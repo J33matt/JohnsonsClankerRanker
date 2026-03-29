@@ -207,6 +207,25 @@
     text-align: center;
   }
   .rank-num.top3 { color: var(--gold); }
+  .rank-move-cell {
+    width: 28px;
+    min-width: 28px;
+    padding: 0 2px !important;
+    text-align: center;
+    vertical-align: middle;
+  }
+  .rank-move {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+  }
+  .rank-move-arrow { font-size: 0.55rem; line-height: 1.1; }
+  .rank-move-num   { font-size: 0.58rem; line-height: 1; letter-spacing: 0; }
+  .rank-move.up   { color: var(--green); }
+  .rank-move.down { color: var(--red); }
   .team-cell {
     display: flex;
     align-items: center;
@@ -264,6 +283,34 @@
   .streak-best { background: rgba(255,50,0,0.25); color: #ff4400; border: 1px solid rgba(255,50,0,0.5); box-shadow: 0 0 8px rgba(255,77,0,0.3); }
   .streak-worst { background: rgba(0,60,220,0.25); color: #3366ee; border: 1px solid rgba(0,60,220,0.5); box-shadow: 0 0 8px rgba(30,100,255,0.3); }
   .bar-cell { min-width: 120px; }
+  .last-cell {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .last-result {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .last-wl {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.05rem;
+    letter-spacing: 1px;
+    min-width: 14px;
+  }
+  .last-wl.win  { color: var(--green); }
+  .last-wl.loss { color: var(--red); }
+  .last-score { color: var(--text); font-weight: 600; font-size: 0.82rem; }
+  .last-at    { color: var(--muted); font-size: 0.75rem; }
+  .last-opp-logo {
+    width: 18px; height: 14px;
+    object-fit: contain;
+    border-radius: 2px;
+    vertical-align: middle;
+  }
+  .last-opp-abbr { color: var(--muted); font-size: 0.8rem; }
+  .last-none { color: var(--muted); font-size: 0.78rem; }
   .power-bar-bg {
     height: 6px;
     background: var(--border);
@@ -492,14 +539,14 @@
   .score-card.gtw:hover { border-color: rgba(255,170,0,0.55); }
   .gtw-flag {
     position: absolute;
-    top: 0; right: 0;
+    bottom: 0; right: 0;
     background: linear-gradient(135deg, var(--accent2), var(--accent));
     color: #fff;
     font-family: 'Bebas Neue', sans-serif;
     font-size: 0.65rem;
     letter-spacing: 2px;
-    padding: 3px 10px 3px 8px;
-    border-radius: 0 10px 0 8px;
+    padding: 3px 8px 3px 10px;
+    border-radius: 8px 0 10px 0;
   }
   .gtw-matchup-rank {
     font-family: 'Barlow Condensed', sans-serif;
@@ -509,6 +556,33 @@
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid rgba(255,170,0,0.15);
+  }
+
+  /* Close game banner */
+  .close-game-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(90deg, rgba(255,51,85,0.18) 0%, rgba(255,77,0,0.18) 100%);
+    border-top: 1px solid rgba(255,51,85,0.3);
+    padding: 5px 12px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--red);
+    animation: close-game-pulse 1.2s ease-in-out infinite;
+  }
+  .close-game-dot {
+    width: 6px; height: 6px;
+    background: var(--red);
+    border-radius: 50%;
+    animation: pulse 1.2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes close-game-pulse {
+    0%,100% { background: linear-gradient(90deg, rgba(255,51,85,0.18) 0%, rgba(255,77,0,0.18) 100%); }
+    50% { background: linear-gradient(90deg, rgba(255,51,85,0.28) 0%, rgba(255,77,0,0.28) 100%); }
   }
 
   /* Live score pulse ring */
@@ -2164,7 +2238,7 @@
   <div id="panel-graph" class="panel">
     <div class="section-header">
       <div class="section-title">Power Rankings Graph</div>
-      <div class="section-sub">Weekly rankings throughout the 2025–26 season</div>
+      <div class="section-sub">Rankings throughout the 2025–26 season — Plotted weekly on Fridays</div>
     </div>
     <div class="graph-controls">
       <div class="graph-controls-row">
@@ -2357,13 +2431,13 @@ const STREAK_DATA = {
 };
 
 // Identify best and worst streaks
-const ALL_STREAKS = Object.values(STREAK_DATA);
-const BEST_STREAK = Math.max(...ALL_STREAKS);
-const WORST_STREAK = Math.min(...ALL_STREAKS);
+// Mutable streak extremes — updated live whenever games finish
+let _streakBest  = Math.max(...Object.values(STREAK_DATA));
+let _streakWorst = Math.min(...Object.values(STREAK_DATA));
 
 function getStreakClass(streak) {
-  if (streak === BEST_STREAK) return 'streak-best';
-  if (streak === WORST_STREAK) return 'streak-worst';
+  if (streak === _streakBest)  return 'streak-best';
+  if (streak === _streakWorst) return 'streak-worst';
   const abs = Math.abs(streak);
   if (abs <= 1) return 'streak-grey';
   if (streak > 0) return abs >= 5 ? 'streak-w5' : 'streak-w' + abs;
@@ -2411,6 +2485,176 @@ let rankingsSortDir = 'desc';
 let rankingsView = 'league'; // 'league' | 'conference' | 'division'
 const ENRICHED_DATA = STANDINGS_DATA.map(t => ({ ...t, ...computePowerScore(t), streak: STREAK_DATA[t.abbr] || 0 }));
 
+// ── LAST GAME MAP ─────────────────────────────────────────────
+// Keyed by team abbr → most recent final game object.
+// Seeded from static RECENT_GAMES at init; updated live.
+let _lastGameMap = {};
+
+function seedLastGameMap(games) {
+  const sorted = [...games].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  sorted.forEach(g => {
+    const isFinal = g.isFinal || g.status === 'final';
+    if (!isFinal) return;
+    _lastGameMap[g.home] = g;
+    _lastGameMap[g.away] = g;
+  });
+}
+
+// ── LIVE UPDATE ENGINE ───────────────────────────────────────
+// Called after every ESPN fetch. Mutates STANDINGS_DATA, STREAK_DATA,
+// _RECENT_RESULTS, ENRICHED_DATA in-place so all render functions
+// see fresh data without a page reload.
+//
+// KEY INVARIANT: Only games that are truly NEW (not already counted
+// in STANDINGS_DATA baseline or a previous poll cycle) affect W/L totals.
+// Streaks for a team are only updated when that team has a genuinely new
+// final game — never recomputed from a partial game list.
+
+// Persistent set of game keys already applied to STANDINGS_DATA.
+// Pre-seeded with all RECENT_GAMES so they are never double-counted.
+const _appliedGameKeys = new Set(
+  RECENT_GAMES.map(g => g.date + '_' + g.home + '_' + g.away)
+);
+
+function applyLiveGameData(allFinalGames) {
+  if (!allFinalGames || !allFinalGames.length) return;
+
+  const sorted = [...allFinalGames].sort((a, b) => (a.date||'').localeCompare(b.date||''));
+
+  // 1. Filter to genuinely new games not yet applied to W/L totals.
+  const newGames = sorted.filter(g => {
+    const key = g.date + '_' + g.home + '_' + g.away;
+    if (_appliedGameKeys.has(key)) return false;
+    _appliedGameKeys.add(key);
+    return true;
+  });
+
+  // 2. Apply only new game results to wins/losses — never re-apply old ones.
+  if (newGames.length) {
+    const wMap = {}, lMap = {};
+    STANDINGS_DATA.forEach(t => { wMap[t.abbr] = t.wins; lMap[t.abbr] = t.losses; });
+    newGames.forEach(g => {
+      const hw = g.homeScore > g.awayScore;
+      if (wMap[g.home] !== undefined) { hw ? wMap[g.home]++ : lMap[g.home]++; }
+      if (wMap[g.away] !== undefined) { hw ? lMap[g.away]++ : wMap[g.away]++; }
+    });
+    STANDINGS_DATA.forEach(t => { t.wins = wMap[t.abbr]; t.losses = lMap[t.abbr]; });
+  }
+
+  // 3. Update last-game map — newest game per team wins (use full sorted list so
+  //    the most recent game always overwrites older entries).
+  sorted.forEach(g => { _lastGameMap[g.home] = g; _lastGameMap[g.away] = g; });
+
+  // 4. Update STREAK_DATA only for teams that have a genuinely new final game.
+  //    We do NOT recompute all streaks from scratch (that would erase history).
+  //    Instead, for each affected team we append the new result(s) to their
+  //    existing streak counter.
+  if (newGames.length) {
+    // Group new games per team in chronological order.
+    const teamNewGames = {};
+    newGames.forEach(g => {
+      const hw = g.homeScore > g.awayScore;
+      if (!teamNewGames[g.home]) teamNewGames[g.home] = [];
+      if (!teamNewGames[g.away]) teamNewGames[g.away] = [];
+      teamNewGames[g.home].push(hw);       // true = win for home team
+      teamNewGames[g.away].push(!hw);      // true = win for away team
+    });
+    Object.keys(teamNewGames).forEach(abbr => {
+      const results = teamNewGames[abbr]; // chronological: true=W, false=L
+      let streak = STREAK_DATA[abbr] || 0;
+      results.forEach(won => {
+        if (won) {
+          streak = streak > 0 ? streak + 1 : 1;
+        } else {
+          streak = streak < 0 ? streak - 1 : -1;
+        }
+      });
+      STREAK_DATA[abbr] = streak;
+    });
+  }
+
+  // 5. Rebuild _RECENT_RESULTS from last 20 applied games across all fetched data.
+  const recent20 = sorted.slice(-20);
+  STANDINGS_DATA.forEach(t => { _RECENT_RESULTS[t.abbr] = { recentWins: 0, recentLosses: 0 }; });
+  recent20.forEach(g => {
+    const hw = g.homeScore > g.awayScore;
+    if (_RECENT_RESULTS[g.home]) { hw ? _RECENT_RESULTS[g.home].recentWins++ : _RECENT_RESULTS[g.home].recentLosses++; }
+    if (_RECENT_RESULTS[g.away]) { hw ? _RECENT_RESULTS[g.away].recentLosses++ : _RECENT_RESULTS[g.away].recentWins++; }
+  });
+
+  // 6. Recompute ENRICHED_DATA in-place (only needed when something actually changed).
+  if (newGames.length) {
+    ENRICHED_DATA.forEach((entry, i) => {
+      const s = STANDINGS_DATA[i];
+      Object.assign(entry, s, computePowerScore(s), { streak: STREAK_DATA[s.abbr] || 0 });
+    });
+
+    // 7. Update streak extremes for badge coloring.
+    const vals = Object.values(STREAK_DATA);
+    _streakBest  = Math.max(...vals);
+    _streakWorst = Math.min(...vals);
+  }
+}
+
+// ── POLL LOOP ────────────────────────────────────────────────
+// 60s when live games running, 5min otherwise.
+// Refreshes all tabs with live data after each fetch.
+let _pollTimer = null;
+let _hasLiveGames = false;
+let _weeklySnapshotsCache = null; // invalidated when data changes
+
+async function pollAndRefreshAll() {
+  const today = localDateStr(new Date());
+  const past3  = getDateRange(3, 0).slice(0, 3);
+  const results = await Promise.all([espnFetchDate(today), ...past3.map(d => espnFetchDate(d))]);
+  const todayGames = results[0] || [];
+  const allFinal   = [...todayGames, ...results.slice(1).flatMap(r => r || [])].filter(g => g.isFinal);
+
+  _hasLiveGames = todayGames.some(g => g.isLive);
+
+  // Determine if any genuinely new finals exist before mutating state.
+  const newFinalsExist = allFinal.some(g => {
+    const key = g.date + '_' + g.home + '_' + g.away;
+    return !_appliedGameKeys.has(key);
+  });
+
+  if (newFinalsExist) {
+    applyLiveGameData(allFinal);
+  }
+
+  // Only re-render rankings/other tabs when something actually changed.
+  // This prevents power scores and rankings from flickering mid-game.
+  if (!newFinalsExist) {
+    schedulePoll();
+    return;
+  }
+
+  renderRankings();
+
+  // Re-render other tabs only if visible (avoids resetting bracket picks)
+  if (document.getElementById('panel-playoffs')  && document.getElementById('panel-playoffs').classList.contains('active'))  renderPlayoffs();
+  if (document.getElementById('panel-draft')     && document.getElementById('panel-draft').classList.contains('active'))     renderDraft();
+  if (document.getElementById('panel-simulator') && document.getElementById('panel-simulator').classList.contains('active')) renderSimulator();
+
+  // Graph: invalidate snapshot cache and update chart if it's been rendered
+  if (typeof graphChart !== 'undefined' && graphChart) {
+    _weeklySnapshotsCache = null;
+    updateGraph();
+  }
+
+  // Timestamp
+  const now = new Date();
+  const el = document.getElementById('update-time');
+  if (el) el.textContent = 'Updated ' + now.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' · ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+
+  schedulePoll();
+}
+
+function schedulePoll() {
+  if (_pollTimer) clearTimeout(_pollTimer);
+  _pollTimer = setTimeout(pollAndRefreshAll, _hasLiveGames ? 60000 : 300000);
+}
+
 const SORT_COLUMNS = [
   { key: 'power',    label: 'Power Score', center: false },
   { key: 'record',   label: 'Record',      center: false },
@@ -2452,7 +2696,48 @@ function getSortValue(t, key) {
   }
 }
 
+// ============================================================
+// RANK MOVEMENT — baseline is the most recent weekly snapshot
+// ============================================================
+function buildBaselineRankMap() {
+  // Always use the last entry in WEEKLY_RANKINGS as the week's starting point.
+  // When the auto-inject fires (7+ days elapsed), the newly appended snapshot
+  // becomes the new baseline automatically on the next call.
+  const last = WEEKLY_RANKINGS[WEEKLY_RANKINGS.length - 1];
+  const map = {};
+  if (last && last.rankings) {
+    last.rankings.forEach(function(e) { map[e.team] = e.rank; });
+  }
+  return map;
+}
+
+function buildCurrentRankMap() {
+  // Compute live ranks from current ENRICHED_DATA power scores
+  const sorted = [...ENRICHED_DATA].sort(function(a, b) { return b.power - a.power; });
+  const map = {};
+  sorted.forEach(function(t, i) { map[t.abbr] = i + 1; });
+  return map;
+}
+
+function getRankMovement(abbr, baselineMap, currentMap) {
+  const base = baselineMap[abbr];
+  const curr = currentMap[abbr];
+  if (!base || !curr) return 0;
+  return base - curr; // positive = moved up (lower rank number = better)
+}
+
+function rankMoveCell(movement) {
+  if (movement > 0) {
+    return '<td class="rank-move-cell"><div class="rank-move up"><span class="rank-move-arrow">▲</span><span class="rank-move-num">' + movement + '</span></div></td>';
+  } else if (movement < 0) {
+    return '<td class="rank-move-cell"><div class="rank-move down"><span class="rank-move-arrow">▼</span><span class="rank-move-num">' + Math.abs(movement) + '</span></div></td>';
+  }
+  return '<td class="rank-move-cell"></td>';
+}
+
 function renderRankings() {
+  const baselineRankMap = buildBaselineRankMap();
+  const currentRankMap  = buildCurrentRankMap();
   const allPowers = ENRICHED_DATA.map(t => t.power);
   const maxP = Math.max(...allPowers);
   const minP = Math.min(...allPowers);
@@ -2468,6 +2753,7 @@ function renderRankings() {
     return `<table class="rankings-table">
       <thead><tr>
         <th class="center">#</th>
+        <th style="width:28px;min-width:28px;padding:0"></th>
         <th class="sortable${rankingsSortKey==='name'?' sort-active':''}" onclick="sortRankings('name')">Team<span class="sort-arrow">${rankingsSortKey==='name'?(rankingsSortDir==='desc'?'\u25BC':'\u25B2'):'\u25BC'}</span></th>
         ${thSortable('power','Power Score',false)}
         <th class="bar-cell"></th>
@@ -2477,18 +2763,49 @@ function renderRankings() {
         ${thSortable('ortg','oRtg',true)}
         ${thSortable('drtg','dRtg',true)}
         ${thSortable('streak','Streak',true)}
+        <th class="last-cell" style="color:var(--muted);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;padding:10px 14px;font-weight:600">Last</th>
       </tr></thead><tbody>`;
   }
 
-  function teamRow(t, rank, isTop3) {
+  function teamRow(t, rank, isTop3, movement) {
     const fillColor = getPowerColor(t.power, minP, maxP);
     const fillPct = ((t.power - minP) / (maxP - minP) * 100).toFixed(1);
     const streakClass = getStreakClass(t.streak);
     const streakLabel = getStreakLabel(t.streak);
     const colors = TEAM_COLORS[t.abbr] || { bg: 'var(--surface2)', text: 'var(--text)' };
     const logo = getLogoUrl(t.abbr);
+
+    // Build Last Game cell
+    const lg = _lastGameMap[t.abbr] || null;
+    let lastCell = `<td class="last-cell"><span class="last-none">—</span></td>`;
+    if (lg) {
+      const isHome  = lg.home === t.abbr;
+      const myScore = isHome ? lg.homeScore : lg.awayScore;
+      const opScore = isHome ? lg.awayScore  : lg.homeScore;
+      const oppAbbr = isHome ? lg.away : lg.home;
+      const won     = myScore > opScore;
+      const atVs    = isHome ? 'vs' : '@';
+      const oppLogo = getLogoUrl(oppAbbr);
+      // Get day of week from game date
+      let dayLabel = '';
+      if (lg.date) {
+        const gameDate = new Date(lg.date + 'T12:00:00');
+        dayLabel = gameDate.toLocaleDateString('en-US', { weekday: 'short' });
+      }
+      lastCell = `<td class="last-cell">
+        <span class="last-result">
+          <span class="last-wl ${won?'win':'loss'}">${won?'W':'L'}</span>
+          <span class="last-score">${myScore}–${opScore}</span>
+          <span class="last-at">${atVs}</span>
+          <img class="last-opp-logo" src="${oppLogo}" alt="${oppAbbr}" onerror="this.style.display='none'">
+          <span class="last-opp-abbr">${oppAbbr}${dayLabel ? ` <span style="color:var(--muted);font-size:0.72rem">(${dayLabel})</span>` : ''}</span>
+        </span>
+      </td>`;
+    }
+
     return `<tr>
       <td><div class="rank-num ${isTop3?'top3':''}">${rank}</div></td>
+      ${rankMoveCell(movement)}
       <td>
         <div class="team-cell">
           <div style="width:36px;height:28px;border-radius:5px;background:${colors.bg};border:1px solid ${colors.bg}88;display:flex;align-items:center;justify-content:center;padding:2px 3px;flex-shrink:0">
@@ -2512,6 +2829,7 @@ function renderRankings() {
       <td class="ortg-cell">${t.ortg}</td>
       <td class="ortg-cell">${t.drtg}</td>
       <td><span class="trend-badge ${streakClass}">${streakLabel}</span></td>
+      ${lastCell}
     </tr>`;
   }
 
@@ -2529,7 +2847,7 @@ function renderRankings() {
   if (rankingsView === 'league') {
     const sorted = sortTeams(ENRICHED_DATA);
     html = tableHead();
-    sorted.forEach((t, i) => { html += teamRow(t, i + 1, i < 3); });
+    sorted.forEach((t, i) => { html += teamRow(t, i + 1, i < 3, getRankMovement(t.abbr, baselineRankMap, currentRankMap)); });
     html += `</tbody></table>`;
 
   } else if (rankingsView === 'conference') {
@@ -2539,7 +2857,7 @@ function renderRankings() {
       const teams = sortTeams(ENRICHED_DATA.filter(t => t.conf === conf));
       html += `<div class="rankings-group-header ${cls}">${label}</div>`;
       html += tableHead();
-      teams.forEach((t, i) => { html += teamRow(t, i + 1, i < 3); });
+      teams.forEach((t, i) => { html += teamRow(t, i + 1, i < 3, getRankMovement(t.abbr, baselineRankMap, currentRankMap)); });
       html += `</tbody></table>`;
     });
 
@@ -2554,7 +2872,7 @@ function renderRankings() {
       const confLabel = div.conf === 'WEST' ? 'Western' : 'Eastern';
       html += `<div class="rankings-group-header div">${div.name} Division <span style="font-size:0.7rem;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:2px;margin-left:8px">${confLabel}</span></div>`;
       html += tableHead();
-      teams.forEach((t, i) => { html += teamRow(t, i + 1, i === 0); });
+      teams.forEach((t, i) => { html += teamRow(t, i + 1, i === 0, getRankMovement(t.abbr, baselineRankMap, currentRankMap)); });
       html += `</tbody></table>`;
     });
   }
@@ -2579,7 +2897,7 @@ const ABBR_MAP = {
   'OKC':'OKC','ORL':'ORL','PHI':'PHI','PHX':'PHX','POR':'POR',
   'SAC':'SAC','SAS':'SAS','TOR':'TOR','UTA':'UTA','WAS':'WAS',
   'GS':'GSW','SA':'SAS','NY':'NYK','NO':'NOP','PHO':'PHX',
-  'UTAH':'UTA'
+  'UTAH':'UTA','WSH':'WAS','BRK':'BKN','NOR':'NOP'
 };
 function normAbbr(a) { return ABBR_MAP[a] || a; }
 
@@ -2852,6 +3170,26 @@ async function renderScores() {
     // GTW matchup label
     const gtwMeta = gtw && gtwLabel ? `<div class="gtw-matchup-rank">⭐ ${gtwLabel}</div>` : '';
 
+    // Close game banner: live game, 4th quarter, under 5:00, within 5 points
+    let closeGameBanner = '';
+    if (g.isLive) {
+      const scoreDiff = Math.abs((g.homeScore || 0) - (g.awayScore || 0));
+      const statusStr = (g.status || '').toLowerCase();
+      // ESPN status text for 4th quarter looks like "4th - 3:42" or "4Q 2:15" or "End of 3rd"
+      const is4thQ = /\b4(th|q)\b/i.test(statusStr) || statusStr.startsWith('4th') || statusStr.startsWith('4q');
+      // Parse time remaining: look for M:SS pattern
+      const timeMatch = statusStr.match(/(\d+):(\d{2})/);
+      let secsRemaining = null;
+      if (timeMatch) {
+        secsRemaining = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
+      }
+      const under5mins = secsRemaining !== null && secsRemaining < 300;
+      if (is4thQ && under5mins && scoreDiff <= 5) {
+        const timeStr = timeMatch ? timeMatch[0].toUpperCase() : 'LATE 4TH';
+        closeGameBanner = `<div class="close-game-banner"><div class="close-game-dot"></div>🔥 CLOSE GAME — ${timeStr} LEFT · ${scoreDiff === 0 ? 'TIED' : scoreDiff + ' PTS'}</div>`;
+      }
+    }
+
     return `<div class="score-card${gtw ? ' gtw' : ''}${g.isLive ? ' is-live' : ''}">
       ${gtw ? `<div class="gtw-flag">MUST WATCH</div>` : ''}
       <div class="score-card-top">
@@ -2883,6 +3221,7 @@ async function renderScores() {
         ${probBar}
         ${gtwMeta}
       </div>
+      ${closeGameBanner}
     </div>`;
   }
 
@@ -2905,21 +3244,46 @@ async function renderScores() {
     <div class="scores-live-dot"></div> Live · ${sourceLabel} · Auto-refreshes on page load
   </div>`;
 
+  // ── GTW SCORING HELPER (used by both sections) ────────
+  const allRemaining = data.remaining || [];
+  const scoredRemaining = allRemaining.map(g => {
+    const hr = powerRanks[g.home] || 30;
+    const ar = powerRanks[g.away] || 30;
+    const eliteScore = hr + ar;
+    const bothTop10 = hr <= 10 && ar <= 10;
+    return { ...g, hr, ar, eliteScore, bothTop10 };
+  });
+
+  // Helper: check if a today game qualifies as GTW (both teams top 10)
+  function getTodayGtwOpts(g) {
+    const hr = powerRanks[g.home] || 30;
+    const ar = powerRanks[g.away] || 30;
+    if (hr <= 10 && ar <= 10) {
+      return { gtw: true, gtwLabel: `#${ar} ${g.away} vs #${hr} ${g.home}` };
+    }
+    return { gtw: false, gtwLabel: '' };
+  }
+
   // ── SECTION 1: TODAY'S GAMES ──────────────────────────
   const todayFinal = data.today.filter(g => g.isFinal);
   const todayLive = data.today.filter(g => g.isLive);
   const todayUpcoming = data.today.filter(g => g.isUpcoming);
   const todayAll = [...todayLive, ...todayFinal, ...todayUpcoming];
 
-  html += sectionHead("Today's Games",
+  // Count how many of today's games are must-watch
+  const todayGtwCount = todayAll.filter(g => getTodayGtwOpts(g).gtw).length;
+  const todaySubLabel = [
     todayLive.length > 0 ? `${todayLive.length} game${todayLive.length > 1 ? 's' : ''} in progress` :
     todayFinal.length > 0 ? `${todayFinal.length} final${todayFinal.length > 1 ? 's' : ''} · ${todayUpcoming.length} upcoming` :
     todayUpcoming.length > 0 ? `${todayUpcoming.length} games tonight` : 'No games today',
-    todayLive.length > 0);
+    todayGtwCount > 0 ? `${todayGtwCount} must watch` : ''
+  ].filter(Boolean).join(' · ');
+
+  html += sectionHead("Today's Games", todaySubLabel, todayLive.length > 0);
 
   if (todayAll.length > 0) {
     html += '<div class="scores-grid">';
-    todayAll.forEach(g => { html += scoreCard(g); });
+    todayAll.forEach(g => { html += scoreCard(g, getTodayGtwOpts(g)); });
     html += '</div>';
   } else {
     html += `<div class="no-games-msg">🏀 No games scheduled today — check back tomorrow</div>`;
@@ -2927,7 +3291,30 @@ async function renderScores() {
 
   html += '<div class="scores-divider"></div>';
 
-  // ── SECTION 2: RECENT RESULTS ─────────────────────────
+  // ── SECTION 2: GAMES TO WATCH (future only — exclude today) ──
+  const todayStr2 = localDateStr(new Date());
+  const gtwGames = scoredRemaining
+    .filter(g => g.bothTop10 && g.date > todayStr2)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.eliteScore - b.eliteScore);
+
+  html += sectionHead('Games to Watch',
+    gtwGames.length > 0 ? `${gtwGames.length} upcoming game${gtwGames.length > 1 ? 's' : ''} between two top-10 teams` : 'No upcoming top-10 matchups found',
+    false);
+
+  if (gtwGames.length > 0) {
+    html += '<div class="scores-grid">';
+    gtwGames.forEach(g => {
+      const matchupStr = `#${g.ar} ${g.away} vs #${g.hr} ${g.home}`;
+      html += scoreCard(g, { gtw: true, gtwLabel: matchupStr });
+    });
+    html += '</div>';
+  } else {
+    html += `<div class="no-games-msg">No upcoming games this season between two top-10 power-ranked teams</div>`;
+  }
+
+  html += '<div class="scores-divider"></div>';
+
+  // ── SECTION 3: RECENT RESULTS ─────────────────────────
   const recentToShow = data.recent;
 
   const recentCount = Math.min(recentToShow.length, 16);
@@ -2941,47 +3328,23 @@ async function renderScores() {
     html += `<div class="no-games-msg">No recent results available</div>`;
   }
 
-  html += '<div class="scores-divider"></div>';
-
-  // ── SECTION 3: GAMES TO WATCH ────────────────────────
-  // Show ALL remaining season games where BOTH teams are in the top 10 power rankings
-  const allRemaining = data.remaining || [];
-
-  // Score each game: sum of both teams' power ranks (lower = more elite matchup)
-  const scoredRemaining = allRemaining.map(g => {
-    const hr = powerRanks[g.home] || 30;
-    const ar = powerRanks[g.away] || 30;
-    const eliteScore = hr + ar; // lower = better
-    const bothTop10 = hr <= 10 && ar <= 10;
-    return { ...g, hr, ar, eliteScore, bothTop10 };
-  });
-
-  // Games to Watch = ALL remaining games where BOTH teams are in top 10
-  const gtwGames = scoredRemaining
-    .filter(g => g.bothTop10)
-    .sort((a, b) => a.date.localeCompare(b.date) || a.eliteScore - b.eliteScore);
-
-  html += sectionHead('Games to Watch',
-    gtwGames.length > 0 ? `${gtwGames.length} remaining game${gtwGames.length > 1 ? 's' : ''} between two top-10 teams` : 'No remaining top-10 matchups found',
-    false);
-
-  if (gtwGames.length > 0) {
-    html += '<div class="scores-grid">';
-    gtwGames.forEach(g => {
-      const matchupStr = `#${g.ar} ${g.away} vs #${g.hr} ${g.home}`;
-      html += scoreCard(g, { gtw: true, gtwLabel: matchupStr });
-    });
-    html += '</div>';
-  } else {
-    html += `<div class="no-games-msg">No remaining games this season between two top-10 power-ranked teams</div>`;
-  }
-
   document.getElementById('scores-container').innerHTML = html;
 
-  // Auto-refresh every 60 seconds if there are live games
-  if (data.today.some(g => g.isLive)) {
-    setTimeout(renderScores, 60000);
+  // Feed finished games into the live engine so rankings/playoffs/graph update.
+  // Only call applyLiveGameData when there are genuinely new finals not yet applied.
+  const finishedGames = [...(data.today||[]), ...(data.recent||[])].filter(g => g.isFinal);
+  const hasNewFinals = finishedGames.some(g => {
+    const key = g.date + '_' + g.home + '_' + g.away;
+    return !_appliedGameKeys.has(key);
+  });
+  if (hasNewFinals) {
+    applyLiveGameData(finishedGames);
+    renderRankings(); // re-render rankings only when data actually changed
   }
+
+  // Start/reset the background poll loop
+  _hasLiveGames = (data.today||[]).some(g => g.isLive);
+  schedulePoll();
 }
 
 function renderStandings() {
@@ -3212,17 +3575,31 @@ function renderPlayoffs() {
 
   // History stack for undo
   const history = [];
+  const redoStack = [];
 
   function pushHistory(action) {
     history.push(JSON.parse(JSON.stringify({ bracketState, piState, action })));
+    redoStack.length = 0; // clear redo on new action
     updateControls();
   }
 
   function undo() {
     if (!history.length) return;
+    const current = JSON.parse(JSON.stringify({ bracketState, piState }));
+    redoStack.push(current);
     const prev = history.pop();
     Object.assign(bracketState, prev.bracketState);
     Object.assign(piState, prev.piState);
+    updateControls();
+    rerenderBracket();
+  }
+
+  function redo() {
+    if (!redoStack.length) return;
+    const next = redoStack.pop();
+    history.push(JSON.parse(JSON.stringify({ bracketState, piState })));
+    Object.assign(bracketState, next.bracketState);
+    Object.assign(piState, next.piState);
     updateControls();
     rerenderBracket();
   }
@@ -3241,6 +3618,7 @@ function renderPlayoffs() {
     });
     bracketState.champion = null;
     history.length = 0;
+    redoStack.length = 0;
     updateControls();
     rerenderBracket();
     dismissChampion();
@@ -3248,8 +3626,10 @@ function renderPlayoffs() {
 
   function updateControls() {
     const undoBtn = document.getElementById('bkt-undo-btn');
+    const redoBtn = document.getElementById('bkt-redo-btn');
     const clearBtn = document.getElementById('bkt-clear-btn');
     if (undoBtn) undoBtn.disabled = history.length === 0;
+    if (redoBtn) redoBtn.disabled = redoStack.length === 0;
     if (clearBtn) {
       const hasAny = bracketState.champion ||
         ['west','east'].some(c => bracketState[c].r1.some(x=>x) || bracketState[c].semi.some(x=>x) || bracketState[c].cf[0] || piState[c].game78winner || piState[c].game910winner);
@@ -3263,46 +3643,86 @@ function renderPlayoffs() {
   const wPI = west.slice(6, 10);
   const ePI = east.slice(6, 10);
 
-  // Returns the 8th seed from play-in for a conf
-  function getSeed8(conf) { return piState[conf].seed8; }
-  function getSeed7(conf) { return piState[conf].game78winner; }
+  // Placeholder objects for undecided 7/8 seeds — used in the bracket before play-in picks are made.
+  // These are lightweight sentinels; bracket picks stored against them get replaced when the real
+  // team is resolved, or cleared if the user's choice doesn't match the resolved seed.
+  function makePlaceholder(seed, conf) {
+    return { _placeholder: true, _seed: seed, _conf: conf, abbr: '__PI' + seed + '_' + conf,
+             name: 'Play-In #' + seed, wins: 0, losses: 0 };
+  }
+
+  // Returns the 8th seed from play-in for a conf (real team or placeholder)
+  function getSeed8(conf) {
+    return piState[conf].seed8 || makePlaceholder(8, conf);
+  }
+  function getSeed7(conf) {
+    return piState[conf].game78winner || makePlaceholder(7, conf);
+  }
+
+  // When a real team is resolved for a play-in slot, walk the bracket and replace
+  // any stored placeholder of that seed with the real team.  If the stored pick
+  // was the OTHER placeholder (wrong seed), leave it — it will get cleared by
+  // invalidatePlayInDownstream.
+  function replacePlaceholderInBracket(conf, seedNum, realTeam) {
+    const phAbbr = '__PI' + seedNum + '_' + conf;
+    // Check every stored bracket pick and swap in the real team
+    ['r1','semi','cf'].forEach(round => {
+      const arr = bracketState[conf][round];
+      for (let i = 0; i < arr.length; i++) {
+        if (arr[i] && arr[i].abbr === phAbbr) arr[i] = realTeam;
+      }
+    });
+    if (bracketState[conf].finalsTeam && bracketState[conf].finalsTeam.abbr === phAbbr) {
+      bracketState[conf].finalsTeam = realTeam;
+    }
+    if (bracketState.champion && bracketState.champion.abbr === phAbbr) {
+      bracketState.champion = realTeam;
+    }
+  }
 
   function pickPlayIn(conf, game, teamIdx) {
     pushHistory('playin');
     const piTeams = conf === 'west' ? wPI : ePI;
     if (game === '78') {
-      piState[conf].game78winner = piTeams[teamIdx];
+      const newSeed7 = piTeams[teamIdx];
+      piState[conf].game78winner = newSeed7;
+      // Replace any bracket placeholder for seed 7 with the real team
+      replacePlaceholderInBracket(conf, 7, newSeed7);
       // Loser of 7/8 plays winner of 9/10 — reset 8 seed decider when 7/8 changes
+      // Also clear bracket picks that used the seed-8 placeholder (they're now ambiguous)
       piState[conf].seed8 = null;
       piState[conf].deciderWinner = null;
+      invalidatePlaceholderPicks(conf, 8);
     } else if (game === '910') {
       piState[conf].game910winner = piTeams[teamIdx + 2];
       // Reset the 8-seed decider pick since 9/10 winner changed
       piState[conf].seed8 = null;
       piState[conf].deciderWinner = null;
+      invalidatePlaceholderPicks(conf, 8);
     } else if (game === 'decider') {
       // teamIdx: 0 = loser of 7/8, 1 = winner of 9/10
       const piState_c = piState[conf];
       const loserOf78 = piTeams.find(t => t !== piState_c.game78winner && (t === piTeams[0] || t === piTeams[1]));
-      if (teamIdx === 0) {
-        piState[conf].seed8 = loserOf78;
-        piState[conf].deciderWinner = loserOf78;
-      } else {
-        piState[conf].seed8 = piState[conf].game910winner;
-        piState[conf].deciderWinner = piState[conf].game910winner;
-      }
+      const newSeed8 = teamIdx === 0 ? loserOf78 : piState[conf].game910winner;
+      piState[conf].seed8 = newSeed8;
+      piState[conf].deciderWinner = newSeed8;
+      // Replace any bracket placeholder for seed 8 with the real team
+      replacePlaceholderInBracket(conf, 8, newSeed8);
     }
-    invalidatePlayInDownstream(conf);
     rerenderBracket();
   }
 
-  function invalidatePlayInDownstream(conf) {
-    // R1 matchups 0 (1 vs 8) and 3 (2 vs 7) use play-in teams
-    bracketState[conf].r1[0] = null;
-    bracketState[conf].r1[3] = null;
-    // If semi/cf/finals depended on those, clear them too
-    invalidateDownstream(conf, 'r1', 0);
-    invalidateDownstream(conf, 'r1', 3);
+  // Clear bracket picks that are stored as a specific placeholder (called when that
+  // placeholder becomes ambiguous again, e.g. when the 7/8 game result changes).
+  function invalidatePlaceholderPicks(conf, seedNum) {
+    const phAbbr = '__PI' + seedNum + '_' + conf;
+    // R1 matchups that use the 8-seed: idx 0 (1v8) — clear pick if it was the placeholder
+    [0, 3].forEach(r1idx => {
+      if (bracketState[conf].r1[r1idx] && bracketState[conf].r1[r1idx].abbr === phAbbr) {
+        bracketState[conf].r1[r1idx] = null;
+        invalidateDownstream(conf, 'r1', r1idx);
+      }
+    });
   }
 
   // ================================================================
@@ -3313,10 +3733,10 @@ function renderPlayoffs() {
     const pairing = R1_PAIRINGS[matchupIdx];
     let topTeam = seeds[pairing[0]];
     let botTeam = seeds[pairing[1]];
-    // Matchup 0: 1 vs 8-seed (play-in winner)
-    if (matchupIdx === 0) { botTeam = getSeed8(conf) || null; }
-    // Matchup 3: 2 vs 7-seed (play-in winner)
-    if (matchupIdx === 3) { botTeam = getSeed7(conf) || null; }
+    // Matchup 0: 1 vs 8-seed (play-in winner or placeholder)
+    if (matchupIdx === 0) { botTeam = getSeed8(conf); }
+    // Matchup 3: 2 vs 7-seed (play-in winner or placeholder)
+    if (matchupIdx === 3) { botTeam = getSeed7(conf); }
     return [topTeam, botTeam];
   }
 
@@ -3360,11 +3780,20 @@ function renderPlayoffs() {
     rerenderBracket();
   }
 
+  function isBracketComplete() {
+    // All 8 R1 picks, all 4 semi picks, both CF picks, and both finalists known
+    const allR1 = ['west','east'].every(c => bracketState[c].r1.every(x => x));
+    const allSemi = ['west','east'].every(c => bracketState[c].semi.every(x => x));
+    const allCF = ['west','east'].every(c => bracketState[c].cf[0]);
+    return allR1 && allSemi && allCF;
+  }
+
   function pickChampion(team) {
     pushHistory('champion');
     bracketState.champion = team;
     rerenderBracket();
-    showChampion(team);
+    // Only show the celebration when the full bracket is filled out
+    if (!team._placeholder && isBracketComplete()) showChampion(team);
   }
 
   function invalidateDownstream(conf, round, idx) {
@@ -3482,6 +3911,19 @@ function renderPlayoffs() {
         <span class="bkt-tbd">TBD</span>
       </div>`;
     }
+    // Placeholder for undecided play-in seed — show seed number in logo box
+    if (team._placeholder) {
+      const cls = extraClass || '';
+      const onclick = clickFn ? `onclick="${clickFn}"` : '';
+      return `<div class="bkt-team-row ${cls}" ${onclick} style="opacity:0.75">
+        <span class="bkt-seed">${seed}</span>
+        <div style="width:38px;height:30px;border-radius:6px;background:var(--surface2);border:1px dashed var(--muted);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--muted);letter-spacing:1px">${team._seed}</span>
+        </div>
+        <span class="bkt-name" style="color:var(--muted)">Play-In #${team._seed}</span>
+        <span class="bkt-record" style="color:var(--muted)">?–?</span>
+      </div>`;
+    }
     const colors = TEAM_COLORS[team.abbr] || { bg: 'var(--surface2)', text: '#fff' };
     const logo = getLogoUrl(team.abbr);
     const cls = extraClass || '';
@@ -3497,20 +3939,21 @@ function renderPlayoffs() {
   }
 
   function matchupHtml(conf, round, matchupIdx, topSeed, topTeam, botSeed, botTeam, winner, clickable) {
-    const hasTeams = topTeam && botTeam;
+    // Allow interaction if at least one team is present (one-sided picks allowed)
+    const hasAny = topTeam || botTeam;
     const classes = ['bkt-matchup'];
-    if (hasTeams && clickable) classes.push('clickable');
-    if (hasTeams && !winner) classes.push('pending');
+    if (hasAny && clickable) classes.push('clickable');
+    if (hasAny && !winner) classes.push('pending');
 
     let topClass = '', botClass = '';
     if (winner) {
-      topClass = topTeam && winner.abbr === topTeam.abbr ? 'winner-row' : 'loser-row';
-      botClass = botTeam && winner.abbr === botTeam.abbr ? 'winner-row' : 'loser-row';
+      topClass = topTeam && winner.abbr === topTeam.abbr ? 'winner-row' : (topTeam ? 'loser-row' : '');
+      botClass = botTeam && winner.abbr === botTeam.abbr ? 'winner-row' : (botTeam ? 'loser-row' : '');
     }
 
-    // Always allow clicking either team to (re)pick
-    const topClick = (hasTeams && clickable) ? `_bktPick('${conf}','${round}',${matchupIdx},'${topTeam.abbr}')` : '';
-    const botClick = (hasTeams && clickable) ? `_bktPick('${conf}','${round}',${matchupIdx},'${botTeam.abbr}')` : '';
+    // Build click handlers — a team is clickable as long as it exists; opponent can be TBD
+    const topClick = (hasAny && clickable && topTeam) ? `_bktPick('${conf}','${round}',${matchupIdx},'${topTeam.abbr}')` : '';
+    const botClick = (hasAny && clickable && botTeam) ? `_bktPick('${conf}','${round}',${matchupIdx},'${botTeam.abbr}')` : '';
 
     return `<div class="${classes.join(' ')}">
       ${teamRowHtml(topSeed, topTeam, topClass, topClick)}
@@ -3586,30 +4029,36 @@ function renderPlayoffs() {
   function buildFinalsHtml() {
     const [wTeam, eTeam] = getFinalsTeams();
     const champ = bracketState.champion;
-    const hasTeams = wTeam && eTeam;
+    const hasAny = wTeam || eTeam;
 
     if (champ) {
-      const colors = TEAM_COLORS[champ.abbr] || { bg: '#ffaa00', text: '#fff' };
+      const isPhChamp = champ._placeholder;
+      const colors = isPhChamp ? { bg: 'var(--muted)', text: '#fff' } : (TEAM_COLORS[champ.abbr] || { bg: '#ffaa00', text: '#fff' });
+      const champLabel = isPhChamp ? ('Play-In #' + champ._seed) : champ.abbr;
       return `<div class="bracket-finals-col">
         <div class="bkt-finals has-teams" style="border-color:${colors.bg};cursor:pointer" onclick="_bktPickChampion(null)">
           🏆<br>NBA<br>FINALS
-          <div class="finals-team" style="color:${colors.bg}">${champ.abbr}</div>
+          <div class="finals-team" style="color:${colors.bg};font-size:${isPhChamp?'0.65rem':'1rem'}">${champLabel}</div>
           <div class="finals-sub">CHAMPION</div>
         </div>
       </div>`;
     }
 
-    if (hasTeams) {
-      const wc = TEAM_COLORS[wTeam.abbr] || {bg:'var(--accent)'};
-      const ec = TEAM_COLORS[eTeam.abbr] || {bg:'var(--blue)'};
+    if (hasAny) {
+      // Build buttons for whichever finalist(s) are known
+      let buttons = '';
+      [wTeam, eTeam].filter(Boolean).forEach(team => {
+        const isPh = team._placeholder;
+        const tc = isPh ? {bg:'var(--muted)'} : (TEAM_COLORS[team.abbr] || {bg:'var(--accent)'});
+        const label = isPh ? ('Play-In #' + team._seed) : team.abbr;
+        buttons += `<button onclick="_bktPickChampion('${team.abbr}')" style="background:${tc.bg}22;border:1px solid ${tc.bg}88;border-radius:5px;color:${tc.bg};font-family:'Bebas Neue',sans-serif;font-size:0.75rem;letter-spacing:1px;padding:5px 10px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='${tc.bg}44'" onmouseout="this.style.background='${tc.bg}22'">${label}</button>`;
+      });
+      const sub = (!wTeam || !eTeam) ? 'Finalist — pick champion:' : 'Pick champion:';
       return `<div class="bracket-finals-col">
         <div class="bkt-finals has-teams" style="cursor:default">
           🏆<br>NBA<br>FINALS
-          <div class="finals-sub">Pick champion:</div>
-          <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">
-            <button onclick="_bktPickChampion('${wTeam.abbr}')" style="background:${wc.bg}22;border:1px solid ${wc.bg}88;border-radius:5px;color:${wc.bg};font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1px;padding:5px 10px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='${wc.bg}44'" onmouseout="this.style.background='${wc.bg}22'">${wTeam.abbr}</button>
-            <button onclick="_bktPickChampion('${eTeam.abbr}')" style="background:${ec.bg}22;border:1px solid ${ec.bg}88;border-radius:5px;color:${ec.bg};font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:1px;padding:5px 10px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='${ec.bg}44'" onmouseout="this.style.background='${ec.bg}22'">${eTeam.abbr}</button>
-          </div>
+          <div class="finals-sub">${sub}</div>
+          <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">${buttons}</div>
         </div>
       </div>`;
     }
@@ -3720,7 +4169,13 @@ function renderPlayoffs() {
   };
 
   window._bktPick = function(conf, round, matchupIdx, abbr) {
-    const team = findTeam(abbr);
+    // Check if this is a placeholder pick (__PI7_west / __PI8_east etc.)
+    let team = findTeam(abbr);
+    if (!team && abbr.startsWith('__PI')) {
+      // Reconstruct the placeholder object so it can be stored in bracketState
+      const m = abbr.match(/^__PI(\d+)_(\w+)$/);
+      if (m) team = makePlaceholder(parseInt(m[1]), m[2]);
+    }
     if (!team) return;
     if (round === 'r1') pickR1(conf, matchupIdx, team);
     else if (round === 'semi') pickSemi(conf, matchupIdx, team);
@@ -3729,7 +4184,11 @@ function renderPlayoffs() {
 
   window._bktPickChampion = function(abbr) {
     if (!abbr) return;
-    const team = findTeam(abbr);
+    let team = findTeam(abbr);
+    if (!team && abbr.startsWith('__PI')) {
+      const m = abbr.match(/^__PI(\d+)_(\w+)$/);
+      if (m) team = makePlaceholder(parseInt(m[1]), m[2]);
+    }
     if (!team) return;
     pickChampion(team);
   };
@@ -3784,6 +4243,7 @@ function renderPlayoffs() {
   // Controls
   let ctrlHtml = `<div class="bracket-controls">
     <button class="bkt-ctrl-btn" id="bkt-undo-btn" onclick="_bktUndo()" disabled>↩ Undo</button>
+    <button class="bkt-ctrl-btn" id="bkt-redo-btn" onclick="_bktRedo()" disabled>↪ Redo</button>
     <button class="bkt-ctrl-btn danger" id="bkt-clear-btn" onclick="_bktClear()" disabled>✕ Clear Bracket</button>
     <span class="bracket-hint">Click a team to advance them. Start with Play-In picks above.</span>
   </div>`;
@@ -3791,6 +4251,7 @@ function renderPlayoffs() {
   container.innerHTML = ctrlHtml + `<div id="bracket-inner"></div>`;
 
   window._bktUndo = undo;
+  window._bktRedo = redo;
   window._bktClear = clearBracket;
 
   document.getElementById('bracket-inner').innerHTML = buildFullBracket();
@@ -5202,7 +5663,11 @@ function buildWeeklySnapshots() {
 }
 
 // Cache the snapshots so they're only computed once
-const _WEEKLY_SNAPSHOTS = buildWeeklySnapshots();
+// Lazily-built, cache-invalidated by applyLiveGameData
+function getWeeklySnapshots() {
+  if (!_weeklySnapshotsCache) _weeklySnapshotsCache = buildWeeklySnapshots();
+  return _weeklySnapshotsCache;
+}
 
 function buildGraphDatasets() {
   const labels = WEEKLY_RANKINGS.map(function(w) { return w.label; });
@@ -5210,7 +5675,7 @@ function buildGraphDatasets() {
   const datasets = [];
   ALL_GRAPH_TEAMS.forEach(function(team) {
     if (!graphActiveTeams.has(team)) return;
-    const data = _WEEKLY_SNAPSHOTS.map(function(snapshot) {
+    const data = getWeeklySnapshots().map(function(snapshot) {
       const entry = snapshot[team];
       if (!entry) return null;
       return graphYAxis === 'rank' ? entry.rank : entry.power;
@@ -5417,15 +5882,18 @@ function showTab(id, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + id).classList.add('active');
   btn.classList.add('active');
-  // Refresh Johnson's analysis each time rankings tab is opened
   if (id === 'rankings') {
     document.getElementById('ai-analysis-text').innerHTML = `<div id="ai-loading"><div class="mini-spinner"></div> Generating fresh analysis...</div>`;
     fetchAIAnalysis();
+    renderRankings();
   }
-  // Render graph when tab is first opened
-  if (id === 'graph' && !graphChart) {
-    renderGraph();
+  if (id === 'graph') {
+    if (!graphChart) { renderGraph(); }
+    else { _weeklySnapshotsCache = null; updateGraph(); }
   }
+  if (id === 'playoffs')  renderPlayoffs();
+  if (id === 'draft')     renderDraft();
+  if (id === 'simulator') renderSimulator();
 }
 
 // ============================================================
@@ -5435,8 +5903,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   const now = new Date();
   document.getElementById('update-time').textContent = 'Updated ' + now.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' · ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 
+  // Seed last-game map from static data so column shows immediately
+  seedLastGameMap(RECENT_GAMES.map(g => ({ ...g, isFinal: g.status === 'final' })));
+
+  // Auto-inject a new weekly graph point if 7+ days have passed since last entry
+  (function() {
+    const last = WEEKLY_RANKINGS[WEEKLY_RANKINGS.length - 1];
+    const lastDate = new Date(last.date);
+    const today = new Date(); today.setHours(0,0,0,0);
+    if (Math.floor((today - lastDate) / 86400000) >= 7) {
+      const label   = today.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+      const dateStr = today.toISOString().slice(0, 10);
+      const entries = STANDINGS_DATA.map(t => {
+        const ps = computePowerScore(t);
+        return { team: t.abbr, wins: t.wins, losses: t.losses, power: ps.power, netRtg: ps.netRtg };
+      }).sort((a,b) => b.power - a.power).map((e,i) => ({ ...e, rank: i+1 }));
+      WEEKLY_RANKINGS.push({ date: dateStr, label, rankings: entries });
+    }
+  })();
+
   renderRankings();
-  renderScores(); // async — will update scores-container when done
+  renderScores(); // async — will update scores-container when done, then start poll loop
   renderPlayoffs();
   renderSimulator();
   renderDraft();
