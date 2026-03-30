@@ -877,35 +877,55 @@
   /* pick bar */
   .pred-pick-bar {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 11px 16px; position: relative; overflow: hidden;
+    padding: 10px 14px; position: relative; overflow: hidden; min-height: 56px;
+    border-top: 1px solid rgba(0,0,0,0.2);
   }
-  .pred-pick-bar-bg { position: absolute; inset: 0; opacity: 0.88; }
+  .pred-pick-bar-bg { position: absolute; inset: 0; }
   .pred-pick-left {
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 12px;
     position: relative; z-index: 1;
   }
+  .pred-pick-logo {
+    width: 48px; height: 40px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; padding: 4px 5px;
+    background: rgba(0,0,0,0.30); border: 1px solid rgba(255,255,255,0.18);
+  }
+  .pred-pick-logo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)); }
+  .pred-pick-text { display: flex; flex-direction: column; gap: 0; }
   .pred-pick-label-text {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.05rem; letter-spacing: 3px; color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.65rem; letter-spacing: 3px; color: rgba(255,255,255,0.55);
+    text-transform: uppercase; line-height: 1;
   }
   .pred-pick-name {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.5rem; letter-spacing: 3px; color: #fff;
+    font-size: 1.6rem; letter-spacing: 3px; color: #fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5); line-height: 1;
   }
   .pred-pick-tag {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 0.68rem; letter-spacing: 1px;
     padding: 2px 8px; border-radius: 10px; font-weight: 700;
-    background: rgba(255,255,255,0.2); color: #fff;
-    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(0,0,0,0.35); color: #fff;
+    border: 1px solid rgba(255,255,255,0.25);
     position: relative; z-index: 1;
   }
   .pred-pick-right {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 0.85rem; letter-spacing: 2px;
-    color: rgba(255,255,255,0.8); text-transform: uppercase;
-    position: relative; z-index: 1; display: flex; align-items: center; gap: 5px;
+    color: rgba(255,255,255,0.9); text-transform: uppercase;
+    position: relative; z-index: 1; display: flex; align-items: center; gap: 6px;
   }
+  /* On coloured pick bar, force dark bg on all badges for legibility */
+  .pred-pick-bar .pred-ml-badge,
+  .pred-pick-bar .pred-result-badge,
+  .pred-pick-bar .pred-payout-badge {
+    background: rgba(0,0,0,0.40) !important;
+    color: #fff !important;
+    border-color: rgba(255,255,255,0.22) !important;
+  }
+  .pred-pick-bar .pred-result-badge.correct { color: #7fff9e !important; border-color: rgba(127,255,158,0.40) !important; }
+  .pred-pick-bar .pred-result-badge.wrong   { color: #ff9090 !important; border-color: rgba(255,144,144,0.40) !important; }
   .pred-result-badge {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 0.7rem; letter-spacing: 2px;
@@ -972,14 +992,14 @@
   /* MONEYLINE & BETTING LEDGER */
   .pred-ml-badge {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.72rem; letter-spacing: 1px; font-weight: 700;
-    padding: 2px 7px; border-radius: 8px;
+    font-size: 0.8rem; letter-spacing: 1px; font-weight: 700;
+    padding: 3px 9px; border-radius: 8px;
     background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85);
     border: 1px solid rgba(255,255,255,0.2);
     position: relative; z-index: 1;
   }
-  .pred-ml-badge.fav  { background: rgba(0,232,122,0.15); color: var(--green); border-color: rgba(0,232,122,0.3); }
-  .pred-ml-badge.dog  { background: rgba(255,170,0,0.15); color: var(--accent2); border-color: rgba(255,170,0,0.3); }
+  .pred-ml-badge.fav  { background: rgba(0,210,100,0.20); color: #4dffa0; border-color: rgba(0,210,100,0.45); }
+  .pred-ml-badge.dog  { background: rgba(255,160,0,0.20);  color: #ffc844; border-color: rgba(255,160,0,0.45); }
   .pred-payout-badge {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 0.72rem; letter-spacing: 1px; font-weight: 700;
@@ -2506,7 +2526,7 @@
   <div style="max-width:1400px; margin:0 auto; padding:0 40px; display:flex; width:100%;">
     <button class="tab-btn active" onclick="showTab('rankings', this)">Rankings</button>
     <button class="tab-btn" onclick="showTab('scores', this)">Scores</button>
-    <button class="tab-btn" onclick="showTab('predictions', this)">Predictions</button>
+    <button class="tab-btn" onclick="showTab('predictions', this)">Betting</button>
     <button class="tab-btn" onclick="showTab('playoffs', this)">Playoffs</button>
     <button class="tab-btn" onclick="showTab('simulator', this)">Simulator</button>
     <button class="tab-btn" onclick="showTab('draft', this)">Draft</button>
@@ -3816,6 +3836,23 @@ function renderScoresHtml(data) {
   // Always recompute power ranks fresh so GTW badges reflect current rankings
   const powerRanks = buildPowerRankMap();
 
+  // ── PULL MONEYLINES FROM STORED BETTING PICKS ────────────
+  // The betting tab fetches & stores MLs in localStorage. Read them here so
+  // score cards always show moneylines regardless of ESPN odds availability.
+  const _picksMLMap = {};
+  try {
+    const todayStr = localDateStr(new Date());
+    const raw = localStorage.getItem('predictions:' + todayStr);
+    if (raw) {
+      const stored = JSON.parse(raw);
+      (stored.picks || []).forEach(p => {
+        if (p.homeAbbr && p.awayAbbr && (p.homeML || p.awayML)) {
+          _picksMLMap[p.awayAbbr + '@' + p.homeAbbr] = { homeML: p.homeML, awayML: p.awayML };
+        }
+      });
+    }
+  } catch(e) {}
+
   // ── SCORE CARD BUILDER ─────────────────────────────────
   function scoreCard(g, opts = {}) {
     const { gtw = false, gtwLabel = '' } = opts;
@@ -3848,18 +3885,43 @@ function renderScoresHtml(data) {
       dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     }
 
-    // Win probability for upcoming
+    // Resolve moneylines: game object first, then picks cache fallback
+    const _mlFallback = _picksMLMap[awayAbbr + '@' + homeAbbr] || {};
+    const resolvedHomeML = g.homeML || _mlFallback.homeML || null;
+    const resolvedAwayML = g.awayML || _mlFallback.awayML || null;
+
+    function fmtML(ml) {
+      if (!ml) return null;
+      const str = (ml > 0 ? '+' : '') + ml;
+      const color = ml < 0 ? '#4dffa0' : '#ffc844';
+      return `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1px;color:${color}">${str}</span>`;
+    }
+
+    // Win probability + moneylines
     let probBar = '';
     if (g.isUpcoming) {
       const { homePct, awayPct } = gameWinProb(awayAbbr, homeAbbr);
+      const mlRow = (resolvedAwayML || resolvedHomeML) ? `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)">
+          <div>${fmtML(resolvedAwayML) || '<span style="color:var(--muted)">—</span>'}</div>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Moneyline</span>
+          <div>${fmtML(resolvedHomeML) || '<span style="color:var(--muted)">—</span>'}</div>
+        </div>` : '';
       probBar = `<div class="score-prob-bar">
-        <div class="score-prob-labels">
-          <span>${awayAbbr} ${awayPct}%</span>
-          <span>${homeAbbr} ${homePct}%</span>
-        </div>
+        <div class="score-prob-labels"><span>${awayAbbr} ${awayPct}%</span><span>${homeAbbr} ${homePct}%</span></div>
         <div class="score-prob-track">
           <div class="prob-away" style="width:${awayPct}%"></div>
           <div class="prob-home" style="width:${homePct}%"></div>
+        </div>
+        ${mlRow}
+      </div>`;
+    } else if ((g.isLive || g.isFinal) && (resolvedAwayML || resolvedHomeML)) {
+      // Show pre-game ML on live/final cards
+      probBar = `<div class="score-prob-bar">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>${fmtML(resolvedAwayML) || '<span style="color:var(--muted)">—</span>'}</div>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Pre-Game ML</span>
+          <div>${fmtML(resolvedHomeML) || '<span style="color:var(--muted)">—</span>'}</div>
         </div>
       </div>`;
     }
@@ -3917,6 +3979,7 @@ function renderScoresHtml(data) {
               <img src="${awayLogo}" alt="${awayAbbr}" onerror="this.style.display='none'">
             </div>
             <div class="score-team-info">
+              ${powerRanks[awayAbbr] ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4);line-height:1;margin-bottom:1px">#${powerRanks[awayAbbr]}</div>` : ''}
               <div class="score-team-abbr-lg" style="color:${awayColors.bg === '#333' ? 'var(--text)' : awayColors.bg}">${awayAbbr}</div>
               <div class="score-team-record">${awayRecStr} · Away</div>
             </div>
@@ -3927,6 +3990,7 @@ function renderScoresHtml(data) {
               <img src="${homeLogo}" alt="${homeAbbr}" onerror="this.style.display='none'">
             </div>
             <div class="score-team-info">
+              ${powerRanks[homeAbbr] ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4);line-height:1;margin-bottom:1px">#${powerRanks[homeAbbr]}</div>` : ''}
               <div class="score-team-abbr-lg" style="color:${homeColors.bg === '#333' ? 'var(--text)' : homeColors.bg}">${homeAbbr}</div>
               <div class="score-team-record">${homeRecStr} · Home</div>
             </div>
@@ -7245,7 +7309,7 @@ async function renderPredictions() {
   // fill in below as data arrives.
   container.innerHTML = `
     <div class="section-header">
-      <div class="section-title">🔮 Clanker Predictions</div>
+      <div class="section-title">🎰 Clanker Betting</div>
       <div class="section-sub">Clanker's game picks · Tracks record over time</div>
     </div>
     <div class="pred-header-row">
@@ -7502,11 +7566,16 @@ async function renderPredictions() {
 
           <div class="pred-stats-row">${statsHtml}</div>
 
-          <div class="pred-pick-bar">
-            <div class="pred-pick-bar-bg" style="background:${pickHex}"></div>
+          <div class="pred-pick-bar" style="background:linear-gradient(90deg,${pickHex}44 0%,${pickHex}18 100%)">
+            <div class="pred-pick-bar-bg" style="background:${pickHex};opacity:0.15"></div>
             <div class="pred-pick-left">
-              <span class="pred-pick-label-text">PICK -</span>
-              <span class="pred-pick-name">${pick.pick}</span>
+              <div class="pred-pick-logo">
+                <img src="${getLogoUrl(pick.pick)}" alt="${pick.pick}" onerror="this.style.display='none'">
+              </div>
+              <div class="pred-pick-text">
+                <span class="pred-pick-label-text">PICK</span>
+                <span class="pred-pick-name">${pick.pick}</span>
+              </div>
               ${pick.isUpset ? '<span class="pred-pick-tag">UPSET</span>' : ''}
             </div>
             <div class="pred-pick-right">${pickRight}</div>
@@ -7864,8 +7933,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Fetch authoritative streaks from ESPN standings API · fixes any stale hardcoded values
   fetchESPNStreaks();
 
-  // Silently generate today's picks in the background so they're ready when tab opens
-  _predEnsureTodaysPicks();
+  // Generate today's picks first so moneylines are in localStorage before scores render
+  await _predEnsureTodaysPicks();
 
   renderRankings();
   renderScores(); // async · will update scores-container when done, then start poll loop
@@ -7873,8 +7942,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderSimulator();
   renderDraft();
   fetchAIAnalysis();
-  // Generate today's picks in the background · ready when user opens the tab
-  _predEnsureTodaysPicks();
   // Graph is rendered lazily when tab is opened
 });
 </script>
