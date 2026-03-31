@@ -2540,6 +2540,258 @@
     .graph-canvas-wrap { height: 380px; }
     .graph-controls-row { flex-direction: column; gap: 16px; }
   }
+
+  /* =====================================================
+     MOBILE RESPONSIVE LAYER  (≤ 768px)
+     Preserves all desktop styles — additive only
+  ===================================================== */
+  @media (max-width: 768px) {
+
+    /* ── HEADER ─────────────────────────────────────── */
+    header { padding: 0 16px; }
+    .header-inner {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 14px 0 12px;
+    }
+    .logo-block h1 { font-size: 2.2rem; }
+    .logo-block .tagline { font-size: 0.72rem; letter-spacing: 2px; }
+    .live-badge { font-size: 0.72rem; letter-spacing: 2px; }
+
+    /* ── NAV TABS ────────────────────────────────────── */
+    .nav-tabs {
+      padding: 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-tabs > div,
+    .nav-tabs-inner {
+      padding: 0 8px !important;
+      min-width: max-content;
+    }
+    .tab-btn {
+      padding: 12px 14px;
+      font-size: 0.78rem;
+      letter-spacing: 1.5px;
+      white-space: nowrap;
+    }
+
+    /* ── MAIN PADDING ────────────────────────────────── */
+    main { padding: 20px 14px; }
+
+    /* ── SECTION HEADERS ─────────────────────────────── */
+    .section-header {
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+    .section-title { font-size: 1.5rem; }
+    .updated-time { margin-left: 0; width: 100%; }
+
+    /* ── AI ANALYSIS BOX ─────────────────────────────── */
+    .ai-box { padding: 14px 16px; font-size: 0.85rem; margin-bottom: 18px; }
+
+    /* ── RANKINGS VIEW TOGGLE ────────────────────────── */
+    .rankings-view-bar { flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .view-btn { padding: 5px 10px; font-size: 0.72rem; letter-spacing: 1px; }
+
+    /* ── POWER RANKINGS TABLE ────────────────────────── */
+    /*  Strategy: keep rank #, team name, power score, streak.
+        Hide: bar, SOS, ORtg, Win%, Record columns on smallest screens */
+    .rankings-table { font-size: 0.82rem; }
+    .rankings-table th,
+    .rankings-table td { padding: 10px 8px; }
+
+    /* Hide lower-priority columns on mobile */
+    .col-bar,
+    .col-record,
+    .col-winpct,
+    .col-netrtg,
+    .col-ortg,
+    .col-drtg { display: none; }
+
+    /* Shrink rank number */
+    .rank-num { font-size: 1.15rem; width: 28px; }
+    .rank-move-cell { width: 20px; min-width: 20px; }
+
+    /* Team badge */
+    .team-abbr-badge { font-size: 0.85rem; width: 36px; }
+    .team-name-full { font-size: 0.85rem; }
+    .team-conf { font-size: 0.68rem; }
+
+    /* Power score */
+    .power-score { font-size: 1.25rem; }
+
+    /* Streak badge */
+    .trend-badge { font-size: 0.72rem; padding: 2px 7px; }
+
+    /* Last result — keep compact */
+    .last-cell { font-size: 0.78rem; }
+    .last-wl { font-size: 0.9rem; }
+    .last-score { font-size: 0.75rem; }
+
+    /* ── SCORES GRID ─────────────────────────────────── */
+    .scores-grid { grid-template-columns: 1fr; gap: 12px; }
+    .score-card-body { padding: 12px 14px 14px; }
+    .score-team-abbr-lg { font-size: 1.3rem; }
+    .score-vs-num { font-size: 1.7rem; min-width: 30px; }
+    .score-prob-bar { margin-top: 10px; padding-top: 10px; }
+
+    /* Scores section labels */
+    .scores-section-title { font-size: 1.3rem; }
+
+    /* ── PREDICTIONS CARDS ───────────────────────────── */
+    .pred-header-row { gap: 12px; }
+    .pred-record-badge { padding: 8px 12px; }
+    .pred-record-num { font-size: 1.3rem; }
+    .pred-date-nav { margin-left: 0; width: 100%; justify-content: center; }
+    .pred-cards-grid { grid-template-columns: 1fr; gap: 14px; }
+    .pred-card-header { padding: 12px 12px 10px; min-height: 64px; }
+    .pred-team-abbr { font-size: 1.35rem; }
+    .pred-logo-wrap { width: 36px; height: 30px; }
+    .pred-pick-name { font-size: 1.35rem; }
+    .pred-stat-val { font-size: 0.85rem; }
+    .pred-stat-label { font-size: 0.62rem; letter-spacing: 1.5px; }
+    .pred-generate-btn { width: 100%; text-align: center; }
+
+    /* History rows */
+    .pred-history-row { flex-wrap: wrap; gap: 8px; }
+    .pred-history-date { min-width: 70px; font-size: 0.82rem; }
+    .pred-history-games { font-size: 0.75rem; }
+
+    /* ── PLAYOFFS BRACKET ────────────────────────────── */
+    .bracket-controls { gap: 8px; }
+    .bkt-ctrl-btn { font-size: 0.72rem; padding: 6px 10px; letter-spacing: 1px; }
+    .bracket-hint { display: none; }
+
+    /* Bracket tree: scroll inside wrapper, tree itself flows naturally */
+    .bracket-tree-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x;
+      margin: 0 -14px;        /* bleed to edge of screen */
+      padding: 0 14px 12px;
+    }
+    .bracket-tree {
+      transform: none;
+      min-width: max-content;   /* don't shrink; let wrapper scroll */
+      min-height: auto;
+      justify-content: flex-start;
+      padding-bottom: 8px;
+    }
+
+    /* Matchup cards a bit narrower */
+    .bkt-matchup { min-width: 140px; }
+    .bkt-name { font-size: 0.78rem; }
+    .bkt-record { font-size: 0.7rem; }
+    .bkt-logo-badge { width: 30px; height: 24px; }
+
+    /* Play-In */
+    .playin-section { flex-direction: column; gap: 14px; }
+    .playin-conf { padding: 14px 16px; }
+
+    /* Eliminated */
+    .eliminated-section { flex-direction: column; gap: 14px; }
+    .eliminated-conf { padding: 14px 18px; }
+
+    /* ── STANDINGS (inside scores) ───────────────────── */
+    .conf-header { font-size: 1.15rem; letter-spacing: 2px; margin: 20px 0 10px; }
+    .standings-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .standings-table th,
+    .standings-table td { padding: 8px 8px; font-size: 0.85rem; white-space: nowrap; }
+
+    /* ── TRENDS GRID ─────────────────────────────────── */
+    .trends-grid { grid-template-columns: 1fr; gap: 14px; }
+    .trend-card { padding: 16px; }
+
+    /* ── DRAFT TAB ───────────────────────────────────── */
+    .draft-layout { grid-template-columns: 1fr; gap: 16px; }
+    .lottery-card { overflow-x: auto; }
+    .lottery-table { min-width: 280px; }
+    .lottery-table th, .lottery-table td { padding: 7px 9px; font-size: 0.82rem; }
+
+    /* ── SIMULATOR ───────────────────────────────────── */
+    .sim-standings-grid { grid-template-columns: 1fr; }
+    .sim-run-bar { padding: 14px 16px; gap: 10px; }
+    .sim-run-btn { font-size: 0.95rem; padding: 10px 20px; }
+    .sim-run-desc { font-size: 0.78rem; }
+    .sim-card { padding: 16px; }
+    .sim-controls { flex-wrap: wrap; gap: 8px; }
+
+    /* ── BRACKET WRAPPER — controlled scroll, no page overflow ─ */
+    #panel-playoffs { overflow: hidden; }
+
+    /* ── GRAPH TAB ───────────────────────────────────── */
+    .graph-controls { padding: 14px 14px 10px; }
+    .graph-controls-row { flex-direction: column; gap: 12px; }
+    .graph-filter-group,
+    .graph-toggle-group { flex-direction: column; gap: 6px; }
+    .graph-presets { flex-wrap: wrap; gap: 6px; }
+    .graph-preset-btn { font-size: 0.72rem; padding: 4px 10px; }
+    #graph-team-chips { gap: 5px; }
+    .graph-chip { font-size: 0.7rem; padding: 3px 8px; }
+    .graph-canvas-wrap { height: 280px; }
+    .graph-legend { flex-wrap: wrap; gap: 6px 10px; padding: 10px 14px; }
+    .graph-legend-item { font-size: 0.7rem; padding: 3px 6px; }
+
+    /* ── CHAMPION OVERLAY ────────────────────────────── */
+    .champ-card { padding: 32px 24px; }
+    .champ-name { font-size: 2.4rem; }
+    .champ-trophy { font-size: 3.8rem; }
+
+    /* ── SCORES API NOTICE ───────────────────────────── */
+    .scores-api-notice { font-size: 0.75rem; padding: 8px 12px; flex-wrap: wrap; gap: 6px; }
+
+    /* ── NOTABLES CARD ───────────────────────────────── */
+    .notables-card { padding: 14px 16px; }
+    .notables-desc { font-size: 0.9rem; }
+
+    /* ── GENERAL MISC ─────────────────────────────────── */
+    .section-sub { font-size: 0.7rem; letter-spacing: 2px; }
+    .loading-spinner { padding: 48px 0; }
+    .pred-center-info { padding: 0 6px; }
+    /* Prevent any element from causing horizontal page scroll */
+    body { overflow-x: hidden; }
+  }
+
+  /* Extra-small phones (≤ 420px) */
+  @media (max-width: 420px) {
+    .logo-block h1 { font-size: 1.8rem; }
+    .tab-btn { padding: 10px 11px; font-size: 0.72rem; letter-spacing: 1px; }
+    main { padding: 16px 10px; }
+    .section-title { font-size: 1.3rem; }
+
+    /* Rankings: also hide last-result col to keep 3 key cols visible */
+    .col-last { display: none; }
+
+    /* Score cards: tighten further */
+    .score-card-body { padding: 10px 12px 12px; }
+    .score-team-abbr-lg { font-size: 1.15rem; }
+    .score-vs-num { font-size: 1.45rem; }
+    .score-logo-wrap { width: 30px; height: 26px; }
+
+    /* Predictions */
+    .pred-team-abbr { font-size: 1.2rem; }
+    .pred-logo-wrap { width: 30px; height: 26px; }
+    .pred-pick-name { font-size: 1.15rem; }
+
+    /* Bracket: scale down slightly for tiny phones */
+    .bkt-matchup { min-width: 120px; }
+    .bkt-name { font-size: 0.7rem; }
+  }
+
+  /* Touch devices — remove hover lift effects that feel broken on tap */
+  @media (hover: none) and (pointer: coarse) {
+    .score-card:hover  { transform: none !important; box-shadow: none !important; }
+    .score-card:hover  { border-color: var(--border) !important; }
+    .pred-card:hover   { border-color: var(--border) !important; }
+    .bkt-matchup.clickable:hover { border-color: var(--border) !important; box-shadow: none !important; }
+    .rankings-table tbody tr:hover { background: transparent !important; }
+    .notables-card:hover { transform: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -2558,7 +2810,7 @@
 </header>
 
 <div class="nav-tabs" style="padding: 0 0;">
-  <div style="max-width:1400px; margin:0 auto; padding:0 40px; display:flex; width:100%;">
+  <div class="nav-tabs-inner" style="max-width:1400px; margin:0 auto; padding:0 40px; display:flex; width:100%;">
     <button class="tab-btn active" onclick="showTab('rankings', this)">Rankings</button>
     <button class="tab-btn" onclick="showTab('scores', this)">Scores</button>
     <button class="tab-btn" onclick="showTab('predictions', this)">Betting</button>
@@ -3519,14 +3771,14 @@ function renderRankings() {
         <th style="width:28px;min-width:28px;padding:0"></th>
         <th class="sortable${rankingsSortKey==='name'?' sort-active':''}" onclick="sortRankings('name')">Team<span class="sort-arrow">${rankingsSortKey==='name'?(rankingsSortDir==='desc'?'\u25BC':'\u25B2'):'\u25BC'}</span></th>
         ${thSortable('power','Power Score',false)}
-        <th class="bar-cell"></th>
-        ${thSortable('record','Record',false)}
-        ${thSortable('winPct','Win%',true)}
-        ${thSortable('netRtg','Net Rtg',true)}
-        ${thSortable('ortg','oRtg',true)}
-        ${thSortable('drtg','dRtg',true)}
+        <th class="bar-cell col-bar"></th>
+        <th class="col-record sortable${rankingsSortKey==='record'?' sort-active':''}" onclick="sortRankings('record')">Record<span class="sort-arrow">${rankingsSortKey==='record'?(rankingsSortDir==='desc'?'\u25BC':'\u25B2'):'\u25BC'}</span></th>
+        <th class="col-winpct center sortable${rankingsSortKey==='winPct'?' sort-active':''}" onclick="sortRankings('winPct')">Win%<span class="sort-arrow">${rankingsSortKey==='winPct'?(rankingsSortDir==='desc'?'\u25BC':'\u25B2'):'\u25BC'}</span></th>
+        <th class="col-netrtg center sortable${rankingsSortKey==='netRtg'?' sort-active':''}" onclick="sortRankings('netRtg')">Net Rtg<span class="sort-arrow">${rankingsSortKey==='netRtg'?(rankingsSortDir==='desc'?'\u25BC':'\u25B2'):'\u25BC'}</span></th>
+        <th class="col-ortg center sortable${rankingsSortKey==='ortg'?' sort-active':''}" onclick="sortRankings('ortg')">oRtg<span class="sort-arrow">${rankingsSortKey==='ortg'?(rankingsSortDir==='desc'?'\u25BC':'\u25B2'):'\u25BC'}</span></th>
+        <th class="col-drtg center sortable${rankingsSortKey==='drtg'?' sort-active':''}" onclick="sortRankings('drtg')">dRtg<span class="sort-arrow">${rankingsSortKey==='drtg'?(rankingsSortDir==='desc'?'\u25BC':'\u25B2'):'\u25BC'}</span></th>
         ${thSortable('streak','Streak',true)}
-        <th class="last-cell" style="color:var(--muted);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;padding:10px 14px;font-weight:600">Last</th>
+        <th class="last-cell col-last" style="color:var(--muted);font-size:0.75rem;letter-spacing:2px;text-transform:uppercase;padding:10px 14px;font-weight:600">Last</th>
       </tr></thead><tbody>`;
   }
 
@@ -3540,7 +3792,7 @@ function renderRankings() {
 
     // Build Last Game cell
     const lg = _lastGameMap[t.abbr] || null;
-    let lastCell = `<td class="last-cell"><span class="last-none">-</span></td>`;
+    let lastCell = `<td class="last-cell col-last"><span class="last-none">-</span></td>`;
     if (lg) {
       const isHome  = lg.home === t.abbr;
       const myScore = isHome ? lg.homeScore : lg.awayScore;
@@ -3555,7 +3807,7 @@ function renderRankings() {
         const gameDate = new Date(lg.date + 'T12:00:00');
         dayLabel = gameDate.toLocaleDateString('en-US', { weekday: 'short' });
       }
-      lastCell = `<td class="last-cell">
+      lastCell = `<td class="last-cell col-last">
         <span class="last-result">
           <span class="last-wl ${won?'win':'loss'}">${won?'W':'L'}</span>
           <span class="last-score">${myScore}–${opScore}</span>
@@ -3581,16 +3833,16 @@ function renderRankings() {
         </div>
       </td>
       <td><div class="power-score" style="color:${fillColor}">${t.power}</div></td>
-      <td class="bar-cell">
+      <td class="bar-cell col-bar">
         <div class="power-bar-bg">
           <div class="power-bar-fill" style="width:${fillPct}%; background:${fillColor}"></div>
         </div>
       </td>
-      <td class="record-cell">${t.wins}–${t.losses}</td>
-      <td class="win-pct-cell center">${(t.winPct*100).toFixed(1)}%</td>
-      <td class="ortg-cell" style="color:${t.netRtg>0?'#00e87a':'#ff3355'}">${t.netRtg > 0 ? '+' : ''}${t.netRtg}</td>
-      <td class="ortg-cell">${t.ortg}</td>
-      <td class="ortg-cell">${t.drtg}</td>
+      <td class="record-cell col-record">${t.wins}–${t.losses}</td>
+      <td class="win-pct-cell center col-winpct">${(t.winPct*100).toFixed(1)}%</td>
+      <td class="ortg-cell col-netrtg" style="color:${t.netRtg>0?'#00e87a':'#ff3355'}">${t.netRtg > 0 ? '+' : ''}${t.netRtg}</td>
+      <td class="ortg-cell col-ortg">${t.ortg}</td>
+      <td class="ortg-cell col-drtg">${t.drtg}</td>
       <td><span class="trend-badge ${streakClass}">${streakLabel}</span></td>
       ${lastCell}
     </tr>`;
@@ -5142,11 +5394,11 @@ function renderPlayoffs() {
     </div>`;
 
     // Main bracket
-    html += `<div class="bracket-tree">`;
+    html += `<div class="bracket-tree-wrap"><div class="bracket-tree">`;
     html += buildHalfHtml('west', west);
     html += buildFinalsHtml();
     html += buildHalfHtml('east', east);
-    html += `</div>`;
+    html += `</div></div>`;
 
     return html;
   }
@@ -5923,11 +6175,11 @@ function renderSimResults(result) {
     <div class="bracket-conf-label east-label" style="flex:1;font-size:1.2rem">EASTERN CONFERENCE</div>
   </div>`;
 
-  bktHtml += `<div class="bracket-tree" style="min-height:580px">`;
+  bktHtml += `<div class="bracket-tree-wrap"><div class="bracket-tree" style="min-height:580px">`;
   bktHtml += buildSimHalf('west', wSeeds, playoffResult.wR1, playoffResult.wSemi, playoffResult.wCF);
   bktHtml += buildSimFinalsCol(playoffResult);
   bktHtml += buildSimHalf('east', eSeeds, playoffResult.eR1, playoffResult.eSemi, playoffResult.eCF);
-  bktHtml += `</div>`;
+  bktHtml += `</div></div>`;
 
   bktHtml += `</div>`;
 
