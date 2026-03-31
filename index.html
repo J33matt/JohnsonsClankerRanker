@@ -1720,6 +1720,41 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* P&L CHART */
+  .pnl-chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 32px;
+    margin-bottom: 32px;
+  }
+  .pnl-chart-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .pnl-chart-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+  .pnl-chart-sub {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .pnl-chart-wrap {
+    padding: 20px;
+    height: 220px;
+    position: relative;
+  }
+
   /* AI ANALYSIS BOX */
   .ai-box {
     background: linear-gradient(135deg, rgba(255,77,0,0.08) 0%, rgba(255,170,0,0.05) 100%);
@@ -2661,6 +2696,9 @@
       <canvas id="power-chart"></canvas>
     </div>
     <div class="graph-legend" id="graph-legend"></div>
+    <div style="margin-top:10px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:1px;color:var(--muted)">
+      * Power score formula was adjusted on March 27
+    </div>
   </div>
 
 
@@ -3319,6 +3357,10 @@ async function pollAndRefreshAll() {
 
   _hasLiveGames = todayGames.some(g => g.isLive);
 
+  // Always re-fetch net ratings on every poll so oRTG/dRTG/netRtg stay current
+  // even on days with no new game results finishing.
+  fetchLiveNetRatings();
+
   // Determine if any genuinely new finals exist before mutating state.
   const newFinalsExist = allFinal.some(g => {
     const key = g.date + '_' + g.home + '_' + g.away;
@@ -3336,8 +3378,7 @@ async function pollAndRefreshAll() {
     return;
   }
 
-  // Re-fetch net ratings and streaks · both update automatically after new games finish
-  fetchLiveNetRatings();
+  // Re-fetch streaks after new games finish
   fetchESPNStreaks();
 
   renderRankings();
@@ -3371,6 +3412,11 @@ function schedulePoll() {
   if (_pollTimer) clearTimeout(_pollTimer);
   _pollTimer = setTimeout(pollAndRefreshAll, _hasLiveGames ? 60000 : 300000);
 }
+
+// Standalone ratings refresh — runs every 30 minutes regardless of game activity.
+// Ensures oRTG, dRTG, and net rating stay current even on off-days or between polls.
+// fetchLiveNetRatings() already calls renderRankings() internally when data changes.
+setInterval(function() { fetchLiveNetRatings(); }, 30 * 60 * 1000);
 
 const SORT_COLUMNS = [
   { key: 'power',    label: 'Power Score', center: false },
@@ -6597,7 +6643,9 @@ function getWeeklySnapshots() {
 }
 
 function buildGraphDatasets() {
-  const labels = WEEKLY_RANKINGS.map(function(w) { return w.label; });
+  const labels = WEEKLY_RANKINGS.map(function(w) {
+    return w.label === 'Mar 27' ? 'Mar 27*' : w.label;
+  });
 
   const datasets = [];
   ALL_GRAPH_TEAMS.forEach(function(team) {
@@ -7039,6 +7087,125 @@ async function _getDayLedger(dateStr) {
   } catch(e) { return null; }
 }
 
+// ── P&L CHART ─────────────────────────────────────────────────
+let _pnlChart = null;
+
+async function renderPnlChart() {
+  const area = document.getElementById('pred-pnl-chart-area');
+  if (!area) return;
+
+  // Load last 30 days of daily ledger entries
+  const promises = [];
+  const dateLabels = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const ds = localDateStr(d);
+    dateLabels.push(ds);
+    promises.push(_getDayLedger(ds));
+  }
+  const ledgers = await Promise.all(promises);
+
+  // Build cumulative net P&L, only plotted on days with bets
+  const labels = [];
+  const dataPoints = [];
+  let running = 0;
+  let hasBets = false;
+
+  for (let i = 0; i < dateLabels.length; i++) {
+    const lg = ledgers[i];
+    if (!lg || !lg.bets) continue; // skip days with no bets
+    running += lg.net || 0;
+    running = Math.round(running * 100) / 100;
+    const d = new Date(dateLabels[i] + 'T12:00:00');
+    labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    dataPoints.push(running);
+    hasBets = true;
+  }
+
+  if (!hasBets) {
+    area.innerHTML = ''; // No data yet, hide
+    return;
+  }
+
+  // Determine overall color based on final value
+  const finalVal = dataPoints[dataPoints.length - 1] ?? 0;
+  const lineColor = finalVal >= 0 ? '#00e87a' : '#ff3355';
+  const fillColor = finalVal >= 0 ? 'rgba(0,232,122,0.08)' : 'rgba(255,51,85,0.08)';
+
+  // Per-point dot colors (green if up, red if down at that point)
+  const pointColors = dataPoints.map(v => v >= 0 ? '#00e87a' : '#ff3355');
+
+  // Build card HTML
+  area.innerHTML = `
+    <div class="pnl-chart-card">
+      <div class="pnl-chart-header">
+        <div class="pnl-chart-title">💰 House Net P&L</div>
+        <div class="pnl-chart-sub">Cumulative profit / loss · $10/game · end-of-day snapshots</div>
+      </div>
+      <div class="pnl-chart-wrap">
+        <canvas id="pnl-canvas"></canvas>
+      </div>
+    </div>`;
+
+  const ctx = document.getElementById('pnl-canvas');
+  if (!ctx) return;
+
+  if (_pnlChart) { _pnlChart.destroy(); _pnlChart = null; }
+
+  _pnlChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Net P&L',
+        data: dataPoints,
+        borderColor: lineColor,
+        borderWidth: 2.5,
+        backgroundColor: fillColor,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: pointColors,
+        spanGaps: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const v = ctx.parsed.y;
+              return (v >= 0 ? '+$' : '-$') + Math.abs(v).toFixed(2) + ' cumulative';
+            }
+          },
+          bodyFont: { family: "'Barlow Condensed', sans-serif" },
+          titleFont: { family: "'Barlow Condensed', sans-serif" },
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#ffffff08' },
+          ticks: { font: { family: "'Barlow Condensed', sans-serif", size: 10 }, color: '#555', maxRotation: 45 }
+        },
+        y: {
+          grid: { color: '#ffffff08' },
+          border: { dash: [4, 4] },
+          ticks: {
+            font: { family: "'Barlow Condensed', sans-serif", size: 11 },
+            color: '#666',
+            callback: v => (v >= 0 ? '+$' : '-$') + Math.abs(v).toFixed(0)
+          }
+        }
+      }
+    }
+  });
+}
+
 // PREDICTIONS TAB
 // ============================================================
 
@@ -7064,7 +7231,46 @@ function _storageDelete(key) {
 
 // Storage keys
 function _predKey(dateStr) { return 'predictions:' + dateStr; }
-function _predViewingDate() { return _predState.viewingDate || localDateStr(new Date()); }
+
+// Returns the "active" betting date — the most recent day that had picks/games.
+// After midnight, stays on the previous day until all its games are confirmed final
+// (or until 6 AM, whichever comes first) to avoid the page breaking at midnight.
+function _predActiveDate() {
+  const now = new Date();
+  const calendarToday = localDateStr(now);
+  const hour = now.getHours();
+
+  // Between midnight and 6 AM, check if yesterday's games are all done
+  if (hour < 6) {
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = localDateStr(yesterday);
+
+    // Check localStorage for yesterday's picks — if they exist and have ungraded games, stay there
+    try {
+      const raw = localStorage.getItem(_predKey(yesterdayStr));
+      if (raw) {
+        const data = JSON.parse(raw);
+        const picks = data.picks || [];
+        const hasUngradedPicks = picks.length > 0 && picks.some(p => !p.result);
+        if (hasUngradedPicks) return yesterdayStr;
+        // All graded — also check if yesterday had picks at all (meaning it was a game day)
+        if (picks.length > 0) {
+          // All games done, fall through to today
+        } else {
+          return yesterdayStr; // yesterday had no picks yet, stay there
+        }
+      } else {
+        // No picks stored for yesterday — if it's very early AM, stay on yesterday
+        return yesterdayStr;
+      }
+    } catch(e) {}
+  }
+
+  return calendarToday;
+}
+
+function _predViewingDate() { return _predState.viewingDate || _predActiveDate(); }
 
 const _predState = {
   viewingDate: null,   // null = today
@@ -7294,9 +7500,10 @@ async function _predGradePicks(dateStr) {
 
 async function renderPredictions() {
   const container = document.getElementById('predictions-container');
-  const todayStr = localDateStr(new Date());
+  const calendarToday = localDateStr(new Date());
+  const activeDate = _predActiveDate();   // may be yesterday if past midnight & games unfinished
   const viewDate = _predViewingDate();
-  const isToday  = viewDate === todayStr;
+  const isToday  = viewDate === activeDate;  // "today" = the active betting day, not calendar day
 
   // Reset the generate-trigger guard if viewing a different date than last time
   if (_predState.lastTriggerDate !== viewDate) {
@@ -7343,12 +7550,13 @@ async function renderPredictions() {
         Loading…
       </div>
     </div>
+    <div id="pred-pnl-chart-area"></div>
     <div id="pred-history-area"></div>`;
 
   // ── Step 2: Load picks + games + odds in parallel ───────────────
   const [storedRaw, fetchedGames, viewDateOdds] = await Promise.all([
     _storageGet(_predKey(viewDate)),
-    isToday ? espnFetchDate(todayStr).catch(() => null) : Promise.resolve(null),
+    isToday ? espnFetchDate(viewDate).catch(() => null) : Promise.resolve(null),
     fetchOddsForDate(viewDate).catch(() => ({})),
   ]);
 
@@ -7358,7 +7566,7 @@ async function renderPredictions() {
   let games = fetchedGames || [];
   if (isToday && !games.length) {
     games = UPCOMING_GAMES
-      .filter(g => g.date === todayStr)
+      .filter(g => g.date === viewDate)
       .map(g => ({ ...g, isFinal: false, isLive: false, isUpcoming: true }));
   }
 
@@ -7576,7 +7784,7 @@ async function renderPredictions() {
                 <span class="pred-pick-label-text">PICK</span>
                 <span class="pred-pick-name">${pick.pick}</span>
               </div>
-              ${pick.isUpset ? '<span class="pred-pick-tag">UPSET</span>' : ''}
+              
             </div>
             <div class="pred-pick-right">${pickRight}</div>
           </div>
@@ -7589,12 +7797,7 @@ async function renderPredictions() {
     });
     html += `</div>`;
 
-    if (isToday && !locked) {
-      html += `<div style="margin-top:20px;display:flex;align-items:center;gap:12px">
-        <button class="pred-generate-btn" onclick="_predRegenerate()">↺ Re-generate Picks</button>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--muted);letter-spacing:1px">Locks when first game tips off</span>
-      </div>`;
-    } else if (isToday && locked) {
+    if (isToday && locked) {
       html += `<div style="margin-top:16px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase">
         🔒 Picks locked · Games in progress
       </div>`;
@@ -7756,6 +7959,9 @@ async function renderPredictions() {
       hHtml += `</div>`;
       histArea.innerHTML = hHtml;
     }
+
+    // Render P&L chart after history
+    renderPnlChart().catch(() => {});
   }).catch(() => {});
 }
 
@@ -7790,12 +7996,12 @@ function _predPicksLocked(picks, todayGames) {
 // Generates silently in the background; re-renders predictions tab if visible.
 async function _predEnsureTodaysPicks() {
   if (_predState.generating) return;
-  const todayStr = localDateStr(new Date());
-  const existing = await _storageGet(_predKey(todayStr));
+  const activeDate = _predActiveDate();
+  const existing = await _storageGet(_predKey(activeDate));
   if (existing) return;
 
-  // Fetch today's games
-  const fetched = await espnFetchDate(todayStr);
+  // Fetch games for the active date
+  const fetched = await espnFetchDate(activeDate);
   const upcoming = (fetched || []).filter(g => !g.isFinal && !g.isLive);
   if (!upcoming.length) return; // no games or all finished
 
@@ -7803,8 +8009,8 @@ async function _predEnsureTodaysPicks() {
   _predState.generating = true;
   try {
     const picks = await _predGeneratePicks(upcoming);
-    const saveData = { date: todayStr, picks, generatedAt: new Date().toISOString() };
-    await _storageSet(_predKey(todayStr), JSON.stringify(saveData));
+    const saveData = { date: activeDate, picks, generatedAt: new Date().toISOString() };
+    await _storageSet(_predKey(activeDate), JSON.stringify(saveData));
   } catch(e) {
     console.error('Auto-generate picks error:', e);
   }
@@ -7821,13 +8027,13 @@ async function _predGenerateToday() {
   _predState.generating = true;
 
   try {
-    const todayStr = localDateStr(new Date());
-    const fetched = await espnFetchDate(todayStr);
+    const activeDate = _predActiveDate();
+    const fetched = await espnFetchDate(activeDate);
     const upcoming = (fetched || []).filter(g => !g.isFinal && !g.isLive);
     if (upcoming.length) {
       const picks = await _predGeneratePicks(upcoming);
-      const saveData = { date: todayStr, picks, generatedAt: new Date().toISOString() };
-      await _storageSet(_predKey(todayStr), JSON.stringify(saveData));
+      const saveData = { date: activeDate, picks, generatedAt: new Date().toISOString() };
+      await _storageSet(_predKey(activeDate), JSON.stringify(saveData));
     }
   } catch(e) {
     console.error('Prediction error:', e);
@@ -7844,8 +8050,8 @@ async function _predGenerateToday() {
 }
 
 async function _predRegenerate() {
-  const todayStr = localDateStr(new Date());
-  await _storageDelete(_predKey(todayStr));
+  const activeDate = _predActiveDate();
+  await _storageDelete(_predKey(activeDate));
   _predState.generateTriggered = false;
   _predState.lastTriggerDate = null;
   _predGenerateToday();
@@ -7854,23 +8060,25 @@ async function _predRegenerate() {
 function _predNavigate(dir) {
   const current = new Date(_predViewingDate() + 'T12:00:00');
   current.setDate(current.getDate() + dir);
-  const todayStr = localDateStr(new Date());
+  const activeDate = _predActiveDate();
   const newDate = localDateStr(current);
-  _predState.viewingDate = newDate === todayStr ? null : newDate;
+  // Don't navigate forward past the active betting date
+  if (newDate > activeDate) return;
+  _predState.viewingDate = newDate === activeDate ? null : newDate;
   renderPredictions();
 }
 
 function _predJumpToDate(dateStr) {
-  const todayStr = localDateStr(new Date());
-  _predState.viewingDate = dateStr === todayStr ? null : dateStr;
+  const activeDate = _predActiveDate();
+  _predState.viewingDate = dateStr === activeDate ? null : dateStr;
   renderPredictions();
 }
 
 // Auto-grade picks when poll detects new final games
 async function _predAutoGrade() {
-  const todayStr = localDateStr(new Date());
-  await _predGradePicks(todayStr);
-  await _gradeBetsForDate(todayStr);
+  const activeDate = _predActiveDate();
+  await _predGradePicks(activeDate);
+  await _gradeBetsForDate(activeDate);
   // If predictions tab is visible, re-render
   if (document.getElementById('panel-predictions')?.classList.contains('active')) {
     renderPredictions();
