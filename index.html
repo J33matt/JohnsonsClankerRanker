@@ -7197,15 +7197,18 @@ async function fetchOddsForDate(dateStr) {
         const awayML = preferred.awayTeamOdds?.moneyLine
           || preferred.awayTeamOdds?.current?.moneyLine
           || null;
-        // Spread: ESPN stores as a positive number = home spread (e.g. -5.5 home means spread.value = 5.5)
-        const spreadVal = preferred.spread?.value ?? preferred.spread ?? null;
-        const spreadLine = spreadVal != null ? parseFloat(spreadVal) : null;
-        // Spread odds (juice) — usually -110 each side
-        const awaySpreadML = preferred.awayTeamOdds?.spreadOdds?.moneyLine
-          || preferred.awayTeamOdds?.current?.spreadOdds?.moneyLine
+        // Spread: ESPN spread.value is the home team's spread (negative = home favored)
+        // e.g. home -7 → spread.value = -7, so away gets +7
+        const spreadRaw = preferred.spread?.value ?? preferred.spread ?? null;
+        const spreadLine = spreadRaw != null ? parseFloat(spreadRaw) : null;
+        // Spread juice — try multiple ESPN paths
+        const awaySpreadML = preferred.awayTeamOdds?.spreadOdds?.value
+          || preferred.awayTeamOdds?.current?.spreadOdds?.value
+          || preferred.awayTeamOdds?.pointSpread?.moneyLine
           || -110;
-        const homeSpreadML = preferred.homeTeamOdds?.spreadOdds?.moneyLine
-          || preferred.homeTeamOdds?.current?.spreadOdds?.moneyLine
+        const homeSpreadML = preferred.homeTeamOdds?.spreadOdds?.value
+          || preferred.homeTeamOdds?.current?.spreadOdds?.value
+          || preferred.homeTeamOdds?.pointSpread?.moneyLine
           || -110;
         // Over/Under total
         const overUnder = preferred.overUnder?.value ?? preferred.overUnder ?? null;
@@ -8965,12 +8968,17 @@ function _botScoreBet(type, awayAbbr, homeAbbr, ml, spreadLine, total) {
     return homePct / 100 - mlToImplied(ml);
   }
   if (type === 'spread_away' || type === 'spread_home') {
-    // powerDiff > 0 means home is better; spreadLine > 0 means home favored
+    // powerDiff > 0 means home is stronger
+    // spreadLine is home team's number: -7 means home -7 (favored by 7)
+    // Home covers if powerDiff > Math.abs(spreadLine) when home is favored
     const powerDiff = (homeE.power - awayE.power) + 3;
+    const homeSpreadNum = spreadLine || 0; // negative = home favored
     if (type === 'spread_home') {
-      return (powerDiff - (spreadLine || 0)) / 15;
+      // Home covers: powerDiff > -homeSpreadNum (projected margin beats the spread)
+      return (powerDiff + homeSpreadNum) / 15;
     } else {
-      return ((spreadLine || 0) - powerDiff) / 15;
+      // Away covers: projected margin < -homeSpreadNum
+      return (-homeSpreadNum - powerDiff) / 15;
     }
   }
   if (type === 'ou_over' || type === 'ou_under') {
@@ -9255,13 +9263,14 @@ async function _sbSaveBets(bets) {
 function _sbSpread(awayAbbr, homeAbbr) {
   const awayE = ENRICHED_DATA.find(t => t.abbr === awayAbbr);
   const homeE = ENRICHED_DATA.find(t => t.abbr === homeAbbr);
-  if (!awayE || !homeE) return { line: 0, awaySpread: '+0', homeSpread: '-0' };
-  // Home team gets +3 advantage
-  const diff = (homeE.power - awayE.power) + 3;
-  // Round to nearest 0.5
-  const line = Math.round(diff * 2) / 2;
-  const awaySpread = line >= 0 ? `+${line}` : `${line}`;
-  const homeSpread = line >= 0 ? `-${line}` : `+${Math.abs(line)}`;
+  if (!awayE || !homeE) return { line: 0, awaySpread: 'pk', homeSpread: 'pk' };
+  // powerDiff > 0 means home is stronger → home is favored → negative spread for home
+  const powerDiff = (homeE.power - awayE.power) + 3; // +3 home court
+  // line = home team's spread: negative means home is favored
+  const line = -Math.round(powerDiff * 2) / 2;
+  const absSL = Math.abs(line);
+  const homeSpread = line <= 0 ? `-${absSL}` : `+${absSL}`;
+  const awaySpread = line <= 0 ? `+${absSL}` : `-${absSL}`;
   return { line, awaySpread, homeSpread };
 }
 
@@ -9532,9 +9541,9 @@ function _sbLegDesc(leg) {
   const { type, awayAbbr, homeAbbr, line } = leg;
   if (type === 'ml_away') return `${awayAbbr} ML`;
   if (type === 'ml_home') return `${homeAbbr} ML`;
-  // away line stored as -spreadLine so display is +spreadLine when home is favored
-  if (type === 'spread_away') return `${awayAbbr} ${line > 0 ? '+' : ''}${line}`;
-  if (type === 'spread_home') return `${homeAbbr} ${line > 0 ? '-' : '+'}${Math.abs(line)}`;
+  // spread_away leg stores line = -spreadLine (away's number), spread_home stores line = spreadLine (home's number)
+  if (type === 'spread_away') return `${awayAbbr} ${line >= 0 ? '+' : ''}${line}`;
+  if (type === 'spread_home') return `${homeAbbr} ${line >= 0 ? '+' : ''}${line}`;
   if (type === 'ou_over') return `OVER ${line}`;
   if (type === 'ou_under') return `UNDER ${line}`;
   return leg.label || '';
@@ -9741,12 +9750,13 @@ async function renderSportsbook() {
     const prob = gameWinProb(g.away, g.home);
 
     // Real spread from ESPN if available, otherwise power-score fallback
+    // spreadLine = home team's spread: negative means home is favored
     let spreadLine, awaySpread, homeSpread;
     if (od.spreadLine != null && !isNaN(od.spreadLine)) {
-      // ESPN spread.value is typically stored as the home spread (positive = home favored)
-      spreadLine  = od.spreadLine;
-      awaySpread  = spreadLine >= 0 ? `+${spreadLine}` : `${Math.abs(spreadLine)}`;
-      homeSpread  = spreadLine >= 0 ? `-${spreadLine}` : `+${Math.abs(spreadLine)}`;
+      spreadLine = od.spreadLine; // home team's line (e.g. -7 = home -7, away +7)
+      const absSL = Math.abs(spreadLine);
+      homeSpread = spreadLine <= 0 ? `-${absSL}` : `+${absSL}`;
+      awaySpread = spreadLine <= 0 ? `+${absSL}` : `-${absSL}`;
     } else {
       const ps = _sbSpread(g.away, g.home);
       spreadLine = ps.line;
