@@ -8976,11 +8976,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   .sb-bet-odds.even { color: var(--muted); }
 
   /* Bet slip sidebar */
-  .sb-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; align-items: flex-start; }
+  .sb-layout { display: grid; grid-template-columns: 1fr 360px; gap: 28px; align-items: flex-start; }
   @media (max-width: 900px) { .sb-layout { grid-template-columns: 1fr; } }
+  .sb-right-col { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+  .sb-right-col::-webkit-scrollbar { width: 4px; }
+  .sb-right-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
   .sb-slip {
-    position: sticky; top: 20px;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; flex-shrink: 0;
   }
   .sb-slip-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -9685,6 +9687,11 @@ async function _sbAutoSettle() {
       if (finalResult === 'win') payout = bet.stake + _mlPayout(bet.parlayML, bet.stake);
       else if (finalResult === 'push') payout = bet.stake;
       else payout = 0;
+      // Store per-leg results so circles fill in correctly
+      bet.legResults = bet.legs.map(l => {
+        const g = games.find(g => g.home === l.homeAbbr && g.away === l.awayAbbr);
+        return (g && g.isFinal) ? _sbGradeLeg(l, g) : (finalResult === 'win' ? 'win' : 'pending');
+      });
     }
 
     bet.status = 'settled';
@@ -10004,6 +10011,26 @@ function _renderSbGameButtons() {
 // Sportsbook active date — stays on yesterday until all its games are final,
 // so bets settle correctly and the page doesn't jump to "tomorrow" at midnight.
 let _sbActiveDateCache = null;
+let _sbLiveRefreshTimer = null;
+
+// Lightweight refresh: settle open bets and update the bets panel without full re-render
+async function _sbRefreshBets() {
+  if (!_sbProfile) return;
+  const prevBankroll = _sbProfile.bankroll;
+  await _sbAutoSettle();
+  const bets = await _sbLoadBets();
+  const panel = document.getElementById('sb-mybets-panel');
+  if (!panel) return;
+  const openBets = bets.filter(b => b.status === 'open');
+  panel.innerHTML = (openBets.length ? _renderSbOpenBets(openBets) : '') + _renderSbHistory(bets);
+  // Update balance display if it changed
+  if (_sbProfile && _sbProfile.bankroll !== prevBankroll) {
+    const balEl = document.querySelector('.sb-bankroll-val');
+    if (balEl) balEl.textContent = '$' + (_sbProfile.bankroll || 0).toFixed(2);
+    const openEl = document.querySelector('.sb-stat-pill b:last-of-type');
+    if (openEl) openEl.textContent = openBets.length;
+  }
+}
 async function _sbGetActiveDate() {
   if (_sbActiveDateCache) return _sbActiveDateCache;
   const todayStr = localDateStr(new Date());
@@ -10267,7 +10294,8 @@ async function renderSportsbook() {
 
     html += `</div>`;
 
-    // Bet slip
+    // Right column: slip on top, user's bets below
+    html += `<div class="sb-right-col">`;
     html += `
     <div>
       <div class="sb-slip" id="sb-slip-panel">
@@ -10296,20 +10324,21 @@ async function renderSportsbook() {
       </div>
     </div>
     </div>`;
+
+    // My Bets panel inside the right column — always visible
+    html += `<div id="sb-mybets-panel">`;
+    if (openBets.length) html += _renderSbOpenBets(openBets);
+    html += _renderSbHistory(bets);
+    html += `</div>`;
+
+    html += `</div>`; // close sb-right-col
+    html += `</div>`; // close sb-layout (the one opened before sb-games-main)
   }
 
-  // Open bets panel (prominent, above full history)
-  if (openBets.length) {
-    html += _renderSbOpenBets(openBets);
-  }
-
-  // Clanker's picks (shown here only for broke users; non-broke users see it above)
+  // Clanker's picks (shown here only for broke users; non-broke users see it inside games col above)
   if (isBroke) {
     html += _renderBotPicks(botBets, enrichedGames);
   }
-
-  // Full bet history
-  html += _renderSbHistory(bets);
 
   container.innerHTML = html;
 
@@ -10322,6 +10351,10 @@ async function renderSportsbook() {
   // Initialize slip
   _renderSbSlip();
   _renderSbGameButtons();
+
+  // Live refresh: settle + update bets panel every 2 minutes
+  if (_sbLiveRefreshTimer) clearInterval(_sbLiveRefreshTimer);
+  _sbLiveRefreshTimer = setInterval(() => { _sbRefreshBets().catch(() => {}); }, 2 * 60 * 1000);
 }
 
 function _renderSbGameCard(g, openBets) {
@@ -10760,15 +10793,19 @@ function _renderSbBetCard(bet, opts = {}) {
   };
 
   const legsHtml = legs.map((l, i) => {
-    // For settled bets, guess per-leg result from overall (single = same result)
+    // Per-leg result: singles use overall result; parlays use stored legResults if available
     let legResult = null;
     if (!isPending) {
       if (!isParlay) {
-        legResult = bet.result; // single bet — one leg, same result
+        legResult = bet.result;
+      } else if (bet.legResults && bet.legResults[i] != null) {
+        legResult = bet.legResults[i]; // stored at settlement time
+      } else if (bet.result === 'win') {
+        legResult = 'win'; // all legs must have won
+      } else if (bet.result === 'push') {
+        legResult = 'push';
       } else {
-        // Parlay: we don't have per-leg stored results, show grey unless bet is done
-        // If overall is loss, at least one leg lost — show pending for all but it's ambiguous
-        legResult = 'pending';
+        legResult = 'pending'; // loss but no per-leg data — keep gray
       }
     }
 
