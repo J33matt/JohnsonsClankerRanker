@@ -9249,11 +9249,17 @@ function _botScoreBet(type, awayAbbr, homeAbbr, ml, spreadLine, total) {
 async function _botMakeDailyPicks(enrichedGames) {
   if (!_botProfile) return;
   const today = localDateStr(new Date());
-  if (_botProfile.lastPickDate === today && _botProfile.pickVersion === 2) return; // already picked today with current logic
+  if (_botProfile.lastPickDate === today && _botProfile.pickVersion === 3) return; // already picked today with current logic
 
   const bets = await _botLoadBets();
-  // Remove any stale picks from today (e.g. placed with old scoring logic)
+  // Remove any stale/invalid picks from today and refund their stakes
+  const todayOpen = bets.filter(b => b.date === today && b.status === 'open');
   const keptBets = bets.filter(b => b.date !== today || b.status === 'settled');
+  const refund = todayOpen.reduce((sum, b) => sum + (b.stake || 0), 0);
+  if (refund > 0) {
+    _botProfile.bankroll = (_botProfile.bankroll || 0) + refund;
+    await _sbSaveBotProfile();
+  }
   const bankroll = _botProfile.bankroll || 0;
   if (bankroll <= 0) return;
 
@@ -9362,7 +9368,7 @@ async function _botMakeDailyPicks(enrichedGames) {
   if (betPlaced) {
     _botBetsCache = null; // invalidate cache so fresh load picks up new bets
     _botProfile.lastPickDate = today;
-    _botProfile.pickVersion = 2;
+    _botProfile.pickVersion = 3;
     await _botSaveBets(keptBets);
     await _botSave();
   }
