@@ -8058,7 +8058,7 @@ async function renderPredictions() {
   // fill in below as data arrives.
   container.innerHTML = `
     <div class="section-header">
-      <div class="section-title">🎰 Clanker Betting</div>
+      <div class="section-title">🎰 Clanker's Daily Picks</div>
       <div class="section-sub">Clanker's game picks · Tracks record over time</div>
     </div>
     <div class="pred-header-row">
@@ -9393,7 +9393,7 @@ async function _botSettle(enrichedGamesForToday) {
 
     bet.status = 'settled'; bet.result = finalResult; bet.payout = payout; bet.net = payout - bet.stake;
     changed = true;
-    _botProfile.bankroll = Math.max(0, (_botProfile.bankroll || 0) + payout - bet.stake);
+    _botProfile.bankroll = Math.max(0, (_botProfile.bankroll || 0) + payout);  // stake already deducted at placement
     _botProfile.w = (_botProfile.w || 0) + (finalResult === 'win' ? 1 : 0);
     _botProfile.l = (_botProfile.l || 0) + (finalResult === 'loss' ? 1 : 0);
     _botProfile.net = (_botProfile.net || 0) + (payout - bet.stake);
@@ -9661,7 +9661,7 @@ async function _sbAutoSettle() {
 
     // Update profile
     if (_sbProfile) {
-      _sbProfile.bankroll = Math.max(0, (_sbProfile.bankroll || 0) + payout - bet.stake);
+      _sbProfile.bankroll = Math.max(0, (_sbProfile.bankroll || 0) + payout);  // stake already deducted at placement
       _sbProfile.allTimeW = (_sbProfile.allTimeW || 0) + (finalResult === 'win' ? 1 : 0);
       _sbProfile.allTimeL = (_sbProfile.allTimeL || 0) + (finalResult === 'loss' ? 1 : 0);
       _sbProfile.allTimeNet = (_sbProfile.allTimeNet || 0) + (payout - bet.stake);
