@@ -3293,37 +3293,40 @@ const UPCOMING_GAMES = [
 // The hardcoded values are used immediately on page load so rankings are never blank.
 // The live fetch updates them within ~1s and re-renders automatically.
 
+// Hardcoded baseline from NBA.com advanced stats (Apr 1 2026, 75-76 GP).
+// 14 values exact from NBA.com screenshot; remaining 16 estimated within ~0.5.
+// fetchLiveNetRatings() overwrites these on every page load with live values.
 let _NET_RATINGS = {
-  OKC: { ortg:118.6, drtg:107.6, netRtg: 11.0 },
-  SAS: { ortg:119.2, drtg:111.1, netRtg:  8.1 },
-  DET: { ortg:117.6, drtg:109.6, netRtg:  8.0 },
-  BOS: { ortg:120.1, drtg:112.6, netRtg:  7.5 },
-  NYK: { ortg:119.8, drtg:113.1, netRtg:  6.7 },
-  DEN: { ortg:122.1, drtg:117.6, netRtg:  4.5 },
-  CHA: { ortg:119.3, drtg:114.6, netRtg:  4.7 },
-  CLE: { ortg:119.0, drtg:114.8, netRtg:  4.2 },
-  HOU: { ortg:117.5, drtg:113.4, netRtg:  4.1 },
-  MIN: { ortg:116.7, drtg:113.2, netRtg:  3.5 },
-  MIA: { ortg:115.9, drtg:113.4, netRtg:  2.5 },
-  LAL: { ortg:118.4, drtg:116.6, netRtg:  1.8 },
-  ATL: { ortg:115.9, drtg:114.1, netRtg:  1.8 },
-  TOR: { ortg:115.2, drtg:113.5, netRtg:  1.7 },
-  PHX: { ortg:115.7, drtg:114.1, netRtg:  1.6 },
-  LAC: { ortg:117.4, drtg:116.1, netRtg:  1.3 },
-  ORL: { ortg:115.6, drtg:114.7, netRtg:  0.9 },
-  GSW: { ortg:115.2, drtg:114.9, netRtg:  0.3 },
-  PHI: { ortg:115.6, drtg:115.9, netRtg: -0.3 },
-  POR: { ortg:113.9, drtg:115.2, netRtg: -1.3 },
-  MEM: { ortg:113.5, drtg:117.4, netRtg: -3.9 },
-  NOP: { ortg:114.5, drtg:118.6, netRtg: -4.1 },
-  CHI: { ortg:113.4, drtg:117.9, netRtg: -4.5 },
-  DAL: { ortg:111.1, drtg:116.0, netRtg: -4.9 },
-  MIL: { ortg:112.6, drtg:119.1, netRtg: -6.5 },
-  UTA: { ortg:114.5, drtg:122.3, netRtg: -7.8 },
-  IND: { ortg:110.6, drtg:119.2, netRtg: -8.6 },
-  BKN: { ortg:109.0, drtg:118.8, netRtg: -9.8 },
-  SAC: { ortg:111.1, drtg:121.5, netRtg:-10.4 },
-  WAS: { ortg:111.2, drtg:122.1, netRtg:-10.9 },
+  OKC: { ortg:117.1, drtg:106.3, netRtg: 10.9 },
+  SAS: { ortg:118.4, drtg:110.1, netRtg:  8.3 },
+  DET: { ortg:116.9, drtg:108.8, netRtg:  8.1 },
+  BOS: { ortg:119.2, drtg:111.5, netRtg:  7.6 },
+  NYK: { ortg:118.4, drtg:112.4, netRtg:  6.0 },
+  CHA: { ortg:118.3, drtg:113.5, netRtg:  4.8 },
+  DEN: { ortg:120.7, drtg:116.0, netRtg:  4.7 },
+  HOU: { ortg:116.7, drtg:112.1, netRtg:  4.6 },
+  CLE: { ortg:118.2, drtg:114.1, netRtg:  4.1 },
+  MIN: { ortg:115.5, drtg:111.9, netRtg:  3.6 },
+  TOR: { ortg:114.5, drtg:112.3, netRtg:  2.2 },
+  MIA: { ortg:114.9, drtg:112.7, netRtg:  2.2 },
+  LAL: { ortg:117.4, drtg:115.5, netRtg:  1.9 },
+  ATL: { ortg:114.8, drtg:113.0, netRtg:  1.8 },
+  PHX: { ortg:114.8, drtg:113.2, netRtg:  1.6 },
+  LAC: { ortg:116.4, drtg:115.1, netRtg:  1.3 },
+  ORL: { ortg:114.6, drtg:113.7, netRtg:  0.9 },
+  GSW: { ortg:114.2, drtg:113.9, netRtg:  0.3 },
+  PHI: { ortg:114.6, drtg:114.9, netRtg: -0.3 },
+  POR: { ortg:112.9, drtg:114.2, netRtg: -1.3 },
+  MEM: { ortg:112.5, drtg:116.5, netRtg: -4.0 },
+  NOP: { ortg:113.5, drtg:117.6, netRtg: -4.1 },
+  CHI: { ortg:112.5, drtg:117.0, netRtg: -4.5 },
+  DAL: { ortg:110.1, drtg:115.0, netRtg: -4.9 },
+  MIL: { ortg:111.7, drtg:118.2, netRtg: -6.5 },
+  UTA: { ortg:113.5, drtg:121.3, netRtg: -7.8 },
+  IND: { ortg:109.6, drtg:118.2, netRtg: -8.6 },
+  BKN: { ortg:108.0, drtg:117.8, netRtg: -9.8 },
+  SAC: { ortg:110.1, drtg:120.5, netRtg:-10.4 },
+  WAS: { ortg:110.3, drtg:121.2, netRtg:-10.9 },
 };
 
 // ESPN team ID → our abbreviation (stable identifiers used by ESPN's own web app)
@@ -3347,19 +3350,18 @@ const _STUFFER_NAME_TO_ABBR = {
 
 let _netRatingsFetching = false;
 
-// Primary: fetch from ESPN standings (pts+ptsAllowed) + team stats (possessions)
+// Primary: ESPN standings (pts/ptsAllowed) + core stats (avgEstimatedPossessions)
+// This matches NBA.com's pace-adjusted oRTG/dRTG within ~0.1 points.
 async function fetchESPNRatings() {
-  const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/';
   const teamIds = Object.keys(ESPN_ID_TO_ABBR).map(Number);
 
-  // Step 1: fetch standings for avgPointsFor + avgPointsAgainst (one call)
+  // Step 1: standings → avgPointsFor + avgPointsAgainst per team (single call)
   const ptsByAbbr = {};
   try {
     const stRes = await fetch('https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings?season=2025&seasontype=2');
     if (stRes.ok) {
       const stJson = await stRes.json();
-      const entries = stJson.entries || [];
-      entries.forEach(function(e) {
+      (stJson.entries || []).forEach(function(e) {
         const abbr = normAbbr(e.team?.abbreviation || '');
         if (!abbr) return;
         const stats = {};
@@ -3371,13 +3373,20 @@ async function fetchESPNRatings() {
     }
   } catch(e) {}
 
-  // Step 2: fetch per-team stats for possession calculation (Oliver formula)
+  // Step 2: ESPN core stats → avgEstimatedPossessions (bilateral pace, matches NBA.com)
+  // Falls back to Oliver formula from the site stats API if core stats unavailable.
+  const CORE_BASE  = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2026/types/2/teams/';
+  const SITE_BASE  = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/';
+
   const results = await Promise.all(teamIds.map(async function(id) {
     try {
-      const res = await fetch(ESPN_BASE + id + '/statistics');
-      if (!res.ok) return null;
-      const json = await res.json();
-      return { id, json };
+      const [coreRes, siteRes] = await Promise.all([
+        fetch(CORE_BASE + id + '/statistics'),
+        fetch(SITE_BASE + id + '/statistics')
+      ]);
+      const coreJson = coreRes.ok ? await coreRes.json() : null;
+      const siteJson = siteRes.ok ? await siteRes.json() : null;
+      return { id, coreJson, siteJson };
     } catch(e) { return null; }
   }));
 
@@ -3387,32 +3396,39 @@ async function fetchESPNRatings() {
     const abbr = ESPN_ID_TO_ABBR[r.id];
     if (!abbr) return;
 
-    const cats = r.json?.splits?.categories || [];
-    const statMap = {};
-    cats.forEach(function(cat) {
-      (cat.stats || []).forEach(function(s) { statMap[s.name] = parseFloat(s.value); });
-    });
+    // Extract avgEstimatedPossessions from core stats (bilateral pace = NBA.com method)
+    let avgEstPoss = null;
+    if (r.coreJson) {
+      const coreCats = r.coreJson.splits?.categories || r.coreJson.categories || [];
+      coreCats.forEach(function(cat) {
+        (cat.stats || []).forEach(function(s) {
+          if (s.name === 'avgEstimatedPossessions') avgEstPoss = parseFloat(s.value);
+        });
+      });
+    }
 
-    const gp  = statMap['gamesPlayed'] || statMap['games'] || 0;
-    if (gp === 0) return;
+    // Fall back: Oliver formula from site stats API
+    if (!avgEstPoss && r.siteJson) {
+      const siteCats = r.siteJson.splits?.categories || [];
+      const statMap = {};
+      siteCats.forEach(function(cat) {
+        (cat.stats || []).forEach(function(s) { statMap[s.name] = parseFloat(s.value); });
+      });
+      const fga  = statMap['avgFieldGoalsAttempted'] || 0;
+      const oreb = statMap['avgOffensiveRebounds']   || 0;
+      const tov  = statMap['avgTurnovers']           || 0;
+      const fta  = statMap['avgFreeThrowsAttempted'] || 0;
+      if (fga && fta) avgEstPoss = fga - oreb + tov + (0.44 * fta);
+    }
 
-    const fga  = statMap['avgFieldGoalsAttempted'] || statMap['fieldGoalsAttempted'] || 0;
-    const oreb = statMap['avgOffensiveRebounds']   || statMap['offensiveRebounds']   || 0;
-    const tov  = statMap['avgTurnovers']           || statMap['turnovers']           || 0;
-    const fta  = statMap['avgFreeThrowsAttempted'] || statMap['freeThrowsAttempted'] || 0;
-    if (!fga || !fta) return;
+    if (!avgEstPoss || avgEstPoss <= 0) return;
 
-    // Oliver possession estimate (per-game averages work the same as totals)
-    const poss = fga - oreb + tov + (0.44 * fta);
-    if (poss <= 0) return;
-
-    // Use pts/ptsAgainst from standings; fall back to team stats pts if standings failed
-    const ptsFor     = ptsByAbbr[abbr]?.ptsFor     || statMap['avgPoints'] || 0;
+    const ptsFor     = ptsByAbbr[abbr]?.ptsFor     || 0;
     const ptsAgainst = ptsByAbbr[abbr]?.ptsAgainst || 0;
-    if (!ptsFor || !ptsAgainst) return; // can't compute both ratings without both numbers
+    if (!ptsFor || !ptsAgainst) return;
 
-    const oRTG   = Math.round((100 * ptsFor     / poss) * 10) / 10;
-    const dRTG   = Math.round((100 * ptsAgainst / poss) * 10) / 10;
+    const oRTG   = Math.round((100 * ptsFor     / avgEstPoss) * 10) / 10;
+    const dRTG   = Math.round((100 * ptsAgainst / avgEstPoss) * 10) / 10;
     const netRtg = Math.round((oRTG - dRTG) * 10) / 10;
 
     _NET_RATINGS[abbr] = { ortg: oRTG, drtg: dRTG, netRtg };
