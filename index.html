@@ -7417,14 +7417,12 @@ async function fetchOddsForDate(dateStr) {
         // e.g. home -7 → spread.value = -7, so away gets +7
         const spreadRaw = preferred.spread?.value ?? preferred.spread ?? null;
         const spreadLine = spreadRaw != null ? parseFloat(spreadRaw) : null;
-        // Spread juice — try multiple ESPN paths
-        const awaySpreadML = preferred.awayTeamOdds?.spreadOdds?.value
-          || preferred.awayTeamOdds?.current?.spreadOdds?.value
-          || preferred.awayTeamOdds?.pointSpread?.moneyLine
+        // Spread juice — spreadOdds is a direct number on the root odds object
+        const awaySpreadML = preferred.awayTeamOdds?.spreadOdds
+          || parseInt(preferred.awayTeamOdds?.current?.spread?.american)
           || -110;
-        const homeSpreadML = preferred.homeTeamOdds?.spreadOdds?.value
-          || preferred.homeTeamOdds?.current?.spreadOdds?.value
-          || preferred.homeTeamOdds?.pointSpread?.moneyLine
+        const homeSpreadML = preferred.homeTeamOdds?.spreadOdds
+          || parseInt(preferred.homeTeamOdds?.current?.spread?.american)
           || -110;
         // Over/Under total
         const overUnder = preferred.overUnder?.value ?? preferred.overUnder ?? null;
@@ -10004,6 +10002,27 @@ function _sbWinPct(awayML, homeML, awayAbbr, homeAbbr) {
   return gameWinProb(awayAbbr, homeAbbr);
 }
 
+// Fetch ESPN matchup predictor win % for a list of games (keyed by away@home)
+async function _fetchPredictorWinPcts(games) {
+  const result = {};
+  await Promise.all(games.map(async g => {
+    if (!g.eventId) return;
+    try {
+      const url = `https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/events/${g.eventId}/competitions/${g.eventId}/predictor`;
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const json = await res.json();
+      const stats = json.awayTeam?.statistics || [];
+      const proj = stats.find(s => s.name === 'gameProjection');
+      if (proj && proj.value != null) {
+        const awayPct = Math.round(proj.value);
+        result[g.away + '@' + g.home] = { awayPct, homePct: 100 - awayPct };
+      }
+    } catch(e) {}
+  }));
+  return result;
+}
+
 async function renderSportsbook() {
   const container = document.getElementById('sb-container');
   if (!container) return;
@@ -10058,11 +10077,15 @@ async function renderSportsbook() {
   }
   _sbGames = games;
 
+  // Fetch ESPN matchup predictor win % (only for upcoming games that have an eventId)
+  const predictorPcts = await _fetchPredictorWinPcts(games.filter(g => g.isUpcoming && g.eventId)).catch(() => ({}));
+
   // Build enriched games with spreads + totals + odds + win probability
   const enrichedGames = games.map(g => {
     const key = g.away + '@' + g.home;
     const od = odds[key] || {};
-    const prob = _sbWinPct(od.awayML, od.homeML, g.away, g.home);
+    // Use ESPN predictor if available, otherwise fall back to implied moneyline odds
+    const prob = predictorPcts[key] || _sbWinPct(od.awayML, od.homeML, g.away, g.home);
 
     // Real spread from ESPN if available, otherwise power-score fallback
     // spreadLine = home team's spread: negative means home is favored
