@@ -3102,26 +3102,88 @@
     }, 500);
   }
 
+  // ── Shared storage (leaderboard — readable by all users) ──
+  var _sharedCache = {};
+  var _sharedLoaded = false;
+  var _sharedLoading = null;
+  var _sharedSaveTimers = {};
+
+  function _sharedRef(key) {
+    var safeKey = key.replace(/\//g, '__SL__');
+    return _db.collection('shared').doc(safeKey);
+  }
+
+  function _loadShared() {
+    if (_sharedLoaded) return Promise.resolve();
+    if (_sharedLoading) return _sharedLoading;
+    _sharedLoading = _ensureUsername().then(function() {
+      _initFirebase();
+      return _db.collection('shared').get()
+        .then(function(snap) {
+          snap.forEach(function(doc) {
+            var key = doc.id.replace(/__SL__/g, '/');
+            _sharedCache[key] = doc.data().value;
+          });
+          _sharedLoaded = true;
+        })
+        .catch(function() { _sharedLoaded = true; });
+    });
+    return _sharedLoading;
+  }
+
+  function _scheduleSharedSave(key, value) {
+    if (_sharedSaveTimers[key]) clearTimeout(_sharedSaveTimers[key]);
+    _sharedSaveTimers[key] = setTimeout(function() {
+      _sharedRef(key).set({ value: value }).catch(function() {});
+    }, 1500);
+  }
+
   window.storage = {
-    get: async function(key) {
+    get: async function(key, shared) {
+      if (shared) {
+        await _loadShared();
+        var val = _sharedCache[key];
+        if (val === undefined) throw new Error('Key not found: ' + key);
+        return { key: key, value: val };
+      }
       await _load();
       var val = _cache[key];
       if (val === undefined) throw new Error('Key not found: ' + key);
       return { key: key, value: val };
     },
-    set: async function(key, value) {
+    set: async function(key, value, shared) {
+      if (shared) {
+        await _loadShared();
+        _sharedCache[key] = value;
+        _scheduleSharedSave(key, value);
+        return { key: key, value: value };
+      }
       await _load();
       _cache[key] = value;
       _scheduleSave(key, value);
       return { key: key, value: value };
     },
-    delete: async function(key) {
+    delete: async function(key, shared) {
+      if (shared) {
+        await _loadShared();
+        delete _sharedCache[key];
+        if (_sharedSaveTimers[key]) clearTimeout(_sharedSaveTimers[key]);
+        _sharedSaveTimers[key] = setTimeout(function() {
+          _sharedRef(key).delete().catch(function() {});
+        }, 500);
+        return { key: key, deleted: true };
+      }
       await _load();
       delete _cache[key];
       _scheduleDelete(key);
       return { key: key, deleted: true };
     },
-    list: async function(prefix) {
+    list: async function(prefix, shared) {
+      if (shared) {
+        await _loadShared();
+        var keys = Object.keys(_sharedCache).filter(function(k) { return !prefix || k.startsWith(prefix); });
+        return { keys: keys, prefix: prefix };
+      }
       await _load();
       var keys = Object.keys(_cache).filter(function(k) { return !prefix || k.startsWith(prefix); });
       return { keys: keys, prefix: prefix };
@@ -9873,10 +9935,21 @@ async function renderSportsbook() {
     await _sbAutoSettle();
   }
 
-  // Show onboarding if still no profile
+  // Auto-create sportsbook profile using Firebase username (no onboarding prompt)
   if (!_sbProfile) {
-    _renderSbOnboarding(container);
-    return;
+    const autoNick = (localStorage.getItem('jcr.username') || 'Player').replace(/[^a-zA-Z0-9_ ]/g, '').trim().slice(0, 20) || 'Player';
+    const today = localDateStr(new Date());
+    _sbProfile = {
+      nickname: autoNick,
+      bankroll: 100,
+      startBalance: 100,
+      startDate: today,
+      allTimeW: 0, allTimeL: 0, allTimeNet: 0,
+      brokeCount: 0,
+      history: [{ date: today, balance: 100, label: 'Start' }]
+    };
+    await window.storage.set(SB_KEY_PROFILE, JSON.stringify(_sbProfile));
+    await _sbSaveLeaderboard();
   }
 
   // Fetch today's games + odds in parallel with leaderboard
