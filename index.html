@@ -8061,7 +8061,7 @@ async function renderPredictions() {
         </div>
       </div>
       <div class="pred-date-nav">
-        <button class="pred-date-btn" onclick="_predNavigate(-1)" ${viewDate <= '2026-03-29' ? 'disabled' : ''}>◀</button>
+        <button class="pred-date-btn" onclick="_predNavigate(-1)" ${viewDate <= '2026-03-31' ? 'disabled' : ''}>◀</button>
         <div class="pred-date-label">${isToday ? 'TODAY' : _predFmtDate(viewDate)}</div>
         <button class="pred-date-btn" onclick="_predNavigate(1)" ${isToday ? 'disabled' : ''}>▶</button>
       </div>
@@ -8377,8 +8377,8 @@ async function renderPredictions() {
       }
     }
   } else {
-    if (viewDate === '2026-03-29') {
-      picksArea.innerHTML = `<div class="pred-no-games">Betting predictions started on Mar 30</div>`;
+    if (viewDate === '2026-03-31') {
+      picksArea.innerHTML = `<div class="pred-no-games">Betting predictions started on Apr 1</div>`;
     } else {
       picksArea.innerHTML = `<div class="pred-no-games">No picks recorded for ${_predFmtDate(viewDate)}</div>`;
     }
