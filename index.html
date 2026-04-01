@@ -2808,6 +2808,8 @@
     .notables-card:hover { transform: none !important; }
   }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -2980,26 +2982,38 @@
 </main>
 
 <script>
-// ── GitHub cloud storage ─────────────────────────────────────
-// All site data is stored in data.json in the GitHub repo.
-// Token is saved in localStorage (the only localStorage usage).
+// ── Firebase cloud storage ───────────────────────────────────
+// Each user's data stored in Firestore: users/{username}/store/{key}
 (function () {
-  const REPO      = 'J33matt/JohnsonsClankerRanker';
-  const FILE      = 'data.json';
-  const TOKEN_KEY = 'gh.pat';
+  var firebaseConfig = {
+    apiKey: "AIzaSyCCIs7EnqUwWxJfe4yO1OxJ_1glACZ1zEc",
+    authDomain: "johnsonsclankerranker-ba199.firebaseapp.com",
+    projectId: "johnsonsclankerranker-ba199",
+    storageBucket: "johnsonsclankerranker-ba199.firebasestorage.app",
+    messagingSenderId: "40795520767",
+    appId: "1:40795520767:web:17a469f360bae22a2456ca"
+  };
 
-  let _token   = localStorage.getItem(TOKEN_KEY);
-  let _cache   = {};
-  let _sha     = null;
-  let _loaded  = false;
-  let _loading = null;
-  let _saveTimer = null;
-  let _syncEl  = null;
+  var USERNAME_KEY = 'jcr.username';
+  var _username = localStorage.getItem(USERNAME_KEY);
+  var _db = null;
+  var _cache = {};
+  var _loaded = false;
+  var _loading = null;
+  var _saveTimers = {};
+  var _syncEl = null;
+
+  function _initFirebase() {
+    if (!_db) {
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      _db = firebase.firestore();
+    }
+  }
 
   function _showSyncStatus(msg, cls) {
     if (!_syncEl) {
       _syncEl = document.createElement('div');
-      _syncEl.id = 'gh-sync-status';
+      _syncEl.id = 'fb-sync-status';
       _syncEl.style.cssText = 'position:fixed;bottom:12px;right:12px;padding:6px 14px;border-radius:20px;font-family:Barlow Condensed,sans-serif;font-size:0.8rem;letter-spacing:1px;z-index:9999;transition:opacity 0.5s';
       document.body.appendChild(_syncEl);
     }
@@ -3008,147 +3022,116 @@
     _syncEl.style.color       = cls==='ok' ? '#00c864' : cls==='err' ? '#ff4444' : '#ffaa00';
     _syncEl.style.border      = '1px solid ' + (cls==='ok' ? 'rgba(0,200,100,0.3)' : cls==='err' ? 'rgba(255,60,60,0.3)' : 'rgba(255,170,0,0.3)');
     _syncEl.style.opacity = '1';
-    if (cls === 'ok') setTimeout(() => { if (_syncEl) _syncEl.style.opacity = '0'; }, 3000);
+    if (cls === 'ok') setTimeout(function() { if (_syncEl) _syncEl.style.opacity = '0'; }, 3000);
   }
 
-  function _showTokenModal(resolve) {
-    const overlay = document.createElement('div');
+  function _showUsernameModal(resolve) {
+    var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center';
-    overlay.innerHTML = `
-      <div style="background:#12122a;border:1px solid rgba(255,170,0,0.35);border-radius:14px;padding:36px;max-width:420px;width:90%;font-family:'Barlow Condensed',sans-serif">
-        <div style="font-size:1.5rem;letter-spacing:3px;color:#ffaa00;margin-bottom:6px">&#x2601;&#xFE0F; CLOUD SYNC</div>
-        <div style="color:#aaa;font-size:0.92rem;margin-bottom:22px;line-height:1.55">
-          Enter your GitHub Personal Access Token to sync your picks and bets to the cloud.<br><br>
-          Your token is saved locally so you only need to do this once.
-        </div>
-        <input id="gh-pat-input" type="password" placeholder="ghp_..."
-          style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:8px;border:1px solid rgba(255,170,0,0.3);background:rgba(255,255,255,0.05);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:1rem;letter-spacing:1px;margin-bottom:14px;outline:none"/>
-        <button id="gh-pat-btn"
-          style="width:100%;padding:11px;border-radius:8px;border:none;background:#ffaa00;color:#000;font-family:'Barlow Condensed',sans-serif;font-size:1rem;letter-spacing:3px;font-weight:700;cursor:pointer">
-          CONNECT
-        </button>
-        <div id="gh-pat-err" style="color:#ff6b6b;font-size:0.82rem;margin-top:10px;display:none"></div>
-      </div>`;
+    overlay.innerHTML = '<div style="background:#12122a;border:1px solid rgba(255,170,0,0.35);border-radius:14px;padding:36px;max-width:420px;width:90%;font-family:\'Barlow Condensed\',sans-serif">'
+      + '<div style="font-size:1.5rem;letter-spacing:3px;color:#ffaa00;margin-bottom:6px">&#x1F3C0; WELCOME</div>'
+      + '<div style="color:#aaa;font-size:0.92rem;margin-bottom:22px;line-height:1.55">Enter your name to track your picks and compete on the leaderboard.<br><br>This is saved to your browser so you only need to do this once.</div>'
+      + '<input id="jcr-name-input" type="text" placeholder="Your name (e.g. Matt)" maxlength="20"'
+      + ' style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:8px;border:1px solid rgba(255,170,0,0.3);background:rgba(255,255,255,0.05);color:#fff;font-family:\'Barlow Condensed\',sans-serif;font-size:1rem;letter-spacing:1px;margin-bottom:14px;outline:none"/>'
+      + '<button id="jcr-name-btn" style="width:100%;padding:11px;border-radius:8px;border:none;background:#ffaa00;color:#000;font-family:\'Barlow Condensed\',sans-serif;font-size:1rem;letter-spacing:3px;font-weight:700;cursor:pointer">LET\'S GO</button>'
+      + '<div id="jcr-name-err" style="color:#ff6b6b;font-size:0.82rem;margin-top:10px;display:none"></div>'
+      + '</div>';
     document.body.appendChild(overlay);
-    const input = overlay.querySelector('#gh-pat-input');
-    const btn   = overlay.querySelector('#gh-pat-btn');
-    const err   = overlay.querySelector('#gh-pat-err');
+    var input = overlay.querySelector('#jcr-name-input');
+    var btn   = overlay.querySelector('#jcr-name-btn');
+    var err   = overlay.querySelector('#jcr-name-err');
     input.focus();
-    async function tryConnect() {
-      const t = input.value.trim();
-      if (!t) { err.textContent = 'Please enter a token.'; err.style.display = ''; return; }
-      btn.textContent = 'CONNECTING\u2026'; btn.disabled = true;
-      const res = await fetch('https://api.github.com/repos/' + REPO, {
-        headers: { 'Authorization': 'token ' + t }
-      }).catch(() => null);
-      if (!res || !res.ok) {
-        err.textContent = 'Invalid token or no repo access. Try again.';
-        err.style.display = ''; btn.textContent = 'CONNECT'; btn.disabled = false;
-        return;
-      }
-      localStorage.setItem(TOKEN_KEY, t);
-      _token = t;
+    function submit() {
+      var name = input.value.trim();
+      if (!name || name.length < 2) { err.textContent = 'Please enter at least 2 characters.'; err.style.display = ''; return; }
+      var safe = name.replace(/[^a-zA-Z0-9_ ]/g, '').trim();
+      if (!safe) { err.textContent = 'Letters and numbers only please.'; err.style.display = ''; return; }
+      localStorage.setItem(USERNAME_KEY, safe);
+      _username = safe;
       document.body.removeChild(overlay);
-      resolve(t);
+      resolve(safe);
     }
-    btn.onclick = tryConnect;
-    input.onkeydown = e => { if (e.key === 'Enter') tryConnect(); };
+    btn.onclick = submit;
+    input.onkeydown = function(e) { if (e.key === 'Enter') submit(); };
   }
 
-  function _ensureToken() {
-    if (_token) return Promise.resolve(_token);
-    return new Promise(resolve => _showTokenModal(resolve));
+  function _ensureUsername() {
+    if (_username) return Promise.resolve(_username);
+    return new Promise(function(resolve) { _showUsernameModal(resolve); });
+  }
+
+  function _storeRef(key) {
+    var safeKey = key.replace(/\//g, '__SL__');
+    return _db.collection('users').doc(_username).collection('store').doc(safeKey);
   }
 
   function _load() {
     if (_loaded) return Promise.resolve();
     if (_loading) return _loading;
-    _loading = _ensureToken().then(async token => {
-      try {
-        _showSyncStatus('\u27f3 Syncing\u2026', 'sync');
-        const res = await fetch(
-          'https://api.github.com/repos/' + REPO + '/contents/' + FILE + '?t=' + Date.now(),
-          { headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' } }
-        );
-        if (res.ok) {
-          const json = await res.json();
-          _sha = json.sha;
-          _cache = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g, '')))));
+    _loading = _ensureUsername().then(function() {
+      _initFirebase();
+      _showSyncStatus('\u27f3 Syncing\u2026', 'sync');
+      return _db.collection('users').doc(_username).collection('store').get()
+        .then(function(snap) {
+          snap.forEach(function(doc) {
+            var key = doc.id.replace(/__SL__/g, '/');
+            _cache[key] = doc.data().value;
+          });
           _showSyncStatus('\u2713 Synced', 'ok');
-        } else if (res.status === 404) {
-          _cache = {}; _sha = null;
-          _showSyncStatus('\u2713 Ready', 'ok');
-        } else {
-          _showSyncStatus('\u26a0 Sync error', 'err');
-        }
-      } catch(e) { _showSyncStatus('\u26a0 Sync error', 'err'); }
-      _loaded = true;
+          _loaded = true;
+        })
+        .catch(function() { _showSyncStatus('\u26a0 Sync error', 'err'); _loaded = true; });
     });
     return _loading;
   }
 
-  async function _save() {
-    if (!_token) return;
-    try {
+  function _scheduleSave(key, value) {
+    if (_saveTimers[key]) clearTimeout(_saveTimers[key]);
+    _saveTimers[key] = setTimeout(function() {
       _showSyncStatus('\u27f3 Saving\u2026', 'sync');
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(_cache))));
-      const body = { message: 'Update site data', content };
-      if (_sha) body.sha = _sha;
-      const res = await fetch('https://api.github.com/repos/' + REPO + '/contents/' + FILE, {
-        method: 'PUT',
-        headers: {
-          'Authorization': 'token ' + _token,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
-      if (res.ok) {
-        const json = await res.json();
-        _sha = json.content.sha;
-        _showSyncStatus('\u2713 Saved', 'ok');
-      } else {
-        _showSyncStatus('\u26a0 Save failed', 'err');
-      }
-    } catch(e) { _showSyncStatus('\u26a0 Save failed', 'err'); }
+      _storeRef(key).set({ value: value })
+        .then(function() { _showSyncStatus('\u2713 Saved', 'ok'); })
+        .catch(function() { _showSyncStatus('\u26a0 Save failed', 'err'); });
+    }, 1500);
   }
 
-  function _scheduleSave() {
-    if (_saveTimer) clearTimeout(_saveTimer);
-    _saveTimer = setTimeout(_save, 1500);
+  function _scheduleDelete(key) {
+    if (_saveTimers[key]) clearTimeout(_saveTimers[key]);
+    _saveTimers[key] = setTimeout(function() {
+      _storeRef(key).delete().catch(function() {});
+    }, 500);
   }
 
   window.storage = {
-    get: async (key) => {
+    get: async function(key) {
       await _load();
-      const val = _cache[key];
+      var val = _cache[key];
       if (val === undefined) throw new Error('Key not found: ' + key);
-      return { key, value: val };
+      return { key: key, value: val };
     },
-    set: async (key, value) => {
+    set: async function(key, value) {
       await _load();
       _cache[key] = value;
-      _scheduleSave();
-      return { key, value };
+      _scheduleSave(key, value);
+      return { key: key, value: value };
     },
-    delete: async (key) => {
+    delete: async function(key) {
       await _load();
       delete _cache[key];
-      _scheduleSave();
-      return { key, deleted: true };
+      _scheduleDelete(key);
+      return { key: key, deleted: true };
     },
-    list: async (prefix) => {
+    list: async function(prefix) {
       await _load();
-      const keys = Object.keys(_cache).filter(k => !prefix || k.startsWith(prefix));
-      return { keys, prefix };
+      var keys = Object.keys(_cache).filter(function(k) { return !prefix || k.startsWith(prefix); });
+      return { keys: keys, prefix: prefix };
     }
   };
 
-  // Begin loading as soon as DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _load);
+    document.addEventListener('DOMContentLoaded', function() { _load(); });
   } else {
-    setTimeout(_load, 0);
+    setTimeout(function() { _load(); }, 0);
   }
 })();
 // ============================================================
