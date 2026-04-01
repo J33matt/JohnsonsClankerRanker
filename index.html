@@ -7753,41 +7753,61 @@ async function _storageDelete(key) {
 // Storage keys
 function _predKey(dateStr) { return 'predictions:' + dateStr; }
 
-// Returns the "active" betting date — the most recent day that had picks/games.
-// After midnight, stays on the previous day until all its games are confirmed final
-// (or until 6 AM, whichever comes first) to avoid the page breaking at midnight.
+// Active date cache — populated by _initPredActiveDate() before each render.
+let _predActiveDateCache = null;
+
+// Async initializer: loads yesterday's picks from Firebase and determines the
+// correct active date. "Today" doesn't advance until all yesterday's games are graded.
+async function _initPredActiveDate() {
+  const calendarToday = localDateStr(new Date());
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = localDateStr(yesterday);
+
+  // Load yesterday's picks into _memStore if not already there
+  if (!_memStore[_predKey(yesterdayStr)]) {
+    await _storageGet(_predKey(yesterdayStr));
+  }
+
+  try {
+    const raw = _memStore[_predKey(yesterdayStr)];
+    if (raw) {
+      const data = JSON.parse(raw);
+      const picks = data.picks || [];
+      // Stay on yesterday if any picks still have no result (games not final yet)
+      if (picks.length > 0 && picks.some(p => !p.result)) {
+        _predActiveDateCache = yesterdayStr;
+        return;
+      }
+    }
+  } catch(e) {}
+
+  _predActiveDateCache = calendarToday;
+}
+
+// Sync accessor — always use after awaiting _initPredActiveDate().
 function _predActiveDate() {
+  if (_predActiveDateCache) return _predActiveDateCache;
+  // Fallback: use _memStore sync check (before cache is warmed)
   const now = new Date();
   const calendarToday = localDateStr(now);
   const hour = now.getHours();
-
-  // Between midnight and 6 AM, check if yesterday's games are all done
   if (hour < 6) {
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = localDateStr(yesterday);
-
-    // Check in-memory mirror for yesterday's picks — if they exist and have ungraded games, stay there
     try {
       const raw = _memStore[_predKey(yesterdayStr)];
       if (raw) {
         const data = JSON.parse(raw);
         const picks = data.picks || [];
-        const hasUngradedPicks = picks.length > 0 && picks.some(p => !p.result);
-        if (hasUngradedPicks) return yesterdayStr;
-        // All graded — also check if yesterday had picks at all (meaning it was a game day)
-        if (picks.length > 0) {
-          // All games done, fall through to today
-        } else {
-          return yesterdayStr; // yesterday had no picks yet, stay there
-        }
+        if (picks.length > 0 && picks.some(p => !p.result)) return yesterdayStr;
+        if (picks.length === 0) return yesterdayStr;
       } else {
-        // No picks stored for yesterday — if it's very early AM, stay on yesterday
         return yesterdayStr;
       }
     } catch(e) {}
   }
-
   return calendarToday;
 }
 
@@ -8021,8 +8041,9 @@ async function _predGradePicks(dateStr) {
 
 async function renderPredictions() {
   const container = document.getElementById('predictions-container');
+  await _initPredActiveDate();  // load Firebase data & determine correct active date
   const calendarToday = localDateStr(new Date());
-  const activeDate = _predActiveDate();   // may be yesterday if past midnight & games unfinished
+  const activeDate = _predActiveDate();   // today = last day with ungraded games
   const viewDate = _predViewingDate();
   const isToday  = viewDate === activeDate;  // "today" = the active betting day, not calendar day
 
@@ -8566,6 +8587,7 @@ async function _predEnsureTodaysPicks() {
   }
   _predState.generating = false;
 
+  _predActiveDateCache = null;  // reset so next render recalculates active date
   // Re-render if predictions tab is open
   if (document.getElementById('panel-predictions')?.classList.contains('active')) {
     renderPredictions();
