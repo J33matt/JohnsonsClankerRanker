@@ -9953,6 +9953,40 @@ function _renderSbGameButtons() {
 }
 
 // ── Main render ───────────────────────────────────────────────
+// Sportsbook active date — stays on yesterday until all its games are final,
+// so bets settle correctly and the page doesn't jump to "tomorrow" at midnight.
+let _sbActiveDateCache = null;
+async function _sbGetActiveDate() {
+  if (_sbActiveDateCache) return _sbActiveDateCache;
+  const todayStr = localDateStr(new Date());
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = localDateStr(yesterday);
+  try {
+    const games = await espnFetchDate(yesterdayStr).catch(() => null);
+    if (games && games.length > 0 && games.some(g => !g.isFinal)) {
+      _sbActiveDateCache = yesterdayStr;
+      return yesterdayStr;
+    }
+  } catch(e) {}
+  _sbActiveDateCache = todayStr;
+  return todayStr;
+}
+
+// Convert moneyline to implied true probability (vig removed).
+// Falls back to power-score model when real odds aren't available.
+function _sbWinPct(awayML, homeML, awayAbbr, homeAbbr) {
+  if (awayML && homeML && awayML !== -110 && homeML !== -110) {
+    const toRaw = ml => ml > 0 ? 100 / (ml + 100) : Math.abs(ml) / (Math.abs(ml) + 100);
+    const awayRaw = toRaw(awayML), homeRaw = toRaw(homeML);
+    const total = awayRaw + homeRaw;
+    return {
+      awayPct: Math.round((awayRaw / total) * 100),
+      homePct: Math.round((homeRaw / total) * 100)
+    };
+  }
+  return gameWinProb(awayAbbr, homeAbbr);
+}
+
 async function renderSportsbook() {
   const container = document.getElementById('sb-container');
   if (!container) return;
@@ -9966,6 +10000,7 @@ async function renderSportsbook() {
   // Run auto-settle (only meaningful if there's a profile)
   if (_sbProfile) {
     await _sbAutoSettle();
+    _sbActiveDateCache = null;  // recalculate active date after settling
   }
 
   // Auto-create sportsbook profile using Firebase username (no onboarding prompt)
@@ -9985,8 +10020,8 @@ async function renderSportsbook() {
     await _sbSaveLeaderboard();
   }
 
-  // Fetch today's games + odds in parallel with leaderboard
-  const today = localDateStr(new Date());
+  // Determine active date — stays on yesterday until all games are final
+  const today = await _sbGetActiveDate();
   const [fetchedGames, odds, leaderboard, bets] = await Promise.all([
     espnFetchDate(today).catch(() => null),
     fetchOddsForDate(today).catch(() => ({})),
@@ -10007,7 +10042,7 @@ async function renderSportsbook() {
   const enrichedGames = games.map(g => {
     const key = g.away + '@' + g.home;
     const od = odds[key] || {};
-    const prob = gameWinProb(g.away, g.home);
+    const prob = _sbWinPct(od.awayML, od.homeML, g.away, g.home);
 
     // Real spread from ESPN if available, otherwise power-score fallback
     // spreadLine = home team's spread: negative means home is favored
