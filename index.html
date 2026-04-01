@@ -9258,7 +9258,7 @@ async function _botMakeDailyPicks(enrichedGames) {
   const refund = todayOpen.reduce((sum, b) => sum + (b.stake || 0), 0);
   if (refund > 0) {
     _botProfile.bankroll = (_botProfile.bankroll || 0) + refund;
-    await _sbSaveBotProfile();
+    await _botSave();
   }
   const bankroll = _botProfile.bankroll || 0;
   if (bankroll <= 0) return;
