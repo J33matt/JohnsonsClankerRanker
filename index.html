@@ -3347,12 +3347,31 @@ const _STUFFER_NAME_TO_ABBR = {
 
 let _netRatingsFetching = false;
 
-// Primary: fetch from ESPN stats API and calculate ratings ourselves
+// Primary: fetch from ESPN standings (pts+ptsAllowed) + team stats (possessions)
 async function fetchESPNRatings() {
   const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/';
   const teamIds = Object.keys(ESPN_ID_TO_ABBR).map(Number);
 
-  // Fetch all 30 teams in parallel
+  // Step 1: fetch standings for avgPointsFor + avgPointsAgainst (one call)
+  const ptsByAbbr = {};
+  try {
+    const stRes = await fetch('https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings?season=2025&seasontype=2');
+    if (stRes.ok) {
+      const stJson = await stRes.json();
+      const entries = stJson.entries || [];
+      entries.forEach(function(e) {
+        const abbr = normAbbr(e.team?.abbreviation || '');
+        if (!abbr) return;
+        const stats = {};
+        (e.stats || []).forEach(function(s) { stats[s.name] = s.value; });
+        const ptsFor     = parseFloat(stats['avgPointsFor']     || 0);
+        const ptsAgainst = parseFloat(stats['avgPointsAgainst'] || 0);
+        if (ptsFor > 0) ptsByAbbr[abbr] = { ptsFor, ptsAgainst };
+      });
+    }
+  } catch(e) {}
+
+  // Step 2: fetch per-team stats for possession calculation (Oliver formula)
   const results = await Promise.all(teamIds.map(async function(id) {
     try {
       const res = await fetch(ESPN_BASE + id + '/statistics');
@@ -3368,36 +3387,32 @@ async function fetchESPNRatings() {
     const abbr = ESPN_ID_TO_ABBR[r.id];
     if (!abbr) return;
 
-    // ESPN returns splits.categories array. Find the stats we need by name.
     const cats = r.json?.splits?.categories || [];
     const statMap = {};
     cats.forEach(function(cat) {
-      (cat.stats || []).forEach(function(s) {
-        statMap[s.name] = parseFloat(s.value);
-      });
+      (cat.stats || []).forEach(function(s) { statMap[s.name] = parseFloat(s.value); });
     });
 
-    const gp   = statMap['gamesPlayed'] || statMap['games'] || 0;
+    const gp  = statMap['gamesPlayed'] || statMap['games'] || 0;
     if (gp === 0) return;
 
-    // Per-game averages → season totals
-    const pts    = (statMap['avgPoints']                || statMap['points']                || 0);
-    const ptsAll = (statMap['avgPointsAllowed']         || statMap['pointsAllowed']         || 0);
-    const fga    = (statMap['avgFieldGoalsAttempted']   || statMap['fieldGoalsAttempted']   || 0);
-    const oreb   = (statMap['avgOffensiveRebounds']     || statMap['offensiveRebounds']     || 0);
-    const tov    = (statMap['avgTurnovers']             || statMap['turnovers']             || 0);
-    const fta    = (statMap['avgFreeThrowsAttempted']   || statMap['freeThrowsAttempted']   || 0);
+    const fga  = statMap['avgFieldGoalsAttempted'] || statMap['fieldGoalsAttempted'] || 0;
+    const oreb = statMap['avgOffensiveRebounds']   || statMap['offensiveRebounds']   || 0;
+    const tov  = statMap['avgTurnovers']           || statMap['turnovers']           || 0;
+    const fta  = statMap['avgFreeThrowsAttempted'] || statMap['freeThrowsAttempted'] || 0;
+    if (!fga || !fta) return;
 
-    if (!fga || !fta) return; // missing key stats · skip this team
-
-    // Standard NBA possession estimate (Oliver formula)
-    // Possessions = FGA - OffReb + TOV + (0.44 × FTA)
-    // Using per-game values gives the same ratio as season totals
+    // Oliver possession estimate (per-game averages work the same as totals)
     const poss = fga - oreb + tov + (0.44 * fta);
     if (poss <= 0) return;
 
-    const oRTG  = Math.round((100 * pts    / poss) * 10) / 10;
-    const dRTG  = Math.round((100 * ptsAll / poss) * 10) / 10;
+    // Use pts/ptsAgainst from standings; fall back to team stats pts if standings failed
+    const ptsFor     = ptsByAbbr[abbr]?.ptsFor     || statMap['avgPoints'] || 0;
+    const ptsAgainst = ptsByAbbr[abbr]?.ptsAgainst || 0;
+    if (!ptsFor || !ptsAgainst) return; // can't compute both ratings without both numbers
+
+    const oRTG   = Math.round((100 * ptsFor     / poss) * 10) / 10;
+    const dRTG   = Math.round((100 * ptsAgainst / poss) * 10) / 10;
     const netRtg = Math.round((oRTG - dRTG) * 10) / 10;
 
     _NET_RATINGS[abbr] = { ortg: oRTG, drtg: dRTG, netRtg };
@@ -3907,7 +3922,7 @@ function schedulePoll() {
 // Standalone ratings refresh — runs every 30 minutes regardless of game activity.
 // Ensures oRTG, dRTG, and net rating stay current even on off-days or between polls.
 // fetchLiveNetRatings() already calls renderRankings() internally when data changes.
-setInterval(function() { fetchLiveNetRatings(); }, 30 * 60 * 1000);
+setInterval(function() { fetchLiveNetRatings(); }, 10 * 60 * 1000);
 
 const SORT_COLUMNS = [
   { key: 'power',    label: 'Power Score', center: false },
@@ -8668,6 +8683,8 @@ function showTab(id, btn) {
     document.getElementById('ai-analysis-text').innerHTML = `<div id="ai-loading"><div class="mini-spinner"></div> Generating fresh analysis...</div>`;
     fetchAIAnalysis();
     renderRankings();
+    // Refresh net ratings in the background so values update as games finish
+    fetchLiveNetRatings();
   }
   if (id === 'predictions') renderPredictions().catch(function(e) {
     const c = document.getElementById('predictions-container');
