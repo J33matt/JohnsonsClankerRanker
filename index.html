@@ -2830,12 +2830,12 @@
   <div class="nav-tabs-inner" style="max-width:1400px; margin:0 auto; padding:0 40px; display:flex; width:100%;">
     <button class="tab-btn active" onclick="showTab('rankings', this)">Rankings</button>
     <button class="tab-btn" onclick="showTab('scores', this)">Scores</button>
-    <button class="tab-btn" onclick="showTab('predictions', this)">Betting</button>
+    <button class="tab-btn" onclick="showTab('sportsbook', this)">🎰 Sportsbook</button>
+    <button class="tab-btn" onclick="showTab('predictions', this)">Picks</button>
     <button class="tab-btn" onclick="showTab('playoffs', this)">Playoffs</button>
     <button class="tab-btn" onclick="showTab('simulator', this)">Simulator</button>
     <button class="tab-btn" onclick="showTab('draft', this)">Draft</button>
     <button class="tab-btn" onclick="showTab('graph', this)">Graph</button>
-    <button class="tab-btn" onclick="showTab('sportsbook', this)">🎰 Sportsbook</button>
   </div>
 </div>
 
@@ -8914,22 +8914,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* Bet buttons grid */
   .sb-bet-grid {
     display: grid; grid-template-columns: 1fr 1fr 1fr;
-    gap: 1px; background: var(--border); border-top: 1px solid var(--border);
+    gap: 0; background: var(--surface2); border-top: 1px solid var(--border);
   }
-  .sb-bet-col { background: var(--surface); display: flex; flex-direction: column; gap: 1px; }
+  .sb-bet-col { background: var(--surface2); display: flex; flex-direction: column; gap: 0; padding: 6px 5px; border-right: 1px solid var(--border); }
+  .sb-bet-col:last-child { border-right: none; }
   .sb-bet-col-header {
-    font-family: 'Barlow Condensed', sans-serif; font-size: 0.6rem; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--muted); text-align: center; padding: 6px 0 4px;
-    background: var(--surface2);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.58rem; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--muted); text-align: center; padding: 4px 0 6px;
   }
   .sb-bet-btn {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 8px 6px; background: var(--surface); cursor: pointer; border: none;
-    transition: background 0.15s; min-height: 48px; gap: 2px;
+    padding: 7px 4px; background: rgba(255,255,255,0.04); cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.13); border-radius: 6px; margin-bottom: 4px;
+    transition: background 0.15s, border-color 0.15s; min-height: 50px; gap: 2px;
   }
-  .sb-bet-btn:hover { background: rgba(255,170,0,0.08); }
-  .sb-bet-btn.selected { background: rgba(255,170,0,0.16); }
-  .sb-bet-btn.in-parlay { background: rgba(51,153,255,0.12); }
+  .sb-bet-btn:last-child { margin-bottom: 0; }
+  .sb-bet-btn:hover { background: rgba(255,170,0,0.1); border-color: rgba(255,170,0,0.45); }
+  .sb-bet-btn.selected { background: rgba(255,170,0,0.22); border-color: #ffaa00; border-width: 1.5px; }
+  .sb-bet-btn.in-parlay { background: rgba(51,153,255,0.15); border-color: rgba(51,153,255,0.55); }
   .sb-bet-btn.blocked { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
   .sb-bet-label {
     font-family: 'Bebas Neue', sans-serif; font-size: 0.9rem; letter-spacing: 1px;
@@ -9400,7 +9402,7 @@ async function _botSettle(enrichedGamesForToday) {
   if (_botProfile.bankroll <= 0) {
     const today = localDateStr(new Date());
     if (!_botProfile.brokeDate || _botProfile.brokeDate !== today) {
-      _botProfile.bankroll = 50;
+      _botProfile.bankroll = 25;
       _botProfile.brokeDate = today;
     }
   }
@@ -9673,7 +9675,7 @@ async function _sbAutoSettle() {
       if (_sbProfile.bankroll <= 0) {
         const today = localDateStr(new Date());
         if (!_sbProfile.brokeDate || _sbProfile.brokeDate !== today) {
-          _sbProfile.bankroll = 50;
+          _sbProfile.bankroll = 25;
           _sbProfile.brokeDate = today;
           _sbProfile.brokeCount = (_sbProfile.brokeCount || 0) + 1;
         }
@@ -10020,6 +10022,9 @@ async function renderSportsbook() {
     await _sbSaveLeaderboard();
   }
 
+  // Save leaderboard entry to keep it fresh for other users
+  if (_sbProfile) { _sbSaveLeaderboard().catch(() => {}); }
+
   // Determine active date — stays on yesterday until all games are final
   const today = await _sbGetActiveDate();
   const [fetchedGames, odds, leaderboard, bets] = await Promise.all([
@@ -10143,7 +10148,7 @@ async function renderSportsbook() {
 
   if (isBroke) {
     const brokeMsg = (_sbProfile.brokeCount || 0) > 1
-      ? `You've gone broke ${_sbProfile.brokeCount} times now. Check back tomorrow for $50.`
+      ? `You've gone broke ${_sbProfile.brokeCount} times now. Check back tomorrow for $25.`
       : 'You\'ve exhausted your starting balance. Come back tomorrow for a fresh $50 stake.';
     html += `<div class="sb-broke-banner">
       <div class="sb-broke-icon">💸</div>
