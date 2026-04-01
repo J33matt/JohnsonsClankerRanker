@@ -9233,12 +9233,12 @@ function _botScoreBet(type, awayAbbr, homeAbbr, ml, spreadLine, total) {
     }
   }
   if (type === 'ou_over' || type === 'ou_under') {
-    const awayN = _NET_RATINGS[awayAbbr] || { ortg: 115, drtg: 115 };
-    const homeN = _NET_RATINGS[homeAbbr] || { ortg: 115, drtg: 115 };
-    // ortg/drtg are per-100-possessions. NBA game ≈ 98 possessions per team.
-    // Projected points: ortg * 0.98. Total = away projected pts + home projected pts.
-    const awayProjPts = awayN.ortg * 0.98;
-    const homeProjPts = homeN.ortg * 0.98;
+    const awayN = _NET_RATINGS[awayAbbr] || { ortg: 114, drtg: 114 };
+    const homeN = _NET_RATINGS[homeAbbr] || { ortg: 114, drtg: 114 };
+    // Defensive-adjusted projection: each team's pts = avg of their offense vs opponent's defense.
+    // NBA game ≈ 98 possessions per team.
+    const awayProjPts = (awayN.ortg + homeN.drtg) / 2 * 0.98;
+    const homeProjPts = (homeN.ortg + awayN.drtg) / 2 * 0.98;
     const projTotal   = awayProjPts + homeProjPts;
     const edge = (projTotal - (total || 225)) / 10;
     return type === 'ou_over' ? edge : -edge;
@@ -9294,9 +9294,18 @@ async function _botMakeDailyPicks(enrichedGames) {
     }
   }
 
-  // Sort by edge, pick top 3 highest-value bets
+  // Sort by edge, pick top 3 highest-value bets — max 1 O/U to ensure variety
   candidates.sort((a, b) => b.score - a.score);
-  const picks = candidates.slice(0, 3).filter(c => c.score > 0.01);
+  const picks = [];
+  let ouCount = 0;
+  for (const c of candidates) {
+    if (picks.length >= 3) break;
+    if (c.score <= 0.01) break;
+    const isOU = c.type === 'ou_over' || c.type === 'ou_under';
+    if (isOU && ouCount >= 1) continue;
+    picks.push(c);
+    if (isOU) ouCount++;
+  }
   if (!picks.length) return;
 
   const stake = Math.min(Math.floor(bankroll * 0.2), bankroll);
