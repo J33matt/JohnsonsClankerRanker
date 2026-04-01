@@ -4379,7 +4379,7 @@ function renderScoresHtml(data) {
   const _picksMLMap = {};
   try {
     const todayStr = localDateStr(new Date());
-    const raw = localStorage.getItem('predictions:' + todayStr);
+    const raw = _memStore['predictions:' + todayStr];
     if (raw) {
       const stored = JSON.parse(raw);
       (stored.picks || []).forEach(p => {
@@ -7721,22 +7721,25 @@ async function renderPnlChart() {
 
 // Storage wrappers · uses localStorage (works in any browser).
 // Falls back to a simple in-memory store if localStorage is blocked.
-const _memStore = {};
-function _storageGet(key) {
+const _memStore = {};  // in-memory mirror for sync access (e.g. _predActiveDate)
+async function _storageGet(key) {
   try {
-    const val = localStorage.getItem(key);
-    return Promise.resolve(val ? { value: val } : null);
+    const r = await window.storage.get(key);
+    if (r && r.value != null) { _memStore[key] = r.value; return { value: r.value }; }
+    return null;
   } catch(e) {
-    return Promise.resolve(_memStore[key] ? { value: _memStore[key] } : null);
+    return _memStore[key] ? { value: _memStore[key] } : null;
   }
 }
-function _storageSet(key, val) {
-  try { localStorage.setItem(key, val); } catch(e) { _memStore[key] = val; }
-  return Promise.resolve(true);
+async function _storageSet(key, val) {
+  _memStore[key] = val;  // update mirror immediately for sync reads
+  try { await window.storage.set(key, val); } catch(e) {}
+  return true;
 }
-function _storageDelete(key) {
-  try { localStorage.removeItem(key); } catch(e) { delete _memStore[key]; }
-  return Promise.resolve(true);
+async function _storageDelete(key) {
+  delete _memStore[key];
+  try { await window.storage.delete(key); } catch(e) {}
+  return true;
 }
 
 // Storage keys
@@ -7756,9 +7759,9 @@ function _predActiveDate() {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = localDateStr(yesterday);
 
-    // Check localStorage for yesterday's picks — if they exist and have ungraded games, stay there
+    // Check in-memory mirror for yesterday's picks — if they exist and have ungraded games, stay there
     try {
-      const raw = localStorage.getItem(_predKey(yesterdayStr));
+      const raw = _memStore[_predKey(yesterdayStr)];
       if (raw) {
         const data = JSON.parse(raw);
         const picks = data.picks || [];
