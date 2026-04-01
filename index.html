@@ -7722,9 +7722,15 @@ async function renderPnlChart() {
 // Storage wrappers · uses localStorage (works in any browser).
 // Falls back to a simple in-memory store if localStorage is blocked.
 const _memStore = {};  // in-memory mirror for sync access (e.g. _predActiveDate)
+
+// The entire betting tab belongs to Clanker, not individual users.
+// Both picks (predictions:) and P&L (bets:) are shared across all users.
+function _isSharedKey(key) { return key.startsWith('predictions:') || key.startsWith('bets:'); }
+
 async function _storageGet(key) {
+  const shared = _isSharedKey(key);
   try {
-    const r = await window.storage.get(key);
+    const r = await window.storage.get(key, shared);
     if (r && r.value != null) { _memStore[key] = r.value; return { value: r.value }; }
     return null;
   } catch(e) {
@@ -7732,13 +7738,15 @@ async function _storageGet(key) {
   }
 }
 async function _storageSet(key, val) {
-  _memStore[key] = val;  // update mirror immediately for sync reads
-  try { await window.storage.set(key, val); } catch(e) {}
+  _memStore[key] = val;
+  const shared = _isSharedKey(key);
+  try { await window.storage.set(key, val, shared); } catch(e) {}
   return true;
 }
 async function _storageDelete(key) {
   delete _memStore[key];
-  try { await window.storage.delete(key); } catch(e) {}
+  const shared = _isSharedKey(key);
+  try { await window.storage.delete(key, shared); } catch(e) {}
   return true;
 }
 
