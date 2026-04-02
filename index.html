@@ -3290,6 +3290,33 @@
     }
   };
 
+  // ── Public auth API (exposed to global scope for sportsbook) ────
+  window._jcrAuth = {
+    // Show sign-in modal if not authenticated. Resolves when signed in.
+    ensureAuth: function() { return _ensureAuth(); },
+    // Reset load state so storage re-fetches from Firestore after sign-in
+    resetLoad: function() { _loaded = false; _loading = null; },
+    // Get / set display name (localStorage keyed by UID)
+    getDisplayName: function() { return _displayName; },
+    setDisplayName: function(name) {
+      _displayName = name;
+      if (_uid) localStorage.setItem('jcr.nick.' + _uid, name);
+    },
+    // Sign out: clears all auth state and resolves when done
+    signOut: function() {
+      if (!_auth) return Promise.reject(new Error('Auth not initialised'));
+      return _auth.signOut().then(function() {
+        _uid = null;
+        _displayName = null;
+        _authPromise = null;
+        _authRestorePromise = null;
+        _loaded = false;
+        _loading = null;
+        _cache = {};
+      });
+    }
+  };
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() { _load(); });
   } else {
@@ -10218,13 +10245,12 @@ async function renderSportsbook() {
   try {
 
   // Sign-in required for sportsbook — prompts Google auth + username picker on first visit
-  await _ensureAuth();
+  await window._jcrAuth.ensureAuth();
 
   // Reset the Firestore load state after sign-in.
   // _sbAutoSettle() at page-load runs _load() in "offline" mode (no auth yet),
   // setting _loaded=true with an empty cache. Clear it so we actually fetch from Firestore.
-  _loaded = false;
-  _loading = null;
+  window._jcrAuth.resetLoad();
 
   // Only load from storage if we don't already have a profile in memory
   if (!_sbProfile) {
@@ -10239,7 +10265,7 @@ async function renderSportsbook() {
 
   // Auto-create sportsbook profile using Firebase username (no onboarding prompt)
   if (!_sbProfile) {
-    const autoNick = (_displayName || 'Player').replace(/[^a-zA-Z0-9_ ]/g, '').trim().slice(0, 20) || 'Player';
+    const autoNick = (window._jcrAuth.getDisplayName() || 'Player').replace(/[^a-zA-Z0-9_ ]/g, '').trim().slice(0, 20) || 'Player';
     const today = localDateStr(new Date());
     _sbProfile = {
       nickname: autoNick,
@@ -11167,33 +11193,26 @@ function _sbEditNickname() {
   if (!_sbProfile) return;
   const safe = newNick.trim().slice(0, 20);
   _sbProfile.nickname = safe;
-  _displayName = safe;
-  if (_uid) localStorage.setItem('jcr.nick.' + _uid, safe);
+  window._jcrAuth.setDisplayName(safe);
   _sbSaveProfile().then(() => { _sbSaveLeaderboard(); renderSportsbook(); });
 }
 
 function _sbSignOut() {
   if (!confirm('Sign out of Johnson\'s Clanker Ranker Sportsbook?')) return;
-  if (!_auth) return;
-  _auth.signOut().then(function() {
-    _uid = null;
-    _displayName = null;
-    _authPromise = null;
-    _authRestorePromise = null;
-    _loaded = false;
-    _loading = null;
-    _cache = {};
-    _sbProfile = null;
-    _sbGames = null;
-    if (typeof _sbEnrichedGamesCache !== 'undefined') _sbEnrichedGamesCache = null;
-    if (typeof _sbLiveRefreshTimer !== 'undefined' && _sbLiveRefreshTimer) {
-      clearInterval(_sbLiveRefreshTimer);
-      _sbLiveRefreshTimer = null;
-    }
-    renderSportsbook();
-  }).catch(function(e) {
-    alert('Sign-out failed: ' + (e.message || 'Unknown error'));
-  });
+  window._jcrAuth.signOut()
+    .then(function() {
+      _sbProfile = null;
+      _sbGames = null;
+      if (typeof _sbEnrichedGamesCache !== 'undefined') _sbEnrichedGamesCache = null;
+      if (typeof _sbLiveRefreshTimer !== 'undefined' && _sbLiveRefreshTimer) {
+        clearInterval(_sbLiveRefreshTimer);
+        _sbLiveRefreshTimer = null;
+      }
+      renderSportsbook();
+    })
+    .catch(function(e) {
+      alert('Sign-out failed: ' + (e.message || 'Unknown error'));
+    });
 }
 
 async function _sbStartFresh() {
