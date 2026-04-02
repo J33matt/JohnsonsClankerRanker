@@ -9559,12 +9559,14 @@ async function _sbSaveLeaderboard() {
   if (!_sbProfile) return;
   const safeNick = (_sbProfile.nickname || 'anon').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 20);
   const userKey = 'leaderboard.' + safeNick;
+  const totalBets = (_sbProfile.allTimeW || 0) + (_sbProfile.allTimeL || 0);
   const entry = {
     nickname: _sbProfile.nickname,
     bankroll: _sbProfile.bankroll,
     w: _sbProfile.allTimeW || 0,
     l: _sbProfile.allTimeL || 0,
     net: _sbProfile.allTimeNet || 0,
+    bets: totalBets,
     ts: Date.now()
   };
   try { await window.storage.set(userKey, JSON.stringify(entry), true); } catch(e) {
@@ -10714,6 +10716,7 @@ function _renderSbLeaderboard(entries) {
     const changeStr = (changeFromStart >= 0 ? '+' : '') + '$' + Math.abs(changeFromStart).toFixed(0);
     const changePct = ((changeFromStart / 100) * 100).toFixed(0);
     const changeColor = changeFromStart > 0 ? 'var(--green)' : changeFromStart < 0 ? 'var(--red)' : 'var(--muted)';
+    const betsPlaced = e.bets != null ? e.bets : (e.w || 0) + (e.l || 0);
 
     return `<div class="sb-lb-row${isYou ? ' you' : ''}${e._notInTop ? ' not-in-top' : ''}">
       <div class="sb-lb-rank ${rankCls}">${rankDisplay}</div>
@@ -10722,7 +10725,8 @@ function _renderSbLeaderboard(entries) {
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:var(--muted);letter-spacing:1px;margin-top:1px">${record}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:${changeColor};letter-spacing:1px">${changeStr} (${changePct}%)</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);letter-spacing:1px">${betsPlaced} bet${betsPlaced !== 1 ? 's' : ''}</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;color:${changeColor};letter-spacing:1px">${changeStr} (${changePct}%)</div>
       </div>
       <div class="sb-lb-balance">$${(e.bankroll || 0).toFixed(2)}</div>
     </div>`;
@@ -10736,7 +10740,7 @@ function _renderSbLeaderboard(entries) {
     <div class="sb-lb-row" style="background:var(--surface2);border-bottom:1px solid var(--border)">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Rank</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Player</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:right">vs Start</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:right">Bets · ROI</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:right">Balance</div>
     </div>
     ${rows}
@@ -10841,6 +10845,43 @@ function _renderSbBetCard(bet, opts = {}) {
     const logoA = awayLogo ? `<img src="${awayLogo}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;border-radius:2px" onerror="this.style.display='none'">` : '';
     const logoH = homeLogo ? `<img src="${homeLogo}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;border-radius:2px" onerror="this.style.display='none'">` : '';
 
+    // O/U progress bar — shown when the game is live and the bet is still open
+    let ouBarHtml = '';
+    if (isPending && (l.type === 'ou_over' || l.type === 'ou_under')) {
+      const liveG = (_sbEnrichedGamesCache || _sbGames || []).find(g =>
+        (g.home === l.homeAbbr && g.away === l.awayAbbr) ||
+        (g.home === l.awayAbbr && g.away === l.homeAbbr)
+      );
+      if (liveG && liveG.isLive) {
+        const currentPts = (liveG.homeScore || 0) + (liveG.awayScore || 0);
+        const ouLine = l.line || 0;
+        // Scale: bar fills from 0 → line × 1.15 so there's room to exceed
+        const maxPts = Math.max(ouLine * 1.15, currentPts + 5);
+        const pct = Math.min(100, (currentPts / maxPts) * 100);
+        const linePct = Math.min(99, (ouLine / maxPts) * 100);
+        const isOver = l.type === 'ou_over';
+        const barColor = currentPts >= ouLine
+          ? (isOver ? 'var(--green)' : 'var(--red)')
+          : (isOver ? 'rgba(255,255,255,0.3)' : 'var(--green)');
+        const statusLbl = currentPts >= ouLine
+          ? (isOver ? `✓ Over by ${currentPts - ouLine}` : `✗ Over by ${currentPts - ouLine}`)
+          : `${ouLine - currentPts} pts needed`;
+        ouBarHtml = `
+          <div style="margin-top:8px">
+            <div style="display:flex;justify-content:space-between;font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;color:var(--muted);margin-bottom:3px">
+              <span>${currentPts} pts</span>
+              <span style="color:${currentPts>=ouLine?(isOver?'var(--green)':'var(--red)'):'var(--muted)'}">${statusLbl}</span>
+              <span>O/U ${ouLine}</span>
+            </div>
+            <div style="position:relative;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:visible">
+              <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width 0.4s"></div>
+              <div style="position:absolute;top:-3px;left:${linePct}%;width:2px;height:12px;background:var(--accent2);border-radius:1px;transform:translateX(-50%)"></div>
+            </div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;color:var(--muted);margin-top:2px;letter-spacing:1px">${liveG.status || 'LIVE'}</div>
+          </div>`;
+      }
+    }
+
     return `
       <div style="display:flex;align-items:flex-start;gap:11px;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.05)">
         ${legDot(legResult)}
@@ -10848,6 +10889,7 @@ function _renderSbBetCard(bet, opts = {}) {
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.98rem;font-weight:700;color:var(--text);line-height:1.2">${desc}</div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:2px">${typeStr}</div>
           <div style="display:flex;align-items:center;gap:5px;margin-top:4px;font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted)">${logoA}${logoH} ${gameStr}</div>
+          ${ouBarHtml}
         </div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px;color:var(--muted);flex-shrink:0">${_fmtML(l.ml)}</div>
       </div>`;
