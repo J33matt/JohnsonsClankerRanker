@@ -8153,7 +8153,32 @@ async function renderPredictions() {
       });
     }
     const mlChanged = _attachMoneylines(storedData.picks, viewDateOdds);
-    if (mlChanged) {
+
+    // Attach final scores + results from freshly-fetched games BEFORE rendering
+    // so pick cards always show scores on the first render (not just after background grading)
+    let scoresAttached = false;
+    if (games.length) {
+      storedData.picks.forEach(pick => {
+        const game = games.find(g =>
+          g.isFinal && (
+            (g.home === pick.homeAbbr && g.away === pick.awayAbbr) ||
+            (g.home === pick.awayAbbr && g.away === pick.homeAbbr)
+          )
+        );
+        if (!game) return;
+        if (!pick.finalScore) {
+          pick.finalScore = `${game.away} ${game.awayScore}-${game.homeScore} ${game.home}`;
+          scoresAttached = true;
+        }
+        if (!pick.result) {
+          const winner = game.homeScore > game.awayScore ? game.home : game.away;
+          pick.result = pick.pick === winner ? 'correct' : 'wrong';
+          scoresAttached = true;
+        }
+      });
+    }
+
+    if (mlChanged || scoresAttached) {
       _storageSet(_predKey(viewDate), JSON.stringify(storedData)).catch(() => {});
     }
   }
@@ -8254,7 +8279,7 @@ async function renderPredictions() {
           const scores = parseFinalScores();
           const scoreDisplay = scores
             ? `<div class="pred-score-display" style="font-size:1.3rem">${scores.awayS}<span class="pred-score-sep" style="font-size:1rem"> - </span>${scores.homeS}</div>`
-            : '';
+            : `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;letter-spacing:1px;color:${pick.result==='correct'?'var(--green)':pick.result==='wrong'?'var(--red)':'var(--muted)'}">${pick.result==='correct'?'✓ CORRECT':pick.result==='wrong'?'✗ WRONG':'—'}</div>`;
           centerHtml = `<div class="pred-tip-time" style="font-size:0.65rem">FINAL</div>${scoreDisplay}`;
         } else {
           centerHtml = `<span class="pred-tip-time">${pick.tipTime || 'TODAY'}</span>
@@ -8428,7 +8453,7 @@ async function renderPredictions() {
     }
   } else {
     if (viewDate === '2026-03-31') {
-      picksArea.innerHTML = `<div class="pred-no-games">Betting predictions started on Apr 1</div>`;
+      picksArea.innerHTML = `<div class="pred-no-games">Game predictions started on Apr 1</div>`;
     } else {
       picksArea.innerHTML = `<div class="pred-no-games">No picks recorded for ${_predFmtDate(viewDate)}</div>`;
     }
