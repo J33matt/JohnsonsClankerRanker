@@ -3069,28 +3069,23 @@
     };
   }
 
-  // After Google sign-in: resolve display nickname from localStorage (keyed by UID).
-  // No Firestore read needed — avoids security-rule complexity on the profile doc.
+  // Resolve display nickname from localStorage (keyed by UID — no Firestore read needed).
+  // Always prompts on first sign-in so every user picks their own username.
   function _ensureNickname(user) {
     var stored = localStorage.getItem('jcr.nick.' + user.uid);
     if (stored) return Promise.resolve(stored);
-    // Auto-use Google first name if valid — no extra modal for most users
-    var autoName = (user.displayName || '').split(' ')[0].replace(/[^a-zA-Z0-9_ ]/g, '').trim().slice(0, 20);
-    if (autoName.length >= 2) {
-      localStorage.setItem('jcr.nick.' + user.uid, autoName);
-      return Promise.resolve(autoName);
-    }
-    // Fallback: only prompt if Google name is unusable
+    // First time on this device — show the nickname picker
     return new Promise(function(resolve) { _showNicknameModal(user, resolve); });
   }
 
   function _showNicknameModal(user, resolve) {
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10000;display:flex;align-items:center;justify-content:center';
+    var suggested = ((user.displayName || '').split(' ')[0] || '').replace(/[^a-zA-Z0-9_ ]/g, '').trim().slice(0, 20);
     overlay.innerHTML = '<div style="background:#12122a;border:1px solid rgba(255,170,0,0.35);border-radius:14px;padding:36px;max-width:420px;width:90%;font-family:\'Barlow Condensed\',sans-serif">'
       + '<div style="font-size:1.5rem;letter-spacing:3px;color:#ffaa00;margin-bottom:6px">&#x1F3C0; ONE MORE THING</div>'
       + '<div style="color:#aaa;font-size:0.92rem;margin-bottom:22px;line-height:1.55">Choose a display name for the sportsbook leaderboard.</div>'
-      + '<input id="jcr-nick-input" type="text" placeholder="Your name (e.g. Matt)" maxlength="20"'
+      + '<input id="jcr-nick-input" type="text" placeholder="Your name (e.g. Matt)" maxlength="20" value="' + suggested + '"'
       + ' style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:8px;border:1px solid rgba(255,170,0,0.3);background:rgba(255,255,255,0.05);color:#fff;font-family:\'Barlow Condensed\',sans-serif;font-size:1rem;letter-spacing:1px;margin-bottom:14px;outline:none"/>'
       + '<button id="jcr-nick-btn" style="width:100%;padding:11px;border-radius:8px;border:none;background:#ffaa00;color:#000;font-family:\'Barlow Condensed\',sans-serif;font-size:1rem;letter-spacing:3px;font-weight:700;cursor:pointer">LET\'S GO</button>'
       + '<div id="jcr-nick-err" style="color:#ff6b6b;font-size:0.82rem;margin-top:10px;display:none"></div>'
@@ -3100,6 +3095,7 @@
     var btn   = overlay.querySelector('#jcr-nick-btn');
     var err   = overlay.querySelector('#jcr-nick-err');
     input.focus();
+    if (suggested) input.select();
     function submit() {
       var name = input.value.trim();
       if (!name || name.length < 2) { err.textContent = 'Please enter at least 2 characters.'; err.style.display = ''; return; }
@@ -3113,10 +3109,35 @@
     input.onkeydown = function(e) { if (e.key === 'Enter') submit(); };
   }
 
-  // _authPromise caches the sign-in flow so simultaneous callers share one promise (prevents double modal)
+  // _authPromise — caches the interactive sign-in flow (prevents double modal from parallel callers)
   var _authPromise = null;
+  // _authRestorePromise — caches the silent session-restore check (no modal ever shown)
+  var _authRestorePromise = null;
 
-  // Main auth gate — resolves with uid once signed in (sets _uid + _displayName as side effects)
+  // Silent auth restore — called from _load() / _loadShared(). Never shows a modal.
+  // Sets _uid + _displayName if the user is already signed in, otherwise resolves with nothing.
+  function _tryRestoreAuth() {
+    if (_uid) return Promise.resolve();
+    if (_authRestorePromise) return _authRestorePromise;
+    _initFirebase();
+    _authRestorePromise = new Promise(function(resolve) {
+      var done = false;
+      var unsub = _auth.onAuthStateChanged(function(user) {
+        if (done) return;
+        done = true;
+        unsub();
+        if (user) {
+          _uid = user.uid;
+          _ensureNickname(user).then(function(nick) { _displayName = nick; resolve(); });
+        } else {
+          resolve(); // not signed in — silently continue, no modal
+        }
+      });
+    });
+    return _authRestorePromise;
+  }
+
+  // Interactive auth gate — called ONLY from renderSportsbook(). Shows sign-in modal if needed.
   function _ensureAuth() {
     if (_uid) return Promise.resolve(_uid);
     if (_authPromise) return _authPromise;
@@ -3129,10 +3150,7 @@
         unsub();
         if (user) {
           _uid = user.uid;
-          _ensureNickname(user).then(function(nick) {
-            _displayName = nick;
-            resolve(_uid);
-          });
+          _ensureNickname(user).then(function(nick) { _displayName = nick; resolve(_uid); });
         } else {
           _showSignInModal(resolve);
         }
@@ -3149,7 +3167,8 @@
   function _load() {
     if (_loaded) return Promise.resolve();
     if (_loading) return _loading;
-    _loading = _ensureAuth().then(function() {
+    _loading = _tryRestoreAuth().then(function() {
+      if (!_uid) { _loaded = true; return; } // not signed in — skip Firestore, work offline
       _initFirebase();
       _showSyncStatus('\u27f3 Syncing\u2026', 'sync');
       return _db.collection('users').doc(_uid).collection('store').get()
@@ -3197,7 +3216,7 @@
   function _loadShared() {
     if (_sharedLoaded) return Promise.resolve();
     if (_sharedLoading) return _sharedLoading;
-    _sharedLoading = _ensureAuth().then(function() {
+    _sharedLoading = _tryRestoreAuth().then(function() {
       _initFirebase();
       return _db.collection('shared').get()
         .then(function(snap) {
@@ -10196,6 +10215,9 @@ async function renderSportsbook() {
   if (!container) return;
   container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>Loading Sportsbook…</div>`;
 
+  // Sign-in required for sportsbook — prompts Google auth + username picker on first visit
+  await _ensureAuth();
+
   // Only load from storage if we don't already have a profile in memory
   if (!_sbProfile) {
     await _sbLoadProfile();
@@ -11140,6 +11162,7 @@ function _sbSignOut() {
     _uid = null;
     _displayName = null;
     _authPromise = null;
+    _authRestorePromise = null;
     _loaded = false;
     _loading = null;
     _cache = {};
