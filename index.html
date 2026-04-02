@@ -9326,7 +9326,7 @@ function _sbNickIsBlocked(nick) {
 const BOT_NAME      = "Johnson's Clanker Ranker 🤖";
 const BOT_KEY       = 'sb.bot.profile';
 const BOT_BETS_KEY  = 'sb.bot.bets';
-const BOT_RESET_VER = 7; // bump this to force a full bot reset
+const BOT_RESET_VER = 8; // bump this to force a full bot reset
 const BOT_LB_KEY    = 'leaderboard.ClankerRanker_BOT';
 const BOT_START_BAL = 100;
 
@@ -9450,20 +9450,12 @@ async function _botMakeDailyPicks(enrichedGames) {
   const bankroll = _botProfile.bankroll || 0;
   if (bankroll <= 0) return;
 
-  // Only bet on upcoming games — never on live or final games
+  // Prefer upcoming games; fall back to live/final so Clanker always has picks
   const upcoming = enrichedGames.filter(g => !g.isFinal && !g.isLive);
 
-  let gamesToPick = upcoming;
+  let gamesToPick = upcoming.length ? upcoming : enrichedGames;
 
   if (!gamesToPick.length) {
-    if (enrichedGames.length > 0) {
-      // ESPN returned today's games but they're ALL live/final — lines have closed.
-      // Mark today as done so we don't keep retrying with stale data.
-      _botProfile.lastPickDate = today;
-      _botProfile.pickVersion = 3;
-      await _botSave();
-      return;
-    }
     // ESPN returned nothing at all — fall back to static schedule so Clanker
     // always has picks (only happens on days with no ESPN coverage)
     gamesToPick = UPCOMING_GAMES.slice(0, 10).map(g => {
