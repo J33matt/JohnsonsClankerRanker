@@ -9508,6 +9508,17 @@ async function _botMakeDailyPicks(enrichedGames) {
     picks.push(c);
     if (isOU) ouCount++;
   }
+  // Fallback: if no bets cleared the edge threshold, take best available anyway
+  if (!picks.length) {
+    ouCount = 0;
+    for (const c of candidates) {
+      if (picks.length >= 3) break;
+      const isOU = c.type === 'ou_over' || c.type === 'ou_under';
+      if (isOU && ouCount >= 1) continue;
+      picks.push(c);
+      if (isOU) ouCount++;
+    }
+  }
   if (!picks.length) return;
 
   const stake = Math.min(Math.floor(bankroll * 0.2), bankroll);
