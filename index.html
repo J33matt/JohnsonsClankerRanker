@@ -9359,11 +9359,13 @@ async function _botSave() {
   // Update leaderboard
   try {
     await window.storage.set(BOT_LB_KEY, JSON.stringify({
+      v: 2,  // version — pre-auth entries lack this and are filtered from display
       nickname: BOT_NAME,
       bankroll: _botProfile.bankroll,
       w: _botProfile.w || 0,
       l: _botProfile.l || 0,
       net: _botProfile.net || 0,
+      bets: (_botProfile.w || 0) + (_botProfile.l || 0),
       ts: Date.now()
     }), true);
   } catch(e) {}
@@ -9709,6 +9711,7 @@ async function _sbSaveLeaderboard() {
   const userKey = 'leaderboard.' + safeNick;
   const totalBets = (_sbProfile.allTimeW || 0) + (_sbProfile.allTimeL || 0);
   const entry = {
+    v: 2,  // version — pre-auth entries lack this and are filtered from display
     nickname: _sbProfile.nickname,
     bankroll: _sbProfile.bankroll,
     w: _sbProfile.allTimeW || 0,
@@ -10006,10 +10009,10 @@ async function _sbFetchLeaderboard() {
         if (raw) entries.push(JSON.parse(raw.value));
       } catch(e) {}
     }));
-    // Sort by bankroll descending, filter out stale (no ts in last 60 days)
+    // Only show post-auth entries (v >= 2); filter out stale (no ts in last 60 days)
     const cutoff = Date.now() - 60 * 24 * 60 * 60 * 1000;
     return entries
-      .filter(e => e.nickname && e.bankroll != null && (!e.ts || e.ts > cutoff))
+      .filter(e => e.v >= 2 && e.nickname && e.bankroll != null && (!e.ts || e.ts > cutoff))
       .sort((a, b) => b.bankroll - a.bankroll)
       .slice(0, 15);
   } catch(e) { return []; }
