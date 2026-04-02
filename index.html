@@ -10215,8 +10215,16 @@ async function renderSportsbook() {
   if (!container) return;
   container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>Loading Sportsbook…</div>`;
 
+  try {
+
   // Sign-in required for sportsbook — prompts Google auth + username picker on first visit
   await _ensureAuth();
+
+  // Reset the Firestore load state after sign-in.
+  // _sbAutoSettle() at page-load runs _load() in "offline" mode (no auth yet),
+  // setting _loaded=true with an empty cache. Clear it so we actually fetch from Firestore.
+  _loaded = false;
+  _loading = null;
 
   // Only load from storage if we don't already have a profile in memory
   if (!_sbProfile) {
@@ -10485,6 +10493,15 @@ async function renderSportsbook() {
   // Live refresh: settle + update bets panel every 2 minutes
   if (_sbLiveRefreshTimer) clearInterval(_sbLiveRefreshTimer);
   _sbLiveRefreshTimer = setInterval(() => { _sbRefreshBets().catch(() => {}); }, 2 * 60 * 1000);
+
+  } catch(e) {
+    // Surface any error instead of leaving the spinner up forever
+    console.error('renderSportsbook error:', e);
+    if (container) container.innerHTML = `<div style="padding:48px;text-align:center;font-family:'Barlow Condensed',sans-serif;color:var(--red);letter-spacing:2px">
+      ⚠ Failed to load sportsbook<br><span style="font-size:0.78rem;color:var(--muted);margin-top:8px;display:block">${e.message || String(e)}</span>
+      <button onclick="renderSportsbook()" style="margin-top:18px;padding:9px 22px;border-radius:8px;border:1px solid rgba(255,60,60,0.4);background:transparent;color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;letter-spacing:2px;cursor:pointer">↻ Try Again</button>
+    </div>`;
+  }
 }
 
 function _renderSbGameCard(g, openBets) {
