@@ -9326,7 +9326,7 @@ function _sbNickIsBlocked(nick) {
 const BOT_NAME      = "Johnson's Clanker Ranker 🤖";
 const BOT_KEY       = 'sb.bot.profile';
 const BOT_BETS_KEY  = 'sb.bot.bets';
-const BOT_RESET_VER = 8; // bump this to force a full bot reset
+const BOT_RESET_VER = 9; // bump this to force a full bot reset
 const BOT_LB_KEY    = 'leaderboard.ClankerRanker_BOT';
 const BOT_START_BAL = 100;
 
@@ -9390,47 +9390,102 @@ async function _botSaveBets(bets) {
   }
 }
 
-// Score a potential bet for the bot (higher = better value)
-function _botScoreBet(type, awayAbbr, homeAbbr, ml, spreadLine, total) {
+// ── Advanced Bot Probability Engine ─────────────────────────────────────────
+
+// Standard normal CDF approximation (Hart 1968, max error < 7.5e-8)
+function _botNormalCDF(z) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const poly = t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  const p = 1 - 0.398942280 * Math.exp(-0.5 * z * z) * poly;
+  return z >= 0 ? p : 1 - p;
+}
+
+// Multi-signal matchup model: blends net ratings, win%, power score, and streak
+// Returns { homeWinProb, awayWinProb, projMargin, projTotal }
+function _botEstimateMatchup(awayAbbr, homeAbbr) {
   const awayE = ENRICHED_DATA.find(t => t.abbr === awayAbbr);
   const homeE = ENRICHED_DATA.find(t => t.abbr === homeAbbr);
-  if (!awayE || !homeE) return 0;
+  const awayN = _NET_RATINGS[awayAbbr] || { ortg: 114, drtg: 114, netRtg: 0 };
+  const homeN = _NET_RATINGS[homeAbbr] || { ortg: 114, drtg: 114, netRtg: 0 };
 
-  const { homePct, awayPct } = gameWinProb(awayAbbr, homeAbbr);
-  const mlToImplied = m => m < 0 ? Math.abs(m) / (Math.abs(m) + 100) : 100 / (m + 100);
+  if (!awayE || !homeE) return { homeWinProb: 0.55, awayWinProb: 0.45, projMargin: 3, projTotal: 222 };
 
-  if (type === 'ml_away') {
-    return awayPct / 100 - mlToImplied(ml);
+  // Signal 1: Net rating differential → logistic (most predictive in NBA)
+  // Each point of net rating ≈ ~2.5 pts/game; +3 for home court
+  const netDiff = (homeN.netRtg - awayN.netRtg) + 3.0;
+  const netProb = 1 / (1 + Math.exp(-netDiff * 0.10));
+
+  // Signal 2: Win % → Bill James Log5 formula
+  const hWP = Math.max(0.10, Math.min(0.90, homeE.winPct || 0.500));
+  const aWP = Math.max(0.10, Math.min(0.90, awayE.winPct || 0.500));
+  const log5D = hWP + aWP - 2 * hWP * aWP;
+  const log5Prob = log5D > 0 ? (hWP - hWP * aWP) / log5D : 0.5;
+
+  // Signal 3: Composite power score
+  const pwrDiff = (homeE.power - awayE.power) * 0.4 + 2.5;
+  const pwrProb = 1 / (1 + Math.exp(-pwrDiff * 0.12));
+
+  // Signal 4: Recent streak momentum (hot/cold teams, modest effect)
+  const hStr = homeE.streak || 0;
+  const aStr = awayE.streak || 0;
+  const streakAdj = Math.max(-0.05, Math.min(0.05, (hStr - aStr) * 0.012));
+
+  // Weighted ensemble — net rating dominates (45%), log5 strong (30%), power fills rest
+  const rawProb = 0.45 * netProb + 0.30 * log5Prob + 0.25 * pwrProb + streakAdj;
+  const homeWinProb = Math.max(0.22, Math.min(0.78, rawProb));
+
+  // Projected point margin: offense vs opponent defense, +2.5 home court
+  const POSS = 98;
+  const awayProjPts = ((awayN.ortg + homeN.drtg) / 2) * (POSS / 100);
+  const homeProjPts = ((homeN.ortg + awayN.drtg) / 2) * (POSS / 100) + 2.5;
+  const projMargin = homeProjPts - awayProjPts; // positive = home wins by X
+
+  // Projected game total: additive offense-defense adjustments around league avg
+  const LG = 114;
+  const awayAdjPts = ((awayN.ortg - LG) + (LG - homeN.drtg) + LG) * (POSS / 100);
+  const homeAdjPts = ((homeN.ortg - LG) + (LG - awayN.drtg) + LG) * (POSS / 100);
+  const projTotal = awayAdjPts + homeAdjPts;
+
+  return { homeWinProb, awayWinProb: 1 - homeWinProb, projMargin, projTotal };
+}
+
+// Raw Kelly Criterion fraction: f* = (p·b − q) / b  where b = decimal odds net profit
+// Positive = bet has positive expected value; fractional Kelly (25%) used for safety
+function _botKellyFraction(prob, ml) {
+  if (prob <= 0 || prob >= 1) return 0;
+  const decNet = ml >= 100 ? ml / 100 : 100 / Math.abs(ml); // net profit per $1 wagered
+  const kelly = (prob * (decNet + 1) - 1) / decNet;
+  return Math.max(0, kelly);
+}
+
+// Analyze a single bet: returns { prob, edge, kelly, score }
+// score > 0 means positive expected value; higher = stronger edge
+function _botAnalyzeBet(type, mu, ml, spreadLine, total) {
+  const actualML = ml || -110;
+  const implied = actualML < 0 ? Math.abs(actualML) / (Math.abs(actualML) + 100) : 100 / (actualML + 100);
+  const MARGIN_SD = 13; // NBA point spread std deviation
+  const TOTAL_SD  = 12; // NBA game total std deviation
+
+  let prob = 0;
+  if      (type === 'ml_home')     { prob = mu.homeWinProb; }
+  else if (type === 'ml_away')     { prob = mu.awayWinProb; }
+  else if (type === 'spread_home') {
+    // P(home wins by more than the spread number, e.g. -7 means home must win by 7+)
+    const needMargin = -(spreadLine || 0);
+    prob = _botNormalCDF((mu.projMargin - needMargin) / MARGIN_SD);
   }
-  if (type === 'ml_home') {
-    return homePct / 100 - mlToImplied(ml);
+  else if (type === 'spread_away') {
+    const needMargin = -(spreadLine || 0);
+    prob = 1 - _botNormalCDF((mu.projMargin - needMargin) / MARGIN_SD);
   }
-  if (type === 'spread_away' || type === 'spread_home') {
-    // powerDiff > 0 means home is stronger
-    // spreadLine is home team's number: -7 means home -7 (favored by 7)
-    // Home covers if powerDiff > Math.abs(spreadLine) when home is favored
-    const powerDiff = (homeE.power - awayE.power) + 3;
-    const homeSpreadNum = spreadLine || 0; // negative = home favored
-    if (type === 'spread_home') {
-      // Home covers: powerDiff > -homeSpreadNum (projected margin beats the spread)
-      return (powerDiff + homeSpreadNum) / 15;
-    } else {
-      // Away covers: projected margin < -homeSpreadNum
-      return (-homeSpreadNum - powerDiff) / 15;
-    }
-  }
-  if (type === 'ou_over' || type === 'ou_under') {
-    const awayN = _NET_RATINGS[awayAbbr] || { ortg: 114, drtg: 114 };
-    const homeN = _NET_RATINGS[homeAbbr] || { ortg: 114, drtg: 114 };
-    // Defensive-adjusted projection: each team's pts = avg of their offense vs opponent's defense.
-    // NBA game ≈ 98 possessions per team.
-    const awayProjPts = (awayN.ortg + homeN.drtg) / 2 * 0.98;
-    const homeProjPts = (homeN.ortg + awayN.drtg) / 2 * 0.98;
-    const projTotal   = awayProjPts + homeProjPts;
-    const edge = (projTotal - (total || 225)) / 10;
-    return type === 'ou_over' ? edge : -edge;
-  }
-  return 0;
+  else if (type === 'ou_over')  { prob = 1 - _botNormalCDF(((total || 225) - mu.projTotal) / TOTAL_SD); }
+  else if (type === 'ou_under') { prob = _botNormalCDF(((total || 225) - mu.projTotal) / TOTAL_SD); }
+
+  const edge  = prob - implied;
+  const kelly = _botKellyFraction(prob, actualML);
+  // Score = Kelly × edge direction: only positive for +EV bets, negative for -EV
+  const score = edge > 0 ? kelly : -Math.abs(edge);
+  return { prob, edge, kelly, score };
 }
 
 async function _botMakeDailyPicks(enrichedGames) {
@@ -9474,33 +9529,38 @@ async function _botMakeDailyPicks(enrichedGames) {
 
   if (!gamesToPick.length) return;
 
-  // Score all possible bets across all games
+  // Analyze all possible bets — compute prob + Kelly for each
   const candidates = [];
   const betTypes = ['ml_away','ml_home','spread_away','spread_home','ou_over','ou_under'];
   for (const g of gamesToPick) {
+    const mu = _botEstimateMatchup(g.away, g.home); // compute matchup model once per game
     for (const type of betTypes) {
-      const ml = type === 'ml_away' ? g.awayML
-               : type === 'ml_home' ? g.homeML
-               : (type.startsWith('spread') ? (type === 'spread_away' ? g.awaySpreadML : g.homeSpreadML)
-               : (type === 'ou_over' ? g.overML : g.underML)) || -110;
-      const score = _botScoreBet(type, g.away, g.home, ml, g.spreadLine, g.total);
-      candidates.push({ g, type, ml, score });
+      const ml = (type === 'ml_away'     ? g.awayML
+               : type === 'ml_home'     ? g.homeML
+               : type === 'spread_away' ? g.awaySpreadML
+               : type === 'spread_home' ? g.homeSpreadML
+               : type === 'ou_over'     ? g.overML
+               :                          g.underML) || -110;
+      const { prob, edge, kelly, score } = _botAnalyzeBet(type, mu, ml, g.spreadLine, g.total);
+      candidates.push({ g, type, ml, prob, edge, kelly, score });
     }
   }
 
-  // Sort by edge, pick top 3 highest-value bets — max 1 O/U to ensure variety
+  // Sort by score (positive EV first, then highest Kelly = highest growth rate)
   candidates.sort((a, b) => b.score - a.score);
+
+  // Pick top 3 positive-EV bets — max 1 O/U for variety
   const picks = [];
   let ouCount = 0;
   for (const c of candidates) {
     if (picks.length >= 3) break;
-    if (c.score <= 0.01) break;
+    if (c.score <= 0) break; // stop at negative EV
     const isOU = c.type === 'ou_over' || c.type === 'ou_under';
     if (isOU && ouCount >= 1) continue;
     picks.push(c);
     if (isOU) ouCount++;
   }
-  // Fallback: if no bets cleared the edge threshold, take best available anyway
+  // Fallback: if no bets had positive EV, take best available anyway
   if (!picks.length) {
     ouCount = 0;
     for (const c of candidates) {
@@ -9513,7 +9573,13 @@ async function _botMakeDailyPicks(enrichedGames) {
   }
   if (!picks.length) return;
 
-  const stake = Math.min(Math.floor(bankroll * 0.2), bankroll);
+  // Kelly-based stake sizing helper — 25% fractional Kelly, min $5, max 20% bankroll
+  const kellyStake = (prob, ml) => {
+    const raw = _botKellyFraction(prob, ml);
+    const frac = Math.min(raw * 0.25, 0.20);
+    return Math.max(5, Math.min(Math.floor(bankroll * frac), bankroll));
+  };
+
   let betPlaced = false;
 
   if (picks.length >= 2) {
@@ -9522,7 +9588,7 @@ async function _botMakeDailyPicks(enrichedGames) {
       awayAbbr: p.g.away, homeAbbr: p.g.home, ml: p.ml,
       line: p.type === 'spread_home' ? p.g.spreadLine
           : p.type === 'spread_away' ? -p.g.spreadLine
-          : p.type.startsWith('ou') ? p.g.total : 0,
+          : p.type.startsWith('ou')  ? p.g.total : 0,
       label: p.type
     }));
     const validLegs = [];
@@ -9531,8 +9597,14 @@ async function _botMakeDailyPicks(enrichedGames) {
       if (!check.blocked) validLegs.push(leg);
     }
     if (validLegs.length >= 2) {
-      const combined = validLegs.reduce((acc, l) => acc * _mlToDecimal(l.ml), 1);
-      const parlayML = _parlayOddsToML(combined);
+      const combined   = validLegs.reduce((acc, l) => acc * _mlToDecimal(l.ml), 1);
+      const parlayML   = _parlayOddsToML(combined);
+      // Kelly-size the parlay: use product of individual probs as combined win probability
+      const parlayProb = validLegs.reduce((acc, l) => {
+        const pick = picks.find(p => p.g.key === l.gameKey && p.type === l.type);
+        return acc * (pick ? pick.prob : 0.5);
+      }, 1);
+      const stake = kellyStake(parlayProb, parlayML);
       keptBets.push({
         id: Date.now() + Math.random(), date: today,
         betType: 'parlay', status: 'open',
@@ -9551,9 +9623,10 @@ async function _botMakeDailyPicks(enrichedGames) {
       awayAbbr: p.g.away, homeAbbr: p.g.home, ml: p.ml,
       line: p.type === 'spread_home' ? p.g.spreadLine
           : p.type === 'spread_away' ? -p.g.spreadLine
-          : p.type.startsWith('ou') ? p.g.total : 0,
+          : p.type.startsWith('ou')  ? p.g.total : 0,
       label: p.type
     };
+    const stake = kellyStake(p.prob, p.ml);
     keptBets.push({
       id: Date.now() + Math.random(), date: today,
       betType: 'single', status: 'open',
