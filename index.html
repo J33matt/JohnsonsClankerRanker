@@ -9326,7 +9326,7 @@ function _sbNickIsBlocked(nick) {
 const BOT_NAME      = "Johnson's Clanker Ranker 🤖";
 const BOT_KEY       = 'sb.bot.profile';
 const BOT_BETS_KEY  = 'sb.bot.bets';
-const BOT_RESET_VER = 5; // bump this to force a full bot reset
+const BOT_RESET_VER = 6; // bump this to force a full bot reset
 const BOT_LB_KEY    = 'leaderboard.ClankerRanker_BOT';
 const BOT_START_BAL = 100;
 
@@ -9680,6 +9680,18 @@ async function _sbSaveProfile() {
   } catch(e) {
     console.error('[Sportsbook] Failed to save profile:', e);
   }
+}
+
+// One-time wipe of pre-auth leaderboard entries from shared Firestore storage.
+// Runs once per deployment, gated by the lb_reset_v3 flag in the shared collection.
+async function _sbMaybeResetLeaderboard() {
+  try {
+    const flag = await window.storage.get('lb_reset_v3', true);
+    if (flag) return; // already done
+    const { keys } = await window.storage.list('leaderboard.', true);
+    await Promise.all(keys.map(k => window.storage.delete(k, true).catch(() => {})));
+    await window.storage.set('lb_reset_v3', '1', true);
+  } catch(e) {}
 }
 
 async function _sbSaveLeaderboard() {
@@ -10251,6 +10263,9 @@ async function renderSportsbook() {
   // _sbAutoSettle() at page-load runs _load() in "offline" mode (no auth yet),
   // setting _loaded=true with an empty cache. Clear it so we actually fetch from Firestore.
   window._jcrAuth.resetLoad();
+
+  // One-time leaderboard wipe: clear pre-auth entries from shared storage
+  await _sbMaybeResetLeaderboard();
 
   // Only load from storage if we don't already have a profile in memory
   if (!_sbProfile) {
