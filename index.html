@@ -9448,13 +9448,22 @@ async function _botMakeDailyPicks(enrichedGames) {
   const bankroll = _botProfile.bankroll || 0;
   if (bankroll <= 0) return;
 
-  // Only skip games that are already live or final — upcoming games (any date) are bettable
+  // Only bet on upcoming games — never on live or final games
   const upcoming = enrichedGames.filter(g => !g.isFinal && !g.isLive);
 
-  // Fallback: if ESPN returned nothing or all games are live/final, use static schedule
-  // (override dates to today so bets record correctly)
   let gamesToPick = upcoming;
+
   if (!gamesToPick.length) {
+    if (enrichedGames.length > 0) {
+      // ESPN returned today's games but they're ALL live/final — lines have closed.
+      // Mark today as done so we don't keep retrying with stale data.
+      _botProfile.lastPickDate = today;
+      _botProfile.pickVersion = 3;
+      await _botSave();
+      return;
+    }
+    // ESPN returned nothing at all — fall back to static schedule so Clanker
+    // always has picks (only happens on days with no ESPN coverage)
     gamesToPick = UPCOMING_GAMES.slice(0, 10).map(g => {
       const spread = _sbSpread(g.away, g.home);
       const total  = _sbTotal(g.away, g.home);
@@ -10759,9 +10768,13 @@ function _renderBotPicks(botBets, enrichedGames) {
     </div>`;
 
   if (!todayBets.length) {
-    const msg = enrichedGames.filter(g => !g.isFinal && !g.isLive).length > 0
+    const hasUpcoming = enrichedGames.filter(g => !g.isFinal && !g.isLive).length > 0;
+    const allLocked   = enrichedGames.length > 0 && !hasUpcoming;
+    const msg = hasUpcoming
       ? 'Clanker is analyzing today\'s matchups… reload in a moment to see picks. 🔍'
-      : 'No upcoming games found today — Clanker is resting its circuits. 🔋';
+      : allLocked
+        ? 'All of today\'s games are already underway — Clanker\'s picks will be posted tomorrow when lines open. 🔋'
+        : 'No games scheduled today — Clanker is resting its circuits. 🔋';
     const body = `<div style="padding:24px 20px;font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;letter-spacing:1px;color:var(--muted);text-align:center">${msg}</div>`;
     return `<div style="background:var(--surface);border:1px solid rgba(255,170,0,0.22);border-radius:12px;overflow:hidden;margin-bottom:28px">${headerHtml}${body}</div>`;
   }
