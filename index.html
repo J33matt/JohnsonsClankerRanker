@@ -9752,6 +9752,13 @@ async function _botSettle(enrichedGamesForToday) {
       finalResult = result;
       if (finalResult === 'win')  payout = bet.stake + _mlPayout(bet.parlayML, bet.stake);
       else if (finalResult === 'push') payout = bet.stake;
+      // Store per-leg results so dots render correctly
+      bet.legResults = bet.legs.map(l => {
+        const g = games.find(g => (g.home === l.homeAbbr && g.away === l.awayAbbr) || (g.home === l.awayAbbr && g.away === l.homeAbbr));
+        if (!g) return null;
+        const r = _sbGradeLeg(l, g);
+        return r !== null ? r : (finalResult === 'win' ? 'win' : null);
+      });
     }
 
     bet.status = 'settled'; bet.result = finalResult; bet.payout = payout; bet.net = payout - bet.stake;
@@ -11116,6 +11123,9 @@ function _renderBotPicks(botBets, enrichedGames) {
           legResult = 'win';
         } else if (bet.result === 'push') {
           legResult = 'push';
+        } else {
+          // Settled loss with no per-leg data — grade from game if available
+          legResult = game ? _sbGradeLeg(l, game) : null;
         }
       } else if (game) {
         legResult = _sbGradeLeg(l, game);
