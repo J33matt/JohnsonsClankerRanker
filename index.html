@@ -9331,7 +9331,7 @@ function _sbNickIsBlocked(nick) {
 const BOT_NAME      = "Johnson's Clanker Ranker 🤖";
 const BOT_KEY       = 'sb.bot.profile';
 const BOT_BETS_KEY  = 'sb.bot.bets';
-const BOT_RESET_VER = 10; // bump this to force a full bot reset
+const BOT_RESET_VER = 11; // bump this to force a full bot reset
 const BOT_LB_KEY    = 'leaderboard.ClankerRanker_BOT';
 const BOT_START_BAL = 100;
 
@@ -9509,9 +9509,11 @@ function _botAnalyzeBet(type, mu, ml, spreadLine, total) {
   return { prob, edge, kelly, score };
 }
 
-async function _botMakeDailyPicks(enrichedGames) {
+async function _botMakeDailyPicks(enrichedGames, activeDate) {
   if (!_botProfile) return;
-  const today = localDateStr(new Date());
+  // Use the sportsbook's active date (not the calendar date) so bet.date matches
+  // the actual games, allowing _botSettle to find and grade them correctly.
+  const today = activeDate || localDateStr(new Date());
   if (_botProfile.lastPickDate === today && _botProfile.pickVersion === 3) return; // already picked today with current logic
 
   const bets = await _botLoadBets();
@@ -10514,7 +10516,7 @@ async function renderSportsbook() {
     await _botSave();
   }
   await _botSettle(enrichedGames);
-  await _botMakeDailyPicks(enrichedGames);
+  await _botMakeDailyPicks(enrichedGames, today);
   // Reload after picks are placed so we always display the freshest bets
   const botBets = await _botLoadBets();
 
