@@ -2723,9 +2723,9 @@
     .sb-stats-row { gap: 8px; }
     .sb-stat-pill { padding: 8px 12px; min-width: 72px; font-size: 0.72rem; }
     .sb-stat-pill b { font-size: 1.1rem; }
-    .sb-lb-row { grid-template-columns: 32px 1fr auto; }
     .sb-lb-record { display: none; }
     .sb-lb-cell { display: none; }
+    col.sb-lb-cell { visibility: collapse; }
     .sb-history-row { grid-template-columns: 72px 1fr auto; }
     .sb-history-type, .sb-history-stake { display: none; }
 
@@ -11014,7 +11014,7 @@ function _renderSbLeaderboard(entries) {
   const byBankroll = [...displayEntries].sort((a, b) => (b.bankroll || 0) - (a.bankroll || 0));
   const rankMap = new Map(byBankroll.map((e, i) => [e.nickname, i]));
 
-  // Sort rows by selected column
+  // Sort rows — dir:-1 = descending (highest first), dir:1 = ascending
   const colVal = (e) => {
     if (sort.col === 'bankroll')       return e.bankroll || 0;
     if (sort.col === 'atRisk')         return e.atRisk || 0;
@@ -11023,43 +11023,45 @@ function _renderSbLeaderboard(entries) {
     if (sort.col === 'allTimeWagered') return e.allTimeWagered || 0;
     return 0;
   };
-  const sortedEntries = [...displayEntries].sort((a, b) => sort.dir * (colVal(b) - colVal(a)));
+  const sortedEntries = [...displayEntries].sort((a, b) => sort.dir * (colVal(a) - colVal(b)));
 
-  // Column header helper — clickable, shows arrow on active col
-  const colHdr = (col, label, align = 'right') => {
+  // Column header — clickable th content
+  const thStyle = (col) => {
     const isActive = sort.col === col;
-    const arrow = isActive ? (sort.dir === -1 ? ' ▼' : ' ▲') : '';
-    const color = isActive ? 'var(--text)' : 'var(--muted)';
-    const weight = isActive ? '700' : '400';
-    return `<div onclick="_sbSetLbSort('${col}')" style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:${color};font-weight:${weight};text-transform:uppercase;text-align:${align};cursor:pointer;user-select:none">${label}${arrow}</div>`;
+    return `font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;text-align:right;cursor:pointer;user-select:none;padding:9px 12px 9px 0;white-space:nowrap;color:${isActive ? 'var(--text)' : 'var(--muted)'};font-weight:${isActive ? '700' : '400'}`;
   };
+  const arrow = (col) => sort.col === col ? (sort.dir === -1 ? ' ▼' : ' ▲') : '';
+
+  // Value display — show $0.00/0 for known-zero; — only for legacy null/undefined fields
+  const fmtMoney = (v) => v != null ? '$' + v.toFixed(2) : '<span style="color:rgba(255,255,255,0.25)">—</span>';
+  const fmtCount = (v) => v != null ? String(v) : '<span style="color:rgba(255,255,255,0.25)">—</span>';
+  const fmtWagered = (v) => v != null ? '$' + v.toFixed(0) : '<span style="color:rgba(255,255,255,0.25)">—</span>';
 
   const medals = ['🥇','🥈','🥉'];
+  const tdBase = 'padding:10px 12px 10px 0;vertical-align:middle;text-align:right;border-bottom:1px solid rgba(255,255,255,0.04);';
   const rows = sortedEntries.map((e) => {
     const isYou = e.nickname === myNick;
     const rank = rankMap.get(e.nickname) ?? 999;
-    const rankCls = rank === 0 ? 'top1' : rank === 1 ? 'top2' : rank === 2 ? 'top3' : '';
+    const rankColor = rank === 0 ? '#ffd700' : rank === 1 ? '#c0c0c0' : rank === 2 ? '#cd7f32' : 'var(--muted)';
     const rankDisplay = e._notInTop ? '—' : (rank < 3 ? medals[rank] : `#${rank + 1}`);
     const record = `${e.w || 0}W–${e.l || 0}L`;
     const bal = e.bankroll || 0;
     const balColor = bal >= 100 ? 'var(--green)' : 'var(--red)';
-    const atRisk = e.atRisk || 0;
-    const potReturn = e.potReturn || 0;
-    const liveBets = e.liveBets || 0;
-    const wagered = e.allTimeWagered || 0;
+    const rowBg = isYou ? 'background:rgba(255,170,0,0.06);' : e._notInTop ? 'background:rgba(255,255,255,0.02);font-style:italic;' : '';
+    const youBorder = isYou ? 'border-left:3px solid var(--accent2);' : '';
 
-    return `<div class="sb-lb-row${isYou ? ' you' : ''}${e._notInTop ? ' not-in-top' : ''}">
-      <div class="sb-lb-rank ${rankCls}">${rankDisplay}</div>
-      <div>
+    return `<tr style="${rowBg}${youBorder}">
+      <td style="padding:10px 8px 10px 20px;vertical-align:middle;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:${rankColor}">${rankDisplay}</td>
+      <td style="padding:10px 12px;vertical-align:middle;border-bottom:1px solid rgba(255,255,255,0.04)">
         <div class="sb-lb-name${isYou ? ' you' : ''}">${e.nickname}${isYou ? ' <span style="font-size:0.65rem;color:var(--accent2);letter-spacing:1px">YOU</span>' : ''}</div>
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:var(--muted);letter-spacing:1px;margin-top:1px">${record}</div>
-      </div>
-      <div class="sb-lb-balance" style="color:${balColor}">$${bal.toFixed(2)}</div>
-      <div class="sb-lb-cell">${atRisk > 0 ? '$' + atRisk.toFixed(2) : '<span style="color:rgba(255,255,255,0.2)">—</span>'}</div>
-      <div class="sb-lb-cell" style="${potReturn > 0 ? 'color:var(--green)' : ''}">${potReturn > 0 ? '$' + potReturn.toFixed(2) : '<span style="color:rgba(255,255,255,0.2)">—</span>'}</div>
-      <div class="sb-lb-cell">${liveBets > 0 ? liveBets : '<span style="color:rgba(255,255,255,0.2)">—</span>'}</div>
-      <div class="sb-lb-cell">${wagered > 0 ? '$' + wagered.toFixed(0) : '<span style="color:rgba(255,255,255,0.2)">—</span>'}</div>
-    </div>`;
+      </td>
+      <td style="${tdBase}font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:1px;color:${balColor}">$${bal.toFixed(2)}</td>
+      <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem">${fmtMoney(e.atRisk)}</td>
+      <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.potReturn || 0) > 0 ? 'color:var(--green)' : ''}">${fmtMoney(e.potReturn)}</td>
+      <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem">${fmtCount(e.liveBets)}</td>
+      <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem">${fmtWagered(e.allTimeWagered)}</td>
+    </tr>`;
   }).join('');
 
   return `<div class="sb-leaderboard" style="margin-bottom:28px">
@@ -11067,16 +11069,29 @@ function _renderSbLeaderboard(entries) {
       <span class="sb-lb-title">🏆 Global Leaderboard</span>
       <span class="sb-lb-sub" style="margin-left:auto">Top ${Math.min(entries.length, 15)} · $100 start</span>
     </div>
-    <div class="sb-lb-row" style="background:var(--surface2);border-bottom:1px solid var(--border)">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Rank</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Player</div>
-      ${colHdr('bankroll', 'Balance')}
-      ${colHdr('atRisk', 'At Risk')}
-      ${colHdr('potReturn', 'Pot. Return')}
-      ${colHdr('liveBets', 'Live')}
-      ${colHdr('allTimeWagered', 'Wagered')}
-    </div>
-    ${rows}
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+      <colgroup>
+        <col style="width:52px">
+        <col>
+        <col style="width:90px">
+        <col class="sb-lb-cell" style="width:76px">
+        <col class="sb-lb-cell" style="width:90px">
+        <col class="sb-lb-cell" style="width:46px">
+        <col class="sb-lb-cell" style="width:76px">
+      </colgroup>
+      <thead>
+        <tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
+          <th style="padding:9px 8px 9px 20px;font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:center;font-weight:400">Rank</th>
+          <th style="padding:9px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:left;font-weight:400">Player</th>
+          <th onclick="_sbSetLbSort('bankroll')" style="${thStyle('bankroll')}">Balance${arrow('bankroll')}</th>
+          <th class="sb-lb-cell" onclick="_sbSetLbSort('atRisk')" style="${thStyle('atRisk')}">At Risk${arrow('atRisk')}</th>
+          <th class="sb-lb-cell" onclick="_sbSetLbSort('potReturn')" style="${thStyle('potReturn')}">Pot. Ret.${arrow('potReturn')}</th>
+          <th class="sb-lb-cell" onclick="_sbSetLbSort('liveBets')" style="${thStyle('liveBets')}">Live${arrow('liveBets')}</th>
+          <th class="sb-lb-cell" onclick="_sbSetLbSort('allTimeWagered')" style="${thStyle('allTimeWagered')}">Wagered${arrow('allTimeWagered')}</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
   </div>`;
 }
 
