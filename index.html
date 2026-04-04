@@ -9704,6 +9704,23 @@ async function _botMakeDailyPicks(enrichedGames, activeDate) {
   }
 }
 
+async function _botMigrateEarnings() {
+  if (!_botProfile || _botProfile.earningsMigrated) return;
+  try {
+    const bets = await _botLoadBets();
+    let earned = 0, lost = 0;
+    for (const b of bets) {
+      if (b.status !== 'settled') continue;
+      if (b.result === 'win')  earned += Math.max(0, (b.payout || 0) - (b.stake || 0));
+      if (b.result === 'loss') lost   += b.stake || 0;
+    }
+    _botProfile.allTimeEarned = earned;
+    _botProfile.allTimeLost   = lost;
+    _botProfile.earningsMigrated = true;
+    await _botSave();
+  } catch(e) {}
+}
+
 async function _botSettle(enrichedGamesForToday) {
   if (!_botProfile) return;
   const bets = await _botLoadBets();
@@ -10021,6 +10038,25 @@ function _sbGradeParlay(legs, games) {
   }
   if (anyPending) return { result: 'pending' };
   return { result: hasPush ? 'push' : 'win', settledLegs: legs.length };
+}
+
+// ── One-time migration: rebuild allTimeEarned / allTimeLost from bet history ──
+async function _sbMigrateEarnings() {
+  if (!_sbProfile || _sbProfile.earningsMigrated) return;
+  try {
+    const bets = await _sbLoadBets();
+    let earned = 0, lost = 0;
+    for (const b of bets) {
+      if (b.status !== 'settled') continue;
+      if (b.result === 'win')  earned += Math.max(0, (b.payout || 0) - (b.stake || 0));
+      if (b.result === 'loss') lost   += b.stake || 0;
+    }
+    _sbProfile.allTimeEarned = earned;
+    _sbProfile.allTimeLost   = lost;
+    _sbProfile.earningsMigrated = true;
+    await _sbSaveProfile();
+    await _sbSaveLeaderboard();
+  } catch(e) { console.warn('[SB] Earnings migration failed:', e); }
 }
 
 // ── Auto-settle open bets ─────────────────────────────────────
@@ -10497,6 +10533,7 @@ async function renderSportsbook() {
   // Run auto-settle (only meaningful if there's a profile)
   if (_sbProfile) {
     await _sbAutoSettle();
+    await _sbMigrateEarnings(); // one-time: rebuild allTimeEarned/allTimeLost from history
   }
 
   // Auto-create sportsbook profile using Firebase username (no onboarding prompt)
@@ -10593,6 +10630,7 @@ async function renderSportsbook() {
     await _botSave();
   }
   await _botSettle(enrichedGames);
+  await _botMigrateEarnings(); // one-time: rebuild allTimeEarned/allTimeLost from history
   await _botMakeDailyPicks(enrichedGames, today);
   // Reload after picks are placed so we always display the freshest bets
   const botBets = await _botLoadBets();
