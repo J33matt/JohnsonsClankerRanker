@@ -10337,18 +10337,21 @@ async function _sbRefreshBets() {
   }
 }
 async function _sbGetActiveDate() {
-  if (_sbActiveDateCache) return _sbActiveDateCache;
+  const TTL = 5 * 60 * 1000; // 5 minutes
+  if (_sbActiveDateCache && Date.now() < _sbActiveDateCache.expires) {
+    return _sbActiveDateCache.date;
+  }
   const todayStr = localDateStr(new Date());
   const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = localDateStr(yesterday);
   try {
     const games = await espnFetchDate(yesterdayStr).catch(() => null);
     if (games && games.length > 0 && games.some(g => !g.isFinal)) {
-      _sbActiveDateCache = yesterdayStr;
+      _sbActiveDateCache = { date: yesterdayStr, expires: Date.now() + TTL };
       return yesterdayStr;
     }
   } catch(e) {}
-  _sbActiveDateCache = todayStr;
+  _sbActiveDateCache = { date: todayStr, expires: Date.now() + TTL };
   return todayStr;
 }
 
@@ -10391,6 +10394,7 @@ async function _fetchPredictorWinPcts(games) {
 async function renderSportsbook() {
   const container = document.getElementById('sb-container');
   if (!container) return;
+  _sbActiveDateCache = null; // always re-evaluate active date on each render
   container.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>Loading Sportsbook…</div>`;
 
   try {
@@ -10414,7 +10418,6 @@ async function renderSportsbook() {
   // Run auto-settle (only meaningful if there's a profile)
   if (_sbProfile) {
     await _sbAutoSettle();
-    _sbActiveDateCache = null;  // recalculate active date after settling
   }
 
   // Auto-create sportsbook profile using Firebase username (no onboarding prompt)
