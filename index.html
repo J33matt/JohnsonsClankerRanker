@@ -3072,10 +3072,20 @@
 
   // Resolve display nickname from localStorage (keyed by UID — no Firestore read needed).
   // Always prompts on first sign-in so every user picks their own username.
-  function _ensureNickname(user) {
-    var stored = localStorage.getItem('jcr.nick.' + user.uid);
-    if (stored) return Promise.resolve(stored);
-    // First time on this device — show the nickname picker
+  async function _ensureNickname(user) {
+    // Fast path: already cached in localStorage on this device
+    var localNick = localStorage.getItem('jcr.nick.' + user.uid);
+    if (localNick) return localNick;
+    // Returning user on a new device: look up their nick in the shared UID→nick map
+    try {
+      var uidNick = await _sbGetUidNick();
+      if (uidNick[user.uid]) {
+        var nick = uidNick[user.uid];
+        localStorage.setItem('jcr.nick.' + user.uid, nick); // sync to this device
+        return nick;
+      }
+    } catch(e) {}
+    // No record found anywhere → genuinely new user → show nickname picker
     return new Promise(function(resolve) { _showNicknameModal(user, resolve); });
   }
 
@@ -3097,11 +3107,27 @@
     var err   = overlay.querySelector('#jcr-nick-err');
     input.focus();
     if (suggested) input.select();
-    function submit() {
+    async function submit() {
       var name = input.value.trim();
       if (!name || name.length < 2) { err.textContent = 'Please enter at least 2 characters.'; err.style.display = ''; return; }
       var safe = name.replace(/[^a-zA-Z0-9_ ]/g, '').trim();
-      if (!safe) { err.textContent = 'Letters and numbers only please.'; err.style.display = ''; return; }
+      if (!safe || safe.length < 2) { err.textContent = 'Letters and numbers only please.'; err.style.display = ''; return; }
+      err.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Checking\u2026';
+      try {
+        var available = await _sbCheckNickAvailable(safe, user.uid);
+        if (!available) {
+          err.textContent = 'That username is already taken.';
+          err.style.display = '';
+          btn.disabled = false;
+          btn.textContent = "LET'S GO";
+          return;
+        }
+        await _sbClaimNick(safe, user.uid, null);
+      } catch(e) {
+        // Network error during uniqueness check — proceed anyway, don't block sign-in
+      }
       localStorage.setItem('jcr.nick.' + user.uid, safe);
       document.body.removeChild(overlay);
       resolve(safe);
@@ -3297,6 +3323,8 @@
     ensureAuth: function() { return _ensureAuth(); },
     // Reset load state so storage re-fetches from Firestore after sign-in
     resetLoad: function() { _loaded = false; _loading = null; },
+    // Get current Firebase UID (null if not signed in)
+    getUid: function() { return _uid; },
     // Get / set display name (localStorage keyed by UID)
     getDisplayName: function() { return _displayName; },
     setDisplayName: function(name) {
@@ -9730,6 +9758,44 @@ async function _botSettle(enrichedGamesForToday) {
 const SB_KEY_PROFILE  = 'sb.profile';
 const SB_KEY_BETLIST  = 'sb.bets';
 const SB_KEY_PARLAY   = 'sb.parlay.slip';
+const SB_NICK_MAP_KEY = 'sb:nick_map'; // shared: nick_lower → uid  (uniqueness guard)
+const SB_UID_NICK_KEY = 'sb:uid_nick'; // shared: uid → display_nick (returning-user lookup)
+
+// ── Nickname map helpers (shared Firestore storage) ───────────
+async function _sbGetNickMap() {
+  try {
+    const raw = await window.storage.get(SB_NICK_MAP_KEY, true).catch(() => null);
+    return raw ? JSON.parse(raw.value) : {};
+  } catch(e) { return {}; }
+}
+async function _sbGetUidNick() {
+  try {
+    const raw = await window.storage.get(SB_UID_NICK_KEY, true).catch(() => null);
+    return raw ? JSON.parse(raw.value) : {};
+  } catch(e) { return {}; }
+}
+// Returns true if the nickname is unclaimed or already owned by this uid
+async function _sbCheckNickAvailable(nick, uid) {
+  try {
+    const nickMap = await _sbGetNickMap();
+    const owner = nickMap[nick.toLowerCase()];
+    return !owner || owner === uid;
+  } catch(e) { return true; } // fail open — don't block on transient network error
+}
+// Atomically claim a display nickname: remove oldDisplayNick from map (if provided),
+// write nick_lower→uid and uid→displayNick entries to shared storage
+async function _sbClaimNick(displayNick, uid, oldDisplayNick) {
+  try {
+    const [nickMap, uidNick] = await Promise.all([_sbGetNickMap(), _sbGetUidNick()]);
+    if (oldDisplayNick) delete nickMap[oldDisplayNick.toLowerCase()];
+    nickMap[displayNick.toLowerCase()] = uid;
+    uidNick[uid] = displayNick;
+    await Promise.all([
+      window.storage.set(SB_NICK_MAP_KEY, JSON.stringify(nickMap), true),
+      window.storage.set(SB_UID_NICK_KEY, JSON.stringify(uidNick), true)
+    ]);
+  } catch(e) {}
+}
 
 // ── State ────────────────────────────────────────────────────
 let _sbSlip = [];          // array of leg objects on current slip
@@ -11412,15 +11478,23 @@ async function _sbCreateProfile() {
   renderSportsbook();
 }
 
-function _sbEditNickname() {
+async function _sbEditNickname() {
   const newNick = prompt('Enter new nickname (max 20 chars):', _sbProfile?.nickname || '');
   if (!newNick || !newNick.trim()) return;
-  if (_sbNickIsBlocked(newNick.trim())) { alert('That name isn\'t allowed — please choose another.'); return; }
+  const safe = newNick.trim().slice(0, 20).replace(/[^a-zA-Z0-9_ ]/g, '').trim();
+  if (!safe || safe.length < 2) { alert('Please use letters and numbers only (min 2 characters).'); return; }
+  if (_sbNickIsBlocked(safe)) { alert('That name isn\'t allowed — please choose another.'); return; }
   if (!_sbProfile) return;
-  const safe = newNick.trim().slice(0, 20);
+  const uid = window._jcrAuth.getUid();
+  const available = await _sbCheckNickAvailable(safe, uid);
+  if (!available) { alert('That username is already taken — please choose another.'); return; }
+  const oldNick = _sbProfile.nickname;
   _sbProfile.nickname = safe;
   window._jcrAuth.setDisplayName(safe);
-  _sbSaveProfile().then(() => { _sbSaveLeaderboard(); renderSportsbook(); });
+  await _sbClaimNick(safe, uid, oldNick);
+  await _sbSaveProfile();
+  await _sbSaveLeaderboard();
+  renderSportsbook();
 }
 
 function _sbSignOut() {
