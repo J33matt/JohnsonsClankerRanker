@@ -11089,6 +11089,17 @@ function _renderSbBetCard(bet, opts = {}) {
       } else {
         legResult = 'pending'; // loss but no per-leg data — keep gray
       }
+    } else if (isParlay) {
+      // For pending parlays, grade each leg whose game is already final
+      const allGames = (_sbEnrichedGamesCache || []).concat(_sbGames || []);
+      const legGame = allGames.find(g =>
+        (g.home === l.homeAbbr && g.away === l.awayAbbr) ||
+        (g.home === l.awayAbbr && g.away === l.homeAbbr)
+      );
+      if (legGame && legGame.isFinal) {
+        legResult = _sbGradeLeg(l, legGame);
+      }
+      // else legResult stays null → grey dot
     }
 
     const desc = _sbLegDesc(l);
