@@ -1,4 +1,3 @@
-
 // ── Toast notifications ───────────────────────────────────────
 let _sbToastTimer = null;
 function _sbToast(type, title, msg) {
@@ -2108,3 +2107,4 @@ function _sbQuickFavParlay() {
   _renderSbSlip();
   _renderSbGameButtons();
 }
+

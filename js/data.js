@@ -214,8 +214,6 @@ function _buildRecentResults() {
   return results;
 }
 const _RECENT_RESULTS = _buildRecentResults();
-
-// NBA team colors for abbreviation badges
 const TEAM_COLORS = {
   ATL: {bg:'#E03A3E',text:'#fff'}, BKN: {bg:'#333333',text:'#fff'}, BOS: {bg:'#007A33',text:'#fff'},
   CHA: {bg:'#1D1160',text:'#00788C'}, CHI: {bg:'#CE1141',text:'#fff'}, CLE: {bg:'#860038',text:'#FDBB30'},
@@ -228,7 +226,7 @@ const TEAM_COLORS = {
   POR: {bg:'#E03A3E',text:'#fff'}, SAC: {bg:'#5A2D81',text:'#fff'}, SAS: {bg:'#C4CED4',text:'#000'},
   TOR: {bg:'#CE1141',text:'#fff'}, UTA: {bg:'#002B5C',text:'#F9A01B'}, WAS: {bg:'#002B5C',text:'#E31837'},
 };
-// NBA team IDs for logo URLs
+
 const NBA_TEAM_IDS = {
   ATL:1610612737,BKN:1610612751,BOS:1610612738,CHA:1610612766,
   CHI:1610612741,CLE:1610612739,DAL:1610612742,DEN:1610612743,

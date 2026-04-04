@@ -152,6 +152,8 @@ async function fetchLiveNetRatings() {
     _netRatingsFetching = false;
   }
 }
+
+
 // ── POWER SCORE ───────────────────────────────────────────────────────────────
 function computePowerScore(team) {
   const gp = team.wins + team.losses;
@@ -312,7 +314,6 @@ function getStreakClass(streak) {
   if (streak > 0) return abs >= 5 ? 'streak-w5' : 'streak-w' + abs;
   return abs >= 5 ? 'streak-l5' : 'streak-l' + abs;
 }
-
 function getStreakLabel(streak) {
   const abs = Math.abs(streak);
   const prefix = streak > 0 ? 'W' : 'L';
@@ -328,6 +329,7 @@ function getPowerColor(score, min, max) {
   if (pct > 0.4) return "#ffaa00";
   return "#3399ff";
 }
+
 const ENRICHED_DATA = STANDINGS_DATA.map(t => ({ ...t, ...computePowerScore(t), streak: STREAK_DATA[t.abbr] || 0 }));
 
 // ── LAST GAME MAP ─────────────────────────────────────────────
@@ -421,6 +423,7 @@ function applyLiveGameData(allFinalGames) {
     _streakWorst = Math.min(...vals);
   }
 }
+
 // ── POLL LOOP ────────────────────────────────────────────────
 // 60s when live games running, 5min otherwise.
 // Refreshes all tabs with live data after each fetch.
@@ -498,50 +501,6 @@ function schedulePoll() {
 // Ensures oRTG, dRTG, and net rating stay current even on off-days or between polls.
 // fetchLiveNetRatings() already calls renderRankings() internally when data changes.
 setInterval(function() { fetchLiveNetRatings(); }, 10 * 60 * 1000);
-
-// ============================================================
-// RANK MOVEMENT · baseline is the most recent weekly snapshot
-// ============================================================
-function buildBaselineRankMap() {
-  // Always use the last entry in WEEKLY_RANKINGS as the week's starting point.
-  // When the auto-inject fires (7+ days elapsed), the newly appended snapshot
-  // becomes the new baseline automatically on the next call.
-  const last = WEEKLY_RANKINGS[WEEKLY_RANKINGS.length - 1];
-  const map = {};
-  if (last && last.rankings) {
-    last.rankings.forEach(function(e) { map[e.team] = e.rank; });
-  }
-  return map;
-}
-
-function buildCurrentRankMap() {
-  // Compute live ranks from current ENRICHED_DATA power scores
-  const sorted = [...ENRICHED_DATA].sort(function(a, b) { return b.power - a.power; });
-  const map = {};
-  sorted.forEach(function(t, i) { map[t.abbr] = i + 1; });
-  return map;
-}
-
-function getRankMovement(abbr, baselineMap, currentMap) {
-  const base = baselineMap[abbr];
-  const curr = currentMap[abbr];
-  if (!base || !curr) return 0;
-  return base - curr; // positive = moved up (lower rank number = better)
-}
-
-function rankMoveCell(movement) {
-  if (movement > 0) {
-    return '<td class="rank-move-cell"><div class="rank-move up"><span class="rank-move-arrow">▲</span><span class="rank-move-num">' + movement + '</span></div></td>';
-  } else if (movement < 0) {
-    return '<td class="rank-move-cell"><div class="rank-move down"><span class="rank-move-arrow">▼</span><span class="rank-move-num">' + Math.abs(movement) + '</span></div></td>';
-  }
-  return '<td class="rank-move-cell"></td>';
-}
-// ============================================================
-// LIVE NBA DATA · ESPN API (free, CORS-friendly, no key needed)
-// Auto-refreshes: data fetched fresh on every page load.
-// ============================================================
-
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard';
 
 // Normalize ESPN team abbreviations → our internal abbrs
@@ -677,6 +636,7 @@ async function fetchRemainingSchedule() {
   });
   return allGames;
 }
+
 // Main scores fetch · pulls today + 3 past days from ESPN, plus full remaining schedule
 async function fetchAllScoreData() {
   const today = localDateStr(new Date());
@@ -742,34 +702,4 @@ async function fetchAllScoreData() {
     source,
     fetchedAt: new Date()
   };
-}
-}
-
-// Division winners map (best record in each division)
-function getDivisionWinners() {
-  const divs = {};
-  STANDINGS_DATA.forEach(t => {
-    const key = t.conf + '_' + t.div;
-    if (!divs[key] || t.wins / (t.wins + t.losses) > divs[key].wins / (divs[key].wins + divs[key].losses)) {
-      divs[key] = t;
-    }
-  });
-  return new Set(Object.values(divs).map(t => t.abbr));
-}
-
-function getConfWinPct(team) {
-  const seed = team.abbr.charCodeAt(0) * 3 + team.abbr.charCodeAt(1) * 7 + team.abbr.charCodeAt(2);
-  const base = team.wins / (team.wins + team.losses);
-  return base + ((seed % 11) - 5) * 0.004;
-}
-
-function getDivWinPct(team) {
-  const seed = team.abbr.charCodeAt(0) * 5 + team.abbr.charCodeAt(2) * 3;
-  const base = team.wins / (team.wins + team.losses);
-  return base + ((seed % 9) - 4) * 0.006;
-}
-
-function getPointDiff(team) {
-  const netRtg = computePowerScore(team).netRtg;
-  return Math.round(netRtg * (team.wins + team.losses) * 0.5);
 }

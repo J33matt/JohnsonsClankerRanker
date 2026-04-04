@@ -1,13 +1,7 @@
-
-// ============================================================
-// RENDER FUNCTIONS
-// ============================================================
-// ============================================================
-// SORTING STATE
-// ============================================================
 let rankingsSortKey = 'power';
 let rankingsSortDir = 'desc';
 let rankingsView = 'league'; // 'league' | 'conference' | 'division'
+
 const SORT_COLUMNS = [
   { key: 'power',    label: 'Power Score', center: false },
   { key: 'record',   label: 'Record',      center: false },
@@ -47,6 +41,45 @@ function getSortValue(t, key) {
     case 'streak':   return t.streak;
     default:         return 0;
   }
+}
+
+// ============================================================
+// RANK MOVEMENT · baseline is the most recent weekly snapshot
+// ============================================================
+function buildBaselineRankMap() {
+  // Always use the last entry in WEEKLY_RANKINGS as the week's starting point.
+  // When the auto-inject fires (7+ days elapsed), the newly appended snapshot
+  // becomes the new baseline automatically on the next call.
+  const last = WEEKLY_RANKINGS[WEEKLY_RANKINGS.length - 1];
+  const map = {};
+  if (last && last.rankings) {
+    last.rankings.forEach(function(e) { map[e.team] = e.rank; });
+  }
+  return map;
+}
+
+function buildCurrentRankMap() {
+  // Compute live ranks from current ENRICHED_DATA power scores
+  const sorted = [...ENRICHED_DATA].sort(function(a, b) { return b.power - a.power; });
+  const map = {};
+  sorted.forEach(function(t, i) { map[t.abbr] = i + 1; });
+  return map;
+}
+
+function getRankMovement(abbr, baselineMap, currentMap) {
+  const base = baselineMap[abbr];
+  const curr = currentMap[abbr];
+  if (!base || !curr) return 0;
+  return base - curr; // positive = moved up (lower rank number = better)
+}
+
+function rankMoveCell(movement) {
+  if (movement > 0) {
+    return '<td class="rank-move-cell"><div class="rank-move up"><span class="rank-move-arrow">▲</span><span class="rank-move-num">' + movement + '</span></div></td>';
+  } else if (movement < 0) {
+    return '<td class="rank-move-cell"><div class="rank-move down"><span class="rank-move-arrow">▼</span><span class="rank-move-num">' + Math.abs(movement) + '</span></div></td>';
+  }
+  return '<td class="rank-move-cell"></td>';
 }
 
 function renderRankings() {
@@ -193,5 +226,3 @@ function renderRankings() {
 
   document.getElementById('rankings-container').innerHTML = html;
 }
-
-// ============================================================

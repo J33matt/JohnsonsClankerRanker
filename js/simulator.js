@@ -1,3 +1,6 @@
+// ============================================================
+// SEASON SIMULATOR
+// ============================================================
 function renderSimulator() {
   document.getElementById('simulator-container').innerHTML = `
     <div class="sim-tab-layout">
@@ -258,6 +261,7 @@ function simulateFullPlayoffs(wSeeds, eSeeds) {
 
   return { wR1, eR1, wSemi, eSemi, wCF, eCF, finals };
 }
+
 // ---- Render sim results ----
 function renderSimResults(result) {
   const { simWest, simEast, wSeeds, eSeeds, playoffResult, standings } = result;
@@ -443,4 +447,3 @@ function buildSimFinalsCol(result) {
     </div>
   </div>`;
 }
-

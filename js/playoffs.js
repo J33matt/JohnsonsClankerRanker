@@ -1,3 +1,24 @@
+function seedConference(conf) {
+  const teams = STANDINGS_DATA.filter(t => t.conf === conf).map(t => ({
+    ...t,
+    winPct: t.wins / (t.wins + t.losses),
+    confWinPct: getConfWinPct(t),
+    divWinPct: getDivWinPct(t),
+    ptDiff: getPointDiff(t),
+  }));
+  const divWinners = getDivisionWinners();
+  teams.sort((a, b) => {
+    if (Math.abs(a.winPct - b.winPct) > 0.0001) return b.winPct - a.winPct;
+    const aDiv = divWinners.has(a.abbr) ? 1 : 0;
+    const bDiv = divWinners.has(b.abbr) ? 1 : 0;
+    if (aDiv !== bDiv) return bDiv - aDiv;
+    if (Math.abs(a.confWinPct - b.confWinPct) > 0.0001) return b.confWinPct - a.confWinPct;
+    if (a.div === b.div && Math.abs(a.divWinPct - b.divWinPct) > 0.0001) return b.divWinPct - a.divWinPct;
+    return b.ptDiff - a.ptDiff;
+  });
+  return teams;
+}
+
 function renderPlayoffs() {
   const west = seedConference('WEST');
   const east = seedConference('EAST');

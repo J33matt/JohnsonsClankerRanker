@@ -1,3 +1,9 @@
+
+// PREDICTIONS TAB
+// ============================================================
+
+// Storage wrappers · uses localStorage (works in any browser).
+// Falls back to a simple in-memory store if localStorage is blocked.
 const _memStore = {};  // in-memory mirror for sync access (e.g. _predActiveDate)
 
 // The entire betting tab belongs to Clanker, not individual users.
@@ -961,5 +967,3 @@ async function _predAutoGrade() {
     renderPredictions();
   }
 }
-
-

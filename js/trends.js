@@ -98,11 +98,34 @@ function renderTrends() {
 
   document.getElementById('trends-container').innerHTML = html;
 }
+// Division winners map (best record in each division)
+function getDivisionWinners() {
+  const divs = {};
+  STANDINGS_DATA.forEach(t => {
+    const key = t.conf + '_' + t.div;
+    if (!divs[key] || t.wins / (t.wins + t.losses) > divs[key].wins / (divs[key].wins + divs[key].losses)) {
+      divs[key] = t;
+    }
+  });
+  return new Set(Object.values(divs).map(t => t.abbr));
+}
 
-// ============================================================
-// PLAYOFFS BRACKET
-// ============================================================
+function getConfWinPct(team) {
+  const seed = team.abbr.charCodeAt(0) * 3 + team.abbr.charCodeAt(1) * 7 + team.abbr.charCodeAt(2);
+  const base = team.wins / (team.wins + team.losses);
+  return base + ((seed % 11) - 5) * 0.004;
+}
 
+function getDivWinPct(team) {
+  const seed = team.abbr.charCodeAt(0) * 5 + team.abbr.charCodeAt(2) * 3;
+  const base = team.wins / (team.wins + team.losses);
+  return base + ((seed % 9) - 4) * 0.006;
+}
+
+function getPointDiff(team) {
+  const netRtg = computePowerScore(team).netRtg;
+  return Math.round(netRtg * (team.wins + team.losses) * 0.5);
+}
 async function fetchAIAnalysis() {
   // Build a rich, unique context from current streak + power data every call
   const sorted = ENRICHED_DATA.slice().sort((a,b) => b.power - a.power);
@@ -149,7 +172,6 @@ async function fetchAIAnalysis() {
     document.getElementById('ai-analysis-text').innerHTML = `<p style="line-height:1.75;">${fallbacks[Math.floor(Math.random() * fallbacks.length)]}</p>`;
   }
 }
-
 // ============================================================
 // NEWS GENERATION ENGINE
 // ============================================================
@@ -548,7 +570,3 @@ function renderNews(newsItems) {
   html += `</div></div>`;
   document.getElementById('news-container').innerHTML = html;
 }
-
-// ============================================================
-// GRAPH TAB · Weekly Power Rankings Chart
-// ============================================================

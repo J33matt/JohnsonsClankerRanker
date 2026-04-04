@@ -1,6 +1,365 @@
-const _oddsCache = {};
+
+// ============================================================
+// SCORES RENDER · 3-section redesign
+// ============================================================
+async function renderScores() {
+  document.getElementById('scores-container').innerHTML =
+    `<div class="loading-spinner"><div class="spinner"></div>Fetching live scores…</div>`;
+
+  let data;
+  try { data = await fetchAllScoreData(); }
+  catch(e) { data = { today: [], recent: [], remaining: [], source: 'error', fetchedAt: new Date() }; }
+
+  // Cache data so GTW badges can be refreshed when power rankings change
+  _lastScoreData = data;
+
+  // Update timestamp
+  const now = data.fetchedAt || new Date();
+  const tsEl = document.getElementById('scores-update-time');
+  if (tsEl) tsEl.textContent = 'Updated ' + now.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' · ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+
+  renderScoresHtml(data);
+}
+
+// Renders the scores tab HTML using cached game data + freshly computed power ranks.
+// Call this directly (without re-fetching) when power rankings change mid-session.
+function renderScoresHtml(data) {
+  if (!data) return;
+
+  // Always recompute power ranks fresh so GTW badges reflect current rankings
+  const powerRanks = buildPowerRankMap();
+
+  // ── PULL MONEYLINES FROM STORED BETTING PICKS ────────────
+  // The betting tab fetches & stores MLs in localStorage. Read them here so
+  // score cards always show moneylines regardless of ESPN odds availability.
+  const _picksMLMap = {};
+  try {
+    const todayStr = localDateStr(new Date());
+    const raw = _memStore['predictions:' + todayStr];
+    if (raw) {
+      const stored = JSON.parse(raw);
+      (stored.picks || []).forEach(p => {
+        if (p.homeAbbr && p.awayAbbr && (p.homeML || p.awayML)) {
+          _picksMLMap[p.awayAbbr + '@' + p.homeAbbr] = { homeML: p.homeML, awayML: p.awayML };
+        }
+      });
+    }
+  } catch(e) {}
+
+  // ── SCORE CARD BUILDER ─────────────────────────────────
+  function scoreCard(g, opts = {}) {
+    const { gtw = false, gtwLabel = '' } = opts;
+    const homeAbbr = g.home, awayAbbr = g.away;
+    const homeColors = TEAM_COLORS[homeAbbr] || { bg: '#333', text: '#fff' };
+    const awayColors = TEAM_COLORS[awayAbbr] || { bg: '#333', text: '#fff' };
+    const homeLogo = getLogoUrl(homeAbbr);
+    const awayLogo = getLogoUrl(awayAbbr);
+    const homeRec = STANDINGS_DATA.find(t => t.abbr === homeAbbr);
+    const awayRec = STANDINGS_DATA.find(t => t.abbr === awayAbbr);
+    const homeRecStr = homeRec ? `${homeRec.wins}–${homeRec.losses}` : '';
+    const awayRecStr = awayRec ? `${awayRec.wins}–${awayRec.losses}` : '';
+
+    const showScore = g.isFinal || g.isLive;
+    const homeWon = g.homeScore > g.awayScore;
+
+    let statusLabel, statusCls;
+    if (g.isLive) { statusLabel = g.status || 'LIVE'; statusCls = 'status-live'; }
+    else if (g.isFinal) { statusLabel = 'Final'; statusCls = 'status-final'; }
+    else { statusLabel = g.tipDisplay || 'Upcoming'; statusCls = 'status-upcoming'; }
+
+    // Date display
+    const today = localDateStr(new Date());
+    const yesterday = localDateStr(new Date(Date.now() - 86400000));
+    let dateLabel = '';
+    if (g.date === today) dateLabel = 'Today';
+    else if (g.date === yesterday) dateLabel = 'Yesterday';
+    else if (g.date) {
+      const d = new Date(g.date + 'T12:00:00');
+      dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    // Resolve moneylines: game object first, then picks cache fallback
+    const _mlFallback = _picksMLMap[awayAbbr + '@' + homeAbbr] || {};
+    const resolvedHomeML = g.homeML || _mlFallback.homeML || null;
+    const resolvedAwayML = g.awayML || _mlFallback.awayML || null;
+
+    function fmtML(ml) {
+      if (!ml) return null;
+      const str = (ml > 0 ? '+' : '') + ml;
+      const color = ml < 0 ? '#4dffa0' : '#ffc844';
+      return `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1px;color:${color}">${str}</span>`;
+    }
+
+    // Win probability + moneylines
+    let probBar = '';
+    if (g.isUpcoming) {
+      const { homePct, awayPct } = gameWinProb(awayAbbr, homeAbbr);
+      const mlRow = (resolvedAwayML || resolvedHomeML) ? `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)">
+          <div>${fmtML(resolvedAwayML) || '<span style="color:var(--muted)">—</span>'}</div>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Moneyline</span>
+          <div>${fmtML(resolvedHomeML) || '<span style="color:var(--muted)">—</span>'}</div>
+        </div>` : '';
+      probBar = `<div class="score-prob-bar">
+        <div class="score-prob-labels"><span>${awayAbbr} ${awayPct}%</span><span>${homeAbbr} ${homePct}%</span></div>
+        <div class="score-prob-track">
+          <div class="prob-away" style="width:${awayPct}%"></div>
+          <div class="prob-home" style="width:${homePct}%"></div>
+        </div>
+        ${mlRow}
+      </div>`;
+    } else if ((g.isLive || g.isFinal) && (resolvedAwayML || resolvedHomeML)) {
+      // Show pre-game ML on live/final cards
+      probBar = `<div class="score-prob-bar">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>${fmtML(resolvedAwayML) || '<span style="color:var(--muted)">—</span>'}</div>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Pre-Game ML</span>
+          <div>${fmtML(resolvedHomeML) || '<span style="color:var(--muted)">—</span>'}</div>
+        </div>
+      </div>`;
+    }
+
+    // Score display
+    let scoreSection = '';
+    if (showScore) {
+      const homeScoreCls = g.isFinal ? (homeWon ? 'won' : 'lost') : 'live-score';
+      const awayScoreCls = g.isFinal ? (!homeWon ? 'won' : 'lost') : 'live-score';
+      scoreSection = `<div class="score-vs-block">
+        <div class="score-final-scores">
+          <div class="score-vs-num ${awayScoreCls}">${g.awayScore}</div>
+          <div class="score-vs-dash">–</div>
+          <div class="score-vs-num ${homeScoreCls}">${g.homeScore}</div>
+        </div>
+        ${g.isLive ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;letter-spacing:2px;color:var(--green);text-align:center">${g.status}</div>` : ''}
+      </div>`;
+    } else {
+      scoreSection = `<div class="score-vs-block" style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;letter-spacing:2px">VS</div>`;
+    }
+
+    // GTW matchup label
+    const gtwMeta = gtw && gtwLabel ? `<div class="gtw-matchup-rank">⭐ ${gtwLabel}</div>` : '';
+
+    // Close game banner: live game, 4th quarter, under 5:00, within 5 points
+    let closeGameBanner = '';
+    if (g.isLive) {
+      const scoreDiff = Math.abs((g.homeScore || 0) - (g.awayScore || 0));
+      const statusStr = (g.status || '').toLowerCase();
+      // ESPN status text for 4th quarter looks like "4th - 3:42" or "4Q 2:15" or "End of 3rd"
+      const is4thQ = /\b4(th|q)\b/i.test(statusStr) || statusStr.startsWith('4th') || statusStr.startsWith('4q');
+      // Parse time remaining: look for M:SS pattern
+      const timeMatch = statusStr.match(/(\d+):(\d{2})/);
+      let secsRemaining = null;
+      if (timeMatch) {
+        secsRemaining = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
+      }
+      const under5mins = secsRemaining !== null && secsRemaining < 300;
+      if (is4thQ && under5mins && scoreDiff <= 5) {
+        const timeStr = timeMatch ? timeMatch[0].toUpperCase() : 'LATE 4TH';
+        closeGameBanner = `<div class="close-game-banner"><div class="close-game-dot"></div>🔥 CLOSE GAME · ${timeStr} LEFT · ${scoreDiff === 0 ? 'TIED' : scoreDiff + ' PTS'}</div>`;
+      }
+    }
+
+    return `<div class="score-card${gtw ? ' gtw' : ''}${g.isLive ? ' is-live' : ''}">
+      ${gtw ? `<div class="gtw-flag">MUST WATCH</div>` : ''}
+      <div class="score-card-top">
+        <span class="score-time-badge">${dateLabel}${g.tipDisplay && !g.isFinal && !g.isLive ? ' · ' + g.tipDisplay : ''}</span>
+        <span class="score-status ${statusCls}">${statusLabel}</span>
+      </div>
+      <div class="score-card-body">
+        <div class="score-teams-row">
+          <div class="score-team-block away">
+            <div class="score-logo-wrap" style="background:${awayColors.bg};border:1px solid ${awayColors.bg}88">
+              <img src="${awayLogo}" alt="${awayAbbr}" onerror="this.style.display='none'">
+            </div>
+            <div class="score-team-info">
+              ${powerRanks[awayAbbr] ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4);line-height:1;margin-bottom:1px">#${powerRanks[awayAbbr]}</div>` : ''}
+              <div class="score-team-abbr-lg" style="color:${awayColors.bg === '#333' ? 'var(--text)' : awayColors.bg}">${awayAbbr}</div>
+              <div class="score-team-record">${awayRecStr} · Away</div>
+            </div>
+          </div>
+          ${scoreSection}
+          <div class="score-team-block home">
+            <div class="score-logo-wrap" style="background:${homeColors.bg};border:1px solid ${homeColors.bg}88">
+              <img src="${homeLogo}" alt="${homeAbbr}" onerror="this.style.display='none'">
+            </div>
+            <div class="score-team-info">
+              ${powerRanks[homeAbbr] ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4);line-height:1;margin-bottom:1px">#${powerRanks[homeAbbr]}</div>` : ''}
+              <div class="score-team-abbr-lg" style="color:${homeColors.bg === '#333' ? 'var(--text)' : homeColors.bg}">${homeAbbr}</div>
+              <div class="score-team-record">${homeRecStr} · Home</div>
+            </div>
+          </div>
+        </div>
+        ${probBar}
+        ${gtwMeta}
+      </div>
+      ${closeGameBanner}
+    </div>`;
+  }
+
+  // ── SECTION HEADER HELPER ─────────────────────────────
+  function sectionHead(title, sub, live = false) {
+    return `<div class="scores-section-label">
+      ${live ? '<div class="scores-live-dot"></div>' : ''}
+      <div>
+        <div class="scores-section-title">${title}</div>
+        <div class="scores-section-sub">${sub}</div>
+      </div>
+    </div>`;
+  }
+
+  let html = '';
+
+  // API source notice
+  const sourceLabel = data.source === 'espn' ? 'ESPN API' : 'Cached data';
+  html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:2px;color:var(--muted)">
+    <div class="scores-live-dot"></div> Live · ${sourceLabel} · Auto-refreshes on page load
+  </div>`;
+
+  // ── GTW SCORING HELPER (used by both sections) ────────
+  const allRemaining = data.remaining || [];
+  const scoredRemaining = allRemaining.map(g => {
+    const hr = powerRanks[g.home] || 30;
+    const ar = powerRanks[g.away] || 30;
+    const eliteScore = hr + ar;
+    const bothTop10 = hr <= 10 && ar <= 10;
+    return { ...g, hr, ar, eliteScore, bothTop10 };
+  });
+
+  // Helper: check if a today game qualifies as GTW (both teams top 10)
+  function getTodayGtwOpts(g) {
+    const hr = powerRanks[g.home] || 30;
+    const ar = powerRanks[g.away] || 30;
+    if (hr <= 10 && ar <= 10) {
+      return { gtw: true, gtwLabel: `#${ar} ${g.away} vs #${hr} ${g.home}` };
+    }
+    return { gtw: false, gtwLabel: '' };
+  }
+
+  // ── SECTION 1: TODAY'S GAMES ──────────────────────────
+  const todayFinal = data.today.filter(g => g.isFinal);
+  const todayLive = data.today.filter(g => g.isLive);
+  const todayUpcoming = data.today.filter(g => g.isUpcoming);
+  const todayAll = [...todayLive, ...todayFinal, ...todayUpcoming];
+
+  // Count how many of today's games are must-watch
+  const todayGtwCount = todayAll.filter(g => getTodayGtwOpts(g).gtw).length;
+  const todaySubLabel = [
+    todayLive.length > 0 ? `${todayLive.length} game${todayLive.length > 1 ? 's' : ''} in progress` :
+    todayFinal.length > 0 ? `${todayFinal.length} final${todayFinal.length > 1 ? 's' : ''} · ${todayUpcoming.length} upcoming` :
+    todayUpcoming.length > 0 ? `${todayUpcoming.length} games tonight` : 'No games today',
+    todayGtwCount > 0 ? `${todayGtwCount} must watch` : ''
+  ].filter(Boolean).join(' · ');
+
+  html += sectionHead("Today's Games", todaySubLabel, todayLive.length > 0);
+
+  if (todayAll.length > 0) {
+    html += '<div class="scores-grid">';
+    todayAll.forEach(g => { html += scoreCard(g, getTodayGtwOpts(g)); });
+    html += '</div>';
+  } else {
+    html += `<div class="no-games-msg">🏀 No games scheduled today. Check back tomorrow.</div>`;
+  }
+
+  html += '<div class="scores-divider"></div>';
+
+  // ── SECTION 2: GAMES TO WATCH (future only · exclude today) ──
+  const todayStr2 = localDateStr(new Date());
+  const gtwGames = scoredRemaining
+    .filter(g => g.bothTop10 && g.date > todayStr2)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.eliteScore - b.eliteScore);
+
+  html += sectionHead('Games to Watch',
+    gtwGames.length > 0 ? `${gtwGames.length} upcoming game${gtwGames.length > 1 ? 's' : ''} between two top-10 teams` : 'No upcoming top-10 matchups found',
+    false);
+
+  if (gtwGames.length > 0) {
+    html += '<div class="scores-grid">';
+    gtwGames.forEach(g => {
+      const matchupStr = `#${g.ar} ${g.away} vs #${g.hr} ${g.home}`;
+      html += scoreCard(g, { gtw: true, gtwLabel: matchupStr });
+    });
+    html += '</div>';
+  } else {
+    html += `<div class="no-games-msg">No upcoming games this season between two top-10 power-ranked teams</div>`;
+  }
+
+  html += '<div class="scores-divider"></div>';
+
+  // ── SECTION 3: RECENT RESULTS ─────────────────────────
+  const recentToShow = data.recent;
+
+  const recentCount = Math.min(recentToShow.length, 16);
+  html += sectionHead('Recent Results', data.source === 'espn' ? 'Past 72 hours · From ESPN API' : 'Cached results', false);
+
+  if (recentToShow.length > 0) {
+    html += '<div class="scores-grid">';
+    recentToShow.slice(0, recentCount).forEach(g => { html += scoreCard(g); });
+    html += '</div>';
+  } else {
+    html += `<div class="no-games-msg">No recent results available</div>`;
+  }
+
+  document.getElementById('scores-container').innerHTML = html;
+
+  // Feed finished games into the live engine so rankings/playoffs/graph update.
+  // Only call applyLiveGameData when there are genuinely new finals not yet applied.
+  const finishedGames = [...(data.today||[]), ...(data.recent||[])].filter(g => g.isFinal);
+  const hasNewFinals = finishedGames.some(g => {
+    const key = g.date + '_' + g.home + '_' + g.away;
+    return !_appliedGameKeys.has(key);
+  });
+  if (hasNewFinals) {
+    applyLiveGameData(finishedGames);
+    renderRankings(); // re-render rankings only when data actually changed
+  }
+
+  // Start/reset the background poll loop
+  _hasLiveGames = (data.today||[]).some(g => g.isLive);
+  schedulePoll();
+}
+
+function renderStandings() {
+  const east = STANDINGS_DATA.filter(t => t.conf === 'EAST').sort((a,b)=>b.wins-a.wins||(a.losses-b.losses));
+  const west = STANDINGS_DATA.filter(t => t.conf === 'WEST').sort((a,b)=>b.wins-a.wins||(a.losses-b.losses));
+
+  function tableFor(teams, confName) {
+    let h = `<div class="conf-header">${confName} Conference</div>`;
+    h += `<table class="standings-table"><thead><tr>
+      <th>#</th><th>Team</th><th>W</th><th>L</th><th>PCT</th><th>GB</th><th>DIV</th>
+    </tr></thead><tbody>`;
+    const leaderW = teams[0].wins, leaderL = teams[0].losses;
+    teams.forEach((t, i) => {
+      const gb = i === 0 ? '' : (((leaderW - t.wins) + (t.losses - leaderL)) / 2).toFixed(1);
+      const playoffLine = i === 5; // after 6th seed
+      h += `<tr class="${playoffLine ? 'playoff-line' : ''}">
+        <td>${i+1}</td>
+        <td>${t.name}</td>
+        <td>${t.wins}</td>
+        <td>${t.losses}</td>
+        <td class="win-pct">${(t.wins/(t.wins+t.losses)*100).toFixed(1)}%</td>
+        <td>${gb}</td>
+        <td>${t.div.split(' ')[0]}</td>
+      </tr>`;
+    });
+    h += '</tbody></table>';
+    return h;
+  }
+
+  document.getElementById('standings-container').innerHTML =
+    tableFor(east, 'Eastern') + tableFor(west, 'Western');
+}
+// ============================================================
+
+// ============================================================
+// BETTING LEDGER — $10/game on Clanker's pick, American odds
+// ============================================================
+
+// Storage keys
 const _BET_KEY_PREFIX = 'bets:';
 const _BET_ALLTIME_KEY = 'bets:alltime';
+
+// Cache of fetched moneylines: { "AWAY@HOME_DATE": { awayML, homeML } }
+const _oddsCache = {};
 
 // Fetch moneylines from ESPN scoreboard for a given date
 // ESPN scoreboard includes comp.odds[0].homeTeamOdds.moneyLine on upcoming games
@@ -359,359 +718,3 @@ async function renderPnlChart() {
     }
   });
 }
-
-// PREDICTIONS TAB
-// ============================================================
-
-// Storage wrappers · uses localStorage (works in any browser).
-// Falls back to a simple in-memory store if localStorage is blocked.
-// ============================================================
-// SCORES RENDER · 3-section redesign
-// ============================================================
-async function renderScores() {
-  document.getElementById('scores-container').innerHTML =
-    `<div class="loading-spinner"><div class="spinner"></div>Fetching live scores…</div>`;
-
-  let data;
-  try { data = await fetchAllScoreData(); }
-  catch(e) { data = { today: [], recent: [], remaining: [], source: 'error', fetchedAt: new Date() }; }
-
-  // Cache data so GTW badges can be refreshed when power rankings change
-  _lastScoreData = data;
-
-  // Update timestamp
-  const now = data.fetchedAt || new Date();
-  const tsEl = document.getElementById('scores-update-time');
-  if (tsEl) tsEl.textContent = 'Updated ' + now.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' · ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-
-  renderScoresHtml(data);
-}
-
-// Renders the scores tab HTML using cached game data + freshly computed power ranks.
-// Call this directly (without re-fetching) when power rankings change mid-session.
-function renderScoresHtml(data) {
-  if (!data) return;
-
-  // Always recompute power ranks fresh so GTW badges reflect current rankings
-  const powerRanks = buildPowerRankMap();
-
-  // ── PULL MONEYLINES FROM STORED BETTING PICKS ────────────
-  // The betting tab fetches & stores MLs in localStorage. Read them here so
-  // score cards always show moneylines regardless of ESPN odds availability.
-  const _picksMLMap = {};
-  try {
-    const todayStr = localDateStr(new Date());
-    const raw = _memStore['predictions:' + todayStr];
-    if (raw) {
-      const stored = JSON.parse(raw);
-      (stored.picks || []).forEach(p => {
-        if (p.homeAbbr && p.awayAbbr && (p.homeML || p.awayML)) {
-          _picksMLMap[p.awayAbbr + '@' + p.homeAbbr] = { homeML: p.homeML, awayML: p.awayML };
-        }
-      });
-    }
-  } catch(e) {}
-
-  // ── SCORE CARD BUILDER ─────────────────────────────────
-  function scoreCard(g, opts = {}) {
-    const { gtw = false, gtwLabel = '' } = opts;
-    const homeAbbr = g.home, awayAbbr = g.away;
-    const homeColors = TEAM_COLORS[homeAbbr] || { bg: '#333', text: '#fff' };
-    const awayColors = TEAM_COLORS[awayAbbr] || { bg: '#333', text: '#fff' };
-    const homeLogo = getLogoUrl(homeAbbr);
-    const awayLogo = getLogoUrl(awayAbbr);
-    const homeRec = STANDINGS_DATA.find(t => t.abbr === homeAbbr);
-    const awayRec = STANDINGS_DATA.find(t => t.abbr === awayAbbr);
-    const homeRecStr = homeRec ? `${homeRec.wins}–${homeRec.losses}` : '';
-    const awayRecStr = awayRec ? `${awayRec.wins}–${awayRec.losses}` : '';
-
-    const showScore = g.isFinal || g.isLive;
-    const homeWon = g.homeScore > g.awayScore;
-
-    let statusLabel, statusCls;
-    if (g.isLive) { statusLabel = g.status || 'LIVE'; statusCls = 'status-live'; }
-    else if (g.isFinal) { statusLabel = 'Final'; statusCls = 'status-final'; }
-    else { statusLabel = g.tipDisplay || 'Upcoming'; statusCls = 'status-upcoming'; }
-
-    // Date display
-    const today = localDateStr(new Date());
-    const yesterday = localDateStr(new Date(Date.now() - 86400000));
-    let dateLabel = '';
-    if (g.date === today) dateLabel = 'Today';
-    else if (g.date === yesterday) dateLabel = 'Yesterday';
-    else if (g.date) {
-      const d = new Date(g.date + 'T12:00:00');
-      dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    }
-
-    // Resolve moneylines: game object first, then picks cache fallback
-    const _mlFallback = _picksMLMap[awayAbbr + '@' + homeAbbr] || {};
-    const resolvedHomeML = g.homeML || _mlFallback.homeML || null;
-    const resolvedAwayML = g.awayML || _mlFallback.awayML || null;
-
-    function fmtML(ml) {
-      if (!ml) return null;
-      const str = (ml > 0 ? '+' : '') + ml;
-      const color = ml < 0 ? '#4dffa0' : '#ffc844';
-      return `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1px;color:${color}">${str}</span>`;
-    }
-
-    // Win probability + moneylines
-    let probBar = '';
-    if (g.isUpcoming) {
-      const { homePct, awayPct } = gameWinProb(awayAbbr, homeAbbr);
-      const mlRow = (resolvedAwayML || resolvedHomeML) ? `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px;padding-top:7px;border-top:1px solid var(--border)">
-          <div>${fmtML(resolvedAwayML) || '<span style="color:var(--muted)">—</span>'}</div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Moneyline</span>
-          <div>${fmtML(resolvedHomeML) || '<span style="color:var(--muted)">—</span>'}</div>
-        </div>` : '';
-      probBar = `<div class="score-prob-bar">
-        <div class="score-prob-labels"><span>${awayAbbr} ${awayPct}%</span><span>${homeAbbr} ${homePct}%</span></div>
-        <div class="score-prob-track">
-          <div class="prob-away" style="width:${awayPct}%"></div>
-          <div class="prob-home" style="width:${homePct}%"></div>
-        </div>
-        ${mlRow}
-      </div>`;
-    } else if ((g.isLive || g.isFinal) && (resolvedAwayML || resolvedHomeML)) {
-      // Show pre-game ML on live/final cards
-      probBar = `<div class="score-prob-bar">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>${fmtML(resolvedAwayML) || '<span style="color:var(--muted)">—</span>'}</div>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Pre-Game ML</span>
-          <div>${fmtML(resolvedHomeML) || '<span style="color:var(--muted)">—</span>'}</div>
-        </div>
-      </div>`;
-    }
-
-    // Score display
-    let scoreSection = '';
-    if (showScore) {
-      const homeScoreCls = g.isFinal ? (homeWon ? 'won' : 'lost') : 'live-score';
-      const awayScoreCls = g.isFinal ? (!homeWon ? 'won' : 'lost') : 'live-score';
-      scoreSection = `<div class="score-vs-block">
-        <div class="score-final-scores">
-          <div class="score-vs-num ${awayScoreCls}">${g.awayScore}</div>
-          <div class="score-vs-dash">–</div>
-          <div class="score-vs-num ${homeScoreCls}">${g.homeScore}</div>
-        </div>
-        ${g.isLive ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;letter-spacing:2px;color:var(--green);text-align:center">${g.status}</div>` : ''}
-      </div>`;
-    } else {
-      scoreSection = `<div class="score-vs-block" style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;letter-spacing:2px">VS</div>`;
-    }
-
-    // GTW matchup label
-    const gtwMeta = gtw && gtwLabel ? `<div class="gtw-matchup-rank">⭐ ${gtwLabel}</div>` : '';
-
-    // Close game banner: live game, 4th quarter, under 5:00, within 5 points
-    let closeGameBanner = '';
-    if (g.isLive) {
-      const scoreDiff = Math.abs((g.homeScore || 0) - (g.awayScore || 0));
-      const statusStr = (g.status || '').toLowerCase();
-      // ESPN status text for 4th quarter looks like "4th - 3:42" or "4Q 2:15" or "End of 3rd"
-      const is4thQ = /\b4(th|q)\b/i.test(statusStr) || statusStr.startsWith('4th') || statusStr.startsWith('4q');
-      // Parse time remaining: look for M:SS pattern
-      const timeMatch = statusStr.match(/(\d+):(\d{2})/);
-      let secsRemaining = null;
-      if (timeMatch) {
-        secsRemaining = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
-      }
-      const under5mins = secsRemaining !== null && secsRemaining < 300;
-      if (is4thQ && under5mins && scoreDiff <= 5) {
-        const timeStr = timeMatch ? timeMatch[0].toUpperCase() : 'LATE 4TH';
-        closeGameBanner = `<div class="close-game-banner"><div class="close-game-dot"></div>🔥 CLOSE GAME · ${timeStr} LEFT · ${scoreDiff === 0 ? 'TIED' : scoreDiff + ' PTS'}</div>`;
-      }
-    }
-
-    return `<div class="score-card${gtw ? ' gtw' : ''}${g.isLive ? ' is-live' : ''}">
-      ${gtw ? `<div class="gtw-flag">MUST WATCH</div>` : ''}
-      <div class="score-card-top">
-        <span class="score-time-badge">${dateLabel}${g.tipDisplay && !g.isFinal && !g.isLive ? ' · ' + g.tipDisplay : ''}</span>
-        <span class="score-status ${statusCls}">${statusLabel}</span>
-      </div>
-      <div class="score-card-body">
-        <div class="score-teams-row">
-          <div class="score-team-block away">
-            <div class="score-logo-wrap" style="background:${awayColors.bg};border:1px solid ${awayColors.bg}88">
-              <img src="${awayLogo}" alt="${awayAbbr}" onerror="this.style.display='none'">
-            </div>
-            <div class="score-team-info">
-              ${powerRanks[awayAbbr] ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4);line-height:1;margin-bottom:1px">#${powerRanks[awayAbbr]}</div>` : ''}
-              <div class="score-team-abbr-lg" style="color:${awayColors.bg === '#333' ? 'var(--text)' : awayColors.bg}">${awayAbbr}</div>
-              <div class="score-team-record">${awayRecStr} · Away</div>
-            </div>
-          </div>
-          ${scoreSection}
-          <div class="score-team-block home">
-            <div class="score-logo-wrap" style="background:${homeColors.bg};border:1px solid ${homeColors.bg}88">
-              <img src="${homeLogo}" alt="${homeAbbr}" onerror="this.style.display='none'">
-            </div>
-            <div class="score-team-info">
-              ${powerRanks[homeAbbr] ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4);line-height:1;margin-bottom:1px">#${powerRanks[homeAbbr]}</div>` : ''}
-              <div class="score-team-abbr-lg" style="color:${homeColors.bg === '#333' ? 'var(--text)' : homeColors.bg}">${homeAbbr}</div>
-              <div class="score-team-record">${homeRecStr} · Home</div>
-            </div>
-          </div>
-        </div>
-        ${probBar}
-        ${gtwMeta}
-      </div>
-      ${closeGameBanner}
-    </div>`;
-  }
-
-  // ── SECTION HEADER HELPER ─────────────────────────────
-  function sectionHead(title, sub, live = false) {
-    return `<div class="scores-section-label">
-      ${live ? '<div class="scores-live-dot"></div>' : ''}
-      <div>
-        <div class="scores-section-title">${title}</div>
-        <div class="scores-section-sub">${sub}</div>
-      </div>
-    </div>`;
-  }
-
-  let html = '';
-
-  // API source notice
-  const sourceLabel = data.source === 'espn' ? 'ESPN API' : 'Cached data';
-  html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:2px;color:var(--muted)">
-    <div class="scores-live-dot"></div> Live · ${sourceLabel} · Auto-refreshes on page load
-  </div>`;
-
-  // ── GTW SCORING HELPER (used by both sections) ────────
-  const allRemaining = data.remaining || [];
-  const scoredRemaining = allRemaining.map(g => {
-    const hr = powerRanks[g.home] || 30;
-    const ar = powerRanks[g.away] || 30;
-    const eliteScore = hr + ar;
-    const bothTop10 = hr <= 10 && ar <= 10;
-    return { ...g, hr, ar, eliteScore, bothTop10 };
-  });
-
-  // Helper: check if a today game qualifies as GTW (both teams top 10)
-  function getTodayGtwOpts(g) {
-    const hr = powerRanks[g.home] || 30;
-    const ar = powerRanks[g.away] || 30;
-    if (hr <= 10 && ar <= 10) {
-      return { gtw: true, gtwLabel: `#${ar} ${g.away} vs #${hr} ${g.home}` };
-    }
-    return { gtw: false, gtwLabel: '' };
-  }
-
-  // ── SECTION 1: TODAY'S GAMES ──────────────────────────
-  const todayFinal = data.today.filter(g => g.isFinal);
-  const todayLive = data.today.filter(g => g.isLive);
-  const todayUpcoming = data.today.filter(g => g.isUpcoming);
-  const todayAll = [...todayLive, ...todayFinal, ...todayUpcoming];
-
-  // Count how many of today's games are must-watch
-  const todayGtwCount = todayAll.filter(g => getTodayGtwOpts(g).gtw).length;
-  const todaySubLabel = [
-    todayLive.length > 0 ? `${todayLive.length} game${todayLive.length > 1 ? 's' : ''} in progress` :
-    todayFinal.length > 0 ? `${todayFinal.length} final${todayFinal.length > 1 ? 's' : ''} · ${todayUpcoming.length} upcoming` :
-    todayUpcoming.length > 0 ? `${todayUpcoming.length} games tonight` : 'No games today',
-    todayGtwCount > 0 ? `${todayGtwCount} must watch` : ''
-  ].filter(Boolean).join(' · ');
-
-  html += sectionHead("Today's Games", todaySubLabel, todayLive.length > 0);
-
-  if (todayAll.length > 0) {
-    html += '<div class="scores-grid">';
-    todayAll.forEach(g => { html += scoreCard(g, getTodayGtwOpts(g)); });
-    html += '</div>';
-  } else {
-    html += `<div class="no-games-msg">🏀 No games scheduled today. Check back tomorrow.</div>`;
-  }
-
-  html += '<div class="scores-divider"></div>';
-
-  // ── SECTION 2: GAMES TO WATCH (future only · exclude today) ──
-  const todayStr2 = localDateStr(new Date());
-  const gtwGames = scoredRemaining
-    .filter(g => g.bothTop10 && g.date > todayStr2)
-    .sort((a, b) => a.date.localeCompare(b.date) || a.eliteScore - b.eliteScore);
-
-  html += sectionHead('Games to Watch',
-    gtwGames.length > 0 ? `${gtwGames.length} upcoming game${gtwGames.length > 1 ? 's' : ''} between two top-10 teams` : 'No upcoming top-10 matchups found',
-    false);
-
-  if (gtwGames.length > 0) {
-    html += '<div class="scores-grid">';
-    gtwGames.forEach(g => {
-      const matchupStr = `#${g.ar} ${g.away} vs #${g.hr} ${g.home}`;
-      html += scoreCard(g, { gtw: true, gtwLabel: matchupStr });
-    });
-    html += '</div>';
-  } else {
-    html += `<div class="no-games-msg">No upcoming games this season between two top-10 power-ranked teams</div>`;
-  }
-
-  html += '<div class="scores-divider"></div>';
-
-  // ── SECTION 3: RECENT RESULTS ─────────────────────────
-  const recentToShow = data.recent;
-
-  const recentCount = Math.min(recentToShow.length, 16);
-  html += sectionHead('Recent Results', data.source === 'espn' ? 'Past 72 hours · From ESPN API' : 'Cached results', false);
-
-  if (recentToShow.length > 0) {
-    html += '<div class="scores-grid">';
-    recentToShow.slice(0, recentCount).forEach(g => { html += scoreCard(g); });
-    html += '</div>';
-  } else {
-    html += `<div class="no-games-msg">No recent results available</div>`;
-  }
-
-  document.getElementById('scores-container').innerHTML = html;
-
-  // Feed finished games into the live engine so rankings/playoffs/graph update.
-  // Only call applyLiveGameData when there are genuinely new finals not yet applied.
-  const finishedGames = [...(data.today||[]), ...(data.recent||[])].filter(g => g.isFinal);
-  const hasNewFinals = finishedGames.some(g => {
-    const key = g.date + '_' + g.home + '_' + g.away;
-    return !_appliedGameKeys.has(key);
-  });
-  if (hasNewFinals) {
-    applyLiveGameData(finishedGames);
-    renderRankings(); // re-render rankings only when data actually changed
-  }
-
-  // Start/reset the background poll loop
-  _hasLiveGames = (data.today||[]).some(g => g.isLive);
-  schedulePoll();
-}
-
-function renderStandings() {
-  const east = STANDINGS_DATA.filter(t => t.conf === 'EAST').sort((a,b)=>b.wins-a.wins||(a.losses-b.losses));
-  const west = STANDINGS_DATA.filter(t => t.conf === 'WEST').sort((a,b)=>b.wins-a.wins||(a.losses-b.losses));
-
-  function tableFor(teams, confName) {
-    let h = `<div class="conf-header">${confName} Conference</div>`;
-    h += `<table class="standings-table"><thead><tr>
-      <th>#</th><th>Team</th><th>W</th><th>L</th><th>PCT</th><th>GB</th><th>DIV</th>
-    </tr></thead><tbody>`;
-    const leaderW = teams[0].wins, leaderL = teams[0].losses;
-    teams.forEach((t, i) => {
-      const gb = i === 0 ? '' : (((leaderW - t.wins) + (t.losses - leaderL)) / 2).toFixed(1);
-      const playoffLine = i === 5; // after 6th seed
-      h += `<tr class="${playoffLine ? 'playoff-line' : ''}">
-        <td>${i+1}</td>
-        <td>${t.name}</td>
-        <td>${t.wins}</td>
-        <td>${t.losses}</td>
-        <td class="win-pct">${(t.wins/(t.wins+t.losses)*100).toFixed(1)}%</td>
-        <td>${gb}</td>
-        <td>${t.div.split(' ')[0]}</td>
-      </tr>`;
-    });
-    h += '</tbody></table>';
-    return h;
-  }
-
-  document.getElementById('standings-container').innerHTML =
-    tableFor(east, 'Eastern') + tableFor(west, 'Western');
-}
-
