@@ -2725,6 +2725,7 @@
     .sb-stat-pill b { font-size: 1.1rem; }
     .sb-lb-row { grid-template-columns: 32px 1fr auto; }
     .sb-lb-record { display: none; }
+    .sb-lb-cell { display: none; }
     .sb-history-row { grid-template-columns: 72px 1fr auto; }
     .sb-history-type, .sb-history-stake { display: none; }
 
@@ -9023,11 +9024,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   .sb-lb-sub { font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; letter-spacing: 2px; color: var(--muted); }
   .sb-lb-row {
-    display: grid; grid-template-columns: 44px 1fr auto auto;
+    display: grid; grid-template-columns: 44px 1fr auto auto auto auto auto;
     align-items: center; gap: 12px; padding: 11px 20px;
     border-bottom: 1px solid rgba(255,255,255,0.04);
     font-family: 'Barlow Condensed', sans-serif; font-size: 0.9rem;
     transition: background 0.15s;
+  }
+  .sb-lb-cell {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.82rem;
+    color: var(--muted); text-align: right; letter-spacing: 0.5px;
   }
   .sb-lb-row.not-in-top {
     border-top: 1px solid var(--border); background: rgba(255,255,255,0.02);
@@ -9358,6 +9363,18 @@ async function _botSave() {
   try { await window.storage.set(BOT_KEY, JSON.stringify(_botProfile)); } catch(e) {}
   // Update leaderboard
   try {
+    const botOpenBets = (_botBetsCache || []).filter(b => b.status === 'open');
+    const botAtRisk = botOpenBets.reduce((s, b) => s + (b.stake || 0), 0);
+    let botPotReturn = 0;
+    for (const b of botOpenBets) {
+      if (b.potentialPayout != null) {
+        botPotReturn += b.potentialPayout;
+      } else if (b.betType === 'parlay' && b.parlayML) {
+        botPotReturn += (b.stake || 0) + _mlPayout(b.parlayML, b.stake || 0);
+      } else if (b.ml) {
+        botPotReturn += (b.stake || 0) + _mlPayout(b.ml, b.stake || 0);
+      }
+    }
     await window.storage.set(BOT_LB_KEY, JSON.stringify({
       v: 2,  // version — pre-auth entries lack this and are filtered from display
       nickname: BOT_NAME,
@@ -9366,6 +9383,10 @@ async function _botSave() {
       l: _botProfile.l || 0,
       net: _botProfile.net || 0,
       bets: (_botProfile.w || 0) + (_botProfile.l || 0),
+      atRisk: botAtRisk,
+      potReturn: botPotReturn,
+      liveBets: botOpenBets.length,
+      allTimeWagered: _botProfile.allTimeWagered || 0,
       ts: Date.now()
     }), true);
   } catch(e) {}
@@ -9609,9 +9630,11 @@ async function _botMakeDailyPicks(enrichedGames) {
         id: Date.now() + Math.random(), date: today,
         betType: 'parlay', status: 'open',
         legs: validLegs, stake, parlayML,
+        potentialPayout: stake + _mlPayout(parlayML, stake),
         result: null, payout: null, net: null
       });
       _botProfile.bankroll -= stake;
+      _botProfile.allTimeWagered = (_botProfile.allTimeWagered || 0) + stake;
       betPlaced = true;
     }
   }
@@ -9631,9 +9654,11 @@ async function _botMakeDailyPicks(enrichedGames) {
       id: Date.now() + Math.random(), date: today,
       betType: 'single', status: 'open',
       legs: [leg], stake, ml: p.ml,
+      potentialPayout: stake + _mlPayout(p.ml, stake),
       result: null, payout: null, net: null
     });
     _botProfile.bankroll -= stake;
+    _botProfile.allTimeWagered = (_botProfile.allTimeWagered || 0) + stake;
     betPlaced = true;
   }
 
@@ -9712,6 +9737,7 @@ let _sbProfile = null;
 let _sbGames = [];         // today's games with live odds
 let _sbEnrichedGamesCache = []; // enriched games with odds + spreads + totals
 let _sbHistoryFilter = 'all'; // 'all' | 'open' | 'settled'
+let _sbLbSort = { col: 'bankroll', dir: -1 }; // active leaderboard sort column + direction
 
 // ── Parlay correlation rules ─────────────────────────────────
 function _sbCorrelationBlocked(newLeg, existingLegs) {
@@ -9786,6 +9812,25 @@ async function _sbSaveLeaderboard() {
   const safeNick = (_sbProfile.nickname || 'anon').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 20);
   const userKey = 'leaderboard.' + safeNick;
   const totalBets = (_sbProfile.allTimeW || 0) + (_sbProfile.allTimeL || 0);
+
+  // Compute live-bet stats from open bets
+  let atRisk = 0, potReturn = 0, liveBets = 0;
+  try {
+    const bets = await _sbLoadBets();
+    for (const b of bets) {
+      if (b.status !== 'open') continue;
+      liveBets++;
+      atRisk += b.stake || 0;
+      if (b.potentialPayout != null) {
+        potReturn += b.potentialPayout;
+      } else if (b.betType === 'parlay' && b.parlayML) {
+        potReturn += (b.stake || 0) + _mlPayout(b.parlayML, b.stake || 0);
+      } else if (b.ml) {
+        potReturn += (b.stake || 0) + _mlPayout(b.ml, b.stake || 0);
+      }
+    }
+  } catch(e) {}
+
   const entry = {
     v: 2,  // version — pre-auth entries lack this and are filtered from display
     nickname: _sbProfile.nickname,
@@ -9794,6 +9839,8 @@ async function _sbSaveLeaderboard() {
     l: _sbProfile.allTimeL || 0,
     net: _sbProfile.allTimeNet || 0,
     bets: totalBets,
+    atRisk, potReturn, liveBets,
+    allTimeWagered: _sbProfile.allTimeWagered || 0,
     ts: Date.now()
   };
   try { await window.storage.set(userKey, JSON.stringify(entry), true); } catch(e) {
@@ -10038,11 +10085,13 @@ async function _sbPlaceBet() {
         legs: [leg],
         stake: _sbStake,
         ml: leg.ml,
+        potentialPayout: _sbStake + _mlPayout(leg.ml, _sbStake),
         result: null, payout: null, net: null
       };
       bets.push(bet);
       newBets.push(bet);
       _sbProfile.bankroll -= _sbStake;
+      _sbProfile.allTimeWagered = (_sbProfile.allTimeWagered || 0) + _sbStake;
     }
   } else {
     // Parlay
@@ -10056,11 +10105,13 @@ async function _sbPlaceBet() {
       legs: [..._sbSlip],
       stake: _sbStake,
       parlayML,
+      potentialPayout: _sbStake + _mlPayout(parlayML, _sbStake),
       result: null, payout: null, net: null
     };
     bets.push(bet);
     newBets.push(bet);
     _sbProfile.bankroll -= _sbStake;
+    _sbProfile.allTimeWagered = (_sbProfile.allTimeWagered || 0) + _sbStake;
   }
 
   await _sbSaveBets(bets);
@@ -10931,6 +10982,7 @@ function _renderBotPicks(botBets, enrichedGames) {
 
 function _renderSbLeaderboard(entries) {
   const myNick = _sbProfile?.nickname || '';
+  const sort = _sbLbSort;
 
   if (!entries.length) {
     return `<div class="sb-leaderboard" style="margin-bottom:28px">
@@ -10942,7 +10994,7 @@ function _renderSbLeaderboard(entries) {
     </div>`;
   }
 
-  // Check if current user appears in entries, if not add them at end for context
+  // Check if current user appears in entries; if not, append them for context
   const userInList = entries.some(e => e.nickname === myNick);
   const displayEntries = [...entries];
   if (!userInList && _sbProfile) {
@@ -10952,25 +11004,49 @@ function _renderSbLeaderboard(entries) {
       w: _sbProfile.allTimeW || 0,
       l: _sbProfile.allTimeL || 0,
       net: _sbProfile.allTimeNet || 0,
+      atRisk: 0, potReturn: 0, liveBets: 0,
+      allTimeWagered: _sbProfile.allTimeWagered || 0,
       _notInTop: true
     });
   }
 
-  const rows = displayEntries.map((e, i) => {
+  // Stable bankroll-based rank for medals (independent of active sort)
+  const byBankroll = [...displayEntries].sort((a, b) => (b.bankroll || 0) - (a.bankroll || 0));
+  const rankMap = new Map(byBankroll.map((e, i) => [e.nickname, i]));
+
+  // Sort rows by selected column
+  const colVal = (e) => {
+    if (sort.col === 'bankroll')       return e.bankroll || 0;
+    if (sort.col === 'atRisk')         return e.atRisk || 0;
+    if (sort.col === 'potReturn')      return e.potReturn || 0;
+    if (sort.col === 'liveBets')       return e.liveBets || 0;
+    if (sort.col === 'allTimeWagered') return e.allTimeWagered || 0;
+    return 0;
+  };
+  const sortedEntries = [...displayEntries].sort((a, b) => sort.dir * (colVal(b) - colVal(a)));
+
+  // Column header helper — clickable, shows arrow on active col
+  const colHdr = (col, label, align = 'right') => {
+    const isActive = sort.col === col;
+    const arrow = isActive ? (sort.dir === -1 ? ' ▼' : ' ▲') : '';
+    const color = isActive ? 'var(--text)' : 'var(--muted)';
+    const weight = isActive ? '700' : '400';
+    return `<div onclick="_sbSetLbSort('${col}')" style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:${color};font-weight:${weight};text-transform:uppercase;text-align:${align};cursor:pointer;user-select:none">${label}${arrow}</div>`;
+  };
+
+  const medals = ['🥇','🥈','🥉'];
+  const rows = sortedEntries.map((e) => {
     const isYou = e.nickname === myNick;
-    const rankCls = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
-    const medals = ['🥇','🥈','🥉'];
-    const rankDisplay = e._notInTop ? '—' : (i < 3 ? medals[i] : `#${i + 1}`);
+    const rank = rankMap.get(e.nickname) ?? 999;
+    const rankCls = rank === 0 ? 'top1' : rank === 1 ? 'top2' : rank === 2 ? 'top3' : '';
+    const rankDisplay = e._notInTop ? '—' : (rank < 3 ? medals[rank] : `#${rank + 1}`);
     const record = `${e.w || 0}W–${e.l || 0}L`;
-    const net = e.net || 0;
-    const netStr = (net >= 0 ? '+' : '') + '$' + Math.abs(net).toFixed(2);
-    const netColor = net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : 'var(--muted)';
-    // ROI vs $100 start
-    const changeFromStart = e.bankroll - 100;
-    const changeStr = (changeFromStart >= 0 ? '+' : '') + '$' + Math.abs(changeFromStart).toFixed(0);
-    const changePct = ((changeFromStart / 100) * 100).toFixed(0);
-    const changeColor = changeFromStart > 0 ? 'var(--green)' : changeFromStart < 0 ? 'var(--red)' : 'var(--muted)';
-    const betsPlaced = e.bets != null ? e.bets : (e.w || 0) + (e.l || 0);
+    const bal = e.bankroll || 0;
+    const balColor = bal >= 100 ? 'var(--green)' : 'var(--red)';
+    const atRisk = e.atRisk || 0;
+    const potReturn = e.potReturn || 0;
+    const liveBets = e.liveBets || 0;
+    const wagered = e.allTimeWagered || 0;
 
     return `<div class="sb-lb-row${isYou ? ' you' : ''}${e._notInTop ? ' not-in-top' : ''}">
       <div class="sb-lb-rank ${rankCls}">${rankDisplay}</div>
@@ -10978,27 +11054,39 @@ function _renderSbLeaderboard(entries) {
         <div class="sb-lb-name${isYou ? ' you' : ''}">${e.nickname}${isYou ? ' <span style="font-size:0.65rem;color:var(--accent2);letter-spacing:1px">YOU</span>' : ''}</div>
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:var(--muted);letter-spacing:1px;margin-top:1px">${record}</div>
       </div>
-      <div style="text-align:right">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);letter-spacing:1px">${betsPlaced} bet${betsPlaced !== 1 ? 's' : ''}</div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;color:${changeColor};letter-spacing:1px">${changeStr} (${changePct}%)</div>
-      </div>
-      <div class="sb-lb-balance">$${(e.bankroll || 0).toFixed(2)}</div>
+      <div class="sb-lb-balance" style="color:${balColor}">$${bal.toFixed(2)}</div>
+      <div class="sb-lb-cell">${atRisk > 0 ? '$' + atRisk.toFixed(2) : '<span style="color:rgba(255,255,255,0.2)">—</span>'}</div>
+      <div class="sb-lb-cell" style="${potReturn > 0 ? 'color:var(--green)' : ''}">${potReturn > 0 ? '$' + potReturn.toFixed(2) : '<span style="color:rgba(255,255,255,0.2)">—</span>'}</div>
+      <div class="sb-lb-cell">${liveBets > 0 ? liveBets : '<span style="color:rgba(255,255,255,0.2)">—</span>'}</div>
+      <div class="sb-lb-cell">${wagered > 0 ? '$' + wagered.toFixed(0) : '<span style="color:rgba(255,255,255,0.2)">—</span>'}</div>
     </div>`;
   }).join('');
 
   return `<div class="sb-leaderboard" style="margin-bottom:28px">
     <div class="sb-lb-header">
       <span class="sb-lb-title">🏆 Global Leaderboard</span>
-      <span class="sb-lb-sub" style="margin-left:auto">Top ${Math.min(entries.length, 15)} · Balance from $100 start</span>
+      <span class="sb-lb-sub" style="margin-left:auto">Top ${Math.min(entries.length, 15)} · $100 start</span>
     </div>
     <div class="sb-lb-row" style="background:var(--surface2);border-bottom:1px solid var(--border)">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Rank</div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">Player</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:right">Bets · ROI</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:right">Balance</div>
+      ${colHdr('bankroll', 'Balance')}
+      ${colHdr('atRisk', 'At Risk')}
+      ${colHdr('potReturn', 'Pot. Return')}
+      ${colHdr('liveBets', 'Live')}
+      ${colHdr('allTimeWagered', 'Wagered')}
     </div>
     ${rows}
   </div>`;
+}
+
+function _sbSetLbSort(col) {
+  if (_sbLbSort.col === col) {
+    _sbLbSort.dir = _sbLbSort.dir === -1 ? 1 : -1;
+  } else {
+    _sbLbSort = { col, dir: -1 };
+  }
+  renderSportsbook();
 }
 
 // ── Shared bet card renderer (used by open bets + history) ────
