@@ -10820,6 +10820,20 @@ async function renderSportsbook() {
   }
 }
 
+// Euclidean distance in RGB space; returns 999 if either color is non-hex (e.g. CSS var)
+function _sbColorDist(h1, h2) {
+  const parse = h => {
+    h = (h || '').replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) throw new Error('not hex');
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  };
+  try {
+    const [r1,g1,b1] = parse(h1);
+    const [r2,g2,b2] = parse(h2);
+    return Math.sqrt((r1-r2)**2 + (g1-g2)**2 + (b1-b2)**2);
+  } catch(e) { return 999; }
+}
+
 function _renderSbGameCard(g, openBets) {
   const awayColors = TEAM_COLORS[g.away] || { bg: 'var(--muted)', text: '#fff' };
   const homeColors = TEAM_COLORS[g.home] || { bg: 'var(--muted)', text: '#fff' };
@@ -10842,8 +10856,24 @@ function _renderSbGameCard(g, openBets) {
   // Win prob bar
   const awayPct = g.awayWinPct || 45;
   const homePct = g.homeWinPct || 55;
-  const awayBarColor = (awayColors.bg && awayColors.bg !== 'var(--muted)' && awayColors.bg !== '#333') ? awayColors.bg : 'var(--blue)';
-  const homeBarColor = (homeColors.bg && homeColors.bg !== 'var(--muted)' && homeColors.bg !== '#333') ? homeColors.bg : 'var(--accent)';
+  const CONTRAST_THRESH = 80;
+  const isHex = c => c && !c.startsWith('var(') && c !== '#333' && /^#[0-9a-fA-F]{6}$/.test(c);
+  let awayBarColor;
+  if (isHex(awayColors.bg)) {
+    if (isHex(homeColors.bg) && _sbColorDist(awayColors.bg, homeColors.bg) < CONTRAST_THRESH) {
+      // Primary colors too similar — try away secondary
+      if (isHex(awayColors.text) && _sbColorDist(awayColors.text, homeColors.bg) >= CONTRAST_THRESH) {
+        awayBarColor = awayColors.text;
+      } else {
+        awayBarColor = 'var(--blue)';
+      }
+    } else {
+      awayBarColor = awayColors.bg;
+    }
+  } else {
+    awayBarColor = 'var(--blue)';
+  }
+  const homeBarColor = isHex(homeColors.bg) ? homeColors.bg : 'var(--accent)';
   const probBar = g.isFinal ? '' : `
     <div style="display:flex;align-items:center;gap:8px;padding:0 14px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:1px">
       <span style="color:var(--muted);width:32px;text-align:right">${awayPct}%</span>
@@ -11087,11 +11117,42 @@ function _renderBotPicks(botBets, enrichedGames) {
         ? `<span style="color:var(--muted);font-size:0.72rem;margin-left:8px">${game.awayScore ?? '—'}–${game.homeScore ?? '—'}${game.isFinal ? ' F' : ''}</span>`
         : '';
 
+      // O/U progress bar — shown when game is live and bet is pending
+      let ouBarHtml = '';
+      if (isPending && (l.type === 'ou_over' || l.type === 'ou_under') && game?.isLive) {
+        const currentPts = (game.homeScore || 0) + (game.awayScore || 0);
+        const ouLine = l.line || 0;
+        const maxPts = Math.max(ouLine * 1.15, currentPts + 5);
+        const pct = Math.min(100, (currentPts / maxPts) * 100);
+        const linePct = Math.min(99, (ouLine / maxPts) * 100);
+        const isOver = l.type === 'ou_over';
+        const barColor = currentPts >= ouLine
+          ? (isOver ? 'var(--green)' : 'var(--red)')
+          : (isOver ? 'rgba(255,255,255,0.3)' : 'var(--green)');
+        const statusLbl = currentPts >= ouLine
+          ? (isOver ? `✓ Over by ${currentPts - ouLine}` : `✗ Over by ${currentPts - ouLine}`)
+          : `${ouLine - currentPts} pts needed`;
+        ouBarHtml = `
+          <div style="margin-top:6px">
+            <div style="display:flex;justify-content:space-between;font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;color:var(--muted);margin-bottom:3px">
+              <span>${currentPts} pts</span>
+              <span style="color:${currentPts>=ouLine?(isOver?'var(--green)':'var(--red)'):'var(--muted)'}">${statusLbl}</span>
+              <span>O/U ${ouLine}</span>
+            </div>
+            <div style="position:relative;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:visible">
+              <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width 0.4s"></div>
+              <div style="position:absolute;top:-3px;left:${linePct}%;width:2px;height:12px;background:var(--accent2);border-radius:1px;transform:translateX(-50%)"></div>
+            </div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;color:var(--muted);margin-top:2px;letter-spacing:1px">${game.status || 'LIVE'}</div>
+          </div>`;
+      }
+
       return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
         <div style="font-size:1rem;flex-shrink:0;margin-top:1px">${l.type.startsWith('ml') ? '🏆' : l.type.startsWith('spread') ? '📏' : '🎯'}</div>
         <div style="flex:1;min-width:0">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.92rem;font-weight:700;color:var(--text)">${desc} <span style="color:var(--muted);font-weight:400">${_fmtML(l.ml)}</span>${scoreInfo}</div>
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);letter-spacing:1px;margin-top:2px">${logoA}${l.awayAbbr} @ ${logoH}${l.homeAbbr} · ${reason}</div>
+          ${ouBarHtml}
         </div>
       </div>`;
     }).join('');
