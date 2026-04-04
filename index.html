@@ -10140,11 +10140,12 @@ async function _sbAutoSettle() {
   if (changed) {
     await _sbSaveBets(bets);
     if (_sbProfile) {
-      // Check if broke — if bankroll is 0 and it's a new day, give $50
+      // Check if broke — tiered reset: $50 first time, $25 second, $10 thereafter
       if (_sbProfile.bankroll <= 0) {
         const today = localDateStr(new Date());
         if (!_sbProfile.brokeDate || _sbProfile.brokeDate !== today) {
-          _sbProfile.bankroll = 25;
+          const resetAmt = _sbNextResetAmount(_sbProfile.brokeCount);
+          _sbProfile.bankroll = resetAmt;
           _sbProfile.brokeDate = today;
           _sbProfile.brokeCount = (_sbProfile.brokeCount || 0) + 1;
         }
@@ -10377,6 +10378,20 @@ function _renderSbSlip() {
       }
     }
   }
+  // All-in warning
+  const allinWarn = document.getElementById('sb-allin-warning');
+  if (allinWarn) {
+    const balance = _sbProfile?.bankroll || 0;
+    const totalStakeCheck = _sbSlipMode === 'single' ? _sbStake * _sbSlip.length : _sbStake;
+    if (_sbSlip.length > 0 && balance > 0 && totalStakeCheck >= balance) {
+      const nextReset = _sbNextResetAmount(_sbProfile?.brokeCount || 0);
+      allinWarn.textContent = `⚠️ All in — if you lose, you'll restart with $${nextReset}`;
+      allinWarn.style.display = '';
+    } else {
+      allinWarn.style.display = 'none';
+    }
+  }
+
   const pbtn = document.getElementById('sb-place-btn');
   if (pbtn) {
     const totalStake = _sbSlipMode === 'single' ? _sbStake * _sbSlip.length : _sbStake;
@@ -10755,6 +10770,7 @@ async function renderSportsbook() {
           <button class="sb-quick-btn" onclick="_sbQuickStake(50)">$50</button>
           <button class="sb-quick-btn" onclick="_sbQuickStake(Math.floor(_sbProfile?.bankroll||0))" title="All In">All In</button>
         </div>
+        <div id="sb-allin-warning" style="display:none;padding:8px 14px;background:rgba(255,51,85,0.1);border-top:1px solid rgba(255,51,85,0.2);font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--red);letter-spacing:1px"></div>
         <div class="sb-payout-row" id="sb-payout-row" style="display:none">
           <span class="sb-payout-label">Potential Payout</span>
           <span class="sb-payout-val" id="sb-payout-val"></span>
@@ -11575,15 +11591,25 @@ function _sbSignOut() {
     });
 }
 
+// Returns the bankroll amount a user gets on their next reset, based on how many times
+// they've already gone bankrupt. brokeCount is the current value (before this reset).
+function _sbNextResetAmount(brokeCount) {
+  const n = brokeCount || 0;
+  if (n === 0) return 50;
+  if (n === 1) return 25;
+  return 10;
+}
+
 async function _sbStartFresh() {
   if (!_sbProfile) return;
-  if (!confirm('Start fresh with $50? Your bet history will be kept but your balance resets.')) return;
+  const resetAmt = _sbNextResetAmount(_sbProfile.brokeCount);
+  if (!confirm(`Start fresh with $${resetAmt}? Your bet history will be kept but your balance resets.`)) return;
   const today = localDateStr(new Date());
-  _sbProfile.bankroll = 50;
+  _sbProfile.bankroll = resetAmt;
   _sbProfile.brokeCount = (_sbProfile.brokeCount || 0) + 1;
   _sbProfile.brokeDate = today;
   if (!_sbProfile.history) _sbProfile.history = [];
-  _sbProfile.history.push({ date: today, balance: 50, label: 'Reset' });
+  _sbProfile.history.push({ date: today, balance: resetAmt, label: 'Reset' });
   await _sbSaveProfile();
   await _sbSaveLeaderboard();
   renderSportsbook();
