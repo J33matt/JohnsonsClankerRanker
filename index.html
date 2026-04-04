@@ -9415,6 +9415,7 @@ async function _botSave() {
       potReturn: botPotReturn,
       liveBets: botOpenBets.length,
       allTimeWagered: _botProfile.allTimeWagered || 0,
+      brokeCount: _botProfile.brokeCount || 0,
       ts: Date.now()
     }), true);
   } catch(e) {}
@@ -9746,6 +9747,7 @@ async function _botSettle(enrichedGamesForToday) {
     if (!_botProfile.brokeDate || _botProfile.brokeDate !== today) {
       _botProfile.bankroll = 25;
       _botProfile.brokeDate = today;
+      _botProfile.brokeCount = (_botProfile.brokeCount || 0) + 1;
     }
   }
 
@@ -9909,6 +9911,7 @@ async function _sbSaveLeaderboard() {
     bets: totalBets,
     atRisk, potReturn, liveBets,
     allTimeWagered: _sbProfile.allTimeWagered || 0,
+    brokeCount: _sbProfile.brokeCount || 0,
     ts: Date.now()
   };
   try { await window.storage.set(userKey, JSON.stringify(entry), true); } catch(e) {
@@ -11077,6 +11080,7 @@ function _renderSbLeaderboard(entries) {
       net: _sbProfile.allTimeNet || 0,
       atRisk: 0, potReturn: 0, liveBets: 0,
       allTimeWagered: _sbProfile.allTimeWagered || 0,
+      brokeCount: _sbProfile.brokeCount || 0,
       _notInTop: true
     });
   }
@@ -11092,6 +11096,7 @@ function _renderSbLeaderboard(entries) {
     if (sort.col === 'potReturn')      return e.potReturn || 0;
     if (sort.col === 'liveBets')       return e.liveBets || 0;
     if (sort.col === 'allTimeWagered') return e.allTimeWagered || 0;
+    if (sort.col === 'brokeCount')     return e.brokeCount || 0;
     return 0;
   };
   const sortedEntries = [...displayEntries].sort((a, b) => sort.dir * (colVal(a) - colVal(b)));
@@ -11132,6 +11137,7 @@ function _renderSbLeaderboard(entries) {
       <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.potReturn || 0) > 0 ? 'color:var(--green)' : ''}">${fmtMoney(e.potReturn)}</td>
       <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem">${fmtCount(e.liveBets)}</td>
       <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem">${fmtWagered(e.allTimeWagered)}</td>
+      <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.brokeCount || 0) > 0 ? 'color:var(--red)' : ''}">${fmtCount(e.brokeCount)}</td>
     </tr>`;
   }).join('');
 
@@ -11149,16 +11155,18 @@ function _renderSbLeaderboard(entries) {
         <col class="sb-lb-cell" style="width:90px">
         <col class="sb-lb-cell" style="width:46px">
         <col class="sb-lb-cell" style="width:76px">
+        <col class="sb-lb-cell" style="width:52px">
       </colgroup>
       <thead>
         <tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
           <th style="padding:9px 8px 9px 20px;font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:center;font-weight:400">Rank</th>
           <th style="padding:9px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;text-align:left;font-weight:400">Player</th>
           <th onclick="_sbSetLbSort('bankroll')" style="${thStyle('bankroll')}">Balance${arrow('bankroll')}</th>
-          <th class="sb-lb-cell" onclick="_sbSetLbSort('atRisk')" style="${thStyle('atRisk')}">At Risk${arrow('atRisk')}</th>
+          <th class="sb-lb-cell" onclick="_sbSetLbSort('atRisk')" style="${thStyle('atRisk')}">In Play${arrow('atRisk')}</th>
           <th class="sb-lb-cell" onclick="_sbSetLbSort('potReturn')" style="${thStyle('potReturn')}">Pot. Ret.${arrow('potReturn')}</th>
           <th class="sb-lb-cell" onclick="_sbSetLbSort('liveBets')" style="${thStyle('liveBets')}">Live${arrow('liveBets')}</th>
-          <th class="sb-lb-cell" onclick="_sbSetLbSort('allTimeWagered')" style="${thStyle('allTimeWagered')}">Wagered${arrow('allTimeWagered')}</th>
+          <th class="sb-lb-cell" onclick="_sbSetLbSort('allTimeWagered')" style="${thStyle('allTimeWagered')}">Volume${arrow('allTimeWagered')}</th>
+          <th class="sb-lb-cell" onclick="_sbSetLbSort('brokeCount')" style="${thStyle('brokeCount')}">💸${arrow('brokeCount')}</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
