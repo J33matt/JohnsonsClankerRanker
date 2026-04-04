@@ -9740,9 +9740,10 @@ async function _botSettle(enrichedGamesForToday) {
 
     if (bet.betType === 'single') {
       const leg = bet.legs[0];
-      const game = games.find(g => g.isFinal && ((g.home === leg.homeAbbr && g.away === leg.awayAbbr)));
+      const game = games.find(g => (g.home === leg.homeAbbr && g.away === leg.awayAbbr));
       if (!game) continue;
       finalResult = _sbGradeLeg(leg, game);
+      if (finalResult === null) continue;
       if (finalResult === 'win')  payout = bet.stake + _mlPayout(leg.ml, bet.stake);
       else if (finalResult === 'push') payout = bet.stake;
     } else {
@@ -9981,9 +9982,18 @@ function _sbTotal(awayAbbr, homeAbbr) {
 
 // ── Determine bet result from final scores ─────────────────────
 function _sbGradeLeg(leg, game) {
-  const { homeScore, awayScore } = game;
+  const { homeScore, awayScore, isFinal } = game;
   if (homeScore == null || awayScore == null) return null;
   const { type, line } = leg;
+  // Under bet: once the total exceeds the line the score can never come back down, so it's an immediate loss
+  if (type === 'ou_under') {
+    const tot = homeScore + awayScore;
+    if (tot > line) return 'loss';
+    if (!isFinal) return null; // still alive — game is in progress
+    return tot < line ? 'win' : 'push';
+  }
+  // All other bet types can only be graded on a final score
+  if (!isFinal) return null;
   if (type === 'ml_away') {
     if (awayScore > homeScore) return 'win';
     if (awayScore < homeScore) return 'loss';
@@ -9995,7 +10005,6 @@ function _sbGradeLeg(leg, game) {
     return 'push';
   }
   if (type === 'spread_away') {
-    // Away covers if awayScore + spread > homeScore
     const margin = awayScore + line - homeScore;
     if (margin > 0) return 'win';
     if (margin < 0) return 'loss';
@@ -10013,12 +10022,6 @@ function _sbGradeLeg(leg, game) {
     if (tot < line) return 'loss';
     return 'push';
   }
-  if (type === 'ou_under') {
-    const tot = homeScore + awayScore;
-    if (tot < line) return 'win';
-    if (tot > line) return 'loss';
-    return 'push';
-  }
   return null;
 }
 
@@ -10030,9 +10033,9 @@ function _sbGradeParlay(legs, games) {
       (g.home === leg.homeAbbr && g.away === leg.awayAbbr) ||
       (g.home === leg.awayAbbr && g.away === leg.homeAbbr)
     );
-    if (!game || (!game.isFinal && !game.isLive)) { anyPending = true; continue; }
-    if (!game.isFinal) { anyPending = true; continue; }
+    if (!game) { anyPending = true; continue; }
     const result = _sbGradeLeg(leg, game);
+    if (result === null) { anyPending = true; continue; }
     if (result === 'loss') return { result: 'loss', settledLegs: legs.length };
     if (result === 'push') hasPush = true;
   }
@@ -10088,8 +10091,9 @@ async function _sbAutoSettle() {
         (g.home === leg.homeAbbr && g.away === leg.awayAbbr) ||
         (g.home === leg.awayAbbr && g.away === leg.homeAbbr)
       );
-      if (!game || !game.isFinal) continue;
+      if (!game) continue;
       finalResult = _sbGradeLeg(leg, game);
+      if (finalResult === null) continue;
       if (finalResult === 'win') payout = bet.stake + _mlPayout(leg.ml, bet.stake);
       else if (finalResult === 'push') payout = bet.stake;
       else payout = 0;
@@ -11113,7 +11117,7 @@ function _renderBotPicks(botBets, enrichedGames) {
         } else if (bet.result === 'push') {
           legResult = 'push';
         }
-      } else if (game && game.isFinal) {
+      } else if (game) {
         legResult = _sbGradeLeg(l, game);
       }
       let dotHtml;
@@ -11433,7 +11437,7 @@ function _renderSbBetCard(bet, opts = {}) {
         (g.home === l.homeAbbr && g.away === l.awayAbbr) ||
         (g.home === l.awayAbbr && g.away === l.homeAbbr)
       );
-      if (legGame && legGame.isFinal) {
+      if (legGame) {
         legResult = _sbGradeLeg(l, legGame);
       }
       // else legResult stays null → grey dot
