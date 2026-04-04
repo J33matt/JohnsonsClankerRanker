@@ -11362,25 +11362,28 @@ function _sbMarginHtml(leg, game) {
   const { type, line } = leg;
   let label = '', color = 'var(--muted)';
 
+  const fin = game.isFinal;
   if (type === 'ml_away') {
     const diff = as - hs;
-    if (diff > 0)       { label = `Up ${diff}`; color = 'var(--green)'; }
-    else if (diff < 0)  { label = `Down ${Math.abs(diff)}`; color = 'var(--red)'; }
+    if (diff > 0)       { label = fin ? `Won by ${diff}` : `Up ${diff}`;           color = 'var(--green)'; }
+    else if (diff < 0)  { label = fin ? `Lost by ${Math.abs(diff)}` : `Down ${Math.abs(diff)}`; color = 'var(--red)'; }
     else                { label = 'Tied'; }
   } else if (type === 'ml_home') {
     const diff = hs - as;
-    if (diff > 0)       { label = `Up ${diff}`; color = 'var(--green)'; }
-    else if (diff < 0)  { label = `Down ${Math.abs(diff)}`; color = 'var(--red)'; }
+    if (diff > 0)       { label = fin ? `Won by ${diff}` : `Up ${diff}`;           color = 'var(--green)'; }
+    else if (diff < 0)  { label = fin ? `Lost by ${Math.abs(diff)}` : `Down ${Math.abs(diff)}`; color = 'var(--red)'; }
     else                { label = 'Tied'; }
   } else if (type === 'spread_away') {
-    const coverMargin = as + line - hs; // positive = covering
-    if (coverMargin > 0)      { label = `Covering by ${coverMargin.toFixed(1).replace('.0','')}`;  color = 'var(--green)'; }
-    else if (coverMargin < 0) { label = `Needs ${Math.abs(coverMargin).toFixed(1).replace('.0','')} to cover`; color = 'var(--red)'; }
+    const coverMargin = as + line - hs;
+    const amt = Math.abs(coverMargin).toFixed(1).replace('.0', '');
+    if (coverMargin > 0)      { label = fin ? `Covered by ${amt}` : `Covering by ${amt}`;        color = 'var(--green)'; }
+    else if (coverMargin < 0) { label = fin ? `Didn't cover (needed ${amt})` : `Needs ${amt} to cover`; color = 'var(--red)'; }
     else                      { label = 'Push line'; }
   } else if (type === 'spread_home') {
     const coverMargin = hs - line - as;
-    if (coverMargin > 0)      { label = `Covering by ${coverMargin.toFixed(1).replace('.0','')}`;  color = 'var(--green)'; }
-    else if (coverMargin < 0) { label = `Needs ${Math.abs(coverMargin).toFixed(1).replace('.0','')} to cover`; color = 'var(--red)'; }
+    const amt = Math.abs(coverMargin).toFixed(1).replace('.0', '');
+    if (coverMargin > 0)      { label = fin ? `Covered by ${amt}` : `Covering by ${amt}`;        color = 'var(--green)'; }
+    else if (coverMargin < 0) { label = fin ? `Didn't cover (needed ${amt})` : `Needs ${amt} to cover`; color = 'var(--red)'; }
     else                      { label = 'Push line'; }
   }
 
