@@ -11157,9 +11157,9 @@ function _renderBotPicks(botBets, enrichedGames) {
         ? `<span style="color:var(--muted);font-size:0.72rem;margin-left:8px">${game.awayScore ?? '—'}–${game.homeScore ?? '—'}${game.isFinal ? ' F' : ''}</span>`
         : '';
 
-      // O/U progress bar — shown when game is live and bet is pending
+      // O/U progress bar — shown when game has scores (live or final)
       let ouBarHtml = '';
-      if (isPending && (l.type === 'ou_over' || l.type === 'ou_under') && game?.isLive) {
+      if ((l.type === 'ou_over' || l.type === 'ou_under') && game && (game.isLive || game.isFinal)) {
         const currentPts = (game.homeScore || 0) + (game.awayScore || 0);
         const ouLine = l.line || 0;
         const maxPts = Math.max(ouLine * 1.15, currentPts + 5);
@@ -11172,6 +11172,7 @@ function _renderBotPicks(botBets, enrichedGames) {
         const statusLbl = currentPts >= ouLine
           ? (isOver ? `✓ Over by ${currentPts - ouLine}` : `✗ Over by ${currentPts - ouLine}`)
           : `${ouLine - currentPts} pts needed`;
+        const footerLbl = game.isFinal ? 'FINAL' : (game.status || 'LIVE');
         ouBarHtml = `
           <div style="margin-top:6px">
             <div style="display:flex;justify-content:space-between;font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;color:var(--muted);margin-bottom:3px">
@@ -11183,7 +11184,7 @@ function _renderBotPicks(botBets, enrichedGames) {
               <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width 0.4s"></div>
               <div style="position:absolute;top:-3px;left:${linePct}%;width:2px;height:12px;background:var(--accent2);border-radius:1px;transform:translateX(-50%)"></div>
             </div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;color:var(--muted);margin-top:2px;letter-spacing:1px">${game.status || 'LIVE'}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;color:var(--muted);margin-top:2px;letter-spacing:1px">${footerLbl}</div>
           </div>`;
       }
 
@@ -11461,17 +11462,17 @@ function _renderSbBetCard(bet, opts = {}) {
     const logoA = awayLogo ? `<img src="${awayLogo}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;border-radius:2px" onerror="this.style.display='none'">` : '';
     const logoH = homeLogo ? `<img src="${homeLogo}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;border-radius:2px" onerror="this.style.display='none'">` : '';
 
-    // O/U progress bar — shown when the game is live and the bet is still open
+    // O/U progress bar — shown when the game has scores (live or final)
     let ouBarHtml = '';
-    if (isPending && (l.type === 'ou_over' || l.type === 'ou_under')) {
-      const liveG = (_sbEnrichedGamesCache || _sbGames || []).find(g =>
+    if (l.type === 'ou_over' || l.type === 'ou_under') {
+      const allG = (_sbEnrichedGamesCache || []).concat(_sbGames || []);
+      const liveG = allG.find(g =>
         (g.home === l.homeAbbr && g.away === l.awayAbbr) ||
         (g.home === l.awayAbbr && g.away === l.homeAbbr)
       );
-      if (liveG && liveG.isLive) {
+      if (liveG && (liveG.isLive || liveG.isFinal)) {
         const currentPts = (liveG.homeScore || 0) + (liveG.awayScore || 0);
         const ouLine = l.line || 0;
-        // Scale: bar fills from 0 → line × 1.15 so there's room to exceed
         const maxPts = Math.max(ouLine * 1.15, currentPts + 5);
         const pct = Math.min(100, (currentPts / maxPts) * 100);
         const linePct = Math.min(99, (ouLine / maxPts) * 100);
@@ -11482,6 +11483,7 @@ function _renderSbBetCard(bet, opts = {}) {
         const statusLbl = currentPts >= ouLine
           ? (isOver ? `✓ Over by ${currentPts - ouLine}` : `✗ Over by ${currentPts - ouLine}`)
           : `${ouLine - currentPts} pts needed`;
+        const footerLbl = liveG.isFinal ? 'FINAL' : (liveG.status || 'LIVE');
         ouBarHtml = `
           <div style="margin-top:8px">
             <div style="display:flex;justify-content:space-between;font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;color:var(--muted);margin-bottom:3px">
@@ -11493,7 +11495,7 @@ function _renderSbBetCard(bet, opts = {}) {
               <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width 0.4s"></div>
               <div style="position:absolute;top:-3px;left:${linePct}%;width:2px;height:12px;background:var(--accent2);border-radius:1px;transform:translateX(-50%)"></div>
             </div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;color:var(--muted);margin-top:2px;letter-spacing:1px">${liveG.status || 'LIVE'}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;color:var(--muted);margin-top:2px;letter-spacing:1px">${footerLbl}</div>
           </div>`;
       }
     }
