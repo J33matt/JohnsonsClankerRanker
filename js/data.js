@@ -242,3 +242,4 @@ const NBA_TEAM_IDS = {
 function getLogoUrl(abbr) {
   const id = NBA_TEAM_IDS[abbr];
   return id ? `https://cdn.nba.com/logos/nba/${id}/global/L/logo.svg` : '';
+}

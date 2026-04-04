@@ -377,8 +377,3 @@ function renderGraph() {
 // BETTING LEDGER — $10/game on Clanker's pick, American odds
 // ============================================================
 
-// Storage keys
-const _BET_KEY_PREFIX = 'bets:';
-const _BET_ALLTIME_KEY = 'bets:alltime';
-
-// Cache of fetched moneylines: { "AWAY@HOME_DATE": { awayML, homeML } }

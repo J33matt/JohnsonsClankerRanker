@@ -443,49 +443,4 @@ function buildSimFinalsCol(result) {
     </div>
   </div>`;
 }
-async function fetchAIAnalysis() {
-  // Build a rich, unique context from current streak + power data every call
-  const sorted = ENRICHED_DATA.slice().sort((a,b) => b.power - a.power);
-  const top3 = sorted.slice(0,3).map(t=>`${t.name} (power: ${t.power}, ${t.wins}-${t.losses}, streak: ${t.streak > 0 ? 'W'+t.streak : 'L'+Math.abs(t.streak)})`).join('; ');
-  const hotTeams = ENRICHED_DATA.filter(t => (STREAK_DATA[t.abbr]||0) >= 5).sort((a,b)=>(STREAK_DATA[b.abbr]||0)-(STREAK_DATA[a.abbr]||0)).slice(0,2).map(t=>`${t.name} (${STREAK_DATA[t.abbr]}-game win streak, power ${t.power})`).join(', ');
-  const coldTeams = ENRICHED_DATA.filter(t => (STREAK_DATA[t.abbr]||0) <= -5).sort((a,b)=>(STREAK_DATA[a.abbr]||0)-(STREAK_DATA[b.abbr]||0)).slice(0,2).map(t=>`${t.name} (${Math.abs(STREAK_DATA[t.abbr])}-game losing streak, power ${t.power})`).join(', ');
-  const surprise = sorted.filter(t => t.power > sorted[4].power && (STREAK_DATA[t.abbr]||0) >= 3).slice(0,1).map(t=>t.name)[0] || sorted[3].name;
-  
-  // Add a random "angle" to force different emphasis each load
-  const angles = [
-    'Focus your analysis on the playoff race and who has the best shot at the title.',
-    'Roast the teams on losing streaks without mercy. Be brutal.',
-    'Make a bold prediction about which current hot team will flame out.',
-    'Debate whether the top team is actually as good as their record or just schedule-fluffed.',
-    'Talk about which team has the most alarming red flags hiding behind a decent record.',
-    'Hype up the hottest team in the league right now like they\'re the second coming.',
-    'Be skeptical · pick apart the top team\'s weaknesses even while acknowledging their dominance.',
-    'Call out a cold team that should be better based on their roster and make it personal.',
-  ];
-  const angle = angles[Math.floor(Math.random() * angles.length)];
 
-  const prompt = `You are Johnson, a hilariously opinionated and wildly knowledgeable NBA analyst writing for your website "Johnson's Clanker Ranker." Current 2025-26 NBA power rankings data: Top 3 teams: ${top3}. Teams on fire (5+ win streaks): ${hotTeams || 'none'}. Teams in freefall (5+ loss streaks): ${coldTeams || 'none'}. Surprise performer this stretch: ${surprise}. ${angle} Write exactly 3 punchy sentences, sharp, entertaining, with basketball slang. Be bold, be specific, use the actual team names and stats. Under 85 words total.`;
-  
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 200,
-        messages: [{ role: "user", content: prompt }]
-      })
-    });
-    const data = await res.json();
-    const text = data.content?.map(c => c.text || '').join('') || "Analysis unavailable.";
-    document.getElementById('ai-analysis-text').innerHTML = `<p style="line-height:1.75;">${text}</p>`;
-  } catch(e) {
-    // Fallback: generate a dynamic local analysis using the same data
-    const fallbacks = [
-      `${sorted[0].name} are operating on a different frequency right now · ${sorted[0].power} power score and nobody's close. ${hotTeams ? hotTeams.split(',')[0].split('(')[0].trim() + ' are absolutely scorching on a long win streak, the league should be scared.' : sorted[1].name + ' are keeping pace but that gap at the top is real.'} ${coldTeams ? coldTeams.split(',')[0].split('(')[0].trim() + ' are turning into a disaster at the worst possible time of year.' : 'Rest of the field is just playing for seeding at this point.'}`,
-      `Let me be blunt: ${sorted[0].name} are the class of this league and it's not debatable. ${hotTeams ? hotTeams.split(',')[0].split('(')[0].trim() + ' are catching fire at exactly the right time · watch out.' : sorted[2].name + ' keep showing up and winning games nobody expected them to.'} ${coldTeams ? 'Meanwhile ' + coldTeams.split(',')[0].split('(')[0].trim() + ' are in a full-blown tailspin · management has to be sweating.' : sorted[sorted.length-1].name + ' need to figure things out fast or the draft lottery board is calling.'}`,
-      `${sorted[0].name} have the best power score in the league and they're playing like it. ${hotTeams ? hotTeams.split(',')[0].split('(')[0].trim() + ' just won\'t stop · double-digit winning streak energy is real and other contenders should be worried.' : 'No team is really threatening the top right now, which is almost boring.'} ${coldTeams ? coldTeams.split(',')[0].split('(')[0].trim() + ' are a dumpster fire · multiple losses in a row and the questions are piling up.' : 'The bottom half of the league is just fighting for lottery position at this point.'}`,
-    ];
-    document.getElementById('ai-analysis-text').innerHTML = `<p style="line-height:1.75;">${fallbacks[Math.floor(Math.random() * fallbacks.length)]}</p>`;
-  }
-}

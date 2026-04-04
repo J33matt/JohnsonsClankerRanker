@@ -1,8 +1,9 @@
 const _oddsCache = {};
+const _BET_KEY_PREFIX = 'bets:';
+const _BET_ALLTIME_KEY = 'bets:alltime';
 
 // Fetch moneylines from ESPN scoreboard for a given date
 // ESPN scoreboard includes comp.odds[0].homeTeamOdds.moneyLine on upcoming games
-async function fetchOddsForDate(dateStr) {
 async function fetchOddsForDate(dateStr) {
   const cacheKey = 'odds:' + dateStr;
   if (_oddsCache[cacheKey]) return _oddsCache[cacheKey];
@@ -243,7 +244,6 @@ async function _getDayLedger(dateStr) {
 // ── P&L CHART ─────────────────────────────────────────────────
 let _pnlChart = null;
 
-async function renderPnlChart() {
 async function renderPnlChart() {
   const area = document.getElementById('pred-pnl-chart-area');
   if (!area) return;
