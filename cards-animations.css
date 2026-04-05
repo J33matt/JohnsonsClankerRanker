@@ -1,0 +1,231 @@
+/* ══════════════════════════════════════════════════════
+   CLANKER'S CARD COLLECTION — cards-animations.css
+   All @keyframes and animation declarations.
+   ══════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════
+   CLUTCH — Gold shimmer on hover
+   ══════════════════════════════════════════════════════ */
+.card-rarity-clutch .card-front {
+  box-shadow: 0 0 12px rgba(70,90,200,0.22), inset 0 0 28px rgba(50,70,180,0.05);
+}
+
+.card-rarity-clutch .card-front::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(108deg, transparent 38%, rgba(201,168,76,0.1) 50%, transparent 62%);
+  background-size: 220% 100%;
+  animation: shimmer-clutch 3.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 12px;
+}
+
+.card-wrap:hover .card-rarity-clutch .card-front::after {
+  animation-duration: 0.75s;
+}
+
+@keyframes shimmer-clutch {
+  0%   { background-position: 220% 0; }
+  50%  { background-position: -220% 0; }
+  100% { background-position: 220% 0; }
+}
+
+/* ══════════════════════════════════════════════════════
+   ELITE — Holo foil reacting to mouse (CSS fallback: auto-rotate)
+   ══════════════════════════════════════════════════════ */
+.card-rarity-elite .card-front {
+  box-shadow: 0 0 18px rgba(140,40,220,0.32), inset 0 0 40px rgba(110,25,190,0.07);
+}
+
+.card-rarity-elite .card-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: linear-gradient(
+    108deg,
+    transparent 18%,
+    rgba(200,100,255,0.14) 32%,
+    rgba(80,180,255,0.10) 48%,
+    rgba(200,100,255,0.14) 64%,
+    transparent 78%
+  );
+  background-size: 320% 320%;
+  animation: holo-elite 4.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.3s;
+}
+
+/* JS will override background-position via --mx/--my custom props when hovered */
+.card-wrap:hover .card-rarity-elite .card-front::before {
+  animation-play-state: paused;
+  background-position: calc(var(--mx, 50) * 1%) calc(var(--my, 50) * 1%);
+}
+
+@keyframes holo-elite {
+  0%   { background-position: 0% 0%; opacity: 0.7; }
+  25%  { background-position: 100% 0%; opacity: 1; }
+  50%  { background-position: 100% 100%; opacity: 0.7; }
+  75%  { background-position: 0% 100%; opacity: 1; }
+  100% { background-position: 0% 0%; opacity: 0.7; }
+}
+
+/* ══════════════════════════════════════════════════════
+   SUPERSTAR — Platinum shimmer + particle canvas
+   ══════════════════════════════════════════════════════ */
+.card-rarity-superstar .card-front {
+  box-shadow: 0 0 22px rgba(190,200,235,0.38), inset 0 0 50px rgba(190,200,255,0.05);
+}
+
+.card-rarity-superstar .card-stat-bar {
+  background: linear-gradient(90deg, #7888b8, #ffffff, #7888b8);
+  background-size: 200% 100%;
+  animation: shimmer-plat 1.8s linear infinite;
+}
+
+@keyframes shimmer-plat {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.card-rarity-superstar .card-front::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: linear-gradient(108deg, transparent 28%, rgba(255,255,255,0.13) 44%, rgba(200,218,255,0.09) 56%, transparent 72%);
+  background-size: 260% 100%;
+  animation: shimmer-ss 2.2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes shimmer-ss {
+  0%   { background-position: 260% 0; }
+  100% { background-position: -260% 0; }
+}
+
+/* ══════════════════════════════════════════════════════
+   GAME-BREAKER — CRT glitch, scanlines, RGB split
+   ══════════════════════════════════════════════════════ */
+.card-rarity-gamebreaker .card-front {
+  box-shadow: 0 0 28px rgba(255,20,20,0.58), inset 0 0 60px rgba(255,0,0,0.07);
+  animation: glitch-border 2.8s steps(1) infinite;
+}
+
+@keyframes glitch-border {
+  0%,88%,100% { box-shadow: 0 0 28px rgba(255,20,20,0.58), inset 0 0 60px rgba(255,0,0,0.07); }
+  90%          { box-shadow: 0 0 36px rgba(0,255,240,0.5), inset 0 0 60px rgba(0,220,200,0.07); }
+  93%          { box-shadow: 0 0 36px rgba(255,0,255,0.5), inset 0 0 60px rgba(240,0,240,0.07); }
+  96%          { box-shadow: 0 0 28px rgba(255,20,20,0.58), inset 0 0 60px rgba(255,0,0,0.07); }
+}
+
+.card-rarity-gamebreaker .card-rarity-banner {
+  animation: gb-banner 3.2s steps(1) infinite;
+}
+
+@keyframes gb-banner {
+  0%,84%,100% { background: #cc1500; color: #fff; }
+  87%          { background: #00ffee; color: #000; }
+  90%          { background: #ff00ee; color: #fff; }
+  93%          { background: #cc1500; color: #fff; }
+}
+
+.card-rarity-gamebreaker .card-name {
+  color: #ff5030;
+  animation: glitch-name 2.8s steps(1) infinite;
+  text-shadow: 0 0 8px rgba(255,50,0,0.75);
+}
+
+@keyframes glitch-name {
+  0%,87%,100% { text-shadow: 0 0 8px rgba(255,50,0,0.75); transform: none; clip-path: none; }
+  89%          { text-shadow: -2px 0 #00ffff, 2px 0 #ff00ff; transform: translateX(2px); }
+  91%          { text-shadow: 2px 0 #00ffff, -2px 0 #ff00ff; transform: translateX(-2px); clip-path: inset(20% 0 40% 0); }
+  93%          { text-shadow: 0 0 8px rgba(255,50,0,0.75); transform: none; clip-path: none; }
+}
+
+.card-rarity-gamebreaker .card-stat-bar {
+  background: linear-gradient(90deg, #ff0000, #ff8800, #ffee00, #ff0000);
+  background-size: 300% 100%;
+  animation: gb-bar 0.9s linear infinite;
+  box-shadow: 0 0 4px rgba(255,80,0,0.75);
+}
+
+@keyframes gb-bar {
+  0%   { background-position: 300% 0; }
+  100% { background-position: -300% 0; }
+}
+
+/* RGB split overlay animation */
+.card-rgb-split {
+  animation: rgb-split 2.8s steps(1) infinite;
+}
+
+@keyframes rgb-split {
+  0%,87%,100% { opacity: 0; transform: none; background: transparent; clip-path: none; }
+  88%          { opacity: 1; background: rgba(255,0,0,0.07); clip-path: inset(25% 0 35% 0); transform: translateX(-3px); }
+  89%          { opacity: 1; background: rgba(0,255,255,0.07); clip-path: inset(25% 0 35% 0); transform: translateX(3px); }
+  90%          { opacity: 0; }
+}
+
+/* ══════════════════════════════════════════════════════
+   CARD REVEAL (crate opening)
+   ══════════════════════════════════════════════════════ */
+.crate-reveal-card-wrap {
+  animation: reveal-pop 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  opacity: 0;
+  transform: scale(0.4) rotateY(90deg);
+}
+
+@keyframes reveal-pop {
+  to { opacity: 1; transform: scale(1) rotateY(0deg); }
+}
+
+/* ── Crate bounce (opening screen) ─────────────────── */
+.crate-open-icon {
+  animation: crate-bounce 0.65s ease-in-out infinite alternate;
+}
+
+@keyframes crate-bounce {
+  0%   { transform: scale(1) rotate(-4deg); }
+  100% { transform: scale(1.12) rotate(4deg); }
+}
+
+/* ── Shake before reveal ────────────────────────────── */
+.crate-shake {
+  animation: crate-shake 0.45s ease-in-out;
+}
+
+@keyframes crate-shake {
+  0%,100% { transform: translateX(0) rotate(0deg); }
+  15%      { transform: translateX(-8px) rotate(-6deg); }
+  30%      { transform: translateX(8px) rotate(6deg); }
+  45%      { transform: translateX(-6px) rotate(-4deg); }
+  60%      { transform: translateX(6px) rotate(4deg); }
+  75%      { transform: translateX(-3px) rotate(-2deg); }
+  90%      { transform: translateX(3px) rotate(2deg); }
+}
+
+/* ══════════════════════════════════════════════════════
+   LEADERBOARD CARD INJECTION FADE-IN
+   ══════════════════════════════════════════════════════ */
+.lb-cards-row {
+  animation: fade-in-up 0.3s ease forwards;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════════════════
+   CARD FLIP HOVER (non-touch devices only)
+   ══════════════════════════════════════════════════════ */
+@media (hover: hover) {
+  .card-wrap.auto-flip:hover .card-inner {
+    transform: rotateY(180deg);
+  }
+}

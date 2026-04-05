@@ -1,0 +1,1020 @@
+/* ══════════════════════════════════════════════════════
+   CLANKER'S CARD COLLECTION — cards-base.css
+   Static layout, structure, colors. No keyframes.
+   Uses CSS variables from index.html.
+   ══════════════════════════════════════════════════════ */
+
+/* ── Layout ─────────────────────────────────────────── */
+#cards-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 40px 80px;
+  font-family: 'Barlow', sans-serif;
+  color: var(--text);
+}
+
+.cards-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.cards-page-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  letter-spacing: 3px;
+  color: var(--text);
+  line-height: 1;
+}
+
+.cards-page-title span { color: var(--accent); }
+
+.cards-wallet-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.cards-wallet-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cards-wallet-pill .wval {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent2);
+}
+
+/* ── Sub-nav ─────────────────────────────────────────── */
+.cards-subnav {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 28px;
+}
+
+.cards-subnav-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: none;
+  border: none;
+  padding: 11px 20px;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.cards-subnav-btn.active { color: var(--accent); }
+.cards-subnav-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+.cards-subnav-btn:hover:not(.active) { color: var(--text); }
+
+.cards-subpanel { display: none; }
+.cards-subpanel.active { display: block; }
+
+/* ══════════════════════════════════════════════════════
+   CARD COMPONENT — Structure
+   ══════════════════════════════════════════════════════ */
+.card-wrap {
+  perspective: 900px;
+  width: 180px;
+  height: 260px;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.4,0,0.2,1);
+  border-radius: 12px;
+}
+
+.card-wrap.flipped .card-inner { transform: rotateY(180deg); }
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Card Front */
+.card-front {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.card-rarity-banner {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 4px 0;
+  z-index: 4;
+}
+
+.card-number {
+  position: absolute;
+  top: 18px; left: 7px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.6rem;
+  opacity: 0.1;
+  line-height: 1;
+  z-index: 2;
+  user-select: none;
+  pointer-events: none;
+}
+
+.card-team-emoji {
+  position: absolute;
+  top: 8px; right: 8px;
+  font-size: 1.3rem;
+  line-height: 1;
+  z-index: 4;
+  opacity: 0.8;
+}
+
+.card-player-area {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 8px 10px;
+  gap: 3px;
+}
+
+.card-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 2px;
+  text-align: center;
+  line-height: 1.1;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+}
+
+.card-pos-team {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: center;
+  opacity: 0.7;
+}
+
+/* Card Back */
+.card-back {
+  transform: rotateY(180deg);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 10px 9px 9px;
+  gap: 5px;
+}
+
+.card-back-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  text-align: center;
+  line-height: 1.1;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.card-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-stat-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.56rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  width: 28px;
+  flex-shrink: 0;
+}
+
+.card-stat-bar-wrap {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.card-stat-bar {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.card-stat-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  width: 20px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.card-desc {
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.5rem;
+  line-height: 1.38;
+  color: var(--muted);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 5px;
+  margin-top: auto;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+}
+
+.card-legacy-stamp {
+  position: absolute;
+  bottom: 7px; right: 7px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.52rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  padding: 2px 5px;
+  border-radius: 3px;
+  z-index: 5;
+  background: rgba(0,0,0,0.6);
+}
+
+.card-dup-badge {
+  position: absolute;
+  top: 5px; left: 5px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 700;
+  background: rgba(0,0,0,0.8);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: var(--text);
+  padding: 2px 6px;
+  border-radius: 3px;
+  z-index: 6;
+}
+
+/* ══════════════════════════════════════════════════════
+   RARITY — Base Colors (no animation)
+   ══════════════════════════════════════════════════════ */
+
+/* PRO — Bronze/Grey flat */
+.card-rarity-pro .card-front {
+  background: linear-gradient(155deg, #2c2620 0%, #1c1a16 55%, #242018 100%);
+  border: 1px solid #5c4c3a;
+}
+.card-rarity-pro .card-rarity-banner { background: #3a2e22; color: #9a7a5a; }
+.card-rarity-pro .card-name { color: #c8b898; }
+.card-rarity-pro .card-pos-team { color: #7a6048; }
+.card-rarity-pro .card-stat-bar { background: #9a7a5a; }
+.card-rarity-pro .card-stat-val { color: #c8b898; }
+
+/* IMPACT — Silver/Green */
+.card-rarity-impact .card-front {
+  background: linear-gradient(155deg, #192218 0%, #101810 55%, #1c2418 100%);
+  border: 1px solid #2a5530;
+}
+.card-rarity-impact .card-rarity-banner { background: linear-gradient(90deg,#0d2010,#1c4022,#0d2010); color: #50c870; }
+.card-rarity-impact .card-name { color: #88d898; }
+.card-rarity-impact .card-pos-team { color: #488858; }
+.card-rarity-impact .card-stat-bar { background: #3ab858; }
+.card-rarity-impact .card-stat-val { color: #68d888; }
+
+/* CLUTCH — Gold/Blue */
+.card-rarity-clutch .card-front {
+  background: linear-gradient(155deg, #1c1c2c 0%, #0e0e1e 55%, #161628 100%);
+  border: 1px solid #4050aa;
+}
+.card-rarity-clutch .card-rarity-banner { background: linear-gradient(90deg,#0a0a22,#1a2060,#0a0a22); color: #c9a84c; }
+.card-rarity-clutch .card-name { color: #e8d07a; }
+.card-rarity-clutch .card-pos-team { color: #7888cc; }
+.card-rarity-clutch .card-stat-bar { background: linear-gradient(90deg,#4060cc,#c9a84c); }
+.card-rarity-clutch .card-stat-val { color: #e8d07a; }
+
+/* ELITE — Purple holo */
+.card-rarity-elite .card-front {
+  background: linear-gradient(155deg, #200a30 0%, #160720 55%, #220a38 100%);
+  border: 1px solid #7030b0;
+}
+.card-rarity-elite .card-rarity-banner { background: linear-gradient(90deg,#100520,#301050,#100520); color: #cc80ff; }
+.card-rarity-elite .card-name { color: #e0a0ff; }
+.card-rarity-elite .card-pos-team { color: #9060c0; }
+.card-rarity-elite .card-stat-bar { background: linear-gradient(90deg,#8030d0,#cc80ff); }
+.card-rarity-elite .card-stat-val { color: #e0a0ff; }
+
+/* SUPERSTAR — Platinum/White */
+.card-rarity-superstar .card-front {
+  background: linear-gradient(155deg, #1e1e2c 0%, #14141e 55%, #22222e 100%);
+  border: 1px solid #b0b8d8;
+}
+.card-rarity-superstar .card-rarity-banner { background: linear-gradient(90deg,#101018,#303848,#101018); color: #eaeeff; }
+.card-rarity-superstar .card-name { color: #f0f4ff; }
+.card-rarity-superstar .card-pos-team { color: #9098b8; }
+.card-rarity-superstar .card-stat-val { color: #f0f4ff; }
+
+/* GAME-BREAKER — Red/Iridescent */
+.card-rarity-gamebreaker .card-front {
+  background: linear-gradient(155deg, #220000 0%, #0e0000 55%, #1c0000 100%);
+  border: 2px solid #ff2020;
+}
+.card-rarity-gamebreaker .card-rarity-banner { background: #cc1500; color: #fff; font-weight: 700; letter-spacing: 4px; }
+.card-rarity-gamebreaker .card-pos-team { color: #aa3020; }
+.card-rarity-gamebreaker .card-stat-val { color: #ff6040; }
+
+/* Scanlines (GB only — no animation needed, pure CSS) */
+.card-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  border-radius: 12px;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.22) 2px, rgba(0,0,0,0.22) 4px);
+}
+
+/* RGB split div (animation in cards-animations.css) */
+.card-rgb-split {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  border-radius: 12px;
+  opacity: 0;
+}
+
+/* Particle canvas (GB + Superstar) */
+.card-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 12px;
+}
+
+/* ══════════════════════════════════════════════════════
+   RARITY ACCENT COLORS (reused across UI)
+   ══════════════════════════════════════════════════════ */
+.rarity-color-pro         { color: #9a7a5a; }
+.rarity-color-impact      { color: #50c870; }
+.rarity-color-clutch      { color: #c9a84c; }
+.rarity-color-elite       { color: #cc80ff; }
+.rarity-color-superstar   { color: #eaeeff; }
+.rarity-color-gamebreaker { color: #ff4020; }
+
+/* ══════════════════════════════════════════════════════
+   COLLECTION TAB
+   ══════════════════════════════════════════════════════ */
+.coll-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 22px;
+  align-items: center;
+}
+
+.coll-filter-select {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+}
+.coll-filter-select:focus { border-color: var(--accent); }
+
+.coll-filter-clear {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.coll-filter-clear:hover { border-color: var(--accent); color: var(--text); }
+
+.coll-summary {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+.coll-section-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin: 28px 0 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 7px;
+}
+.coll-section-label .gold { color: var(--gold); }
+
+.coll-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 12px;
+}
+
+.coll-empty {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  padding: 20px 0;
+  text-align: center;
+  width: 100%;
+}
+
+/* ── Showcase ───────────────────────────────────────── */
+.showcase-section { margin-bottom: 36px; }
+
+.showcase-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 3px;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.showcase-sub {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+
+.showcase-slots {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.showcase-slot {
+  width: 180px;
+  height: 260px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  flex-shrink: 0;
+  position: relative;
+}
+.showcase-slot:hover { border-color: var(--accent); background: rgba(255,77,0,0.03); }
+.showcase-slot.filled { border: none; cursor: default; }
+
+.showcase-slot-placeholder {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-align: center;
+  padding: 12px;
+  line-height: 1.5;
+}
+.showcase-slot-placeholder span { font-size: 1.6rem; display: block; margin-bottom: 6px; opacity: 0.4; }
+
+.showcase-remove-btn {
+  position: absolute;
+  top: 5px; right: 5px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: rgba(200,40,40,0.85);
+  border: none;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  line-height: 1;
+}
+
+/* Pick modal for showcase */
+.showcase-pick-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  z-index: 1600;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+  overflow-y: auto;
+}
+
+.showcase-pick-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  max-width: 860px;
+  width: 100%;
+  position: relative;
+}
+
+.showcase-pick-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  letter-spacing: 3px;
+  margin-bottom: 18px;
+}
+
+.showcase-pick-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 1rem;
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.showcase-pick-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.showcase-pick-item { position: relative; }
+
+.showcase-pick-item .card-wrap { cursor: pointer; }
+.showcase-pick-item .card-wrap:hover { opacity: 0.85; }
+
+/* ══════════════════════════════════════════════════════
+   SHOP TAB
+   ══════════════════════════════════════════════════════ */
+.daily-crate-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 16px;
+  margin-bottom: 26px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 1px;
+}
+.daily-crate-bar .dcb-icon { font-size: 1.3rem; }
+.daily-crate-bar .dcb-text { color: var(--text); }
+.daily-crate-bar .dcb-text.claimed { color: var(--green); }
+.daily-crate-bar .dcb-ready { color: var(--accent2); }
+
+.shop-section-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 3px;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+
+.shop-sub {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+
+.shop-crates-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 44px;
+}
+
+.shop-crate-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px 18px 18px;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  transition: border-color 0.2s, transform 0.15s;
+  position: relative;
+}
+.shop-crate-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+.shop-crate-icon { font-size: 2.8rem; line-height: 1; }
+
+.shop-crate-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.shop-crate-price {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent2);
+}
+
+.shop-crate-price.discounted {
+  color: var(--green);
+}
+
+.shop-crate-price-orig {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.shop-crate-odds {
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.shop-crate-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  width: 100%;
+  transition: opacity 0.2s;
+  margin-top: 2px;
+}
+.shop-crate-btn:hover { opacity: 0.85; }
+.shop-crate-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+.shop-new-user-badge {
+  position: absolute;
+  top: -9px; right: -9px;
+  background: var(--accent);
+  color: #fff;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── Inventory ──────────────────────────────────────── */
+.inventory-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 7px;
+}
+
+.inventory-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.inventory-crate-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.inventory-crate-pill:hover { border-color: var(--accent); }
+.inventory-crate-pill .ic-icon { font-size: 1.3rem; }
+.inventory-crate-pill .ic-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.inventory-crate-pill .ic-count {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.05rem;
+  color: var(--accent2);
+  margin-left: 2px;
+}
+
+.inventory-empty {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  padding: 12px 0;
+}
+
+/* ══════════════════════════════════════════════════════
+   CRATE OPENING OVERLAY
+   ══════════════════════════════════════════════════════ */
+.crate-open-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.94);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+}
+
+.crate-open-icon { font-size: 5.5rem; line-height: 1; }
+
+.crate-open-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 4px;
+  color: var(--text);
+  text-align: center;
+}
+
+.crate-open-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.crate-open-btn:hover { border-color: var(--accent); color: var(--text); }
+
+/* ── Reveal ─────────────────────────────────────────── */
+.crate-reveal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.96);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.crate-reveal-eyebrow {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.crate-reveal-rarity {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.2rem;
+  letter-spacing: 5px;
+  text-align: center;
+}
+
+.crate-reveal-dup {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.88rem;
+  letter-spacing: 2px;
+  color: var(--accent2);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.crate-reveal-shard {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.crate-reveal-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+.crate-reveal-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-radius: 6px;
+  padding: 10px 22px;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s;
+}
+.crate-reveal-btn:hover { opacity: 0.85; }
+.crate-reveal-btn.primary { background: var(--accent); color: #fff; }
+.crate-reveal-btn.secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+
+/* ══════════════════════════════════════════════════════
+   LEADERBOARD CARD INTEGRATION
+   ══════════════════════════════════════════════════════ */
+.lb-cards-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+
+.lb-gb-trophy {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  color: #ff4020;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.lb-showcase-mini {
+  display: flex;
+  gap: 3px;
+}
+
+.showcase-mini-pip {
+  width: 26px;
+  height: 38px;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+
+.lb-view-coll-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.lb-view-coll-btn:hover { border-color: var(--accent); color: var(--text); }
+
+/* ── Read-only collection modal ─────────────────────── */
+.coll-view-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  z-index: 1500;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 36px 20px;
+  overflow-y: auto;
+}
+
+.coll-view-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  max-width: 920px;
+  width: 100%;
+  position: relative;
+}
+
+.coll-view-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 1rem;
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.coll-view-close:hover { border-color: var(--accent); color: var(--text); }
+
+.coll-view-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.7rem;
+  letter-spacing: 3px;
+  margin-bottom: 3px;
+}
+
+.coll-view-sub {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 22px;
+}
+
+/* ══════════════════════════════════════════════════════
+   MISC UTILITIES
+   ══════════════════════════════════════════════════════ */
+.cards-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* ══════════════════════════════════════════════════════
+   MOBILE
+   ══════════════════════════════════════════════════════ */
+@media (max-width: 700px) {
+  #cards-container { padding: 18px 14px 60px; }
+  .card-wrap { width: 148px; height: 214px; }
+  .showcase-slot { width: 148px; height: 214px; }
+  .shop-crate-card { width: 160px; }
+  .cards-subnav-btn { padding: 10px 14px; font-size: 0.75rem; }
+  .coll-grid { gap: 12px; }
+}
