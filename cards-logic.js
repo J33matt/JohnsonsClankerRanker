@@ -316,8 +316,9 @@ function _buildCardElement(card, dupCount, isLegacy, opts) {
   const teamEmoji = TEAM_EMOJI[card.team] || '🏀';
   const statBar = (val) => {
     const pct = Math.max(2, Math.min(100, val));
-    const color = val >= 85 ? '#ff4d00' : val >= 70 ? '#ffaa00' : '#5588ff';
-    return `<div class="card-stat-bar" style="width:${pct}%;background:${card.rarity==='pro'?'#9a7a5a':color}"></div>`;
+    // Pro has no CSS gradient so we set inline; all other rarities rely on cards-base.css
+    const bgStyle = card.rarity === 'pro' ? 'background:#9a7a5a;' : '';
+    return `<div class="card-stat-bar" style="width:${pct}%;${bgStyle}"></div>`;
   };
 
   front.innerHTML = `
@@ -546,15 +547,6 @@ function _renderCardsShop() {
     const oddsText = def.odds.map(([r,p]) =>
       `${RARITY_LABELS[r]}: ${(p*100).toFixed(0)}%`).join(' · ');
 
-    const newUserHtml = showNewUser ? `
-      <div class="shop-new-user-badge">NEW USER OFFER</div>
-      <div class="shop-crate-price discounted">$${discountPrice}</div>
-      <div class="shop-crate-price-orig">$${def.price.toFixed(2)}</div>
-      <div class="shop-crate-odds">One-time 50% off — Legendary crate</div>
-      <button class="shop-crate-btn" ${canAffordDiscount?'':'disabled'}
-        onclick="_cardsBuyCrate('${def.id}', true)">Claim Deal</button>
-    ` : '';
-
     return `<div class="shop-crate-card">
       ${showNewUser ? '<div class="shop-new-user-badge">NEW USER OFFER</div>' : ''}
       <div class="shop-crate-icon">${def.icon}</div>
@@ -624,11 +616,7 @@ function _renderCardsCollection(filters) {
   const legacyOpts = [['','All'],['yes','Legacy Only'],['no','Current Only']]
     .map(([v,l]) => `<option value="${v}" ${filters.legacy===v?'selected':''}>${l}</option>`).join('');
 
-  const cardGrid = filtered.map(card => {
-    const cnt = _cardsCount(card.id);
-    const isLeg = _cardsCollection[card.id]?.season !== CARDS_SEASON;
-    return `<div class="card-wrap-slot" data-id="${card.id}"></div>`;
-  }).join('') || '<div class="coll-empty">No cards match this filter.</div>';
+  // Cards are mounted via DOM manipulation below after innerHTML is set.
 
   const legacySection = legacyOwned.length ? `
     <div class="coll-section-label"><span class="gold">⭐ Legacy</span> — ${CARDS_SEASON}</div>
@@ -799,17 +787,25 @@ async function _injectCardDataIntoLeaderboard() {
   for (const row of rows) {
     if (row.querySelector('.lb-cards-row')) continue; // already injected
 
-    // Find nickname from row
+    // Find nickname from row — skip header/spacer rows that have no name element
     const nameEl = row.querySelector('.sb-lb-name');
     if (!nameEl) continue;
     const nick = nameEl.textContent.trim();
+    if (!nick) continue;
 
-    // Self-row: use local data
-    const isSelf = row.classList.contains('you');
+    // Detect self-row: the row itself carries class "you", OR the name element does,
+    // OR it matches the loaded sportsbook profile nickname directly
+    const sbNick = (typeof _sbProfile !== 'undefined' && _sbProfile)
+      ? _sbProfile.nickname : null;
+    const isSelf = row.classList.contains('you') ||
+                   nameEl.classList.contains('you') ||
+                   (sbNick && nick === sbNick);
+
     let gbCount = 0;
     let showcase = [];
 
     if (isSelf) {
+      // Use in-memory collection data — no async fetch needed
       gbCount = Object.keys(_cardsCollection).filter(id => {
         const card = CARD_POOL.find(c => c.id === id);
         return card && card.rarity === 'gamebreaker';
@@ -908,13 +904,18 @@ async function _cardsShowUserCollection(nick) {
     };
   }
 
-  // Patch _sbPlaceBet to award daily crate on bet placement
+  // Patch _sbPlaceBet to award daily crate when a bet is actually placed.
+  // We confirm a bet was placed by checking that _sbSlip was non-empty before
+  // the call and is empty after (the original clears the slip on success only).
   const _origSbPlaceBet = window._sbPlaceBet;
   if (_origSbPlaceBet) {
     window._sbPlaceBet = async function() {
-      const stake = typeof _sbStake !== 'undefined' ? _sbStake : 0;
+      const stake  = typeof _sbStake !== 'undefined' ? _sbStake : 0;
+      const hadBet = typeof _sbSlip  !== 'undefined' && _sbSlip.length > 0;
       const result = await _origSbPlaceBet.apply(this, arguments);
-      if (stake >= 1) cardsOnBetPlaced(stake).catch(() => {});
+      // Slip is cleared to [] on success; if it's still non-empty the bet was rejected
+      const placed = hadBet && typeof _sbSlip !== 'undefined' && _sbSlip.length === 0;
+      if (placed && stake >= 1) cardsOnBetPlaced(stake).catch(() => {});
       return result;
     };
   }
