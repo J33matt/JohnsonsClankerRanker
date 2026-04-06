@@ -179,7 +179,7 @@ async function _cardsProcessSettledBets() {
     if (bet.betType === 'single') {
       crateId = cardsCrateTierForSingleBet(bet.ml);
     } else if (bet.betType === 'parlay') {
-      crateId = cardsCrateTierForParlay(bet.legs.length, bet.parlayML);
+      crateId = cardsCrateTierForParlay((bet.legs || []).length, bet.parlayML);
     }
     if (crateId) _cardsAddCrate(crateId);
   }
@@ -264,7 +264,7 @@ function _showCrateReveal(def, card, isNew) {
   const rarityClass  = 'rarity-color-' + card.rarity;
   const dupMsg       = isNew ? '' :
     `<div class="crate-reveal-dup">DUPLICATE</div>
-     <div class="crate-reveal-shard">Converted to ${SHARD_VALUES[card.rarity].toFixed(2)} shards</div>`;
+     <div class="crate-reveal-shard">+$${SHARD_VALUES[card.rarity].toFixed(2)} added to shards</div>`;
 
   const el = document.createElement('div');
   el.className = 'crate-reveal-overlay';
