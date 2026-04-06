@@ -22,6 +22,7 @@ let _cardsDaily      = null; // {date, claimed}
 let _cardsNewUserUsed = false;
 let _cardsLoaded     = false;
 let _cardsActiveTab  = 'shop';
+let _cardsBankroll   = null; // loaded directly from sb.profile; never depends on sportsbook tab
 
 /* ══════════════════════════════════════════════════════
    STORAGE HELPERS
@@ -32,6 +33,22 @@ async function _cGet(key) {
 }
 async function _cSet(key, val) {
   try { await window.storage.set(key, JSON.stringify(val)); } catch(e) {}
+}
+
+async function _cardsLoadBankroll() {
+  // Prefer live in-memory _sbProfile if already loaded by the Sportsbook tab
+  if (typeof _sbProfile !== 'undefined' && _sbProfile && typeof _sbProfile.bankroll === 'number') {
+    _cardsBankroll = _sbProfile.bankroll;
+    return;
+  }
+  // Otherwise read directly from storage — works even if Sportsbook tab was never opened
+  try {
+    const raw = await window.storage.get('sb.profile');
+    const prof = JSON.parse(raw.value);
+    _cardsBankroll = typeof prof.bankroll === 'number' ? prof.bankroll : null;
+  } catch(e) {
+    _cardsBankroll = null;
+  }
 }
 
 async function _cardsLoad() {
@@ -203,39 +220,78 @@ function _cardsOpenCrate(crateId) {
 
   const isNew = _cardsAddCard(card);
   _cardsSave();
-  _showCrateReveal(def, card, isNew);
+  _showCrateOpening(def, () => _showLotteryReveal(def, card, isNew));
+}
+
+/* ── Purchase confirmation modal ─────────────────────── */
+function _showBuyConfirm(def, price, onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.className = 'cards-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="cards-confirm-modal">
+      <div class="cards-confirm-crate-icon">${def.icon}</div>
+      <div class="cards-confirm-title">${def.name}</div>
+      <div class="cards-confirm-body">Purchase for <strong>$${price.toFixed(2)}</strong>?</div>
+      <div class="cards-confirm-actions">
+        <button class="cards-confirm-btn cc-confirm" id="ccbtn-confirm">Confirm</button>
+        <button class="cards-confirm-btn cc-cancel"  id="ccbtn-cancel">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#ccbtn-confirm').addEventListener('click', () => {
+    overlay.remove();
+    onConfirm();
+  });
+  overlay.querySelector('#ccbtn-cancel').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 }
 
 /* ── Buy crate from shop ─────────────────────────────── */
 async function _cardsBuyCrate(crateId, isNewUserDeal) {
-  if (typeof _sbProfile === 'undefined' || !_sbProfile) {
-    alert('You need a Sportsbook profile to buy crates. Open the Sportsbook tab first.');
-    return;
-  }
   const def = CRATE_DEFS.find(c => c.id === crateId);
   if (!def) return;
 
   const price = isNewUserDeal ? def.price * 0.5 : def.price;
-  if (_sbProfile.bankroll < price) {
-    alert(`Insufficient funds. You need $${price.toFixed(2)} but have $${_sbProfile.bankroll.toFixed(2)}.`);
+
+  // Pre-confirm checks
+  if (isNewUserDeal && _cardsNewUserUsed) {
+    alert('You have already used the new user offer.');
     return;
   }
 
-  if (isNewUserDeal) {
-    if (_cardsNewUserUsed) { alert('You have already used the new user offer.'); return; }
-    _cardsNewUserUsed = true;
-    await _cSet(CK_NEWUSER, true);
+  await _cardsLoadBankroll();
+  if (_cardsBankroll === null) {
+    alert('You need a Sportsbook profile to buy crates. Open the Sportsbook tab first.');
+    return;
+  }
+  if (_cardsBankroll < price) {
+    alert(`Insufficient funds. You need $${price.toFixed(2)} but have $${_cardsBankroll.toFixed(2)}.`);
+    return;
   }
 
-  _sbProfile.bankroll = Math.round((_sbProfile.bankroll - price) * 100) / 100;
-  try { await window.storage.set('sb.profile', JSON.stringify(_sbProfile)); } catch(e) {}
-  try { if (typeof _sbSaveLeaderboard === 'function') await _sbSaveLeaderboard(); } catch(e) {}
+  _showBuyConfirm(def, price, async () => {
+    if (isNewUserDeal) {
+      _cardsNewUserUsed = true;
+      await _cSet(CK_NEWUSER, true);
+    }
+    // Deduct directly from storage so it works whether or not _sbProfile is loaded
+    try {
+      const raw = await window.storage.get('sb.profile');
+      const prof = JSON.parse(raw.value);
+      prof.bankroll = Math.round((prof.bankroll - price) * 100) / 100;
+      await window.storage.set('sb.profile', JSON.stringify(prof));
+      _cardsBankroll = prof.bankroll;
+      // Keep in-memory _sbProfile in sync if it exists
+      if (typeof _sbProfile !== 'undefined' && _sbProfile) _sbProfile.bankroll = prof.bankroll;
+    } catch(e) {}
+    try { if (typeof _sbSaveLeaderboard === 'function') await _sbSaveLeaderboard(); } catch(e) {}
 
-  _cardsAddCrate(crateId);
-  await _cardsSave();
-  _renderCardsShop();
-  // Immediately open the crate
-  _cardsOpenCrate(crateId);
+    _cardsAddCrate(crateId);
+    await _cardsSave();
+    _renderCardsShop();
+    _cardsOpenCrate(crateId);
+  });
 }
 
 /* ══════════════════════════════════════════════════════
@@ -259,18 +315,124 @@ function _showCrateOpening(def, onOpen) {
   el.addEventListener('click', (e) => { if (e.target === el) doOpen(); });
 }
 
-function _showCrateReveal(def, card, isNew) {
-  const rarityLabel  = RARITY_LABELS[card.rarity] || card.rarity;
-  const rarityClass  = 'rarity-color-' + card.rarity;
-  const dupMsg       = isNew ? '' :
+function _showLotteryReveal(def, card, isNew) {
+  let skipped = false;
+  const ovr = Math.round((card.off + card.def + card.clutch + card.cons + card.ath) / 5);
+  const logoMap  = typeof TEAM_LOGO  !== 'undefined' ? TEAM_LOGO  : null;
+
+  // Random pools for each cycling stage
+  const rarityPool  = ['Pro','Impact','Clutch','Elite','Superstar','Game-Breaker'];
+  const teamPool    = ['BOS','NYK','LAL','GSW','CHI','MIA','PHX','DAL','DEN','MIL',
+                       'PHI','ATL','BKN','CHA','CLE','DET','HOU','IND','LAC','MEM',
+                       'MIN','NOP','OKC','ORL','POR','SAC','SAS','TOR','UTA','WAS'];
+  const posPool     = ['PG','SG','SF','PF','C'];
+  const ovrPool     = Array.from({length:20}, (_,i) => String(60 + i * 2)); // 60,62…98
+  const namePool    = ['Johnson','Davis','Williams','Brown','Smith','Jones','Green',
+                       'Robinson','Thomas','Jackson','Walker','Harris','Mitchell'];
+
+  const renderTeam = v => {
+    const url = logoMap ? logoMap[v] : null;
+    return url
+      ? `<img src="${url}" alt="${v}" class="lottery-team-img" onerror="this.style.display='none'">`
+      : `<span>${v}</span>`;
+  };
+
+  const stages = [
+    { key:'rarity',   label:'RARITY',   real: RARITY_LABELS[card.rarity],
+      pool: rarityPool, render: v => `<span>${v}</span>` },
+    { key:'team',     label:'TEAM',     real: card.team,
+      pool: teamPool,   render: renderTeam },
+    { key:'pos',      label:'POSITION', real: card.pos,
+      pool: posPool,    render: v => `<span>${v}</span>` },
+    { key:'ovr',      label:'OVERALL',  real: String(ovr),
+      pool: ovrPool,    render: v => `<span>${v}</span>` },
+    { key:'player',   label:'PLAYER',   real: card.name,
+      pool: namePool,   render: v => `<span>${v}</span>` }
+  ];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'lottery-overlay';
+  overlay.innerHTML = `
+    <div class="lottery-crate-label">${def.icon} Opening ${def.name}…</div>
+    <div class="lottery-locked-row" id="lottery-locked-row"></div>
+    <div class="lottery-active-stage" id="lottery-active-stage">
+      <div class="lottery-stage-label" id="lottery-stage-label"></div>
+      <div class="lottery-reel-val"    id="lottery-reel-val"></div>
+    </div>
+    <div class="lottery-hint">Tap anywhere to skip</div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', () => { skipped = true; });
+
+  const lockedRow  = overlay.querySelector('#lottery-locked-row');
+  const stageLabel = overlay.querySelector('#lottery-stage-label');
+  const reelVal    = overlay.querySelector('#lottery-reel-val');
+
+  function runCycle(stage) {
+    return new Promise(resolve => {
+      let tick = 0;
+      const totalTicks = 14;
+      // Exponential slowdown from ~40 ms → ~320 ms
+      const delays = Array.from({length: totalTicks}, (_,i) => Math.round(40 * Math.pow(1.24, i)));
+
+      // Reset & re-trigger label animation
+      stageLabel.textContent = stage.label;
+      stageLabel.className = '';
+      void stageLabel.offsetWidth;
+      stageLabel.className = 'lottery-stage-label';
+
+      reelVal.classList.remove('locked');
+
+      const doTick = () => {
+        if (skipped) { resolve(); return; }
+        const isLast = tick === totalTicks;
+        const value  = isLast
+          ? stage.real
+          : stage.pool[Math.floor(Math.random() * stage.pool.length)];
+
+        reelVal.innerHTML = stage.render(value);
+
+        if (isLast) {
+          reelVal.classList.add('locked');
+          // Add locked badge to the row above
+          const item = document.createElement('div');
+          item.className = 'lottery-locked-item';
+          item.innerHTML = `
+            <div class="lottery-locked-label">${stage.label}</div>
+            <div class="lottery-locked-value">${stage.render(stage.real)}</div>`;
+          lockedRow.appendChild(item);
+          void item.offsetWidth;
+          item.classList.add('revealed');
+          setTimeout(() => { if (!skipped) resolve(); }, 480);
+        } else {
+          tick++;
+          setTimeout(doTick, delays[tick - 1] || 320);
+        }
+      };
+      doTick();
+    });
+  }
+
+  (async () => {
+    for (const stage of stages) {
+      if (skipped) break;
+      await runCycle(stage);
+      if (!skipped) await new Promise(r => setTimeout(r, 180));
+    }
+    _showFinalReveal(overlay, def, card, isNew);
+  })();
+}
+
+function _showFinalReveal(overlay, def, card, isNew) {
+  const rarityLabel = RARITY_LABELS[card.rarity] || card.rarity;
+  const rarityClass = 'rarity-color-' + card.rarity;
+  const dupMsg = isNew ? '' :
     `<div class="crate-reveal-dup">DUPLICATE</div>
      <div class="crate-reveal-shard">+$${SHARD_VALUES[card.rarity].toFixed(2)} added to shards</div>`;
 
-  const el = document.createElement('div');
-  el.className = 'crate-reveal-overlay';
-  el.innerHTML = `
+  overlay.innerHTML = `
     <div class="crate-reveal-eyebrow">You pulled a…</div>
-    <div class="crate-reveal-card-wrap" id="reveal-card-wrap"></div>
+    <div class="crate-reveal-card-wrap lottery-card-reveal" id="reveal-card-wrap"></div>
     <div class="crate-reveal-rarity ${rarityClass}">${rarityLabel}</div>
     ${dupMsg}
     <div class="crate-reveal-actions">
@@ -280,18 +442,17 @@ function _showCrateReveal(def, card, isNew) {
       <button class="crate-reveal-btn secondary" id="reveal-view-btn">View Collection</button>
     </div>
   `;
-  document.body.appendChild(el);
+  overlay.className = 'crate-reveal-overlay';
 
-  const wrap = el.querySelector('#reveal-card-wrap');
-  const cardEl = _buildCardElement(card, 0, false);
-  wrap.appendChild(cardEl);
+  const wrap = overlay.querySelector('#reveal-card-wrap');
+  wrap.appendChild(_buildCardElement(card, 0, false));
 
-  el.querySelector('#reveal-close-btn').addEventListener('click', () => {
-    el.remove();
+  overlay.querySelector('#reveal-close-btn').addEventListener('click', () => {
+    overlay.remove();
     if (document.getElementById('panel-cards')?.classList.contains('active')) renderCards();
   });
-  el.querySelector('#reveal-view-btn').addEventListener('click', () => {
-    el.remove();
+  overlay.querySelector('#reveal-view-btn').addEventListener('click', () => {
+    overlay.remove();
     _cardsActiveTab = 'collection';
     renderCards();
   });
@@ -309,22 +470,38 @@ function _buildCardElement(card, dupCount, isLegacy, opts) {
   const inner = document.createElement('div');
   inner.className = 'card-inner';
 
-  // Front
+  // ── Front ──────────────────────────────────────────────
   const front = document.createElement('div');
   front.className = `card-face card-front card-rarity-${card.rarity}`;
 
-  const teamEmoji = TEAM_EMOJI[card.team] || '🏀';
-  const statBar = (val) => {
-    const pct = Math.max(2, Math.min(100, val));
-    // Pro has no CSS gradient so we set inline; all other rarities rely on cards-base.css
-    const bgStyle = card.rarity === 'pro' ? 'background:#9a7a5a;' : '';
-    return `<div class="card-stat-bar" style="width:${pct}%;${bgStyle}"></div>`;
-  };
+  // Team logo (CDN SVG) or emoji fallback
+  const logoMap  = typeof TEAM_LOGO  !== 'undefined' ? TEAM_LOGO  : null;
+  const emojiMap = typeof TEAM_EMOJI !== 'undefined' ? TEAM_EMOJI : {};
+  const logoUrl  = logoMap ? logoMap[card.team] : null;
+  const teamLogoHtml = logoUrl
+    ? `<div class="card-team-logo-wrap">
+         <img src="${logoUrl}" alt="${card.team}" class="card-team-logo-img"
+              onerror="this.style.display='none'">
+       </div>`
+    : `<div class="card-team-logo-wrap"><span class="card-team-emoji">${emojiMap[card.team] || '🏀'}</span></div>`;
+
+  // Player headshot with gradient fallback on error
+  const hsUrl = card.pid
+    ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${card.pid}.png`
+    : null;
+  const hsHtml = hsUrl
+    ? `<div class="card-hs-wrap">
+         <img src="${hsUrl}" alt="${card.name}" class="card-hs"
+              onerror="this.closest('.card-hs-wrap').classList.add('hs-err')">
+         <div class="card-bottom-gradient"></div>
+       </div>`
+    : `<div class="card-hs-wrap hs-err"><div class="card-bottom-gradient"></div></div>`;
 
   front.innerHTML = `
     <div class="card-rarity-banner">${RARITY_LABELS[card.rarity]}</div>
     <div class="card-number">#${card.no}</div>
-    <div class="card-team-emoji">${teamEmoji}</div>
+    ${teamLogoHtml}
+    ${hsHtml}
     <div class="card-player-area">
       <div class="card-name">${card.name}</div>
       <div class="card-pos-team">${card.pos} · ${card.team}</div>
@@ -343,37 +520,38 @@ function _buildCardElement(card, dupCount, isLegacy, opts) {
     front.appendChild(rgb);
   }
 
-  // Back
+  // ── Back ───────────────────────────────────────────────
   const back = document.createElement('div');
-  back.className = 'card-face card-back';
+  back.className = `card-face card-back card-rarity-back-${card.rarity}`;
+
+  const ovr = Math.round((card.off + card.def + card.clutch + card.cons + card.ath) / 5);
+
+  const cbStatRow = (label, val) => {
+    const pct = Math.max(2, Math.min(100, val));
+    return `<div class="cb-stat">
+      <div class="cb-sl">${label}</div>
+      <div class="cb-sb-wrap"><div class="cb-sb" style="width:${pct}%"></div></div>
+      <div class="cb-sv">${val}</div>
+    </div>`;
+  };
+
   back.innerHTML = `
-    <div class="card-back-name">${card.name}</div>
-    <div class="card-stat-row">
-      <div class="card-stat-label">OFF</div>
-      <div class="card-stat-bar-wrap">${statBar(card.off)}</div>
-      <div class="card-stat-val" style="color:${card.rarity==='pro'?'#c8b898':'inherit'}">${card.off}</div>
+    <div class="cb-top">
+      <div class="cb-name">${card.name}</div>
+      <div class="cb-ovr-badge">
+        <div class="cb-ovr-num">${ovr}</div>
+        <div class="cb-ovr-lbl">OVR</div>
+      </div>
     </div>
-    <div class="card-stat-row">
-      <div class="card-stat-label">DEF</div>
-      <div class="card-stat-bar-wrap">${statBar(card.def)}</div>
-      <div class="card-stat-val" style="color:${card.rarity==='pro'?'#c8b898':'inherit'}">${card.def}</div>
+    <div class="cb-divider"></div>
+    <div class="cb-stats">
+      ${cbStatRow('OFF', card.off)}
+      ${cbStatRow('DEF', card.def)}
+      ${cbStatRow('CLT', card.clutch)}
+      ${cbStatRow('CON', card.cons)}
+      ${cbStatRow('ATH', card.ath)}
     </div>
-    <div class="card-stat-row">
-      <div class="card-stat-label">CLT</div>
-      <div class="card-stat-bar-wrap">${statBar(card.clutch)}</div>
-      <div class="card-stat-val" style="color:${card.rarity==='pro'?'#c8b898':'inherit'}">${card.clutch}</div>
-    </div>
-    <div class="card-stat-row">
-      <div class="card-stat-label">CON</div>
-      <div class="card-stat-bar-wrap">${statBar(card.cons)}</div>
-      <div class="card-stat-val" style="color:${card.rarity==='pro'?'#c8b898':'inherit'}">${card.cons}</div>
-    </div>
-    <div class="card-stat-row">
-      <div class="card-stat-label">ATH</div>
-      <div class="card-stat-bar-wrap">${statBar(card.ath)}</div>
-      <div class="card-stat-val" style="color:${card.rarity==='pro'?'#c8b898':'inherit'}">${card.ath}</div>
-    </div>
-    <div class="card-desc">${card.desc}</div>
+    <div class="cb-desc">${card.desc || ''}</div>
   `;
 
   inner.appendChild(front);
@@ -398,7 +576,7 @@ function _buildCardElement(card, dupCount, isLegacy, opts) {
     });
   }
 
-  // Superstar particle canvas
+  // Superstar / Game-Breaker particle canvas
   if (card.rarity === 'superstar' || card.rarity === 'gamebreaker') {
     _attachParticleCanvas(front, card.rarity);
   }
@@ -461,8 +639,8 @@ async function renderCards() {
     await _cardsProcessSettledBets();
   }
 
-  const bankroll = (typeof _sbProfile !== 'undefined' && _sbProfile)
-    ? `$${_sbProfile.bankroll.toFixed(2)}` : '—';
+  await _cardsLoadBankroll();
+  const bankroll = _cardsBankroll !== null ? `$${_cardsBankroll.toFixed(2)}` : '—';
 
   container.innerHTML = `
     <div class="cards-top-bar">
@@ -520,7 +698,7 @@ function _renderCardsShop() {
   if (!panel) return;
 
   const dailyClaimed = _dailyIsClaimed();
-  const hasProfile = typeof _sbProfile !== 'undefined' && _sbProfile;
+  const hasProfile = _cardsBankroll !== null;
 
   // Inventory section
   const invKeys = Object.keys(_cardsInventory).filter(k => (_cardsInventory[k]||0) > 0);
@@ -541,7 +719,7 @@ function _renderCardsShop() {
     const isLegendary = def.id === 'legendary';
     const showNewUser = isLegendary && !_cardsNewUserUsed;
     const discountPrice = (def.price * 0.5).toFixed(2);
-    const bankroll = hasProfile ? _sbProfile.bankroll : 0;
+    const bankroll = _cardsBankroll !== null ? _cardsBankroll : 0;
     const canAfford = hasProfile && bankroll >= def.price;
     const canAffordDiscount = hasProfile && bankroll >= def.price * 0.5;
     const oddsText = def.odds.map(([r,p]) =>

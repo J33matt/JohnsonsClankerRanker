@@ -1017,4 +1017,387 @@
   .shop-crate-card { width: 160px; }
   .cards-subnav-btn { padding: 10px 14px; font-size: 0.75rem; }
   .coll-grid { gap: 12px; }
+  .lottery-active-stage { min-width: 260px; padding: 18px 20px; }
+  .lottery-reel-val { font-size: 1.8rem; min-width: 160px; }
+  .lottery-locked-row { gap: 14px; }
+  .cards-confirm-modal { padding: 24px 20px; }
+}
+
+/* ══════════════════════════════════════════════════════
+   PURCHASE CONFIRMATION MODAL
+   ══════════════════════════════════════════════════════ */
+.cards-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.cards-confirm-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px 28px;
+  max-width: 360px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.cards-confirm-crate-icon { font-size: 2.8rem; line-height: 1; }
+
+.cards-confirm-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 3px;
+  color: var(--text);
+}
+
+.cards-confirm-body {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.cards-confirm-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.cards-confirm-btn {
+  flex: 1;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.cards-confirm-btn:hover  { opacity: 0.85; }
+.cards-confirm-btn:active { transform: scale(0.97); }
+.cards-confirm-btn.cc-confirm { background: var(--accent); color: #fff; }
+.cards-confirm-btn.cc-cancel  { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+
+/* ══════════════════════════════════════════════════════
+   LOTTERY REVEAL OVERLAY
+   ══════════════════════════════════════════════════════ */
+.lottery-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.97);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  overflow: hidden;
+  user-select: none;
+  cursor: pointer;
+}
+
+.lottery-crate-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.lottery-locked-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  min-height: 60px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.lottery-locked-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  opacity: 0;
+}
+
+.lottery-locked-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.lottery-locked-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 2px;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lottery-locked-value img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
+}
+
+.lottery-active-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 40px;
+  min-width: 300px;
+  background: var(--surface2);
+}
+
+.lottery-stage-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.lottery-reel-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  letter-spacing: 4px;
+  text-align: center;
+  min-height: 3.2rem;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lottery-reel-val img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 12px rgba(0,0,0,0.6));
+}
+
+.lottery-hint {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.18);
+  margin-top: 8px;
+}
+
+/* ══════════════════════════════════════════════════════
+   CARD FRONT — HEADSHOT & TEAM LOGO
+   ══════════════════════════════════════════════════════ */
+.card-hs-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  z-index: 1;
+}
+
+.card-hs {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+/* Fallback when headshot 404s */
+.card-hs-wrap.hs-err .card-hs { display: none; }
+.card-hs-wrap.hs-err::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(155deg,rgba(255,255,255,0.015),rgba(255,255,255,0.055));
+  border-radius: 12px;
+}
+
+/* Gradient over bottom half for text readability */
+.card-bottom-gradient {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 60%;
+  background: linear-gradient(to top,rgba(0,0,0,0.93) 0%,rgba(0,0,0,0.35) 65%,transparent 100%);
+  z-index: 2;
+  border-radius: 0 0 12px 12px;
+  pointer-events: none;
+}
+
+.card-team-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+
+.card-team-logo-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.85));
+}
+
+/* Ensure player area stays on top */
+.card-player-area { z-index: 3; }
+
+/* ══════════════════════════════════════════════════════
+   CARD BACK — REDESIGNED LAYOUT
+   ══════════════════════════════════════════════════════ */
+
+/* Remove generic background; rarity back classes handle it */
+.card-back {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  padding: 10px 10px 9px;
+  gap: 0;
+}
+
+/* Rarity-tinted back gradients */
+.card-rarity-back-pro         { background: linear-gradient(170deg,#2c2620,#1c1a16); border: 1px solid #5c4c3a; }
+.card-rarity-back-impact      { background: linear-gradient(170deg,#192218,#101810); border: 1px solid #2a5530; }
+.card-rarity-back-clutch      { background: linear-gradient(170deg,#1c1c2c,#0e0e1e); border: 1px solid #4050aa; }
+.card-rarity-back-elite       { background: linear-gradient(170deg,#200a30,#160720); border: 1px solid #7030b0; }
+.card-rarity-back-superstar   { background: linear-gradient(170deg,#1e1e2c,#14141e); border: 1px solid #b0b8d8; }
+.card-rarity-back-gamebreaker { background: linear-gradient(170deg,#220000,#0e0000); border: 2px solid #ff2020; }
+
+/* Top row: name + OVR badge */
+.cb-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.cb-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 2px;
+  line-height: 1.15;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.cb-ovr-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 3px 8px 2px;
+  flex-shrink: 0;
+}
+
+.cb-ovr-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.cb-ovr-lbl {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.44rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+.cb-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 5px 0;
+  flex-shrink: 0;
+}
+
+.cb-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.cb-stat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cb-sl {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.5rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.cb-sb-wrap {
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cb-sb {
+  height: 100%;
+  border-radius: 3px;
+}
+
+/* Static fill colours (animated rarities are in cards-animations.css) */
+.card-rarity-back-pro        .cb-sb { background: #9a7a5a; }
+.card-rarity-back-impact     .cb-sb { background: linear-gradient(90deg,#2a8040,#50c870); }
+.card-rarity-back-clutch     .cb-sb { background: linear-gradient(90deg,#4060cc,#c9a84c); }
+.card-rarity-back-elite      .cb-sb { background: linear-gradient(90deg,#8030d0,#cc80ff); }
+
+.cb-sv {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.8rem;
+  width: 22px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.cb-desc {
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.46rem;
+  line-height: 1.42;
+  color: var(--muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 7;
+  -webkit-box-orient: vertical;
+  margin-top: auto;
+  padding-top: 2px;
 }

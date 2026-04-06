@@ -229,3 +229,62 @@
     transform: rotateY(180deg);
   }
 }
+
+/* ══════════════════════════════════════════════════════
+   LOTTERY REVEAL ANIMATIONS
+   ══════════════════════════════════════════════════════ */
+
+/* Flash + scale when a reel value locks in */
+@keyframes lock-flash {
+  0%   { transform: scale(1);    filter: brightness(1); }
+  35%  { transform: scale(1.13); filter: brightness(1.7); }
+  100% { transform: scale(1);    filter: brightness(1); }
+}
+
+/* Locked item badge pops in on the row above the reel */
+@keyframes locked-item-in {
+  0%   { opacity: 0; transform: scale(0.7) translateY(6px); }
+  65%  { transform: scale(1.08) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Stage label slides in from above */
+@keyframes lottery-stage-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Final card pops into view with overshoot */
+@keyframes final-pop {
+  0%   { transform: scale(0.5) translateY(28px); opacity: 0; }
+  60%  { transform: scale(1.07);                 opacity: 1; }
+  100% { transform: scale(1)   translateY(0);    opacity: 1; }
+}
+
+/* Confirmation modal slides in */
+@keyframes confirm-modal-in {
+  from { opacity: 0; transform: scale(0.9) translateY(10px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+
+/* Apply animations to lottery elements */
+.lottery-reel-val.locked            { animation: lock-flash 0.42s ease-out; }
+.lottery-locked-item.revealed       { animation: locked-item-in 0.38s ease-out both; }
+.lottery-stage-label                { animation: lottery-stage-in 0.22s ease-out both; }
+.lottery-card-reveal                { animation: final-pop 0.55s cubic-bezier(0.34,1.56,0.64,1) both; }
+.cards-confirm-modal                { animation: confirm-modal-in 0.22s ease-out both; }
+
+/* Superstar stat bar shimmer on redesigned back */
+.card-rarity-back-superstar .cb-sb {
+  background: linear-gradient(90deg, #8090c0, #eaeeff, #b0c0e8, #eaeeff, #8090c0);
+  background-size: 300% 100%;
+  animation: shimmer-ss 1.8s linear infinite;
+}
+
+/* Game-Breaker stat bar on redesigned back */
+.card-rarity-back-gamebreaker .cb-sb {
+  background: linear-gradient(90deg, #ff0000, #ff8800, #ffee00, #ff0000);
+  background-size: 300% 100%;
+  animation: gb-bar 0.9s linear infinite;
+  box-shadow: 0 0 4px rgba(255,80,0,0.6);
+}
