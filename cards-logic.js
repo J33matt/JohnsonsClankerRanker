@@ -535,12 +535,19 @@ function _buildCardElement(card, dupCount, isLegacy, opts) {
     </div>`;
   };
 
+  const backLogoHtml = logoUrl
+    ? `<img src="${logoUrl}" alt="${card.team}" class="cb-team-logo" onerror="this.style.display='none'">`
+    : '';
+
   back.innerHTML = `
     <div class="cb-top">
       <div class="cb-name">${card.name}</div>
-      <div class="cb-ovr-badge">
-        <div class="cb-ovr-num">${ovr}</div>
-        <div class="cb-ovr-lbl">OVR</div>
+      <div class="cb-top-right">
+        ${backLogoHtml}
+        <div class="cb-ovr-badge">
+          <div class="cb-ovr-num">${ovr}</div>
+          <div class="cb-ovr-lbl">OVR</div>
+        </div>
       </div>
     </div>
     <div class="cb-divider"></div>
