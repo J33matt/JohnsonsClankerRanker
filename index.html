@@ -8446,6 +8446,7 @@ async function _predAutoGrade() {
 
 
 function showTab(id, btn) {
+  localStorage.setItem('activeTab', id);
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + id).classList.add('active');
@@ -8509,12 +8510,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Generate today's picks first so moneylines are in localStorage before scores render
   await _predEnsureTodaysPicks();
 
-  renderRankings();
+  const _savedTab = localStorage.getItem('activeTab');
+  const _validTabs = ['rankings','scores','predictions','playoffs','simulator','draft','graph','sportsbook','cards'];
+  const _tabToLoad = (_savedTab && _validTabs.includes(_savedTab)) ? _savedTab : 'rankings';
+  const _tabBtn = document.querySelector(`[onclick*="showTab('${_tabToLoad}'"]`);
+  if (_tabBtn) showTab(_tabToLoad, _tabBtn);
+
   renderScores(); // async · will update scores-container when done, then start poll loop
   renderPlayoffs();
   renderSimulator();
   renderDraft();
-  fetchAIAnalysis();
   // Graph is rendered lazily when tab is opened
 
   // Auto-settle any open sportsbook bets in background
