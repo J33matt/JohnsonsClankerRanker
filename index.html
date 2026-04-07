@@ -9209,6 +9209,7 @@ let _sbSlip = [];          // array of leg objects on current slip
 let _sbSlipMode = 'single'; // 'single' | 'parlay'
 let _sbStake = 10;
 let _sbProfile = null;
+let _sbBets = null;        // in-memory source of truth for bets array; null = not yet loaded
 let _sbGames = [];         // today's games with live odds
 let _sbEnrichedGamesCache = []; // enriched games with odds + spreads + totals
 let _sbHistoryFilter = 'all'; // 'all' | 'open' | 'settled'
@@ -9287,13 +9288,20 @@ async function _sbSaveLeaderboard() {
 }
 
 // ── Bet persistence ───────────────────────────────────────────
+// _sbBets is the in-memory source of truth. _sbLoadBets populates it
+// from storage exactly once; all subsequent calls return the cached
+// array so concurrent placements never race against each other.
+// _sbSaveBets always updates _sbBets before writing to storage.
 async function _sbLoadBets() {
+  if (_sbBets !== null) return _sbBets;
   try {
     const raw = await window.storage.get(SB_KEY_BETLIST);
-    return raw ? JSON.parse(raw.value) : [];
-  } catch(e) { return []; }
+    _sbBets = raw ? JSON.parse(raw.value) : [];
+  } catch(e) { _sbBets = []; }
+  return _sbBets;
 }
 async function _sbSaveBets(bets) {
+  _sbBets = bets; // update in-memory reference before async write
   try { await window.storage.set(SB_KEY_BETLIST, JSON.stringify(bets)); } catch(e) {}
 }
 
