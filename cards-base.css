@@ -302,8 +302,9 @@
 
 /* PRO — Bronze */
 .card-rarity-pro .card-front {
-  background: linear-gradient(175deg, #5a4428 0%, #3d2e1a 50%, #2a2010 100%);
-  border: 1px solid #5c4c3a;
+  background: #3d2e1a;
+  border: 1.5px solid #7a6040;
+  box-shadow: 0 0 0 1px rgba(120,90,40,0.25);
 }
 .card-rarity-pro .card-rarity-banner { background: #3a2e22; color: #9a7a5a; }
 .card-rarity-pro .card-name { color: #c8b898; }
@@ -313,8 +314,9 @@
 
 /* IMPACT — Green */
 .card-rarity-impact .card-front {
-  background: linear-gradient(175deg, #0e4020 0%, #0a2c14 50%, #071a0c 100%);
-  border: 1px solid #2a5530;
+  background: #0a2c14;
+  border: 1.5px solid #3a7840;
+  box-shadow: 0 0 0 1px rgba(30,100,50,0.25);
 }
 .card-rarity-impact .card-rarity-banner { background: linear-gradient(90deg,#0d2010,#1c4022,#0d2010); color: #50c870; }
 .card-rarity-impact .card-name { color: #88d898; }
@@ -324,8 +326,9 @@
 
 /* CLUTCH — Blue/Gold */
 .card-rarity-clutch .card-front {
-  background: linear-gradient(175deg, #1e2868 0%, #141a48 50%, #0c1030 100%);
-  border: 1px solid #4050aa;
+  background: #141a48;
+  border: 1.5px solid #5060c0;
+  box-shadow: 0 0 0 1px rgba(50,70,180,0.25);
 }
 .card-rarity-clutch .card-rarity-banner { background: linear-gradient(90deg,#0a0a22,#1a2060,#0a0a22); color: #c9a84c; }
 .card-rarity-clutch .card-name { color: #e8d07a; }
@@ -335,8 +338,9 @@
 
 /* ELITE — Purple */
 .card-rarity-elite .card-front {
-  background: linear-gradient(175deg, #420e68 0%, #2c0848 50%, #1a0430 100%);
-  border: 1px solid #7030b0;
+  background: #2c0848;
+  border: 1.5px solid #8838c8;
+  box-shadow: 0 0 0 1px rgba(120,30,180,0.25);
 }
 .card-rarity-elite .card-rarity-banner { background: linear-gradient(90deg,#100520,#301050,#100520); color: #cc80ff; }
 .card-rarity-elite .card-name { color: #e0a0ff; }
@@ -346,8 +350,9 @@
 
 /* SUPERSTAR — Platinum */
 .card-rarity-superstar .card-front {
-  background: linear-gradient(175deg, #303460 0%, #202240 50%, #141628 100%);
-  border: 1px solid #b0b8d8;
+  background: #202240;
+  border: 1.5px solid #c0c8e8;
+  box-shadow: 0 0 0 1px rgba(160,170,210,0.25);
 }
 .card-rarity-superstar .card-rarity-banner { background: linear-gradient(90deg,#101018,#303848,#101018); color: #eaeeff; }
 .card-rarity-superstar .card-name { color: #f0f4ff; }
@@ -356,8 +361,9 @@
 
 /* GAME-BREAKER — Red */
 .card-rarity-gamebreaker .card-front {
-  background: linear-gradient(175deg, #580000 0%, #380000 50%, #1e0000 100%);
+  background: #380000;
   border: 2px solid #ff2020;
+  box-shadow: 0 0 0 1px rgba(200,0,0,0.3);
 }
 .card-rarity-gamebreaker .card-rarity-banner { background: #cc1500; color: #fff; font-weight: 700; letter-spacing: 4px; }
 .card-rarity-gamebreaker .card-pos-team { color: #aa3020; }
