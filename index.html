@@ -8476,6 +8476,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const now = new Date();
   document.getElementById('update-time').textContent = 'Updated ' + now.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' · ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 
+  // One-time spread-polarity migration — remove after 2025-04-14
+  if (localStorage.getItem('spreadFixApplied') !== 'true') {
+    _sbFixSpreadBets().then(() => localStorage.setItem('spreadFixApplied', 'true'));
+  }
+
   // Seed last-game map from static data so column shows immediately
   seedLastGameMap(RECENT_GAMES.map(g => ({ ...g, isFinal: g.status === 'final' })));
 
@@ -9475,6 +9480,122 @@ async function _sbAutoSettle() {
       await _sbSaveProfile();
       await _sbSaveLeaderboard();
     }
+  }
+}
+
+// ── One-time spread-polarity migration (2025-04-07) ──────────────
+// Re-grades settled spread_home bets using the corrected formula.
+// Runs once on page load; gated by localStorage flag so it never
+// re-runs. Remove this function and its DOMContentLoaded call
+// after 2025-04-14.
+async function _sbFixSpreadBets() {
+  let bets;
+  try {
+    const raw = await window.storage.get('sb.bets');
+    bets = raw ? JSON.parse(raw.value) : [];
+  } catch(e) { bets = []; }
+
+  if (!bets.length) {
+    console.log('[spreadFix] No bets found — nothing to migrate.');
+    return;
+  }
+
+  const settled = bets.filter(b =>
+    b.status === 'settled' &&
+    (b.legs || []).some(l => l.type === 'spread_away' || l.type === 'spread_home')
+  );
+
+  let checked = settled.length;
+  let changed = 0;
+  const log = [];
+
+  for (const bet of settled) {
+    // Re-grade every spread leg using the corrected _sbGradeLeg logic inline.
+    // We don't have live score objects here, so we reconstruct synthetic game
+    // objects from finalScore if available, or skip if scores are absent.
+    // For single bets the leg carries awayAbbr/homeAbbr; re-grade uses leg.line.
+
+    // Derive scores: for each spread leg we need homeScore & awayScore.
+    // _sbAutoSettle stored final scores on the game, not on the bet, so we
+    // must infer them from bet.finalScore if present, or skip.
+    // Strategy: reconstruct a synthetic "game" from stored finalScore string
+    // ("AWAY awayScore-homeScore HOME") if it exists on the bet.
+    // If not available, we cannot re-grade — skip.
+
+    let homeScore = null, awayScore = null;
+    if (bet.finalScore) {
+      // format: "AWAY 112-108 HOME"
+      const m = bet.finalScore.match(/(\d+)-(\d+)/);
+      if (m) { awayScore = +m[1]; homeScore = +m[2]; }
+    }
+    // Also try legs[0].finalScore if individual legs carry it
+    if ((homeScore == null) && bet.legs && bet.legs[0] && bet.legs[0].finalScore) {
+      const m = bet.legs[0].finalScore.match(/(\d+)-(\d+)/);
+      if (m) { awayScore = +m[1]; homeScore = +m[2]; }
+    }
+    if (homeScore == null || awayScore == null) continue; // can't re-grade without scores
+
+    const syntheticGame = { homeScore, awayScore };
+
+    // Re-grade all legs using corrected formula (copied from _sbGradeLeg)
+    const legGrades = (bet.legs || []).map(leg => {
+      const { type, line } = leg;
+      if (type === 'spread_away') {
+        const margin = awayScore + line - homeScore;
+        return margin > 0 ? 'win' : margin < 0 ? 'loss' : 'push';
+      }
+      if (type === 'spread_home') {
+        // Corrected: homeScore + line - awayScore (was homeScore - line - awayScore)
+        const margin = homeScore + line - awayScore;
+        return margin > 0 ? 'win' : margin < 0 ? 'loss' : 'push';
+      }
+      // Non-spread legs keep their existing result (ml/ou unaffected)
+      return bet.result; // for singles there's only one leg anyway
+    });
+
+    // Determine overall corrected result
+    let correctedResult;
+    if (bet.betType === 'parlay') {
+      if (legGrades.includes('loss'))       correctedResult = 'loss';
+      else if (legGrades.includes('push'))  correctedResult = 'push';
+      else                                  correctedResult = 'win';
+    } else {
+      correctedResult = legGrades[0] || bet.result;
+    }
+
+    if (correctedResult === bet.result) continue; // no change needed
+
+    // Recompute payout & net
+    const oldResult = bet.result;
+    const oldPayout = bet.payout;
+    const oldNet    = bet.net;
+
+    bet.result = correctedResult;
+    if (correctedResult === 'win') {
+      const ml = bet.betType === 'parlay' ? bet.parlayML : (bet.ml || bet.legs[0]?.ml);
+      bet.payout = bet.stake + _mlPayout(ml, bet.stake);
+    } else if (correctedResult === 'push') {
+      bet.payout = bet.stake;
+    } else {
+      bet.payout = 0;
+    }
+    bet.net = bet.payout - bet.stake;
+
+    changed++;
+    log.push({
+      id: bet.id, date: bet.date,
+      leg: bet.legs.map(l => `${l.type} ${l.line}`).join(', '),
+      from: `${oldResult} payout=${ (oldPayout||0).toFixed(2)} net=${(oldNet||0).toFixed(2)}`,
+      to:   `${correctedResult} payout=${bet.payout.toFixed(2)} net=${bet.net.toFixed(2)}`
+    });
+  }
+
+  if (changed) {
+    await _sbSaveBets(bets);
+    console.log(`[spreadFix] ✅ Migration complete. Checked: ${checked}, Changed: ${changed}`);
+    log.forEach(e => console.log(`  Bet ${e.id} (${e.date}) [${e.leg}]: ${e.from} → ${e.to}`));
+  } else {
+    console.log(`[spreadFix] Checked ${checked} spread bets — no corrections needed.`);
   }
 }
 
