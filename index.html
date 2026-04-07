@@ -8513,7 +8513,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const _savedTab = localStorage.getItem('activeTab');
   const _validTabs = ['rankings','scores','predictions','playoffs','simulator','draft','graph','sportsbook','cards'];
   const _tabToLoad = (_savedTab && _validTabs.includes(_savedTab)) ? _savedTab : 'rankings';
-  const _tabBtn = document.querySelector(`[onclick*="showTab('${_tabToLoad}'"]`);
+  const _tabBtn = Array.from(document.querySelectorAll('.tab-btn'))
+    .find(b => (b.getAttribute('onclick') || '').includes(`'${_tabToLoad}'`));
+  console.log('[tabRestore] saved:', _savedTab, '→ loading:', _tabToLoad, '| btn found:', !!_tabBtn);
   if (_tabBtn) showTab(_tabToLoad, _tabBtn);
 
   renderScores(); // async · will update scores-container when done, then start poll loop
