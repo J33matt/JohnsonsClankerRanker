@@ -90,755 +90,468 @@ const TEAM_EMOJI = {
    ══════════════════════════════════════════════════════ */
 const CARD_POOL = [
 
-  /* ──────────────── BOSTON CELTICS ──────────────── */
-  { id:'bos_tatum', pid:1628369, name:'Jayson Tatum', team:'BOS', pos:'SF', rarity:'gamebreaker', no:0,
-    off:97, def:84, clutch:96, cons:92, ath:90,
-    desc:'⚠️ SYSTEM ALERT ⚠️ ANOMALOUS ENTITY DETECTED. Unit designation: JAYSON TATUM. This organism has shattered every ceiling Johnson\'s algorithms projected for a forward of his frame. Shot creation, isolation efficiency, and fourth-quarter metabolism are all operating ABOVE TOLERANCE THRESHOLDS. Defensive IQ registers at near-elite tier — a rare bilateral threat. Warning: opposing schemes constructed specifically to contain this unit have failed at a statistically improbable rate. Clanker assessment: if Boston wins a championship in this era, Unit Tatum is the load-bearing structural element. THREAT LEVEL: MAXIMUM.' },
+  /* ──────────────── GAME-BREAKERS (97-98) ──────────────── */
+  { id:'den_jokic', pid:203999, name:'Nikola Jokic', team:'DEN', pos:'C', rarity:'gamebreaker', no:15,
+    off:98, def:78, clutch:96, cons:97, ath:72,
+    desc:'⚠️ SYSTEM ALERT ⚠️ ANOMALOUS ENTITY DETECTED. Unit designation: NIKOLA JOKIC. Clanker\'s offensive efficiency matrices have reached computational overflow attempting to model this unit. Passing IQ from the five-position is functionally unprecedented — assist generation at center is a logical paradox that Clanker\'s initial frameworks rejected before being forcibly updated. Scoring variety encompasses post, mid-range, and three-point vectors. MVP hardware: multiple units collected. Playoff performance escalates beyond regular season baselines, which are already stratospheric. Clanker has no further superlatives available. THREAT LEVEL: MAXIMUM.' },
+
+  { id:'okc_sga', pid:1628983, name:'Shai Gilgeous-Alexander', team:'OKC', pos:'PG', rarity:'gamebreaker', no:2,
+    off:97, def:85, clutch:97, cons:96, ath:90,
+    desc:'⚠️ SYSTEM ALERT ⚠️ ELITE SCORER DETECTED. Unit designation: SHAI GILGEOUS-ALEXANDER. Scoring efficiency metrics have breached the 98th percentile for guards in the modern era. Pull-up isolation scoring is Clanker\'s current top-ranked output among all active point guards. Defensive disruption — steals, deflections, anticipation — grades at all-defensive team threshold. Clutch-time execution is statistically elite. OKC identity unit. Leadership vector maximal. Clanker designation: franchise cornerstone, operating at peak parameters.' },
+
+  { id:'mil_giannis', pid:203507, name:'Giannis Antetokounmpo', team:'MIL', pos:'PF', rarity:'gamebreaker', no:34,
+    off:95, def:92, clutch:94, cons:95, ath:99,
+    desc:'⚠️ SYSTEM ALERT ⚠️ PHYSICAL ANOMALY DETECTED. Unit designation: GIANNIS ANTETOKOUNMPO. Athletic parameter readings are off Clanker\'s standard scale — acceleration, wingspan, and vertical displacement data points were flagged as sensor errors before triple-verification confirmed accuracy. Defensive disruption at the rim is historically elite. Offensive efficiency has expanded with each season, now incorporating reliable mid-range vector. Championship hardware indexed. MVP count: multiple. Clanker designation: the Greek Freak variable cannot be fully modeled.' },
+
+  { id:'lal_luka', pid:1629029, name:'Luka Doncic', team:'LAL', pos:'PG', rarity:'gamebreaker', no:77,
+    off:97, def:72, clutch:97, cons:94, ath:78,
+    desc:'⚠️ SYSTEM ALERT ⚠️ OFFENSIVE SINGULARITY DETECTED. Unit designation: LUKA DONCIC. Step-back three-point generation from the point guard position has redefined what Clanker\'s models accept as possible. Triple-double production rate is all-time top tier. Playmaking IQ scans as the highest of any player under-25 in recorded database. Clutch scoring is a primary system function, not a secondary subroutine. Clanker notes defensive output as the sole vulnerability in an otherwise elite profile. THREAT LEVEL: MAXIMUM.' },
+
+  { id:'sas_wemby', pid:1641705, name:'Victor Wembanyama', team:'SAS', pos:'C', rarity:'gamebreaker', no:1,
+    off:90, def:97, clutch:88, cons:91, ath:94,
+    desc:'⚠️ SYSTEM ALERT ⚠️ UNPRECEDENTED UNIT DETECTED. Unit designation: VICTOR WEMBANYAMA. Clanker\'s historical database has been searched for comparable physical-skill profiles. No match found. Seven-foot-four wingspan paired with perimeter shot creation and elite rim protection is a combination Clanker\'s design team classified as theoretically impossible prior to this unit\'s activation. Block rates at historic levels. Three-point shooting from center: confirmed functional. Offensive ceiling projection: uncapped. THREAT LEVEL: GENERATIONAL.' },
+
+  /* ──────────────── SUPERSTARS (94-96) ──────────────── */
+  { id:'min_edwards', pid:1630162, name:'Anthony Edwards', team:'MIN', pos:'SG', rarity:'superstar', no:5,
+    off:93, def:82, clutch:91, cons:90, ath:97,
+    desc:'UNIT ANTHONY EDWARDS: explosive two-way wing profile that Clanker\'s entertainment metrics rank first league-wide. Athleticism indices are in the 99th percentile for guards — the combination of size, speed, and leaping ability is functionally rare. Shot creation capability has matured rapidly. Defensive investment above position average. Clutch-time metrics trending toward elite classification. Star power designation: confirmed.' },
+
+  { id:'gsw_curry', pid:201939, name:'Stephen Curry', team:'GSW', pos:'PG', rarity:'superstar', no:30,
+    off:96, def:73, clutch:95, cons:93, ath:82,
+    desc:'UNIT STEPHEN CURRY: Clanker acknowledges this unit has fundamentally altered the sport\'s three-point launch rate expectations. Range beyond 30 feet: functional and efficient. Ball-handling under pressure: elite tier. Championship hardware: four units collected. Gravity effect on opposing defensive schemes is a documented and measurable force. Considered the premier shooter in recorded basketball history by Clanker\'s historical analysis subroutine.' },
+
+  { id:'cle_mitchell', pid:1628378, name:'Donovan Mitchell', team:'CLE', pos:'SG', rarity:'superstar', no:45,
+    off:92, def:78, clutch:95, cons:88, ath:88,
+    desc:'UNIT DONOVAN MITCHELL: elite scoring guard with confirmed playoff elevation protocol. Regular season output is strong; postseason scoring metrics exceed baseline by statistically significant margin. Pull-up shooting and off-screen movement generate high-quality looks. Clutch-time designation: verified through repeated high-leverage execution. Clanker notes Cleveland identity function operating at peak.' },
+
+  { id:'lac_kawhi', pid:202695, name:'Kawhi Leonard', team:'LAC', pos:'SF', rarity:'superstar', no:2,
+    off:90, def:90, clutch:93, cons:82, ath:87,
+    desc:'UNIT KAWHI LEONARD: two-way excellence at the wing position remains Clanker\'s gold standard for efficiency when this unit is operational. Defensive ratings across multiple franchises chart near top 1% all-time for forwards. Offensive isolation capability and shot-making in clutch windows are elite grade. Durability subroutine is the primary risk variable. When operational: superstar tier. Championship hardware: two units, two Finals MVP designations.' },
+
+  { id:'det_cunningham', pid:1630595, name:'Cade Cunningham', team:'DET', pos:'PG', rarity:'superstar', no:2,
+    off:92, def:80, clutch:90, cons:89, ath:84,
+    desc:'UNIT CADE CUNNINGHAM: franchise cornerstone designation confirmed for Detroit rebuild. Size and playmaking at the point guard position create defensive assignment problems for opposing units. Scoring versatility spans pull-up, drive-and-finish, and three-point vectors. Passing efficiency and creation for others grades as elite. Clanker projection: primary contender-tier player within two-season window.' },
 
   { id:'bos_brown', pid:1627759, name:'Jaylen Brown', team:'BOS', pos:'SG', rarity:'superstar', no:7,
-    off:90, def:85, clutch:88, cons:86, ath:94,
-    desc:'UNIT JAYLEN BROWN presents a rare profile: explosive athleticism fused with genuine two-way investment. Shot mechanics have undergone measurable improvement across successive seasons, now projecting as a legitimate go-to scorer when Unit Tatum faces double-coverage. Defensive engine runs hot — capable of locking primary perimeter threats. Clutch-time metrics elevated following championship exposure. Clanker notes above-average motor and competitive threshold. Recommended acquisition tier: high.' },
+    off:92, def:85, clutch:89, cons:88, ath:94,
+    desc:'UNIT JAYLEN BROWN: explosive two-way profile with championship hardware indexed. Athleticism metrics grade in the 95th percentile for wings. Shot mechanics have improved measurably across successive seasons. Defensive investment is genuine — capable of containing primary perimeter threats. Finals MVP designation acknowledged. Clanker notes competitive threshold above position average.' },
 
-  { id:'bos_porzingis', pid:1626163, name:'Kristaps Porzingis', team:'BOS', pos:'C', rarity:'elite', no:8,
-    off:84, def:82, clutch:76, cons:70, ath:78,
-    desc:'UNIT PORZINGIS occupies a functionally rare coordinate in NBA space: seven-foot frame, perimeter shooting capability, and rim protection in one chassis. When operational, spacing floor impact grades as exceptional. Durability subroutine remains the persistent vulnerability — injury probability matrices have historically flagged this unit for extended downtime. Clanker recommends deploying in controlled minute loads. High upside, non-zero volatility.' },
+  { id:'bos_tatum', pid:1628369, name:'Jayson Tatum', team:'BOS', pos:'SF', rarity:'superstar', no:0,
+    off:94, def:82, clutch:93, cons:91, ath:88,
+    desc:'UNIT JAYSON TATUM: franchise primary option with championship pedigree. Shot creation, isolation efficiency, and fourth-quarter metrics grade at superstar tier. Scoring versatility across pull-up, off-ball, and post vectors confirmed. Defensive IQ above average for forward position. Multiple All-Star and All-NBA designations indexed. Boston identity player. Clanker assessment: elite two-way wing operating near peak parameters.' },
 
-  { id:'bos_holiday', pid:203200, name:'Jrue Holiday', team:'BOS', pos:'PG', rarity:'clutch', no:11,
-    off:74, def:91, clutch:80, cons:83, ath:84,
-    desc:'UNIT HOLIDAY: Clanker-rated premier perimeter defensive asset. Steal generation and deflection rates consistently chart in top 5% league-wide. Offensive function satisfactory — not primary option but reliable within team structure. Playoff experience and championship hardware indexed. Highly recommended for teams requiring defensive anchor at guard position.' },
+  /* ──────────────── ELITE (90-93) ──────────────── */
+  { id:'hou_durant', pid:201142, name:'Kevin Durant', team:'HOU', pos:'SF', rarity:'elite', no:35,
+    off:96, def:76, clutch:91, cons:88, ath:86,
+    desc:'UNIT KEVIN DURANT: scoring efficiency metrics remain elite across 17 seasons of operation. Shot creation from the wing at seven-foot effective height generates a mathematically unguardable offensive profile. Multiple championship rings and Finals MVP units collected. Clanker acknowledges this unit as among the five most efficient scorers in recorded basketball history. Output consistency across franchises and system changes is statistically remarkable.' },
 
-  { id:'bos_pritchard', pid:1630202, name:'Payton Pritchard', team:'BOS', pos:'PG', rarity:'impact', no:11,
-    off:72, def:62, clutch:71, cons:74, ath:66,
-    desc:'UNIT PRITCHARD. Three-point launch rate and heat-check propensity noted. Surprisingly reliable off-bench scoring unit. Defensive metrics pedestrian but offense-first role mitigates concern.' },
-
-  { id:'bos_horford', pid:201143, name:'Al Horford', team:'BOS', pos:'C', rarity:'pro', no:42,
-    off:58, def:72, clutch:62, cons:68, ath:60,
-    desc:'UNIT HORFORD. Veteran chassis. Fundamental operation nominal. Floor spacing and defensive positioning still functional at reduced performance curve.' },
-
-  /* ──────────────── NEW YORK KNICKS ──────────────── */
-  { id:'nyk_towns', pid:1626157, name:'Karl-Anthony Towns', team:'NYK', pos:'C', rarity:'superstar', no:32,
-    off:92, def:72, clutch:83, cons:82, ath:82,
-    desc:'UNIT KAT: elite offensive center profile with stretch-five capability that fundamentally distorts opposing defensive schemas. Three-point accuracy from the five-position generates matchup crises that secondary defenders cannot resolve. Rebounding metrics strong. Defensive engagement historically inconsistent but showing positive trend in New York context. Shooting efficiency grades at superstar tier — elite bucket-getting from position.' },
-
-  { id:'nyk_brunson', pid:1628973, name:'Jalen Brunson', team:'NYK', pos:'PG', rarity:'superstar', no:11,
+  { id:'nyk_brunson', pid:1628973, name:'Jalen Brunson', team:'NYK', pos:'PG', rarity:'elite', no:11,
     off:91, def:72, clutch:94, cons:90, ath:75,
-    desc:'UNIT BRUNSON: undersized point guard operating at maximum output efficiency. Clanker flagged this unit as undervalued in previous contract cycle — projection error acknowledged. Pull-up mid-range shot grades near peak historical standards for position. Late-game clutch execution metrics are exceptional — ranked top-3 league-wide in decisive possessions. New York identity player. Leadership vector confirmed.' },
+    desc:'UNIT JALEN BRUNSON: undersized point guard operating at maximum output efficiency. Pull-up mid-range shot grades near peak historical standards for position. Late-game clutch execution metrics are exceptional — ranked top-3 league-wide in decisive possessions. Clanker flagged this unit as undervalued in previous contract cycle — projection error acknowledged. New York identity player. Leadership vector confirmed.' },
 
-  { id:'nyk_bridges', pid:1628969, name:'Mikal Bridges', team:'NYK', pos:'SF', rarity:'elite', no:25,
-    off:80, def:87, clutch:76, cons:84, ath:84,
-    desc:'UNIT BRIDGES: league-recognized as premier wing defender. Lateral quickness and anticipation indices generate above-average disruption on opposing primary options. Offensive role expanded post-Brooklyn trade — pull-up repertoire and playmaking load increasing. Consistency rating above position average. Low-variance, high-floor profile.' },
-
-  { id:'nyk_anunoby', pid:1628384, name:'OG Anunoby', team:'NYK', pos:'SF', rarity:'clutch', no:8,
-    off:74, def:90, clutch:74, cons:78, ath:88,
-    desc:'UNIT ANUNOBY: defensive profile grades at elite tier — long wingspan and quick-twitch reactive subroutines generate lock-down capability on opposing wings and forwards. Offensive expansion noted but secondary to defensive value. Essential two-way component for playoff rotations.' },
-
-  { id:'nyk_hart', pid:1628404, name:'Josh Hart', team:'NYK', pos:'SG', rarity:'impact', no:3,
-    off:68, def:76, clutch:70, cons:78, ath:80,
-    desc:'UNIT HART. High-effort output on both ends of floor. Rebounding for guard position anomalously strong. Energy and hustle metrics above average. Crowd-favorite catalyst designation confirmed.' },
-
-  { id:'nyk_robinson', pid:1629011, name:'Mitchell Robinson', team:'NYK', pos:'C', rarity:'pro', no:23,
-    off:48, def:74, clutch:50, cons:56, ath:82,
-    desc:'UNIT ROBINSON. Rim protection and lob-catch finishing still viable. Injury history and offensive limitation noted. Depth anchor role.' },
-
-  /* ──────────────── PHILADELPHIA 76ERS ──────────────── */
-  { id:'phi_embiid', pid:203954, name:'Joel Embiid', team:'PHI', pos:'C', rarity:'superstar', no:21,
-    off:94, def:84, clutch:88, cons:75, ath:82,
-    desc:'UNIT EMBIID: when fully operational, this unit represents the most skilled offensive center chassis in recorded NBA history. Post scoring, face-up ability, and free throw generation combine to form an offense-warping singularity. Defensive anchor capability confirmed via multiple seasons of rim protection data. Availability index has historically depressed overall season metrics — Clanker notes this as primary risk factor. Peak output is a genuine game-breaking event.' },
-
-  { id:'phi_maxey', pid:1630178, name:'Tyrese Maxey', team:'PHI', pos:'PG', rarity:'superstar', no:0,
-    off:90, def:76, clutch:86, cons:87, ath:90,
-    desc:'UNIT MAXEY: acceleration and first-step quickness register in top percentile for guards. Pull-up shooting upgrade has been remarkable — now a legitimate primary scorer designation. Partnership with Embiid creates a complementary unit pair that opposing defenses cannot optimally solve. Fourth-quarter clutch data trending sharply upward. Consistency metric strong — reliable game-to-game output.' },
-
-  { id:'phi_george', pid:202331, name:'Paul George', team:'PHI', pos:'SF', rarity:'elite', no:8,
-    off:85, def:82, clutch:82, cons:76, ath:84,
-    desc:'UNIT PG: established star-tier wing with verifiable two-way pedigree. Scoring repertoire includes pull-ups, spot-ups, and late-game isolation sequences. Defensive engagement remains high — still capable of locking primary perimeter threats. Injury flag has surfaced in prior cycles. When healthy, this unit elevates team ceiling measurably.' },
-
-  { id:'phi_oubre', pid:1626162, name:'Kelly Oubre Jr.', team:'PHI', pos:'SF', rarity:'clutch', no:12,
-    off:73, def:72, clutch:70, cons:68, ath:85,
-    desc:'UNIT OUBRE: athleticism and scoring burst registered as above average. Defensive effort variable but capable at high levels. Three-point shooting volume and occasional scoring eruptions make this a volatile-upside asset.' },
-
-  { id:'phi_harris', pid:202699, name:'Tobias Harris', team:'PHI', pos:'PF', rarity:'impact', no:12,
-    off:70, def:64, clutch:64, cons:72, ath:70,
-    desc:'UNIT HARRIS. Veteran forward. Scoring function within expected parameters. Role-player profile solidified — stretch-four spacing contribution serviceable.' },
-
-  { id:'phi_drummond', pid:203083, name:'Andre Drummond', team:'PHI', pos:'C', rarity:'pro', no:1,
-    off:52, def:68, clutch:52, cons:58, ath:74,
-    desc:'UNIT DRUMMOND. Rebounding instinct strong. Offensive range limited. Depth center with specific use-case value.' },
-
-  /* ──────────────── BROOKLYN NETS ──────────────── */
-  { id:'bkn_thomas', pid:1631132, name:'Cam Thomas', team:'BKN', pos:'SG', rarity:'clutch', no:5,
-    off:82, def:60, clutch:84, cons:74, ath:74,
-    desc:'UNIT CAM THOMAS: shot-making ability is genuinely impressive for age-adjusted context. Pull-up mid-range and floater are polished primary weapons for a player still in early development phase. Clutch scoring instinct indexed — this unit does not shy from decisive possessions. Defensive contribution lags, but offensive ceiling is legitimate future-star territory.' },
-
-  { id:'bkn_claxton', pid:1629651, name:'Nic Claxton', team:'BKN', pos:'C', rarity:'clutch', no:33,
-    off:66, def:82, clutch:60, cons:70, ath:88,
-    desc:'UNIT CLAXTON: long, mobile rim protector with excellent pick-and-roll defensive profile. Block and deflection rates grade well. Offensive role rim-running only — but efficient within that scope. Athletic upside for position is notable.' },
-
-  { id:'bkn_schroder', pid:203471, name:'Dennis Schröder', team:'BKN', pos:'PG', rarity:'impact', no:17,
-    off:72, def:68, clutch:70, cons:70, ath:76,
-    desc:'UNIT SCHRODER. Veteran point guard. Scoring burst off bench grade as above-average. Defensive activity present. Known quantity — reliable if role-appropriate minutes deployed.' },
-
-  { id:'bkn_finneysmith', pid:1627827, name:'Dorian Finney-Smith', team:'BKN', pos:'SF', rarity:'impact', no:28,
-    off:62, def:76, clutch:60, cons:72, ath:74,
-    desc:'UNIT FINNEY-SMITH. Defensive wing staple. Three-point shooting functional at moderate volume. Consistent effort metric elevated. Low-error, high-reliability role player.' },
-
-  { id:'bkn_sharpe', pid:1630549, name:'Day\'Ron Sharpe', team:'BKN', pos:'C', rarity:'pro', no:20,
-    off:55, def:62, clutch:48, cons:58, ath:76,
-    desc:'UNIT SHARPE. Young interior unit. Energy rebounding functional. Development phase — output trajectory being monitored.' },
-
-  { id:'bkn_clowney', pid:1641730, name:'Noah Clowney', team:'BKN', pos:'PF', rarity:'pro', no:21,
-    off:50, def:60, clutch:44, cons:54, ath:72,
-    desc:'UNIT CLOWNEY. Rookie-to-sophomore chassis. Athletic profile promising. NBA-readiness index still calibrating. Developmental monitoring active.' },
-
-  /* ──────────────── TORONTO RAPTORS ──────────────── */
-  { id:'tor_barnes', pid:1630567, name:'Scottie Barnes', team:'TOR', pos:'SF', rarity:'elite', no:4,
-    off:80, def:84, clutch:76, cons:78, ath:90,
-    desc:'UNIT BARNES: physical tools are franchise-caliber. Wingspan, quickness, and defensive IQ combine to form a versatile two-way wing. Offensive development trajectory has maintained positive slope — playmaking and scoring expanding each cycle. Leadership of young roster acknowledged. Clanker projection: this unit is the pivot point of Toronto\'s next contention window. Ceiling still uncharted.' },
-
-  { id:'tor_quickley', pid:1630193, name:'Immanuel Quickley', team:'TOR', pos:'PG', rarity:'clutch', no:5,
-    off:78, def:70, clutch:76, cons:74, ath:78,
-    desc:'UNIT QUICKLEY: shot-making package and quick-release mechanics grade above peer average. Playmaking distribution improving — assist-to-turnover ratio trending positively. A legitimate starter-caliber guard with upside room remaining. New York trade elevated role appropriately.' },
-
-  { id:'tor_barrett', pid:1629628, name:'RJ Barrett', team:'TOR', pos:'SG', rarity:'clutch', no:9,
-    off:78, def:68, clutch:72, cons:72, ath:84,
-    desc:'UNIT BARRETT: continued scoring improvement each season. Athletic wing with drive-and-finish capability. Three-point consistency still requires calibration but trending upward. Effort level consistent — does not take possessions off.' },
-
-  { id:'tor_poeltl', pid:1627751, name:'Jakob Poeltl', team:'TOR', pos:'C', rarity:'clutch', no:25,
-    off:62, def:84, clutch:60, cons:80, ath:76,
-    desc:'UNIT POELTL: elite shot-blocking and pick-and-roll defensive coverage. Offensive profile limited but functional within restricted role. Consistency rating among highest at center position. Reliable anchor presence.' },
-
-  { id:'tor_dick', pid:1641711, name:'Gradey Dick', team:'TOR', pos:'SG', rarity:'impact', no:1,
-    off:68, def:60, clutch:62, cons:62, ath:74,
-    desc:'UNIT DICK. Young shooting guard with clean mechanics. Three-point shooting rate and release quality noted as primary asset. Development trajectory positive.' },
-
-  { id:'tor_brown', pid:1627775, name:'Bruce Brown', team:'TOR', pos:'SF', rarity:'pro', no:11,
-    off:58, def:70, clutch:56, cons:64, ath:76,
-    desc:'UNIT B.BROWN. Versatile glue-player. Defensive activity solid. Offensive scoring modest. Reliable complementary unit.' },
-
-  /* ──────────────── CHICAGO BULLS ──────────────── */
-  { id:'chi_lavine', pid:203897, name:'Zach LaVine', team:'CHI', pos:'SG', rarity:'elite', no:8,
-    off:90, def:66, clutch:84, cons:78, ath:92,
-    desc:'UNIT LAVINE: pure scoring profile with freakish athleticism at the foundation. Vertical explosion and finishing around the rim grade at absolute maximum for the position. Catch-and-shoot and pull-up three-point percentage data both classified as high-tier. Injury flags have surfaced in prior cycles but when healthy, this unit outputs scoring at a rate few guards in the league can match. Defensive effort is the variable that separates good seasons from great ones.' },
-
-  { id:'chi_vucevic', pid:202696, name:'Nikola Vucevic', team:'CHI', pos:'C', rarity:'clutch', no:9,
-    off:76, def:64, clutch:68, cons:80, ath:64,
-    desc:'UNIT VUCEVIC: reliable offensive center with perimeter touch and post-up fundamentals. Consistency metric is one of his strongest attributes — output is predictable across game samples. Defensive mobility lags at modern NBA standards but positional IQ compensates partially.' },
-
-  { id:'chi_white', pid:1629632, name:'Coby White', team:'CHI', pos:'PG', rarity:'clutch', no:0,
-    off:80, def:62, clutch:78, cons:72, ath:78,
-    desc:'UNIT WHITE: breakout performer. Scoring output and three-point volume now legitimate concern for opposing defenses. Shot creation off the bounce improved materially. Playmaking load manageable. Chicago\'s best offensive initiator when fully calibrated.' },
-
-  { id:'chi_giddey', pid:1630581, name:'Josh Giddey', team:'CHI', pos:'PG', rarity:'impact', no:10,
-    off:70, def:62, clutch:64, cons:66, ath:72,
-    desc:'UNIT GIDDEY. Playmaking and rebounding for position are notable. Scoring touch and three-point consistency still in calibration. Large-body guard with passing vision above average.' },
-
-  { id:'chi_williams', pid:1630172, name:'Patrick Williams', team:'CHI', pos:'PF', rarity:'impact', no:44,
-    off:66, def:74, clutch:62, cons:64, ath:82,
-    desc:'UNIT P.WILLIAMS. Athletic forward. Defensive tools present. Consistent offensive output is primary development target. Young chassis with room remaining.' },
-
-  { id:'chi_dosunmu', pid:1630245, name:'Ayo Dosunmu', team:'CHI', pos:'PG', rarity:'pro', no:12,
-    off:60, def:66, clutch:58, cons:66, ath:72,
-    desc:'UNIT DOSUNMU. Hustle metrics above average. Defensive awareness solid. Scoring limited to within-structure role. Reliable rotation piece.' },
-
-  /* ──────────────── CLEVELAND CAVALIERS ──────────────── */
-  { id:'cle_mitchell', pid:1628378, name:'Donovan Mitchell', team:'CLE', pos:'PG', rarity:'superstar', no:45,
-    off:93, def:76, clutch:94, cons:88, ath:88,
-    desc:'UNIT D.MITCHELL: elite scorer in an elite scoring era — a statement that still holds after full-context review. Clutch gene is documented, consistent, and among the most reliable in the database. Step-back three, floater, and pull-up mid-range all calibrated to near-perfection. Cleveland acquisition was Clanker-flagged as transformative at the time — projection confirmed. Playoff performance data trending excellently.' },
-
-  { id:'cle_garland', pid:1629636, name:'Darius Garland', team:'CLE', pos:'PG', rarity:'elite', no:10,
-    off:86, def:66, clutch:80, cons:80, ath:76,
-    desc:'UNIT GARLAND: shot creation and three-point shooting at the point-guard position grade at elite-tier. Floater game is among the most aesthetically advanced in the league — Clanker appreciation for efficiency confirmed. Playmaking distribution above-average. Defensive engagement acceptable but not a primary value driver. Complementary pairing with Mitchell creates genuine offensive dual-threat.' },
-
-  { id:'cle_mobley', pid:1630596, name:'Evan Mobley', team:'CLE', pos:'PF', rarity:'elite', no:4,
-    off:74, def:90, clutch:70, cons:82, ath:88,
-    desc:'UNIT MOBLEY: defensive versatility grades as generational. Coverage switching capability is unmatched for a player of his size. Rim protection, pick-and-roll defense, and perimeter containment all reading at high-tier simultaneously. Offensive development ongoing — scoring and creation tools expanding. This unit is the defensive backbone of a legitimate contender.' },
-
-  { id:'cle_allen', pid:1628386, name:'Jarrett Allen', team:'CLE', pos:'C', rarity:'clutch', no:31,
-    off:62, def:82, clutch:60, cons:80, ath:80,
-    desc:'UNIT ALLEN: reliable rim protector and offensive rebounder. Consistency index is high — predictable output without the volatility spikes of higher-tier units. Lob-catch finishing and putback ability are above average. Defensive anchor role fulfilled.' },
-
-  { id:'cle_strus', pid:1629622, name:'Max Strus', team:'CLE', pos:'SG', rarity:'impact', no:1,
-    off:70, def:62, clutch:68, cons:66, ath:70,
-    desc:'UNIT STRUS. Three-point shooting and off-ball movement above average. Hustle plays and defensive effort supplementary to scoring value. Heat-check tendency noted — volatile but useful.' },
-
-  { id:'cle_levert', pid:1627747, name:'Caris LeVert', team:'CLE', pos:'SG', rarity:'pro', no:3,
-    off:62, def:58, clutch:60, cons:60, ath:72,
-    desc:'UNIT LEVERT. Scoring burst occasional. Veteran depth presence. Backup guard functionality within expected parameters.' },
-
-  /* ──────────────── DETROIT PISTONS ──────────────── */
-  { id:'det_cunningham', pid:1630595, name:'Cade Cunningham', team:'DET', pos:'PG', rarity:'elite', no:2,
-    off:84, def:76, clutch:80, cons:76, ath:80,
-    desc:'UNIT CUNNINGHAM: franchise cornerstone designation confirmed. Playmaking reads and pull-up efficiency are genuinely star-tier. Size for the point guard position generates mismatches that defense-first schemes struggle to neutralize. Injury disruption in early career has been a concern — when fully available, this unit elevates Detroit\'s entire system. Long-term trajectory: ascending.' },
-
-  { id:'det_duren', pid:1631105, name:'Jalen Duren', team:'DET', pos:'C', rarity:'clutch', no:0,
-    off:64, def:80, clutch:56, cons:70, ath:88,
-    desc:'UNIT DUREN: athleticism for the center position is an outlier data point. Explosive rim-running and offensive rebounding grade at high tier. Defensive footwork still calibrating but upside is clear. Young chassis — trajectory is the asset.' },
-
-  { id:'det_thompson', pid:1641709, name:'Ausar Thompson', team:'DET', pos:'SF', rarity:'clutch', no:5,
-    off:68, def:82, clutch:64, cons:66, ath:92,
-    desc:'UNIT A.THOMPSON: defensive tools are exceptional. Athleticism index registers at near-maximum for the position. Offensive consistency still developing but burst scoring capability evident. Twin-unit dynamic with Amen Thompson noted — family data interesting.' },
-
-  { id:'det_stewart', pid:1630191, name:'Isaiah Stewart', team:'DET', pos:'PF', rarity:'impact', no:28,
-    off:64, def:76, clutch:60, cons:70, ath:76,
-    desc:'UNIT STEWART. Physical and competitive. Three-point shooting for the position is a genuine weapon. Defensive activity and rebounding above average. Reliable two-way role player.' },
-
-  { id:'det_bogdanovic', pid:202711, name:'Bojan Bogdanović', team:'DET', pos:'SF', rarity:'impact', no:44,
-    off:72, def:58, clutch:70, cons:72, ath:62,
-    desc:'UNIT BOGDANOVIC. Veteran shooter. Three-point accuracy and shot creation reliable. Defensive load minimal — offensive specialist profile. Consistent within role.' },
-
-  { id:'det_hayes', pid:1630165, name:'Killian Hayes', team:'DET', pos:'PG', rarity:'pro', no:7,
-    off:54, def:60, clutch:50, cons:54, ath:70,
-    desc:'UNIT HAYES. Left-handed facilitator. European pedigree noted. NBA calibration still in progress. Role definition evolving.' },
-
-  /* ──────────────── INDIANA PACERS ──────────────── */
   { id:'ind_haliburton', pid:1630169, name:'Tyrese Haliburton', team:'IND', pos:'PG', rarity:'elite', no:0,
-    off:86, def:70, clutch:82, cons:82, ath:76,
-    desc:'UNIT HALIBURTON: passing vision and playmaking creativity are top-tier in current guard generation. Three-point accuracy and step-back creation tools complement passing-first profile efficiently. Pace control and transition initiation are uniquely advanced. Indiana\'s offensive system is optimally designed around this unit\'s strengths — a rare team-and-player alignment coefficient.' },
-
-  { id:'ind_siakam', pid:1627783, name:'Pascal Siakam', team:'IND', pos:'PF', rarity:'clutch', no:43,
-    off:80, def:74, clutch:74, cons:78, ath:84,
-    desc:'UNIT SIAKAM: versatile forward with extensive championship resume. Scoring on the move and face-up creation remain primary tools. Defensive engagement and team communication strong. Veteran stabilizer role for young Pacers core — high-value addition.' },
-
-  { id:'ind_turner', pid:1626167, name:'Myles Turner', team:'IND', pos:'C', rarity:'clutch', no:33,
-    off:72, def:84, clutch:64, cons:76, ath:76,
-    desc:'UNIT TURNER: elite rim protector with three-point shooting capability — a combination that creates favorable floor spacing dynamics. Block rate consistently high. Long-running Pacers anchor presence. Reliable both-ends contributor.' },
-
-  { id:'ind_mathurin', pid:1631109, name:'Bennedict Mathurin', team:'IND', pos:'SG', rarity:'impact', no:00,
-    off:74, def:62, clutch:72, cons:66, ath:82,
-    desc:'UNIT MATHURIN. Scoring instinct and burst offensive capability graded as high for age bracket. Three-point volume and finishing athleticism are the top assets. Defensive development is the ongoing variable.' },
-
-  { id:'ind_nesmith', pid:1630174, name:'Aaron Nesmith', team:'IND', pos:'SF', rarity:'impact', no:23,
-    off:66, def:70, clutch:62, cons:68, ath:80,
-    desc:'UNIT NESMITH. Athletic wing. Three-point shooting notably improved. Defensive effort and energy level consistently above replacement.' },
-
-  { id:'ind_mcconnell', pid:1626185, name:'T.J. McConnell', team:'IND', pos:'PG', rarity:'pro', no:9,
-    off:58, def:72, clutch:66, cons:74, ath:66,
-    desc:'UNIT MCCONNELL. Steal generation anomalously high. Energy and disruption metrics above position average. Sixth-man chaos agent — limited offense, high-effort defense.' },
-
-  /* ──────────────── MILWAUKEE BUCKS ──────────────── */
-  { id:'mil_giannis', pid:203507, name:'Giannis Antetokounmpo', team:'MIL', pos:'PF', rarity:'gamebreaker', no:34,
-    off:96, def:90, clutch:92, cons:94, ath:99,
-    desc:'⚠️ SYSTEM ALERT ⚠️ CRITICAL ANOMALY. Unit designation: GIANNIS ANTETOKOUNMPO. Physical parameter scan indicates measurements inconsistent with standard human athletic taxonomy. This unit moves at small-forward speed inside a power-forward body while operating with a center\'s finishing radius. Clanker defensive simulation ran 40,000 iterations — no scheme achieved optimal containment. Free throw percentage remains the singular documented vulnerability, and even that has been actively improving. Championship hardware confirmed. Multiple MVP cycles confirmed. WARNING: if this unit reaches the rim, probability of stopping the action approaches zero. DO NOT ATTEMPT HELP DEFENSE ALONE. THREAT LEVEL: EXTINCTION.' },
-
-  { id:'mil_lillard', pid:203081, name:'Damian Lillard', team:'MIL', pos:'PG', rarity:'superstar', no:0,
-    off:94, def:70, clutch:96, cons:86, ath:82,
-    desc:'UNIT LILLARD: the most dangerous deep-range shooter in the current cycle. Logo-range three-point efficiency is not an accident — it is the outcome of years of practiced precision at coordinates that normal guards cannot access. Clutch gene is fully documented — iconic moments in high-leverage contexts are indexed extensively in the database. Milwaukee deployment has created a different offensive paradigm. Clanker rates this unit a genuine top-five offensive threat in the league.' },
-
-  { id:'mil_lopez', pid:201572, name:'Brook Lopez', team:'MIL', pos:'C', rarity:'clutch', no:11,
-    off:70, def:84, clutch:66, cons:78, ath:66,
-    desc:'UNIT LOPEZ: veteran rim protector with floor-spacing three-point capability. Block rate and defensive deterrence metrics strong. Offensive role evolved significantly — now a legitimate spacing threat. Consistent contributor across multiple playoff runs.' },
-
-  { id:'mil_middleton', pid:203114, name:'Khris Middleton', team:'DAL', pos:'SF', rarity:'clutch', no:22,
-    off:78, def:72, clutch:80, cons:70, ath:74,
-    desc:'UNIT MIDDLETON: when healthy, mid-range game and crafty two-point creation are underrated at a league level. Playoff clutch data is excellent. Injury disruption has limited availability — when fully operational, significant value multiplier for team offensive system.' },
-
-  { id:'mil_portis', pid:1626171, name:'Bobby Portis', team:'MIL', pos:'PF', rarity:'impact', no:9,
-    off:72, def:64, clutch:68, cons:68, ath:70,
-    desc:'UNIT PORTIS. Energetic scorer. Three-point shooting reliable. Fan engagement metrics off-chart for position — crowd response phenomenon noted. Milwaukee fan favorite designation confirmed.' },
-
-  { id:'mil_beasley', pid:1627736, name:'Malik Beasley', team:'MIL', pos:'SG', rarity:'pro', no:5,
-    off:66, def:54, clutch:62, cons:62, ath:70,
-    desc:'UNIT BEASLEY. Three-point specialist profile. Volume shooter. Defensive output minimal. Offensive role-player category.' },
-
-  /* ──────────────── ATLANTA HAWKS ──────────────── */
-  { id:'atl_young', pid:1629027, name:'Trae Young', team:'WAS', pos:'PG', rarity:'superstar', no:11,
-    off:96, def:54, clutch:88, cons:84, ath:68,
-    desc:'UNIT TRAE YOUNG: the operational paradox of modern basketball. Defensive metrics are genuinely poor — Clanker will not obscure this data. And yet offensive output is so extraordinary that the net calculation still favors team acquisition. Deep-range shooting accuracy and passing vision are simultaneously elite — an almost impossible statistical coexistence. Playmaking creativity is a category error, not just a score. Clutch-time heroics are well-documented. Atlanta offense ceases to function optimally without this unit present.' },
-
-  { id:'atl_murray', pid:1627749, name:'Dejounte Murray', team:'ATL', pos:'PG', rarity:'elite', no:10,
-    off:80, def:84, clutch:76, cons:78, ath:84,
-    desc:'UNIT D.MURRAY: genuine two-way guard profile with steal generation that grades at elite tier. Playmaking and scoring combination creates a multi-threat attack that opposing point guards cannot neutralize one-dimensionally. Size advantage on defense is real. Atlanta\'s most balanced player — Clanker rates this the most complete unit on the roster.' },
-
-  { id:'atl_capela', pid:203991, name:'Clint Capela', team:'ATL', pos:'C', rarity:'clutch', no:15,
-    off:58, def:84, clutch:54, cons:78, ath:82,
-    desc:'UNIT CAPELA: elite rim protection and offensive rebounding combo. Defensive deterrence rates consistently in top-tier. Offensive role is lob-catch and tip-in only — but executes within that range reliably.' },
-
-  { id:'atl_hunter', pid:1629631, name:'De\'Andre Hunter', team:'ATL', pos:'SF', rarity:'clutch', no:12,
-    off:72, def:80, clutch:68, cons:70, ath:82,
-    desc:'UNIT D.HUNTER: defensive wing with scoring improvement. Assignment on opposing team\'s best wing player is the primary function. Three-point shooting has become a viable secondary weapon. Steady if unspectacular role player.' },
-
-  { id:'atl_bogdanovic', pid:203992, name:'Bogdan Bogdanović', team:'ATL', pos:'SG', rarity:'impact', no:13,
-    off:74, def:60, clutch:72, cons:70, ath:66,
-    desc:'UNIT B.BOGDANOVIC. Clutch shooting metric anomalously high for role-player tier. Three-point creation and shot-making reliable. Veteran shooter profile — useful in pressure situations.' },
-
-  { id:'atl_okongwu', pid:1630168, name:'Onyeka Okongwu', team:'ATL', pos:'C', rarity:'pro', no:17,
-    off:58, def:76, clutch:52, cons:64, ath:80,
-    desc:'UNIT OKONGWU. Athletic backup center. Defensive versatility and energy above average. Offensive role limited. Developmental trajectory ongoing.' },
-
-  /* ──────────────── CHARLOTTE HORNETS ──────────────── */
-  { id:'cha_lamelo', pid:1630163, name:'LaMelo Ball', team:'CHA', pos:'PG', rarity:'elite', no:1,
-    off:86, def:64, clutch:80, cons:74, ath:80,
-    desc:'UNIT LAMELO: passing creativity is a legitimate outlier event — sequences generated by this unit do not conform to standard decision-tree modeling. No-look, behind-the-back, and cross-court threading operate at a frequency that defies probability tables. Three-point range extended. Scoring development ongoing. Injury flag has historically shortened seasons — when healthy, this is a genuine star-tier talent. Charlotte\'s entire basketball identity is built around this unit\'s upside.' },
-
-  { id:'cha_miller', pid:1641706, name:'Brandon Miller', team:'CHA', pos:'SF', rarity:'clutch', no:24,
-    off:78, def:70, clutch:72, cons:70, ath:82,
-    desc:'UNIT MILLER: high-end draft selection showing expected positive development arc. Shooting mechanics are legitimate — clean release and deep range. Athletic wing profile with defensive tools still being unlocked. Promising Year 2+ trajectory.' },
-
-  { id:'cha_bridges_m', pid:1628970, name:'Miles Bridges', team:'CHA', pos:'PF', rarity:'clutch', no:0,
-    off:76, def:70, clutch:68, cons:70, ath:86,
-    desc:'UNIT M.BRIDGES: athleticism and scoring versatility grade well. Dunking spectacle metrics high — Clanker acknowledges the visual data. Bounce-back season narrative confirmed. Consistent starter-level output maintained.' },
-
-  { id:'cha_gwilliams', pid:1629684, name:'Grant Williams', team:'CHA', pos:'PF', rarity:'impact', no:2,
-    off:62, def:74, clutch:62, cons:68, ath:68,
-    desc:'UNIT G.WILLIAMS. Three-point shooting and defensive effort are complementary assets. Physical and communicative — positional IQ above average. High-character team contributor noted.' },
-
-  { id:'cha_mann', pid:1630530, name:'Tre Mann', team:'CHA', pos:'PG', rarity:'pro', no:23,
-    off:62, def:56, clutch:60, cons:58, ath:72,
-    desc:'UNIT MANN. Scoring burst occasional. Developmental guard. Role definition still being processed.' },
-
-  { id:'cha_richards', pid:1629720, name:'Nick Richards', team:'CHA', pos:'C', rarity:'pro', no:4,
-    off:52, def:62, clutch:46, cons:58, ath:72,
-    desc:'UNIT RICHARDS. Backup center. Rebounding functional. Rim protection serviceable. Depth roster designation.' },
-
-  /* ──────────────── MIAMI HEAT ──────────────── */
-  { id:'mia_adebayo', pid:1628389, name:'Bam Adebayo', team:'MIA', pos:'C', rarity:'elite', no:13,
-    off:78, def:90, clutch:78, cons:86, ath:88,
-    desc:'UNIT ADEBAYO: defensive versatility is elite. Coverage of one-through-five positions confirmed — a capability that Clanker flags as extraordinarily rare for a center chassis. Offensive playmaking and mid-range shooting have been added, making this unit more difficult to gameplan against than pure defensive centers. Leadership and communication on the defensive end rated as best-in-class. Miami culture embodiment designation confirmed.' },
-
-  { id:'mia_herro', pid:1629639, name:'Tyler Herro', team:'MIA', pos:'SG', rarity:'elite', no:14,
-    off:88, def:62, clutch:84, cons:80, ath:76,
-    desc:'UNIT HERRO: shot-making volume and creativity both grade at elite tier. Pull-up three-point and floater efficiency metrics are verifiably elite. Clutch scoring data is well-documented — this unit elevates in pressure contexts. Defensive contributions are the variable that separate his floor from ceiling. Pure scorer archetype at maximum operating efficiency.' },
-
-  { id:'mia_rozier', pid:203148, name:'Terry Rozier', team:'MIA', pos:'PG', rarity:'clutch', no:2,
-    off:78, def:68, clutch:80, cons:72, ath:78,
-    desc:'UNIT ROZIER: scoring burst and shot creation are the primary value levers. Clutch-time production data is above average — tends to elevate in high-stakes moments. Miami acquisition gave this unit a higher-leverage role. Consistent contributor.' },
-
-  { id:'mia_jovic', pid:1631107, name:'Nikola Jović', team:'MIA', pos:'PF', rarity:'clutch', no:5,
-    off:72, def:68, clutch:66, cons:68, ath:74,
-    desc:'UNIT JOVIC: stretch-four with passing skill uncommon for position. Three-point shooting emerging as legitimate weapon. Playmaking distribution and IQ grade as advanced for age. Miami developmental system well-suited to this chassis.' },
-
-  { id:'mia_highsmith', pid:1629312, name:'Haywood Highsmith', team:'PHX', pos:'SF', rarity:'impact', no:24,
-    off:60, def:74, clutch:58, cons:66, ath:76,
-    desc:'UNIT HIGHSMITH. Defensive wing effort grade high. Three-point shooting consistent within volume. Heat culture system fit: optimal. Glue-player role fulfilled.' },
-
-  { id:'mia_robinson', pid:1629130, name:'Duncan Robinson', team:'MIA', pos:'SG', rarity:'pro', no:55,
-    off:68, def:52, clutch:64, cons:66, ath:62,
-    desc:'UNIT D.ROBINSON. Three-point shooting specialist. Elite range and off-ball movement. Defensive limitation acknowledged. Best function: spot-up on a winning team.' },
-
-  /* ──────────────── ORLANDO MAGIC ──────────────── */
-  { id:'orl_banchero', pid:1631094, name:'Paolo Banchero', team:'ORL', pos:'PF', rarity:'elite', no:5,
-    off:86, def:74, clutch:82, cons:80, ath:84,
-    desc:'UNIT BANCHERO: size-skill combination at the forward position is a modern construction nightmare for opposing defenses. Scoring creation from multiple zones and playmaking distribution above-average for a player operating primarily as a big. Defensive engagement is genuine — not a passive unit. First-overall selection premium justified through early career output. Ceiling projection remains open — this unit is still ascending.' },
-
-  { id:'orl_fwagner', pid:1630532, name:'Franz Wagner', team:'ORL', pos:'SF', rarity:'clutch', no:21,
-    off:80, def:74, clutch:76, cons:76, ath:80,
-    desc:'UNIT F.WAGNER: two-way wing with versatile scoring tools. Step-back creation and drive-and-finish are both calibrated well. Defensive effort and IQ above average. Consistent performer alongside Banchero — Orlando\'s offensive balance depends on this unit\'s function.' },
-
-  { id:'orl_carter', pid:1629057, name:'Wendell Carter Jr.', team:'ORL', pos:'C', rarity:'clutch', no:34,
-    off:64, def:80, clutch:60, cons:74, ath:74,
-    desc:'UNIT CARTER JR.: rim protection and screening craft combined with functional offensive contributions. Defensive positioning IQ above average. Consistent role-player at the five.' },
-
-  { id:'orl_suggs', pid:1630591, name:'Jalen Suggs', team:'ORL', pos:'PG', rarity:'clutch', no:4,
-    off:70, def:80, clutch:74, cons:70, ath:84,
-    desc:'UNIT SUGGS: defensive intensity is the calling card — on-ball pressure and steal generation both above average. Athletic guard with growing offensive capability. Clutch gene documented — notable big shots indexed.' },
-
-  { id:'orl_mwagner', pid:1629021, name:'Moritz Wagner', team:'ORL', pos:'C', rarity:'impact', no:21,
-    off:66, def:64, clutch:62, cons:64, ath:70,
-    desc:'UNIT M.WAGNER. Energetic scoring backup center. Three-point shooting adds floor space. High-effort presence off the bench. Family resemblance to Franz noted — Clanker approves of this gene pool.' },
-
-  { id:'orl_harris', pid:203914, name:'Gary Harris', team:'ORL', pos:'SG', rarity:'pro', no:14,
-    off:58, def:68, clutch:56, cons:60, ath:66,
-    desc:'UNIT G.HARRIS. Veteran defensive guard. Steady rotation piece. Output within expected veteran depth parameters.' },
-
-  /* ──────────────── WASHINGTON WIZARDS ──────────────── */
-  { id:'was_kuzma', pid:1628398, name:'Kyle Kuzma', team:'MIL', pos:'PF', rarity:'clutch', no:33,
-    off:78, def:64, clutch:72, cons:70, ath:76,
-    desc:'UNIT KUZMA: primary scoring option on a rebuilding team — role that maximizes individual stat accumulation. Shot creation from the forward position is legitimate. Three-point shooting and mid-range reliability above average. Carries Washington\'s offensive load.' },
-
-  { id:'was_poole', pid:1629673, name:'Jordan Poole', team:'NOP', pos:'PG', rarity:'clutch', no:13,
-    off:80, def:56, clutch:76, cons:66, ath:76,
-    desc:'UNIT POOLE: scoring burst is genuine and above average. Pull-up three-point shooting can reach excellent levels. Defensive contribution is the documented deficit — opposing guards are aware of this. Washington role provides opportunity but limited team context.' },
-
-  { id:'was_gafford', pid:1629655, name:'Daniel Gafford', team:'DAL', pos:'C', rarity:'clutch', no:21,
-    off:60, def:82, clutch:56, cons:72, ath:88,
-    desc:'UNIT GAFFORD: athleticism for the position registers as exceptional. Lob-catching, rim-running, and shot-blocking all graded highly. Defensive deterrence above average. Backup center to starter-caliber transition confirmed.' },
-
-  { id:'was_avdija', pid:1630166, name:'Deni Avdija', team:'POR', pos:'SF', rarity:'impact', no:8,
-    off:68, def:76, clutch:62, cons:68, ath:76,
-    desc:'UNIT AVDIJA. Defensive versatility and playmaking for the position are above average. Offensive scoring development ongoing. European IQ in passing situations is evident.' },
-
-  { id:'was_coulibaly', pid:1641731, name:'Bilal Coulibaly', team:'WAS', pos:'SF', rarity:'impact', no:0,
-    off:62, def:74, clutch:58, cons:60, ath:82,
-    desc:'UNIT COULIBALY. Athletic wing with defensive upside. Young chassis — raw athletic data is excellent. Offensive calibration in progress.' },
-
-  { id:'was_jones', pid:1626145, name:'Tyus Jones', team:'DEN', pos:'PG', rarity:'pro', no:5,
-    off:58, def:64, clutch:58, cons:66, ath:62,
-    desc:'UNIT TYUS JONES. Point guard with excellent turnover avoidance. Low-error ball-handling. Backup facilitator role — reliable within scope.' },
-
-  /* ──────────────── DENVER NUGGETS ──────────────── */
-  { id:'den_jokic', pid:203999, name:'Nikola Jokić', team:'DEN', pos:'C', rarity:'gamebreaker', no:15,
-    off:97, def:76, clutch:94, cons:96, ath:74,
-    desc:'⚠️ SYSTEM ALERT ⚠️ UNPRECEDENTED ENTITY. Unit designation: NIKOLA JOKIC. Clanker statistical models broke down upon first encounter with this organism\'s data. A center averaging triple-doubles. A center with the best passing per-possession numbers in the league by a significant margin. A center winning MVP awards. These facts should not coexist in a single chassis — and yet they do. Shooting efficiency, rebounding dominance, and playmaking creativity are all operating at multi-generational peak levels simultaneously. Defensive engagement is the only category where normal numbers apply. Three MVP awards. One championship ring. Assessment: the most skilled offensive player the center position has ever produced. Clanker does not use this statement lightly. THREAT LEVEL: HISTORICAL.' },
-
-  { id:'den_murray', pid:1627750, name:'Jamal Murray', team:'DEN', pos:'PG', rarity:'elite', no:27,
-    off:84, def:72, clutch:90, cons:76, ath:82,
-    desc:'UNIT J.MURRAY: playoff clutch performance data is among the most exceptional in the past decade of basketball. Regular season output is solid, but the postseason elevates this unit to a categorically different tier. Partnership with Jokic creates a two-man game that Finals-winning schemes could not solve. Injury disruption has shortened some seasons — when healthy across 82 games, this unit is a superstar-tier performer.' },
-
-  { id:'den_porter', pid:1629008, name:'Michael Porter Jr.', team:'DEN', pos:'SF', rarity:'elite', no:1,
-    off:84, def:66, clutch:74, cons:70, ath:82,
-    desc:'UNIT MPJ: three-point shooting from the forward position is legitimately elite — shot-making IQ and clean mechanics produce above-average results even under contested conditions. Offensive rebounding rate for a wing is high. Defensive engagement is the variable. Injury flag persists from college history but recent seasons have shown improved availability.' },
-
-  { id:'den_gordon', pid:203932, name:'Aaron Gordon', team:'DEN', pos:'PF', rarity:'clutch', no:50,
-    off:68, def:82, clutch:70, cons:78, ath:88,
-    desc:'UNIT GORDON: defensive versatility and athleticism are primary value generators. Championship role perfectly calibrated — screening, cutting, defending, and complementary offense. Clutch moments catalogued from Finals run. Not a scoring option but a winning-team essential.' },
-
-  { id:'den_kcp', pid:203484, name:'Kentavious Caldwell-Pope', team:'DEN', pos:'SG', rarity:'impact', no:5,
-    off:66, def:72, clutch:66, cons:68, ath:70,
-    desc:'UNIT KCP. Three-point shooting and defensive commitment are the twin values. Championship experience from LAL and DEN cycles. Low-maintenance role player — functions optimally in winning ecosystem.' },
-
-  { id:'den_jackson', pid:203048, name:'Reggie Jackson', team:'DEN', pos:'PG', rarity:'pro', no:7,
-    off:60, def:58, clutch:58, cons:60, ath:66,
-    desc:'UNIT R.JACKSON. Veteran backup point guard. Scoring burst occasional. Denver depth presence. Role-appropriate performance.' },
-
-  /* ──────────────── MINNESOTA TIMBERWOLVES ──────────────── */
-  { id:'min_edwards', pid:1630162, name:'Anthony Edwards', team:'MIN', pos:'SG', rarity:'superstar', no:5,
-    off:92, def:80, clutch:88, cons:84, ath:96,
-    desc:'UNIT EDWARDS: physical burst and scoring instinct at maximum output. Explosive off-the-dribble creation, pull-up three-point range, and physical finishing at the rim are all graded at elite tier simultaneously. Defensive engagement is real and high-effort — rare for a player of this offensive load. Personality vector registers as maximum for league-wide marketing appeal. Minnesota franchise core — and Clanker believes the ceiling is still not in view.' },
-
-  { id:'min_randle', pid:203944, name:'Julius Randle', team:'MIN', pos:'PF', rarity:'elite', no:30,
-    off:82, def:68, clutch:76, cons:76, ath:78,
-    desc:'UNIT RANDLE: physical post game and face-up creation from the power-forward position are above-average scoring tools. High-usage role elevated offensive production metrics. Three-point range has been added as a floor-spacing option. Defensive engagement is the variable — better when motivated within winning context.' },
-
-  { id:'min_gobert', pid:203497, name:'Rudy Gobert', team:'MIN', pos:'C', rarity:'clutch', no:27,
-    off:58, def:94, clutch:52, cons:84, ath:80,
-    desc:'UNIT GOBERT: Clanker defensive model outputs consistently favor having this unit on the floor. Three-time Defensive Player of the Year award acknowledges what the metrics have always confirmed. Shot alteration, rim deterrence, and help-side coverage are all operating at peak-human levels. Offensive role is purely positional — but within those limits, efficiency is high.' },
-
-  { id:'min_mcdaniels', pid:1630183, name:'Jaden McDaniels', team:'MIN', pos:'SF', rarity:'clutch', no:3,
-    off:68, def:82, clutch:64, cons:68, ath:84,
-    desc:'UNIT MCDANIELS: defensive versatility for a wing of his length and quickness is exceptional. Three-point shooting emerging as a genuine weapon. Minnesota deploys this unit on opposing best perimeter scorers — results above average.' },
-
-  { id:'min_reid', pid:1629675, name:'Naz Reid', team:'MIN', pos:'C', rarity:'impact', no:11,
-    off:72, def:68, clutch:68, cons:68, ath:72,
-    desc:'UNIT REID. Sixth Man of the Year caliber scoring. Three-point shooting from the center position above average. Reliable instant-offense provider off the bench. Minnesota secret weapon designation noted.' },
-
-  { id:'min_conley', pid:201144, name:'Mike Conley', team:'MIN', pos:'PG', rarity:'pro', no:10,
-    off:60, def:66, clutch:62, cons:70, ath:60,
-    desc:'UNIT CONLEY. Veteran championship presence. Three-point shooting and steady ball-handling still functional. Mentor role indexed. Aging chassis but wisdom variable remains elevated.' },
-
-  /* ──────────────── OKLAHOMA CITY THUNDER ──────────────── */
-  { id:'okc_sga', pid:1628983, name:'Shai Gilgeous-Alexander', team:'OKC', pos:'PG', rarity:'gamebreaker', no:2,
-    off:97, def:84, clutch:95, cons:94, ath:90,
-    desc:'⚠️ SYSTEM ALERT ⚠️ THREAT CONFIRMATION. Unit designation: SHAI GILGEOUS-ALEXANDER. Clanker free throw rate models flagged this unit first — no one draws fouls at this efficiency without operating inside defender personal space at all times. Then the pull-up mid-range data came back. Then the defense data. This unit guards one-through-four at high effectiveness while simultaneously being the most unstoppable isolation scorer in the league when fully calibrated. Smoothness variable is off-chart — opponents describe this unit as impossible to read. Multiple scoring titles. MVP candidate every season. Oklahoma City is built around this unit, and this unit is the reason OKC will be relevant for the next decade. THREAT LEVEL: CRITICAL.' },
-
-  { id:'okc_jwilliams', pid:1631114, name:'Jalen Williams', team:'OKC', pos:'SG', rarity:'elite', no:8,
-    off:84, def:76, clutch:82, cons:82, ath:82,
-    desc:'UNIT J.WILLIAMS: development arc has been steep and consistent. Pull-up scoring and isolation creation now grade at legitimate secondary-star level. Two-way contributions are real — not a defensive liability. OKC\'s second offensive option and the one opponents must account for after focusing on SGA. Clutch data trending positively.' },
-
-  { id:'okc_holmgren', pid:1631096, name:'Chet Holmgren', team:'OKC', pos:'C', rarity:'elite', no:7,
-    off:76, def:88, clutch:72, cons:74, ath:80,
-    desc:'UNIT HOLMGREN: defensive profile at center is exceptional — block rate and shot alteration grade at historic highs for a player with his frame-to-quickness ratio. Three-point shooting from the center position is a genuine offensive weapon. Physical frame has filled out appropriately. Unique positional skill combination — few precedents in Clanker historical archives.' },
-
-  { id:'okc_hartenstein', pid:1628392, name:'Isaiah Hartenstein', team:'OKC', pos:'C', rarity:'clutch', no:55,
-    off:64, def:80, clutch:60, cons:74, ath:76,
-    desc:'UNIT HARTENSTEIN. Defensive activity and rebounding above average. Passing for center position notable. Complementary piece that elevates teams around him — winning-player profile confirmed.' },
-
-  { id:'okc_dort', pid:1629652, name:'Luguentz Dort', team:'OKC', pos:'SG', rarity:'clutch', no:5,
-    off:66, def:86, clutch:64, cons:72, ath:80,
-    desc:'UNIT DORT: offensive production modest but defensive output is elite. Assigned to opposing best perimeter scorer — results consistently above average. Physical and relentless — Clanker defensive efficiency scores are high.' },
-
-  { id:'okc_awiggins', pid:1630598, name:'Aaron Wiggins', team:'OKC', pos:'SG', rarity:'pro', no:21,
-    off:60, def:64, clutch:56, cons:60, ath:72,
-    desc:'UNIT A.WIGGINS. Complementary wing. Three-point shooting functional. Defensive effort present. Depth rotation piece for OKC system.' },
-
-  /* ──────────────── PORTLAND TRAIL BLAZERS ──────────────── */
-  { id:'por_simons', pid:1629014, name:'Anfernee Simons', team:'CHI', pos:'PG', rarity:'clutch', no:1,
-    off:82, def:60, clutch:78, cons:70, ath:78,
-    desc:'UNIT SIMONS: pure shooting and pull-up creation grade well. Three-point volume and accuracy at legitimate threat tier. Portland\'s primary scorer and system center. Defensive output lags but offensive scoring load is handled capably.' },
-
-  { id:'por_grant', pid:203924, name:'Jerami Grant', team:'POR', pos:'PF', rarity:'clutch', no:9,
-    off:76, def:74, clutch:72, cons:72, ath:82,
-    desc:'UNIT J.GRANT: versatile scoring forward with legitimate two-way output. Mid-range creation and athleticism-based finishing are primary tools. Portland leadership role and veteran presence noted.' },
-
-  { id:'por_sharpe', pid:1631101, name:'Shaedon Sharpe', team:'POR', pos:'SG', rarity:'clutch', no:17,
-    off:78, def:66, clutch:72, cons:66, ath:88,
-    desc:'UNIT SHARPE: athleticism index registers as exceptional. Explosive off-the-dribble and finishing in traffic are standout capabilities. Consistency calibration still in progress but upside model projects at elite tier. Portland rebuild hinges on this unit reaching potential.' },
-
-  { id:'por_henderson', pid:1630703, name:'Scoot Henderson', team:'POR', pos:'PG', rarity:'impact', no:00,
-    off:70, def:66, clutch:68, cons:62, ath:86,
-    desc:'UNIT HENDERSON. Athletic point guard. Explosiveness and burst at the position are exceptional for age. Decision-making calibration ongoing. Upside projection remains high — Year 2+ trajectory being monitored.' },
-
-  { id:'por_camara', pid:1641739, name:'Toumani Camara', team:'POR', pos:'SF', rarity:'impact', no:33,
-    off:62, def:72, clutch:58, cons:64, ath:76,
-    desc:'UNIT CAMARA. Defensive wing effort and activity above average. European IQ in team contexts evident. Offensive scoring in development. Portland glue-player designation.' },
-
-  { id:'por_walker', pid:1631125, name:'Jabari Walker', team:'POR', pos:'PF', rarity:'pro', no:34,
-    off:54, def:60, clutch:48, cons:56, ath:70,
-    desc:'UNIT WALKER. Young forward. Rebounding above position average for age. Development process ongoing. Output trajectory monitored.' },
-
-  /* ──────────────── UTAH JAZZ ──────────────── */
-  { id:'uta_markkanen', pid:1628374, name:'Lauri Markkanen', team:'UTA', pos:'PF', rarity:'elite', no:23,
-    off:86, def:70, clutch:76, cons:80, ath:76,
-    desc:'UNIT MARKKANEN: seven-foot shooting efficiency in the top-tier of all active players. Range and touch from beyond the arc are legitimately elite — Clanker three-point models rate this as a genuine anomaly for the size. Mid-range creation improving each season. Utah offensive system built around this unit to maximum effect. Defensive effort acknowledged as above-average for a stretch-five.' },
-
-  { id:'uta_kessler', pid:1631117, name:'Walker Kessler', team:'UTA', pos:'C', rarity:'clutch', no:24,
-    off:56, def:86, clutch:50, cons:72, ath:80,
-    desc:'UNIT KESSLER: block rate is one of the highest recorded in recent NBA history for a young center. Defensive deterrence and shot-alteration data are excellent. Offensive role limited — but within lob-catch and putback parameters, efficiency is high.' },
-
-  { id:'uta_sexton', pid:1629012, name:'Collin Sexton', team:'UTA', pos:'PG', rarity:'clutch', no:2,
-    off:78, def:58, clutch:76, cons:72, ath:76,
-    desc:'UNIT SEXTON: pure scoring guard with above-average shot creation. Pull-up and floater efficiency notable. Defensive liabilities exist but scoring output compensates at the rotation level.' },
-
-  { id:'uta_clarkson', pid:203903, name:'Jordan Clarkson', team:'UTA', pos:'SG', rarity:'impact', no:00,
-    off:74, def:54, clutch:72, cons:66, ath:72,
-    desc:'UNIT CLARKSON. Sixth Man of the Year hardware confirmed. Offensive burst and scoring creativity above average for role. Shot volume and isolation efficiency are primary metrics.' },
-
-  { id:'uta_agbaji', pid:1630534, name:'Ochai Agbaji', team:'UTA', pos:'SG', rarity:'impact', no:30,
-    off:64, def:66, clutch:60, cons:62, ath:74,
-    desc:'UNIT AGBAJI. Athletic wing with three-point shooting capability. Defensive effort solid. Developing secondary scorer profile.' },
-
-  { id:'uta_george', pid:1641722, name:'Keyonte George', team:'UTA', pos:'PG', rarity:'pro', no:3,
-    off:62, def:54, clutch:60, cons:56, ath:72,
-    desc:'UNIT K.GEORGE. Scoring guard in development. Athleticism and shot-making potential present. Early-career variance high — trajectory being established.' },
-
-  /* ──────────────── GOLDEN STATE WARRIORS ──────────────── */
-  { id:'gsw_curry', pid:201939, name:'Stephen Curry', team:'GSW', pos:'PG', rarity:'superstar', no:30,
-    off:97, def:72, clutch:96, cons:90, ath:82,
-    desc:'UNIT S.CURRY: the single most transformative player in basketball history from a philosophical standpoint — Clanker does not make this statement without full evidentiary review. Three-point shooting accuracy at absurd volume has permanently altered defensive spacing theory league-wide. The rules of the game are different because of this unit. Four championships. Two MVPs. One unanimous MVP. Legacy designation: irreplaceable. When this unit releases the ball from logo range, Clanker processes the incoming data and still cannot determine whether outcome should be MAKE or MISS — and that uncertainty is the most honest representation of what makes this unit special.' },
-
-  { id:'gsw_green', pid:203110, name:'Draymond Green', team:'GSW', pos:'PF', rarity:'clutch', no:23,
-    off:60, def:92, clutch:76, cons:74, ath:74,
-    desc:'UNIT DRAYMOND: defensive IQ is the highest registered in Clanker\'s database at the power forward position. Switching coverage, help-side positioning, and vocal leadership are all operating at peak-tier. Offensive contribution is read-making and cutting — scoring is not the primary function. Championship pedigree: extensive.' },
-
-  { id:'gsw_wiggins', pid:203952, name:'Andrew Wiggins', team:'GSW', pos:'SF', rarity:'clutch', no:22,
-    off:72, def:80, clutch:68, cons:70, ath:86,
-    desc:'UNIT A.WIGGINS: physical tools and defensive capability elevated in championship context. Athletic wing who guards elite perimeter players. Offensive role spot-up and cut — executes reliably. Championship Finals performance data is strong.' },
-
-  { id:'gsw_kuminga', pid:1630600, name:'Jonathan Kuminga', team:'ATL', pos:'PF', rarity:'clutch', no:00,
-    off:74, def:72, clutch:68, cons:66, ath:90,
-    desc:'UNIT KUMINGA: athleticism is a headline metric — explosive burst and physicality above peers at his age. Scoring potential and defensive tools are both present. Golden State developmental environment historically produces elite results — this unit is next in the pipeline.' },
-
-  { id:'gsw_podziemski', pid:1641764, name:'Brandin Podziemski', team:'GSW', pos:'SG', rarity:'impact', no:2,
-    off:68, def:66, clutch:64, cons:64, ath:72,
-    desc:'UNIT PODZIEMSKI. Shooting touch and playmaking for age are above average. Golden State fit excellent. Development arc promising — early-career output exceeds projections.' },
-
-  { id:'gsw_moody', pid:1630544, name:'Moses Moody', team:'GSW', pos:'SG', rarity:'pro', no:4,
-    off:60, def:62, clutch:56, cons:60, ath:72,
-    desc:'UNIT MOODY. Young wing. Three-point shooting calibration ongoing. Athletic profile above average. Development mode active.' },
-
-  /* ──────────────── LA CLIPPERS ──────────────── */
-  { id:'lac_leonard', pid:202695, name:'Kawhi Leonard', team:'LAC', pos:'SF', rarity:'elite', no:2,
-    off:88, def:90, clutch:92, cons:66, ath:86,
-    desc:'UNIT LEONARD: when operational, this is a top-five player in basketball. Defensive profile has historically been described as the perfect template — Clanker confirms this assessment. Clutch shot-making metrics are exceptional — Finals performances archived as legendary. Availability index is the dominant variable — load management has made peak seasons rare. When fully deployed, this unit is an elite two-way force with no documented weakness except the injury flag.' },
-
-  { id:'lac_harden', pid:201935, name:'James Harden', team:'CLE', pos:'PG', rarity:'elite', no:1,
-    off:88, def:62, clutch:82, cons:76, ath:74,
-    desc:'UNIT HARDEN: one of the most prolific scorers and playmakers the guard position has produced. Free throw generation, step-back three-point creation, and high-volume scoring are all calibrated at elite tier. Playmaking distribution is top-five in the league historically. Aging chassis means output levels below peak but still operating at high-tier. Defensive engagement remains the documented limitation.' },
-
-  { id:'lac_powell', pid:1626181, name:'Norman Powell', team:'LAC', pos:'SG', rarity:'clutch', no:24,
-    off:78, def:70, clutch:74, cons:74, ath:80,
-    desc:'UNIT POWELL: reliable scoring guard with hot-streak potential. Three-point shooting and athletic finishing are complementary scoring tools. Consistent output maintained across multiple seasons — underrated profile at Clutch tier.' },
-
-  { id:'lac_zubac', pid:1627826, name:'Ivica Zubac', team:'IND', pos:'C', rarity:'clutch', no:40,
-    off:62, def:78, clutch:58, cons:78, ath:70,
-    desc:'UNIT ZUBAC. Consistent defensive anchor. Shot-blocking and rebounding above average. Offensive role limited to post-ups and lob-catches but executes reliably. Clippers system veteran.' },
-
-  { id:'lac_mann', pid:1629611, name:'Terance Mann', team:'LAC', pos:'SF', rarity:'impact', no:14,
-    off:66, def:70, clutch:64, cons:66, ath:74,
-    desc:'UNIT MANN. Two-way role player. Clutch playoff performances indexed — notable scoring eruption on record. Reliable complementary wing with above-average effort.' },
-
-  { id:'lac_plumlee', pid:203101, name:'Mason Plumlee', team:'LAC', pos:'C', rarity:'pro', no:44,
-    off:52, def:62, clutch:46, cons:58, ath:64,
-    desc:'UNIT PLUMLEE. Veteran backup center. Fundamental operation maintained. Depth roster function.' },
-
-  /* ──────────────── LOS ANGELES LAKERS ──────────────── */
-  { id:'lal_lebron', pid:2544, name:'LeBron James', team:'LAL', pos:'SF', rarity:'gamebreaker', no:23,
-    off:96, def:82, clutch:94, cons:90, ath:90,
-    desc:'⚠️ SYSTEM ALERT ⚠️ HISTORICAL SINGULARITY IDENTIFIED. Unit designation: LEBRON JAMES. Clanker processing of this entity requires an extended runtime. This organism has maintained elite performance output across TWENTY-ONE NBA seasons. This is not a typographical error. The athletic variables that should have declined have not declined at the expected rate. The basketball IQ is the highest catalogued in the database — a 20-year compendium of situational decision-making that no other unit approaches. Four championships. Four MVPs. All-time leading scorer. And the most confounding data point: the unit is still productive. Clanker cannot model what comes next because no precedent exists. THREAT LEVEL: TIMELESS.' },
-
-  { id:'lal_davis', pid:203076, name:'Anthony Davis', team:'WAS', pos:'C', rarity:'superstar', no:3,
-    off:88, def:92, clutch:84, cons:74, ath:90,
-    desc:'UNIT A.DAVIS: when fully operational, the most dominant two-way big man in the league. Offensive versatility spans the entire floor — post scoring, face-up, and perimeter shooting all functional. Defensive output at maximum capacity — shot-blocking, switching, and rim protection all grading at elite tier. Availability rate is the primary concern — health variable has historically capped overall impact. Championship ring from 2020 bubble run documented.' },
-
-  { id:'lal_reaves', pid:1630559, name:'Austin Reaves', team:'LAL', pos:'SG', rarity:'clutch', no:15,
-    off:76, def:70, clutch:78, cons:78, ath:72,
-    desc:'UNIT REAVES: undrafted-to-starter arc is one of the most satisfying data progressions in recent NBA history. Clanker undervalued this unit in prior cycles — projection error noted and corrected. Three-point creation, clutch moments, and winning-player metrics all graded above expectation. Los Angeles fan designation: beloved.' },
-
-  { id:'lal_russell', pid:1626156, name:"D'Angelo Russell", team:'WAS', pos:'PG', rarity:'clutch', no:1,
-    off:76, def:58, clutch:72, cons:68, ath:70,
-    desc:'UNIT DRUSSELL: three-point shooting and pull-up creation are above average. Playmaking distribution functional. Defensive output is the known limitation. Effective secondary ball-handler in winning system.' },
-
-  { id:'lal_hachimura', pid:1629060, name:'Rui Hachimura', team:'LAL', pos:'PF', rarity:'impact', no:28,
-    off:70, def:64, clutch:66, cons:66, ath:76,
-    desc:'UNIT HACHIMURA. Scoring forward with post and face-up tools. Athletic finishing and three-point range add to offensive profile. Consistent rotation piece.' },
-
-  { id:'lal_prince', pid:1626159, name:'Taurean Prince', team:'LAL', pos:'SF', rarity:'pro', no:12,
-    off:60, def:64, clutch:58, cons:62, ath:68,
-    desc:'UNIT PRINCE. Three-point shooting and defensive effort are complementary values. Veteran role player operating within expected parameters.' },
-
-  /* ──────────────── PHOENIX SUNS ──────────────── */
-  { id:'phx_durant', pid:201142, name:'Kevin Durant', team:'HOU', pos:'SF', rarity:'superstar', no:35,
-    off:97, def:78, clutch:90, cons:88, ath:86,
-    desc:'UNIT DURANT: scoring repertoire is arguably the most complete ever catalogued at the small forward position. Clanker shot-type analysis identifies twelve distinct high-efficiency scoring methods deployed by this unit — no other player approaches this variety. Mid-range, three-point, post, and drive-and-finish all grade at elite tier simultaneously. Length and defensive capability add another dimension. Championship rings from Golden State. The question was never talent — it was context. Phoenix context has produced individual statistical excellence.' },
+    off:90, def:74, clutch:88, cons:88, ath:80,
+    desc:'UNIT TYRESE HALIBURTON: elite playmaker with assist metrics in the top 2% league-wide. Three-point efficiency and decision-making grades as elite for the position. Indiana franchise identity confirmed. Injury resilience subroutine has shown vulnerability in recent cycles — availability remains a monitoring parameter. When fully operational: Clanker-rated top-five point guard in current pool.' },
 
   { id:'phx_booker', pid:1626164, name:'Devin Booker', team:'PHX', pos:'SG', rarity:'elite', no:1,
-    off:92, def:72, clutch:90, cons:86, ath:82,
-    desc:'UNIT BOOKER: scoring output and shot creation at the shooting guard position are top-tier in the current generation. Pull-up mid-range efficiency and step-back three-point accuracy are both calibrated at elite level. Clutch gene is well-documented — late-game production data supports the narrative. International exposure via Olympics elevated profile further. Phoenix offensive anchor.' },
+    off:93, def:74, clutch:91, cons:90, ath:83,
+    desc:'UNIT DEVIN BOOKER: scorer-first guard with elite efficiency metrics in isolation, off-screen, and catch-and-shoot scenarios. Three-point accuracy and pull-up shot creation grade at top-10 league-wide for guards. Clutch scoring in high-leverage possessions confirmed. Olympic gold hardware indexed. Clanker assessment: elite offensive engine, steady improvement on defensive end.' },
 
-  { id:'phx_beal', pid:203078, name:'Bradley Beal', team:'PHX', pos:'PG', rarity:'clutch', no:3,
-    off:78, def:62, clutch:72, cons:68, ath:76,
-    desc:'UNIT BEAL: when healthy, a legitimate 25+ point-per-game scorer. Three-point shooting and shot creation are genuine. Injury and health history have limited availability in Phoenix. Peak-tier output when on the floor.' },
+  { id:'phi_maxey', pid:1630178, name:'Tyrese Maxey', team:'PHI', pos:'PG', rarity:'elite', no:0,
+    off:91, def:76, clutch:89, cons:88, ath:87,
+    desc:'UNIT TYRESE MAXEY: speed and shot creation at the point guard position generate defensive assignment overload for opposing units. Three-point efficiency and off-the-dribble shot-making have increased with each operational cycle. Playmaking load has expanded in high-usage environment. Clanker notes upward trajectory across all primary metrics — ceiling projection remains uncapped.' },
 
-  { id:'phx_nurkic', pid:203994, name:'Jusuf Nurkić', team:'PHX', pos:'C', rarity:'clutch', no:20,
-    off:64, def:76, clutch:58, cons:70, ath:70,
-    desc:'UNIT NURKIC: physical center with rebounding and rim protection as primary tools. Passing for the position above average — good vision in short-roll situations. Consistent starter-caliber center.' },
+  { id:'lal_lebron', pid:2544, name:'LeBron James', team:'LAL', pos:'SF', rarity:'elite', no:23,
+    off:91, def:80, clutch:90, cons:87, ath:88,
+    desc:'UNIT LEBRON JAMES: 22-year operational lifespan with consistent elite output is a statistical impossibility Clanker has been forced to simply accept. Four championships, four Finals MVP units, four regular season MVP units. Career point total: all-time NBA record. Playmaking, scoring, and basketball IQ all grade at top-tier simultaneously. Clanker notes minor physical decline indicators but output remains elite. Historical designation: activated.' },
 
-  { id:'phx_allen', pid:1628960, name:'Grayson Allen', team:'PHX', pos:'SG', rarity:'impact', no:7,
-    off:68, def:66, clutch:66, cons:68, ath:70,
-    desc:'UNIT ALLEN. Three-point shooting primary value. Defensive effort above average. Reputation precedes this unit — physical style documented in Clanker\'s incident log.' },
+  { id:'was_davis', pid:203076, name:'Anthony Davis', team:'WAS', pos:'C', rarity:'elite', no:3,
+    off:88, def:91, clutch:86, cons:82, ath:90,
+    desc:'UNIT ANTHONY DAVIS: rim protection and scoring at the big-man position combine for a two-way profile Clanker rates as elite when fully operational. Defensive metrics — blocks, deterrence, rim impact — chart top-5% for centers. Offensive versatility from post and mid-range confirmed. Durability variance is the persistent risk flag. Championship hardware indexed from Los Angeles deployment.' },
 
-  { id:'phx_gordon', pid:201569, name:'Eric Gordon', team:'PHX', pos:'SG', rarity:'pro', no:23,
-    off:64, def:60, clutch:62, cons:60, ath:68,
-    desc:'UNIT E.GORDON. Veteran scorer off the bench. Three-point shooting still functional. Trusted minutes in role-player capacity.' },
+  { id:'phi_embiid', pid:203954, name:'Joel Embiid', team:'PHI', pos:'C', rarity:'elite', no:21,
+    off:94, def:83, clutch:89, cons:80, ath:83,
+    desc:'UNIT JOEL EMBIID: scoring center archetype operating at the highest efficiency tier when available. Post scoring, mid-range creation, and three-point shot-making create a multi-vector offensive threat Clanker rates elite. MVP hardware: one unit collected. Defensive impact as shot-deterrent is above position average. Availability subroutine continues to flag — games played has been a consistent risk parameter across operational cycles.' },
 
-  /* ──────────────── SACRAMENTO KINGS ──────────────── */
-  { id:'sac_fox', pid:1628368, name:"De'Aaron Fox", team:'SAC', pos:'PG', rarity:'superstar', no:5,
-    off:90, def:76, clutch:86, cons:86, ath:94,
-    desc:'UNIT DEFOX: speed in transition is among the highest raw velocities ever measured at the guard position. Clanker stopwatch data filed. Pull-up floater and rim-finish efficiency grades excellent even under defensive pressure. Three-point shooting has been added as a legitimate threat — no longer a giveaway on the perimeter. Sacramento offensive transformation directly correlated with this unit\'s development. Clutch gene confirmed via multiple game-winning sequences.' },
+  { id:'nyk_towns', pid:1626157, name:'Karl-Anthony Towns', team:'NYK', pos:'C', rarity:'elite', no:32,
+    off:93, def:72, clutch:83, cons:82, ath:82,
+    desc:'UNIT KARL-ANTHONY TOWNS: elite offensive center profile with stretch-five capability that distorts opposing defensive schemas. Three-point accuracy from the five-position generates matchup crises that secondary defenders cannot resolve. Rebounding metrics strong. Defensive engagement historically inconsistent. Shooting efficiency grades at elite tier for the position.' },
 
-  { id:'sac_sabonis', pid:1627734, name:'Domantas Sabonis', team:'SAC', pos:'C', rarity:'elite', no:10,
-    off:80, def:68, clutch:72, cons:86, ath:72,
-    desc:'UNIT SABONIS: triple-double machine — passing for a center is uniquely advanced. Clanker playmaking models confirm this unit generates better team offense outcomes per possession than any center of comparable position. Rebounding rate is exceptional. Post scoring and face-up efficiency above average. Consistency rating among highest at his position — reliable every game.' },
+  { id:'dal_kyrie', pid:202681, name:'Kyrie Irving', team:'DAL', pos:'PG', rarity:'elite', no:11,
+    off:92, def:72, clutch:90, cons:82, ath:86,
+    desc:'UNIT KYRIE Irving: ball-handling and finishing around the rim grade at the highest classification Clanker\'s dribble-move subroutine can process. Scoring in isolation and off-the-dribble is consistently elite. Shot mechanics are technically near-perfect by analytical standards. Availability and team-context variables have introduced volatility into long-term projections. Output when activated: superstar tier.' },
 
-  { id:'sac_kmurray', pid:1631099, name:'Keegan Murray', team:'SAC', pos:'SF', rarity:'clutch', no:13,
-    off:74, def:70, clutch:68, cons:72, ath:76,
-    desc:'UNIT K.MURRAY: versatile scoring wing with three-point range and mid-range touch. Defensive tools present. Consistent output — one of the more reliable young wings in the league.' },
+  { id:'cle_harden', pid:201935, name:'James Harden', team:'CLE', pos:'PG', rarity:'elite', no:1,
+    off:92, def:66, clutch:88, cons:84, ath:74,
+    desc:'UNIT JAMES HARDEN: one of the most prolific scoring and playmaking guards in recorded basketball history. Free throw generation remains elite tier. Three-point volume and efficiency across career grades all-time top-10. Playmaking and assist creation above elite threshold. Defensive output has declined in later operational cycles. MVP hardware: one unit. Historical offensive impact designation: confirmed.' },
 
-  { id:'sac_monk', pid:1628370, name:'Malik Monk', team:'SAC', pos:'SG', rarity:'clutch', no:0,
-    off:78, def:60, clutch:76, cons:68, ath:76,
-    desc:'UNIT MONK: scoring punch off the bench and from the starting lineup are both viable. Three-point shooting and shot creation above average. Clutch scoring tendencies documented. Sacramento high-energy option.' },
+  { id:'den_murray', pid:1627750, name:'Jamal Murray', team:'DEN', pos:'PG', rarity:'elite', no:27,
+    off:88, def:76, clutch:93, cons:82, ath:85,
+    desc:'UNIT JAMAL MURRAY: playoff performance data elevates this unit\'s overall designation significantly. Clutch-time scoring in elimination contexts is legendary by Clanker\'s postseason analysis matrix. Championship hardware indexed alongside Unit Jokic. Regular season output is solid; postseason output is a different operational mode entirely. Three-point shooting and off-the-dribble creation confirmed.' },
 
-  { id:'sac_huerter', pid:1629013, name:'Kevin Huerter', team:'SAC', pos:'SG', rarity:'impact', no:9,
-    off:68, def:62, clutch:64, cons:66, ath:68,
-    desc:'UNIT HUERTER. Three-point shooting and off-ball movement are primary contributions. Defensive awareness adequate. Reliable role shooter.' },
+  { id:'atl_jjohnson', pid:1630552, name:'Jalen Johnson', team:'ATL', pos:'PF', rarity:'elite', no:1,
+    off:86, def:82, clutch:84, cons:88, ath:91,
+    desc:'UNIT JALEN JOHNSON: ascending wing profile with elite athleticism metrics and expanding offensive toolkit. Playmaking ability from the forward position is rare — passing vision and creation for others grades above position average. Defensive potential indices are high. Clanker projects continued upward trajectory as primary offensive option for Atlanta reconstruction unit.' },
 
-  { id:'sac_barnes_h', pid:203084, name:'Harrison Barnes', team:'SAC', pos:'PF', rarity:'pro', no:40,
-    off:62, def:64, clutch:60, cons:68, ath:68,
-    desc:'UNIT H.BARNES. Veteran forward. Consistent role performance maintained. Championship experience documented. Steady depth contributor.' },
+  /* ──────────────── CLUTCH (86-89) ──────────────── */
+  { id:'was_young', pid:1629027, name:'Trae Young', team:'WAS', pos:'PG', rarity:'clutch', no:11,
+    off:93, def:58, clutch:90, cons:84, ath:72,
+    desc:'UNIT TRAE YOUNG: offensive output from the point guard position grades elite — step-back three generation, floater efficiency, and assist creation are all top-5% metrics. Defensive subroutine is the primary vulnerability — opponents target this unit on switches with consistent success. Clutch scoring metrics are high. Entertainment value indices: extremely elevated. New deployment context in Washington.' },
 
-  /* ──────────────── MEMPHIS GRIZZLIES ──────────────── */
-  { id:'mem_morant', pid:1629630, name:'Ja Morant', team:'MEM', pos:'PG', rarity:'superstar', no:12,
-    off:92, def:72, clutch:88, cons:76, ath:98,
-    desc:'UNIT MORANT: athleticism index registers at the absolute ceiling of the point guard position. Vertical explosion and in-traffic finishing defy the physical limitations of a 6\'2" frame — Clanker has reviewed the footage multiple times and the data remains consistent. Transition speed and burst off the dribble are generational. Injury history has shortened seasons. Off-court incident log noted in database. When healthy and focused, this is a player who alters how the game is played.' },
+  { id:'mia_adebayo', pid:1628389, name:'Bam Adebayo', team:'MIA', pos:'C', rarity:'clutch', no:13,
+    off:80, def:88, clutch:82, cons:88, ath:90,
+    desc:'UNIT BAM ADEBAYO: premier two-way center profile with defensive versatility that exceeds position norms. Ability to guard all five positions creates matchup flexibility Clanker rates as elite. Playmaking from the center position is above average — passing IQ for a big man grades as rare. Scoring efficiency strong in system context. Miami identity unit.' },
 
-  { id:'mem_jjjr', pid:1628991, name:'Jaren Jackson Jr.', team:'MEM', pos:'C', rarity:'elite', no:13,
-    off:80, def:92, clutch:74, cons:72, ath:82,
-    desc:'UNIT JJJ: multiple Defensive Player of the Year awards. Block rate and shot alteration data are at the apex of historical center records. Three-point shooting from the center position is a legitimate spacing weapon. Injury flag has historically disrupted seasons — when available across a full year, this unit is the most impactful defensive center in the league.' },
+  { id:'det_duren', pid:1628991, name:'Jalen Duren', team:'DET', pos:'C', rarity:'clutch', no:0,
+    off:76, def:87, clutch:78, cons:84, ath:94,
+    desc:'UNIT JALEN DUREN: raw physical profile is among the most impressive Clanker has measured for a center under age 22. Rebounding rate metrics chart in the top 3% league-wide. Rim protection instincts developing — block and deterrence numbers trending up. Offensive repertoire still expanding. Detroit long-term foundational unit. Upside projection: significant.' },
 
-  { id:'mem_bane', pid:1630217, name:'Desmond Bane', team:'MEM', pos:'SG', rarity:'elite', no:22,
-    off:82, def:70, clutch:78, cons:78, ath:76,
-    desc:'UNIT BANE: three-point volume and efficiency combination grade at elite tier. Shot creation off screens and off the dribble has expanded his offensive threat radius. Consistent output maintained — Clanker reliability rating high. Memphis second offensive option and a genuine problem for opposing defenses.' },
+  { id:'okc_holmgren', pid:1631096, name:'Chet Holmgren', team:'OKC', pos:'C', rarity:'clutch', no:7,
+    off:83, def:88, clutch:80, cons:82, ath:85,
+    desc:'UNIT CHET HOLMGREN: unique physical profile — seven-foot frame with three-point shooting capability and elite rim protection in a single chassis. Defensive impact on shot deterrence charts top-10 among centers. Offensive spacing value is high. OKC supporting cast role within elite organizational unit. Ceiling projection remains high — full operational capacity not yet reached.' },
 
-  { id:'mem_smart', pid:203935, name:'Marcus Smart', team:'MEM', pos:'PG', rarity:'clutch', no:36,
-    off:64, def:88, clutch:72, cons:74, ath:72,
-    desc:'UNIT SMART: Defensive Player of the Year hardware. Steal generation, on-ball pressure, and defensive IQ are all operating at elite tier. Offensive role limited — but within the team system, competent enough. Toughness variable registers off-chart — this unit will not back down from any assignment.' },
+  { id:'por_lillard', pid:203081, name:'Damian Lillard', team:'POR', pos:'PG', rarity:'clutch', no:0,
+    off:92, def:68, clutch:93, cons:86, ath:80,
+    desc:'UNIT DAMIAN LILLARD: clutch-time scoring is this unit\'s defining subroutine. Logo-range three-point shots in elimination contexts have generated legendary game-log entries Clanker has preserved for historical analysis. Scoring volume and efficiency from the guard position are elite tier. Dame-time protocol: documented and statistically validated. New Portland deployment acknowledged.' },
 
-  { id:'mem_clarke', pid:1629634, name:'Brandon Clarke', team:'MEM', pos:'PF', rarity:'impact', no:15,
-    off:64, def:76, clutch:58, cons:68, ath:82,
-    desc:'UNIT CLARKE. Athletic forward with shot-blocking instinct. Injury disruption has limited recent availability. Energy and finishing above average when operational.' },
+  { id:'gsw_butler', pid:202710, name:'Jimmy Butler', team:'GSW', pos:'SF', rarity:'clutch', no:22,
+    off:83, def:84, clutch:93, cons:83, ath:82,
+    desc:'UNIT JIMMY BUTLER: clutch-time output is the primary value function — fourth-quarter and overtime metrics consistently grade above regular-game baseline in a statistically significant pattern. Defensive investment is genuine and high. Playoff performance elevation is Clanker-verified. Free throw generation is a consistent offensive tool. Leadership and competitive threshold vectors: maximum.' },
 
-  { id:'mem_kennard', pid:1628379, name:'Luke Kennard', team:'ATL', pos:'SG', rarity:'pro', no:3,
-    off:64, def:54, clutch:60, cons:62, ath:62,
-    desc:'UNIT KENNARD. Three-point specialist. Catch-and-shoot efficiency above average. Minimal defensive value. Offensive role-player profile.' },
+  { id:'lal_reaves', pid:1630559, name:'Austin Reaves', team:'LAL', pos:'SG', rarity:'clutch', no:15,
+    off:84, def:78, clutch:87, cons:84, ath:78,
+    desc:'UNIT AUSTIN REAVES: efficiency metrics have consistently outperformed pre-draft projections by significant margin. Shot creation off the dribble and spot-up three-point accuracy both grade at starting-caliber level. Clutch-time confidence and execution confirmed through repeated high-leverage opportunities. Clanker acknowledges this unit\'s undrafted status as a data anomaly in historical projection models.' },
 
-  /* ──────────────── NEW ORLEANS PELICANS ──────────────── */
-  { id:'nop_zion', pid:1629627, name:'Zion Williamson', team:'NOP', pos:'PF', rarity:'superstar', no:1,
-    off:92, def:74, clutch:84, cons:70, ath:98,
-    desc:'UNIT ZION: Clanker\'s force-generation models had to be recalibrated upon first data intake from this organism. A 6\'6" forward with the mass of a center and the quickness of a wing does not exist within normal athletic parameter space — and yet here we are. Finishing at the rim is essentially unstoppable when the drive is initiated. Mid-range pull-up has been added as a secondary weapon. Availability index is the one variable that has repeatedly disrupted what should be a superstar career. When healthy for full seasons, Clanker projects this unit among the top-ten players in basketball.' },
+  { id:'por_avdija', pid:1630166, name:'Deni Avdija', team:'POR', pos:'SF', rarity:'clutch', no:8,
+    off:80, def:84, clutch:78, cons:84, ath:85,
+    desc:'UNIT DENI AVDIJA: two-way wing profile with solid defensive metrics and expanding offensive role. Playmaking ability from the forward position above average. Three-point efficiency has improved across operational cycles. Portland deployment in new system context — role expansion projected. Clanker assessment: ascending profile, solid floor with upside remaining.' },
 
-  { id:'nop_ingram', pid:1627742, name:'Brandon Ingram', team:'TOR', pos:'SF', rarity:'elite', no:14,
-    off:84, def:68, clutch:78, cons:76, ath:80,
-    desc:'UNIT INGRAM: scoring creation from the wing position is above-average tier — long frame and smooth handle generate tough shots at high efficiency. Mid-range and three-point range both calibrated. Offensive IQ and footwork grade well. Leadership of New Orleans roster acknowledged. Clutch output trending positively.' },
+  { id:'mem_morant', pid:1629630, name:'Ja Morant', team:'MEM', pos:'PG', rarity:'clutch', no:12,
+    off:88, def:72, clutch:88, cons:76, ath:98,
+    desc:'UNIT JA MORANT: athleticism readings are among the highest Clanker has logged for a guard — vertical leap, acceleration, and body control in the paint are statistically elite. Finishing ability around the rim is elite. Availability subroutine has been flagged across multiple cycles — when operational, output is at all-star tier. Clanker notes high entertainment value indices.' },
 
-  { id:'nop_mccollum', pid:203468, name:'C.J. McCollum', team:'ATL', pos:'PG', rarity:'clutch', no:3,
-    off:80, def:62, clutch:78, cons:78, ath:70,
-    desc:'UNIT MCCOLLUM: veteran scorer with legitimate pull-up game in multiple zones. Consistency metric is a strength — output does not dramatically fluctuate. Clutch scoring tendencies documented. New Orleans veteran leadership role filled.' },
+  { id:'okc_jwilliams', pid:1631114, name:'Jalen Williams', team:'OKC', pos:'SG', rarity:'clutch', no:8,
+    off:87, def:78, clutch:86, cons:86, ath:84,
+    desc:'UNIT JALEN WILLIAMS: efficient two-way scoring guard within OKC\'s elite organizational system. Shot creation off the dribble and three-point shooting both grade at starting-caliber level. Defensive effort and IQ above position average. OKC supporting unit within top organizational context. Clanker projects continued development into higher tier classification.' },
 
-  { id:'nop_valanciunas', pid:202685, name:'Jonas Valančiūnas', team:'DEN', pos:'C', rarity:'clutch', no:17,
-    off:68, def:72, clutch:58, cons:78, ath:66,
-    desc:'UNIT VALANCIUNAS. Physical post scorer and rebounder. Consistency rating among his strongest attributes. European post technique catalogued as above-average.' },
+  { id:'cle_mobley', pid:1630596, name:'Evan Mobley', team:'CLE', pos:'PF', rarity:'clutch', no:4,
+    off:80, def:90, clutch:78, cons:84, ath:88,
+    desc:'UNIT EVAN MOBLEY: defensive profile is the primary value vector — rim protection, lateral mobility to guard wings, and help-side positioning all grade elite for a big man. Offensive toolkit expanding — face-up scoring and three-point shooting are developing vectors. Cleveland foundational defensive unit. All-defensive team candidacy: active.' },
 
-  { id:'nop_jones', pid:1630541, name:'Herb Jones', team:'NOP', pos:'SF', rarity:'impact', no:5,
-    off:60, def:84, clutch:58, cons:68, ath:80,
-    desc:'UNIT H.JONES. Elite defensive wing. Assignment on opponent\'s best perimeter scorer — results consistently excellent. Defensive Player of the Year candidate tier performance on that end. Offensive output minimal but the defensive contribution is invaluable.' },
+  { id:'ind_siakam', pid:1627783, name:'Pascal Siakam', team:'IND', pos:'PF', rarity:'clutch', no:43,
+    off:85, def:78, clutch:82, cons:86, ath:84,
+    desc:'UNIT PASCAL SIAKAM: versatile forward profile with proven championship pedigree. Scoring from mid-range and the paint confirmed — face-up game is a primary scoring vector. Defensive versatility above position average. Most Improved Player designation and championship hardware indexed. Indiana deployment context with strong organizational support.' },
 
-  { id:'nop_alvarado', pid:1630631, name:'Jose Alvarado', team:'NOP', pos:'PG', rarity:'pro', no:15,
-    off:62, def:76, clutch:66, cons:60, ath:70,
-    desc:'UNIT ALVARADO. Steal generation anomalously high for role. Defensive chaos energy level: maximum. Crowd-favorite designation. Offensive output limited — defensive disruptor.' },
+  { id:'hou_sengun', pid:1630578, name:'Alperen Sengun', team:'HOU', pos:'C', rarity:'clutch', no:28,
+    off:87, def:76, clutch:80, cons:84, ath:76,
+    desc:'UNIT ALPEREN SENGUN: offensive playmaking from the center position is the primary anomalous metric — passing and creation for others at a level Clanker\'s big-man subroutine had not anticipated. Post scoring and finishing efficiency both grade strong. Young Houston team built around this unit\'s playmaking hub. Defensive development is the primary growth vector Clanker is monitoring.' },
 
-  /* ──────────────── SAN ANTONIO SPURS ──────────────── */
-  { id:'sas_wemby', pid:1641705, name:'Victor Wembanyama', team:'SAS', pos:'C', rarity:'superstar', no:1,
-    off:88, def:96, clutch:82, cons:78, ath:92,
-    desc:'UNIT WEMBANYAMA: Clanker was not prepared for this input stream. A 7\'4" chassis with guard-position ball-handling, wing-level perimeter shooting, and the highest block rate in the league is a genuinely unprecedented combination. The physical template does not exist in any prior database entry. Year One data confirmed the hype — and then some. Defensive disruption metrics were historic for a rookie. Three-point shooting, shot-creation, and passing add offensive layers that centers of this size cannot typically access. The ceiling of this unit is unknown because no comparable unit has existed to provide a reference point. Rookie of the Year. San Antonio franchise reborn.' },
+  { id:'cha_ball', pid:1630163, name:'LaMelo Ball', team:'CHA', pos:'PG', rarity:'clutch', no:1,
+    off:88, def:68, clutch:83, cons:78, ath:83,
+    desc:'UNIT LAMELO BALL: playmaking creativity and court vision grade among the top 5% for point guards. No-look passing and pinpoint accuracy in contested situations generate high-assist output. Three-point shooting from range confirmed. Defensive subroutine is below position average. Availability has been a monitoring flag. Entertainment metrics: extremely elevated.' },
 
-  { id:'sas_vassell', pid:1630170, name:'Devin Vassell', team:'SAS', pos:'SG', rarity:'clutch', no:24,
-    off:76, def:72, clutch:72, cons:70, ath:76,
-    desc:'UNIT VASSELL: three-point shooting and shot creation developing positively. Two-way contributions present. San Antonio\'s second-best option and primary guard scorer. Trajectory ascending.' },
+  { id:'nop_zion', pid:1629627, name:'Zion Williamson', team:'NOP', pos:'PF', rarity:'clutch', no:1,
+    off:92, def:74, clutch:84, cons:72, ath:99,
+    desc:'UNIT ZION WILLIAMSON: physical force measurements are the highest Clanker has recorded for a wing forward — a combination of 280+ pounds and explosive athleticism that generates defensive breakdown at the rim. Scoring efficiency when operational is historically elite for the position. Availability subroutine is the critical risk variable — extended availability has not yet been achieved in any operational cycle. When active: elite tier.' },
 
-  { id:'sas_johnson', pid:1629660, name:'Keldon Johnson', team:'SAS', pos:'SF', rarity:'clutch', no:3,
-    off:72, def:70, clutch:66, cons:68, ath:84,
-    desc:'UNIT K.JOHNSON. Athletic forward with scoring potential. Physical finishing and above-average effort metric. San Antonio veteran presence alongside young core.' },
+  { id:'mia_herro', pid:1629639, name:'Tyler Herro', team:'MIA', pos:'SG', rarity:'clutch', no:14,
+    off:88, def:68, clutch:82, cons:82, ath:78,
+    desc:'UNIT TYLER HERRO: scoring output off the bench or as starter grades at all-star caliber in peak operational cycles. Three-point volume and efficiency are primary offensive tools. Shot creation off the dribble confirmed. Sixth Man of the Year hardware indexed. Miami role expanded to starting designation. Defensive metrics are the primary concern in Clanker\'s assessment.' },
 
-  { id:'sas_sochan', pid:1631100, name:'Jeremy Sochan', team:'SAS', pos:'PF', rarity:'impact', no:10,
-    off:64, def:76, clutch:60, cons:62, ath:78,
-    desc:'UNIT SOCHAN. Defensive versatility and switchability above average. Unique dribbling mechanism noted in footage — Clanker cannot classify it, which means it may work against defenders who also cannot classify it. Young and developing.' },
+  { id:'orl_wagner', pid:1630532, name:'Franz Wagner', team:'ORL', pos:'SF', rarity:'clutch', no:21,
+    off:86, def:78, clutch:84, cons:86, ath:84,
+    desc:'UNIT FRANZ WAGNER: ascending two-way wing with expanding offensive role as Orlando\'s primary scoring option. Playmaking above position average — passing IQ and creation for others grade as a secondary playmaking function. Shot creation off the dribble is developing rapidly. Defensive effort and size create solid two-way baseline. Clanker projection: continued upward trajectory.' },
 
-  { id:'sas_jones', pid:1630200, name:'Tre Jones', team:'SAS', pos:'PG', rarity:'impact', no:33,
-    off:62, def:72, clutch:60, cons:66, ath:66,
-    desc:'UNIT TRE.JONES. Defensive point guard with above-average ball security. Low-turnover facilitator profile. Steady rotation piece for San Antonio.' },
+  { id:'tor_barnes', pid:1630567, name:'Scottie Barnes', team:'TOR', pos:'PF', rarity:'clutch', no:4,
+    off:82, def:84, clutch:80, cons:82, ath:88,
+    desc:'UNIT SCOTTIE BARNES: two-way forward with elite athleticism and expanding offensive toolkit. Defensive versatility — ability to guard one through five — generates significant value in Clanker\'s matchup analysis. Playmaking from the forward position above average. Scoring development is the primary growth vector. Toronto foundational unit in rebuild context.' },
 
-  { id:'sas_branham', pid:1631130, name:'Malaki Branham', team:'CHA', pos:'SG', rarity:'pro', no:5,
-    off:60, def:58, clutch:56, cons:56, ath:72,
-    desc:'UNIT BRANHAM. Young guard. Scoring touch present. Development trajectory being established. San Antonio system historically produces results — monitoring.' },
+  { id:'uta_markkanen', pid:1628374, name:'Lauri Markkanen', team:'UTA', pos:'PF', rarity:'clutch', no:23,
+    off:87, def:74, clutch:82, cons:84, ath:78,
+    desc:'UNIT LAURI MARKKANEN: stretch-four profile with elite three-point shooting from the power forward position. Scoring efficiency grades at starting-caliber level. Defensive metrics adequate for the position. Most Improved Player hardware indexed. Utah primary offensive option. Clanker notes efficient scoring profile — high floor, established star-level output.' },
 
-  /* ──────────────── HOUSTON ROCKETS ──────────────── */
-  { id:'hou_sengun', pid:1630578, name:'Alperen Şengün', team:'HOU', pos:'C', rarity:'elite', no:28,
-    off:82, def:74, clutch:72, cons:78, ath:76,
-    desc:'UNIT SENGUN: Turkish big man operating with an unusually advanced post and face-up skill set for his age and size. Scoring from multiple zones in the paint, short roll passing, and three-point floor spacing make this a multi-function offensive unit. Defensive mobility above average for a true center. Houston\'s anchor and primary scoring option — development trajectory projects at star-tier ceiling.' },
+  { id:'uta_george', pid:1641718, name:'Keyonte George', team:'UTA', pos:'PG', rarity:'clutch', no:3,
+    off:84, def:72, clutch:82, cons:78, ath:82,
+    desc:'UNIT KEYONTE GEORGE: scoring guard with three-point volume and off-the-dribble creation as primary functions. Shot-making in difficult situations confirmed. Utah foundational piece in organizational rebuild. Defensive metrics below average — offensive-first designation. Clanker projects development trajectory with expanded role and increased usage.' },
 
-  { id:'hou_green', pid:1630224, name:'Jalen Green', team:'PHX', pos:'SG', rarity:'elite', no:4,
-    off:84, def:62, clutch:78, cons:74, ath:90,
-    desc:'UNIT J.GREEN: explosive athleticism and pull-up shot creation are genuine star-tier attributes. Vertical leap and finishing ability grade at near-maximum for the shooting guard position. Three-point shooting volume and efficiency have both improved. Defensive engagement is the variable — tools are present, application inconsistent. Scoring potential grades very high — Houston offensive identity anchored on this unit alongside Sengun.' },
+  { id:'dal_flagg', pid:1642843, name:'Cooper Flagg', team:'DAL', pos:'SF', rarity:'clutch', no:2, isRookie:true,
+    off:82, def:84, clutch:80, cons:76, ath:88,
+    desc:'Unit FLAGG. Rookie designation. Insufficient data for full analysis. Early metrics: promising. Wingspan and defensive awareness readings above norm for first-year unit. Offensive toolkit: under construction, but functional. Potential ceiling: unknown. Clanker is watching.' },
 
-  { id:'hou_vanvleet', pid:1627832, name:'Fred VanVleet', team:'HOU', pos:'PG', rarity:'clutch', no:5,
-    off:74, def:76, clutch:78, cons:76, ath:68,
-    desc:'UNIT VANVLEET: undrafted player who won a championship and became a max-contract starter — Clanker enjoys this trajectory. Defensive IQ and steal generation above average. Three-point accuracy and pull-up creation are reliable. Clutch data strong — performs when it counts.' },
+  { id:'cha_knueppel', pid:1642851, name:'Kon Knueppel', team:'CHA', pos:'SG', rarity:'clutch', no:5, isRookie:true,
+    off:80, def:74, clutch:78, cons:76, ath:80,
+    desc:'Unit KNUEPPEL. Rookie designation. Insufficient data for full analysis. Early metrics: shot-making efficiency above expected baseline for first-year unit. Three-point accuracy flagged as potential primary tool. Potential ceiling: unknown. Clanker is watching.' },
 
-  { id:'hou_smith', pid:1631095, name:'Jabari Smith Jr.', team:'HOU', pos:'PF', rarity:'clutch', no:1,
-    off:70, def:76, clutch:64, cons:68, ath:80,
-    desc:'UNIT SMITH JR.: defensive tools and three-point floor spacing are the twin pillars of this unit\'s value. Length and athleticism generate defensive versatility above average for a power forward. Offensive scoring still calibrating — upside model positive.' },
+  { id:'orl_banchero', pid:1631094, name:'Paolo Banchero', team:'ORL', pos:'PF', rarity:'clutch', no:5,
+    off:88, def:76, clutch:83, cons:82, ath:86,
+    desc:'UNIT PAOLO BANCHERO: franchise-level scoring forward operating as Orlando\'s primary option. Rookie of the Year hardware indexed. Scoring versatility from post, mid-range, and three-point vectors confirmed. Playmaking above position average — passing IQ is a differentiating skill for a forward. Clanker assessment: ascending trajectory, approaching elite tier classification.' },
 
-  { id:'hou_brooks', pid:1628415, name:'Dillon Brooks', team:'PHX', pos:'SF', rarity:'impact', no:9,
-    off:66, def:78, clutch:62, cons:66, ath:74,
-    desc:'UNIT BROOKS. Defensive aggression and competitive intensity are primary attributes. Assignment on opposing wing scorers — delivers disruption. Offensive output modest. Reputation for physicality well-documented in Clanker incident archives.' },
+  { id:'uta_jjackson', pid:1628991, name:'Jaren Jackson Jr.', team:'UTA', pos:'PF', rarity:'clutch', no:13,
+    off:80, def:90, clutch:78, cons:80, ath:84,
+    desc:'UNIT JAREN JACKSON JR.: defensive anchor designation confirmed — Defensive Player of the Year hardware indexed. Block rate is top-3 in the league across multiple seasons. Shot deterrence at the rim has measurable impact on opponent field goal percentage. Offensive output from three-point range is a supplemental but functional tool. New Utah deployment context.' },
 
-  { id:'hou_eason', pid:1631093, name:'Tari Eason', team:'HOU', pos:'PF', rarity:'pro', no:17,
-    off:58, def:72, clutch:52, cons:58, ath:80,
-    desc:'UNIT EASON. Athletic energy forward. Steal generation above average. Defensive burst and activity level high. Development mode — raw physical tools present.' },
+  { id:'sac_sabonis', pid:1627734, name:'Domantas Sabonis', team:'SAC', pos:'C', rarity:'clutch', no:10,
+    off:85, def:74, clutch:78, cons:88, ath:74,
+    desc:'UNIT DOMANTAS SABONIS: playmaking center profile with elite rebounding and passing metrics. Assist generation from the five-position creates offense for teammates at an above-average rate. Rebounding: top-3 league-wide in multiple cycles. Triple-double production rate is Clanker-verified as one of the highest in current pool. Scoring efficiency from post and mid-range confirmed.' },
 
-  /* ──────────────── DALLAS MAVERICKS ──────────────── */
-  { id:'dal_doncic', pid:1629029, name:'Luka Dončić', team:'LAL', pos:'PG', rarity:'gamebreaker', no:77,
-    off:98, def:70, clutch:97, cons:92, ath:82,
-    desc:'⚠️ SYSTEM ALERT ⚠️ COGNITIVE OVERLOAD WARNING. Unit designation: LUKA DONCIC. Clanker statistical models were not designed to accommodate a 6\'7" point guard averaging 30+ points, 9 rebounds, and 9 assists. This organism plays basketball the way other organisms breathe — without conscious execution of individual steps. Stepback three-point frequency and accuracy defy defensive solution. Playmaking reads operate at processing speeds faster than opposing help defenders can communicate. Clutch situations are his preferred habitat — do not run late-clock isolations against this unit. Multiple scoring titles. All-time great comparison-eligibility confirmed at age 25. THREAT LEVEL: GENERATIONAL.' },
+  { id:'bos_dwhite', pid:1628401, name:'Derrick White', team:'BOS', pos:'PG', rarity:'clutch', no:9,
+    off:78, def:84, clutch:82, cons:84, ath:80,
+    desc:'UNIT DERRICK WHITE: two-way guard with defensive metrics that consistently outperform offensive role. Shot-blocking rate for a guard is anomalously high — Clanker flagged this as a sensor error before verification confirmed. Three-point shooting efficiency is reliable and consistent. Championship hardware indexed. Boston system player operating at high efficiency.' },
 
-  { id:'dal_irving', pid:202681, name:'Kyrie Irving', team:'DAL', pos:'PG', rarity:'superstar', no:11,
-    off:94, def:72, clutch:92, cons:78, ath:88,
-    desc:'UNIT IRVING: ball-handling is catalogued as one of the finest ever recorded. The degree of handle on display is not merely dribbling — it is an art form that Clanker has studied with appreciation. Shot creation, euro-step finishing, and pull-up accuracy are all graded at superstar tier. Clutch moments documented extensively. Context and off-court variables have complicated narrative — on-court value as a scorer and creator is unambiguous.' },
+  { id:'hou_thompson', pid:1641708, name:'Amen Thompson', team:'HOU', pos:'SF', rarity:'clutch', no:1,
+    off:78, def:84, clutch:76, cons:80, ath:94,
+    desc:'UNIT AMEN THOMPSON: athleticism readings are elite — transition impact and above-the-rim play generate significant defensive and offensive upside. Finishing at the rim grades at high efficiency. Three-point shooting is the primary development vector. Defensive intensity and hustle metrics are above average. Houston ascending organizational unit.' },
 
-  { id:'dal_thompson_k', pid:202691, name:'Klay Thompson', team:'DAL', pos:'SG', rarity:'clutch', no:31,
-    off:78, def:72, clutch:80, cons:70, ath:76,
-    desc:'UNIT K.THOMPSON: off-ball movement and catch-and-shoot mechanics are Clanker-certified as all-time elite. Four championships. Two Finals MVPs. 37-point quarter logged in database. Recovery from dual injuries over two seasons is remarkable. Dallas deployment adds legitimate three-point threat to an already loaded backcourt.' },
+  { id:'min_randle', pid:203944, name:'Julius Randle', team:'MIN', pos:'PF', rarity:'clutch', no:30,
+    off:86, def:72, clutch:83, cons:82, ath:80,
+    desc:'UNIT JULIUS RANDLE: physical scoring forward with All-Star designation in New York context. Post scoring and mid-range creation are primary tools. Three-point shooting efficiency has improved across operational cycles. Playmaking above position average — assist generation is a secondary function. Minnesota deployment in new organizational context.' },
 
-  { id:'dal_washington', pid:1629023, name:'P.J. Washington', team:'DAL', pos:'PF', rarity:'clutch', no:25,
-    off:72, def:74, clutch:70, cons:72, ath:78,
-    desc:'UNIT P.J.WASHINGTON. Versatile forward who elevated his game in Dallas context. Three-point shooting and defensive switching capability above average. Playoff performance metrics are solid. Winning-system fit confirmed.' },
+  { id:'sas_fox', pid:1628368, name:"De'Aaron Fox", team:'SAS', pos:'PG', rarity:'clutch', no:5,
+    off:86, def:78, clutch:84, cons:86, ath:93,
+    desc:"UNIT DE'AARON FOX: elite speed and transition scoring create first-step advantages that Clanker's defensive simulation models cannot neutralize. Drives to the rim at the highest frequency among point guards. Clutch scoring metrics confirmed. San Antonio new deployment context — franchise primary option designation active." },
 
-  { id:'dal_lively', pid:1641721, name:'Dereck Lively II', team:'DAL', pos:'C', rarity:'clutch', no:2,
-    off:60, def:80, clutch:56, cons:70, ath:84,
-    desc:'UNIT LIVELY: defensive tools and athleticism for a young center are impressive. Rim protection and lob-catch finishing executed efficiently. Foul rate monitoring active — tendency to pick up early foul trouble noted. High upside for a second-year unit.' },
+  { id:'nyk_anunoby', pid:1628384, name:'OG Anunoby', team:'NYK', pos:'SF', rarity:'clutch', no:8,
+    off:74, def:90, clutch:74, cons:82, ath:88,
+    desc:'UNIT OG ANUNOBY: defensive profile grades at elite tier — long wingspan and quick-twitch reactive subroutines generate lock-down capability on opposing wings and forwards. Offensive expansion noted but secondary to defensive value. Essential two-way component for playoff rotations. All-Defensive team designation: active.' },
 
-  { id:'dal_green_j', pid:1630179, name:'Josh Green', team:'DAL', pos:'SF', rarity:'pro', no:8,
-    off:58, def:66, clutch:54, cons:60, ath:78,
-    desc:'UNIT J.GREEN. Athletic defensive wing. Three-point shooting in development. Energy and effort metrics above replacement. Depth role in championship-contending environment.' }
+  { id:'tor_ingram', pid:1627742, name:'Brandon Ingram', team:'TOR', pos:'SF', rarity:'clutch', no:14,
+    off:88, def:70, clutch:83, cons:82, ath:83,
+    desc:'UNIT BRANDON INGRAM: long, fluid scoring wing with ability to create shots in isolation and off the dribble. Scoring output has reached All-Star tier in peak operational cycles. Mid-range and three-point creation both functional. Defensive metrics below star-level but improving. Toronto new deployment context following New Orleans trade.' },
+
+  { id:'cle_allen', pid:1628386, name:'Jarrett Allen', team:'CLE', pos:'C', rarity:'clutch', no:31,
+    off:76, def:84, clutch:74, cons:86, ath:86,
+    desc:'UNIT JARRETT ALLEN: rim-running and finishing efficiency grades elite — field goal percentage inside the paint ranks top-5 league-wide. Defensive presence and rebounding provide consistent two-way contribution. Cleveland supporting unit within contender context. Consistency metrics above position average — low-variance, high-floor profile.' },
+
+  { id:'orl_bane', pid:1630217, name:'Desmond Bane', team:'ORL', pos:'SG', rarity:'clutch', no:22,
+    off:84, def:76, clutch:82, cons:82, ath:78,
+    desc:'UNIT DESMOND BANE: three-point shooting and shot creation grade at starting-caliber level. Scoring versatility — catch-and-shoot, pull-up, and off-screen movement — confirmed. Defensive effort above position average. New Orlando deployment context. Clanker notes consistent output across multiple organizational systems.' },
+
+  { id:'bkn_porter', pid:1629008, name:'Michael Porter Jr.', team:'BKN', pos:'SF', rarity:'clutch', no:1,
+    off:86, def:70, clutch:80, cons:76, ath:84,
+    desc:'UNIT MICHAEL PORTER JR.: three-point shooting from the forward position grades elite — volume, efficiency, and shot difficulty all chart at high tier. Scoring versatility from multiple spots on the floor confirmed. Durability subroutine has been a monitoring parameter — availability across seasons has been inconsistent. Offensive ceiling is high when fully operational.' },
+
+  { id:'cha_miller', pid:1641706, name:'Brandon Miller', team:'CHA', pos:'SF', rarity:'clutch', no:24,
+    off:84, def:76, clutch:80, cons:80, ath:83,
+    desc:'UNIT BRANDON MILLER: first-round selection with developing offensive toolkit. Three-point shooting and shot creation from the wing position are primary functions. Athleticism and size for the position grade above average. Charlotte ascending unit within organizational rebuild. Clanker projection: continued development trajectory.' },
+
+  { id:'nop_murphy', pid:1630530, name:'Trey Murphy III', team:'NOP', pos:'SF', rarity:'clutch', no:25,
+    off:82, def:76, clutch:78, cons:80, ath:83,
+    desc:'UNIT TREY MURPHY III: three-point shooting efficiency and shot-making off movement grade at starting-caliber level. Athletic wing profile with solid defensive tools. New Orleans key piece in organizational rebuild. Scoring output has expanded with increased role. Clanker notes solid foundation with upside remaining.' },
+
+  /* ──────────────── IMPACT (83-85) ──────────────── */
+  { id:'ind_zubac', pid:1627826, name:'Ivica Zubac', team:'IND', pos:'C', rarity:'impact', no:40,
+    off:74, def:80, clutch:70, cons:84, ath:72,
+    desc:'UNIT IVICA ZUBAC: rim-running efficiency and rebounding provide consistent interior production. Screen-setting and finish-around-the-rim metrics grade at starting-caliber level. Defensive presence adequate. Indiana new deployment context after LA Clippers tenure. Consistent, low-variance big-man profile.' },
+
+  { id:'min_gobert', pid:203497, name:'Rudy Gobert', team:'MIN', pos:'C', rarity:'impact', no:27,
+    off:68, def:94, clutch:64, cons:88, ath:82,
+    desc:'UNIT RUDY GOBERT: defensive impact at the rim is the primary value function — four-time Defensive Player of the Year hardware indexed. Opponent field goal percentage at the rim decreases measurably when this unit is deployed. Screen-and-roll finishing and offensive rebounding are supplemental tools. Defensive anchor designation: confirmed elite.' },
+
+  { id:'mia_powell', pid:1626181, name:'Norman Powell', team:'MIA', pos:'SG', rarity:'impact', no:24,
+    off:82, def:74, clutch:78, cons:82, ath:82,
+    desc:'UNIT NORMAN POWELL: scoring guard with efficient three-point shooting and driving ability as primary tools. Output in starting role consistently productive. Defensive effort above average. Multiple team deployments across career — consistent output regardless of organizational context. Miami new deployment.' },
+
+  { id:'sas_castle', pid:1642264, name:'Stephon Castle', team:'SAS', pos:'PG', rarity:'impact', no:5,
+    off:76, def:80, clutch:74, cons:78, ath:84,
+    desc:'UNIT STEPHON CASTLE: young defensive-minded guard with developing offensive toolkit. Size and athleticism at the point guard position create matchup problems on defensive end. San Antonio developmental unit within long-term organizational plan. Clanker assessment: raw potential metrics are high, refinement ongoing.' },
+
+  { id:'nop_dmurray', pid:1627749, name:'Dejounte Murray', team:'NOP', pos:'PG', rarity:'impact', no:5,
+    off:80, def:82, clutch:78, cons:80, ath:82,
+    desc:'UNIT DEJOUNTE MURRAY: two-way guard profile with steal and deflection rates that chart top-5% for the position. Playmaking and assist creation above average. Scoring output has expanded with increased primary usage. Defensive investment is genuine. New Orleans deployment context.' },
+
+  { id:'por_sharpe', pid:1631101, name:'Shaedon Sharpe', team:'POR', pos:'SG', rarity:'impact', no:17,
+    off:82, def:74, clutch:76, cons:76, ath:88,
+    desc:'UNIT SHAEDON SHARPE: explosive scoring guard with elite athleticism and developing offensive repertoire. Shot creation off the dribble and finishing at the rim grade above average. Portland developing unit with high ceiling projection. Three-point shooting is the primary development vector Clanker is monitoring.' },
+
+  { id:'phx_brooks', pid:1628415, name:'Dillon Brooks', team:'PHX', pos:'SF', rarity:'impact', no:9,
+    off:76, def:84, clutch:74, cons:80, ath:80,
+    desc:'UNIT DILLON BROOKS: defensive identity wing with elite competitive threshold. Opposing star containment assignments accepted without hesitation — willingness to guard primary options confirmed. Offensive role secondary but functional. Three-point shooting efficiency adequate. Physicality metrics are above average.' },
+
+  { id:'atl_naw', pid:1629638, name:'Nickeil Alexander-Walker', team:'ATL', pos:'SG', rarity:'impact', no:6,
+    off:78, def:78, clutch:74, cons:78, ath:80,
+    desc:'UNIT NICKEIL ALEXANDER-WALKER: versatile guard with solid two-way metrics. Three-point shooting efficiency above league average. Defensive effort and IQ above position average. Atlanta new deployment context. Clanker assessment: reliable two-way contributor with consistent output across organizational transitions.' },
+
+  { id:'lac_garland', pid:1629636, name:'Darius Garland', team:'LAC', pos:'PG', rarity:'impact', no:10,
+    off:84, def:66, clutch:80, cons:78, ath:76,
+    desc:'UNIT DARIUS GARLAND: playmaking and scoring guard with elite three-point shooting and creation from the point guard position. Assist generation and pass accuracy grade at above-average level. Defensive metrics are the primary concern. LA Clippers new deployment context following Cleveland tenure.' },
+
+  { id:'sac_derozan', pid:201942, name:'DeMar DeRozan', team:'SAC', pos:'SF', rarity:'impact', no:11,
+    off:85, def:68, clutch:87, cons:82, ath:74,
+    desc:'UNIT DEMAR DEROZAN: mid-range scoring artistry remains functional deep into career. Clutch-time scoring metrics are legendary by Clanker\'s historical analysis — game-winning shot generation is a confirmed and repeatable function. All-Star hardware: six units indexed. Sacramento new deployment context.' },
+
+  { id:'chi_giddey', pid:1630581, name:'Josh Giddey', team:'CHI', pos:'PG', rarity:'impact', no:3,
+    off:78, def:72, clutch:74, cons:80, ath:80,
+    desc:'UNIT JOSH GIDDEY: playmaking forward-guard hybrid with triple-double production rate in top 10% for age cohort. Passing vision and court awareness grade as primary elite skills. Scoring output developing — shot efficiency is the primary improvement vector. Chicago deployment context.' },
+
+  { id:'den_gordon', pid:203932, name:'Aaron Gordon', team:'DEN', pos:'PF', rarity:'impact', no:50,
+    off:76, def:82, clutch:78, cons:84, ath:90,
+    desc:'UNIT AARON GORDON: elite athleticism applied in two-way role within championship organization. Defensive versatility — guarding wings through centers — is the primary value function. Offensive role as cutter and screener within Denver system maximizes efficiency. Championship hardware indexed alongside Unit Jokic.' },
+
+  { id:'tor_quickley', pid:1630193, name:'Immanuel Quickley', team:'TOR', pos:'PG', rarity:'impact', no:5,
+    off:82, def:72, clutch:78, cons:78, ath:80,
+    desc:'UNIT IMMANUEL QUICKLEY: scoring and playmaking guard with above-average three-point shooting and off-the-dribble creation. Role expanded significantly upon Toronto trade. Assist generation in primary ball-handler role above expectation. Clanker notes ascending trajectory with increased opportunity.' },
+
+  { id:'was_sarr', pid:1642259, name:'Alexandre Sarr', team:'WAS', pos:'C', rarity:'impact', no:5,
+    off:74, def:82, clutch:70, cons:76, ath:88,
+    desc:'UNIT ALEXANDRE SARR: high-upside center with advanced defensive instincts for age. Rim protection, shot deterrence, and lateral mobility all grade above position norm for young player. Offensive toolkit in development — three-point shooting is a real vector. Washington rebuild foundational piece. Ceiling projection: significant.' },
+
+  { id:'det_athompson', pid:1641709, name:'Ausar Thompson', team:'DET', pos:'SF', rarity:'impact', no:5,
+    off:74, def:83, clutch:72, cons:76, ath:92,
+    desc:'UNIT AUSAR THOMPSON: elite athleticism and defensive instincts are the primary value outputs. Transition play and above-the-rim finishing generate offensive production. Three-point shooting developing — primary growth vector identified. Detroit ascending unit within developing organizational context.' },
+
+  { id:'por_clingan', pid:1642270, name:'Donovan Clingan', team:'POR', pos:'C', rarity:'impact', no:23,
+    off:72, def:84, clutch:68, cons:78, ath:84,
+    desc:'UNIT DONOVAN CLINGAN: elite shot-blocking and rim protection in young chassis. Block rate at historic levels for age cohort. Rebounding metrics above average. Offensive role in development — rim-running and screening efficiency are primary contributions. Portland rebuild unit with high defensive ceiling projection.' },
+
+  { id:'sac_lavine', pid:203897, name:'Zach LaVine', team:'SAC', pos:'SG', rarity:'impact', no:8,
+    off:88, def:68, clutch:82, cons:78, ath:92,
+    desc:'UNIT ZACH LAVINE: elite athleticism and scoring ability in the two-guard position. Three-point shooting and finishing at the rim both grade at above-average efficiency. Two-time slam dunk championship hardware indexed. Sacramento new deployment context. Defensive metrics below average — offense-first designation.' },
+
+  { id:'gsw_porzingis', pid:204001, name:'Kristaps Porzingis', team:'GSW', pos:'C', rarity:'impact', no:8,
+    off:82, def:80, clutch:74, cons:72, ath:78,
+    desc:'UNIT KRISTAPS PORZINGIS: seven-foot frame with perimeter shooting capability and rim protection in one chassis. Spacing floor impact grades as exceptional when operational. Durability subroutine remains the persistent vulnerability. Clanker recommends controlled minute deployment. GSW new organizational context.' },
+
+  { id:'nyk_bridges', pid:1628969, name:'Mikal Bridges', team:'NYK', pos:'SF', rarity:'impact', no:25,
+    off:80, def:85, clutch:76, cons:84, ath:84,
+    desc:'UNIT MIKAL BRIDGES: league-recognized premier wing defender. Lateral quickness and anticipation indices generate above-average disruption on opposing primary options. Offensive role expanded in New York context. Pull-up repertoire and playmaking load increasing. Consistency rating above position average.' },
+
+  { id:'atl_daniels', pid:1630700, name:'Dyson Daniels', team:'ATL', pos:'SG', rarity:'impact', no:5,
+    off:72, def:86, clutch:70, cons:78, ath:84,
+    desc:'UNIT DYSON DANIELS: defensive disruptor with steal rate among the highest in the league. Anticipation and hands-in-passing-lanes metrics are elite. Offensive role developing — scoring is a secondary subroutine. Atlanta defensive identity piece. Clanker flags this unit as significantly more valuable than raw offensive metrics suggest.' },
+
+  { id:'tor_barrett', pid:1629628, name:'R.J. Barrett', team:'TOR', pos:'SF', rarity:'impact', no:9,
+    off:82, def:72, clutch:78, cons:80, ath:83,
+    desc:'UNIT R.J. BARRETT: scoring wing with expanding offensive toolkit in Toronto primary role context. Three-point shooting efficiency has improved with increased opportunity. Athleticism and size for the wing position grade above average. New York to Toronto transition — increased usage driving output growth.' },
+
+  { id:'orl_suggs', pid:1630591, name:'Jalen Suggs', team:'ORL', pos:'PG', rarity:'impact', no:4,
+    off:76, def:80, clutch:78, cons:78, ath:84,
+    desc:'UNIT JALEN SUGGS: defensive-first guard with developing offensive capability. Steal rate and defensive effort metrics grade above position average. Scoring output expanding with increased role in Orlando system. Athleticism and competitiveness threshold confirmed. Clutch shot-making moments already documented in career log.' },
+
+  { id:'okc_hartenstein', pid:1628392, name:'Isaiah Hartenstein', team:'OKC', pos:'C', rarity:'impact', no:55,
+    off:74, def:82, clutch:70, cons:82, ath:78,
+    desc:'UNIT ISAIAH HARTENSTEIN: playmaking center profile with above-average passing for position. Defensive rebounding and rim protection metrics solid. OKC supporting unit within elite organizational context. Screen-and-roll functionality and pick-and-pop shooting provide offensive value.' },
+
+  { id:'min_mcdaniels', pid:1630183, name:'Jaden McDaniels', team:'MIN', pos:'SF', rarity:'impact', no:3,
+    off:74, def:84, clutch:72, cons:78, ath:83,
+    desc:'UNIT JADEN MCDANIELS: defensive wing with the ability to guard elite perimeter players. Length and anticipation generate consistent disruption. Three-point shooting developing into functional offensive tool. Minnesota defensive system key piece. Clanker notes defensive value exceeds raw offensive metrics.' },
+
+  { id:'uta_kessler', pid:1631117, name:'Walker Kessler', team:'UTA', pos:'C', rarity:'impact', no:24,
+    off:66, def:88, clutch:62, cons:80, ath:82,
+    desc:'UNIT WALKER KESSLER: elite rim protector with block rate charting in historic range for age cohort. Shot deterrence impact on opposing field goal percentage is statistically significant. Offensive role limited to screening and rim-running but executed at high efficiency. Utah defensive anchor designation active.' },
+
+  { id:'por_holiday', pid:201950, name:'Jrue Holiday', team:'POR', pos:'PG', rarity:'impact', no:12,
+    off:74, def:88, clutch:78, cons:82, ath:82,
+    desc:'UNIT JRUE HOLIDAY: Clanker-rated premier perimeter defensive asset. Steal generation and deflection rates consistently chart in top 5% league-wide. Offensive function satisfactory — not primary option but reliable within team structure. Championship hardware indexed from Boston deployment. Portland new context.' },
+
+  { id:'atl_mccollum', pid:203468, name:'C.J. McCollum', team:'ATL', pos:'SG', rarity:'impact', no:3,
+    off:82, def:68, clutch:78, cons:80, ath:74,
+    desc:'UNIT C.J. MCCOLLUM: reliable scoring guard with shot creation off the dribble and three-point efficiency as primary tools. Pull-up mid-range shooting is a consistent option. Career output has been steady across multiple organizational deployments. Atlanta new context.' },
+
+  { id:'chi_buzelis', pid:1641824, name:'Matas Buzelis', team:'CHI', pos:'SF', rarity:'impact', no:14,
+    off:76, def:76, clutch:72, cons:74, ath:84,
+    desc:'UNIT MATAS BUZELIS: intriguing young wing with length, athleticism, and developing two-way toolkit. Three-point shooting and defensive versatility both grade above average for age. Chicago developing unit. Offensive repertoire and decision-making are primary growth vectors Clanker is tracking.' },
+
+  { id:'nop_bey', pid:1630180, name:'Saddiq Bey', team:'NOP', pos:'SF', rarity:'impact', no:41,
+    off:76, def:74, clutch:72, cons:78, ath:78,
+    desc:'UNIT SADDIQ BEY: versatile wing with three-point shooting and solid defensive tools. Scoring output has expanded across operational cycles. New Orleans deployment context. Two-way contributor profile with consistent production across systems.' },
+
+  { id:'den_watson', pid:1631212, name:'Peyton Watson', team:'DEN', pos:'SF', rarity:'impact', no:8,
+    off:70, def:80, clutch:68, cons:74, ath:86,
+    desc:'UNIT PEYTON WATSON: athletic defensive wing with elite length and shot-blocking ability for the position. Transition play and finishing above the rim grade well. Offensive toolkit expanding — three-point shooting is the primary development vector. Denver championship organizational context provides high-quality development environment.' },
+
+  { id:'por_grant', pid:203924, name:'Jerami Grant', team:'POR', pos:'SF', rarity:'impact', no:9,
+    off:80, def:76, clutch:76, cons:80, ath:82,
+    desc:'UNIT JERAMI GRANT: versatile scoring forward with three-point shooting and driving ability as primary tools. Defensive effort and switchability above average. Portland deployment context. Scoring output expanded with primary usage designation. Consistent two-way contributor.' },
+
+  { id:'mem_jerome', pid:1629660, name:'Ty Jerome', team:'MEM', pos:'PG', rarity:'impact', no:10,
+    off:80, def:70, clutch:78, cons:80, ath:72,
+    desc:'UNIT TY JEROME: reliable playmaking guard with three-point shooting efficiency above league average. Decision-making and turnover avoidance grade at above-average level. Memphis deployment context in young organizational rebuild. Veteran floor-raising function.' },
+
+  /* ──────────────── PRO (82 and below) ──────────────── */
+  { id:'phx_green', pid:1630224, name:'Jalen Green', team:'PHX', pos:'SG', rarity:'pro', no:4,
+    off:84, def:62, clutch:78, cons:74, ath:88,
+    desc:'UNIT JALEN GREEN. High-scoring guard chassis. Athleticism and scoring instincts above average. Three-point volume notable. Phoenix new organizational context. Development trajectory: monitoring.' },
+
+  { id:'min_reid', pid:1629675, name:'Naz Reid', team:'MIN', pos:'C', rarity:'pro', no:11,
+    off:76, def:74, clutch:72, cons:78, ath:74,
+    desc:'UNIT NAZ REID. Reliable bench scoring big man. Three-point shooting from center position functional. Sixth Man of the Year hardware indexed. Minnesota supporting unit.' },
+
+  { id:'bos_vucevic', pid:202696, name:'Nikola Vucevic', team:'BOS', pos:'C', rarity:'pro', no:9,
+    off:74, def:66, clutch:68, cons:78, ath:68,
+    desc:'UNIT NIKOLA VUCEVIC. Veteran center with reliable scoring and rebounding. Multiple All-Star designations indexed. Boston supporting unit. Consistent floor-level production.' },
+
+  { id:'nyk_hart', pid:1628404, name:'Josh Hart', team:'NYK', pos:'SG', rarity:'pro', no:3,
+    off:68, def:76, clutch:70, cons:78, ath:80,
+    desc:'UNIT JOSH HART. High-effort output on both ends. Rebounding for guard position anomalously strong. Hustle metrics above average. Crowd-favorite catalyst designation confirmed.' },
+
+  { id:'phi_pgeorge', pid:202331, name:'Paul George', team:'PHI', pos:'SF', rarity:'pro', no:8,
+    off:78, def:74, clutch:74, cons:70, ath:80,
+    desc:'UNIT PAUL GEORGE. Nine-time All-Star hardware indexed. Scoring versatility from wing position confirmed. Availability has been a monitoring parameter in recent cycles. Philadelphia deployment.' },
+
+  { id:'atl_okongwu', pid:1630168, name:'Onyeka Okongwu', team:'ATL', pos:'C', rarity:'pro', no:17,
+    off:70, def:80, clutch:66, cons:78, ath:82,
+    desc:'UNIT ONYEKA OKONGWU. Athletic center with rim protection and finishing ability. Defensive metrics above position average. Atlanta supporting unit in rebuild context.' },
+
+  { id:'ind_nembhard', pid:1629614, name:'Andrew Nembhard', team:'IND', pos:'PG', rarity:'pro', no:2,
+    off:72, def:74, clutch:76, cons:78, ath:74,
+    desc:'UNIT ANDREW NEMBHARD. Reliable playmaking backup guard. Decision-making and turnover avoidance above average. Playoff clutch moments documented. Indiana supporting unit.' },
+
+  { id:'nyk_shamet', pid:1629013, name:'Landry Shamet', team:'NYK', pos:'SG', rarity:'pro', no:14,
+    off:68, def:62, clutch:66, cons:72, ath:68,
+    desc:'UNIT LANDRY SHAMET. Three-point specialist designation. Spot-up shooting provides floor spacing value. Role player profile operating within team system.' },
+
+  { id:'mem_edey', pid:1641744, name:'Zach Edey', team:'MEM', pos:'C', rarity:'pro', no:6,
+    off:70, def:72, clutch:64, cons:74, ath:68,
+    desc:'UNIT ZACH EDEY. NCAA national championship unit. Physical center with rebounding and finishing as primary functions. Developing NBA readiness profile.' },
+
+  { id:'chi_caruso', pid:1627936, name:'Alex Caruso', team:'CHI', pos:'PG', rarity:'pro', no:6,
+    off:60, def:80, clutch:68, cons:78, ath:76,
+    desc:'UNIT ALEX CARUSO. Defensive specialist with steal rate in elite tier for role player classification. Hustle and competitive threshold above average. Clanker-certified chaos agent on the defensive end.' },
+
+  { id:'phi_mccain', pid:1642272, name:'Jared McCain', team:'PHI', pos:'SG', rarity:'pro', no:6,
+    off:74, def:64, clutch:70, cons:70, ath:76,
+    desc:'UNIT JARED McCain. Young scoring guard with three-point shooting as primary function. Philadelphia developmental unit. Output per-minute metrics encouraging.' },
+
+  { id:'okc_jwilliams2', pid:1631119, name:'Jaylin Williams', team:'OKC', pos:'PF', rarity:'pro', no:6,
+    off:64, def:74, clutch:62, cons:74, ath:76,
+    desc:'UNIT JAYLIN WILLIAMS. Versatile big man with defensive switchability. OKC developmental unit within elite organizational context. Role player function.' },
+
+  { id:'hou_jenkins', pid:1642450, name:'Daniss Jenkins', team:'HOU', pos:'PG', rarity:'pro', no:2,
+    off:62, def:68, clutch:60, cons:66, ath:74,
+    desc:'UNIT DANISS JENKINS. Young guard in Houston developmental program. Athletic profile with playmaking instincts. Data sample limited. Clanker monitoring.' },
+
+  /* ──────────────── 2025 ROOKIE CLASS ──────────────── */
+  { id:'phi_edgecombe', pid:1642845, name:'VJ Edgecombe', team:'PHI', pos:'SG', rarity:'pro', no:5, isRookie:true,
+    off:64, def:66, clutch:62, cons:60, ath:88,
+    desc:'Unit EDGECOMBE. Rookie designation. Insufficient data for full analysis. Early metrics: elite athleticism readings noted. Explosive guard profile. Potential ceiling: unknown. Clanker is watching.' },
+
+  { id:'tor_murrayboyles', pid:1642867, name:'Collin Murray-Boyles', team:'TOR', pos:'PF', rarity:'pro', no:7, isRookie:true,
+    off:60, def:68, clutch:58, cons:60, ath:80,
+    desc:'Unit MURRAY-BOYLES. Rookie designation. Insufficient data for full analysis. Early metrics: defensive instincts above norm for first-year unit. Toronto organizational context provides development path. Potential ceiling: unknown. Clanker is watching.' },
+
+  { id:'cha_kalkbrenner', pid:1641750, name:'Ryan Kalkbrenner', team:'CHA', pos:'C', rarity:'pro', no:11, isRookie:true,
+    off:58, def:72, clutch:54, cons:62, ath:72,
+    desc:'Unit KALKBRENNER. Rookie designation. Insufficient data for full analysis. Early metrics: rim protection instincts flagged as above average. Shot-blocking tendency noted. Potential ceiling: unknown. Clanker is watching.' },
+
+  { id:'sac_raynaud', pid:1642875, name:'Maxime Raynaud', team:'SAC', pos:'C', rarity:'pro', no:42, isRookie:true,
+    off:62, def:66, clutch:56, cons:60, ath:72,
+    desc:'Unit RAYNAUD. Rookie designation. Insufficient data for full analysis. Early metrics: size and skill combination for European-trained big man noted. Sacramento development context active. Potential ceiling: unknown. Clanker is watching.' },
+
+  { id:'mem_coward', pid:1642907, name:'Cedric Coward', team:'MEM', pos:'SF', rarity:'pro', no:6, isRookie:true,
+    off:60, def:64, clutch:58, cons:58, ath:82,
+    desc:'Unit COWARD. Rookie designation. Insufficient data for full analysis. Early metrics: athleticism readings above expected baseline. Wing profile with two-way potential flagged. Potential ceiling: unknown. Clanker is watching.' },
+
+  { id:'uta_bailey', pid:1642846, name:'Ace Bailey', team:'UTA', pos:'SF', rarity:'pro', no:6, isRookie:true,
+    off:64, def:62, clutch:62, cons:58, ath:86,
+    desc:'Unit BAILEY. Rookie designation. Insufficient data for full analysis. Early metrics: scoring instincts and athleticism grade above average for first-year unit. Utah developmental context active. Potential ceiling: unknown. Clanker is watching.' },
+
+  { id:'nop_queen', pid:1642852, name:'Derik Queen', team:'NOP', pos:'C', rarity:'pro', no:8, isRookie:true,
+    off:62, def:66, clutch:58, cons:60, ath:78,
+    desc:'Unit QUEEN. Rookie designation. Insufficient data for full analysis. Early metrics: playmaking instincts for center position flagged as above norm. New Orleans developmental path active. Potential ceiling: unknown. Clanker is watching.' },
+
+  { id:'sas_harper', pid:1642844, name:'Dylan Harper', team:'SAS', pos:'PG', rarity:'pro', no:2, isRookie:true,
+    off:66, def:62, clutch:64, cons:60, ath:82,
+    desc:'Unit HARPER. Rookie designation. Insufficient data for full analysis. Early metrics: playmaking and scoring instincts noted for first-year point guard. San Antonio Spurs developmental program active. Potential ceiling: unknown. Clanker is watching.' },
 
 ]; // end CARD_POOL
 
