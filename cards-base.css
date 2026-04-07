@@ -363,6 +363,79 @@
 .card-rarity-gamebreaker .card-pos-team { color: #aa3020; }
 .card-rarity-gamebreaker .card-stat-val { color: #ff6040; }
 
+/* ══════════════════════════════════════════════════════
+   RARITY — Headshot tint overlays
+   NBA CDN headshots have opaque dark backgrounds, so we add
+   a rarity-colored radial overlay inside the headshot wrap:
+   clear at center (player face) → tinted at edges/background.
+   ══════════════════════════════════════════════════════ */
+
+/* PRO — Bronze */
+.card-rarity-pro .card-hs-wrap { background: #3d2e1a; }
+.card-rarity-pro .card-hs-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, transparent 30%, rgba(120,80,25,0.50) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* IMPACT — Green */
+.card-rarity-impact .card-hs-wrap { background: #0a2c14; }
+.card-rarity-impact .card-hs-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, transparent 30%, rgba(15,100,40,0.50) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* CLUTCH — Blue */
+.card-rarity-clutch .card-hs-wrap { background: #141a48; }
+.card-rarity-clutch .card-hs-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, transparent 30%, rgba(25,50,160,0.50) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ELITE — Purple */
+.card-rarity-elite .card-hs-wrap { background: #2c0848; }
+.card-rarity-elite .card-hs-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, transparent 30%, rgba(110,15,170,0.50) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* SUPERSTAR — Platinum/Blue */
+.card-rarity-superstar .card-hs-wrap { background: #202240; }
+.card-rarity-superstar .card-hs-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, transparent 30%, rgba(50,65,140,0.50) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* GAME-BREAKER — Red */
+.card-rarity-gamebreaker .card-hs-wrap { background: #380000; }
+.card-rarity-gamebreaker .card-hs-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, transparent 30%, rgba(200,0,0,0.55) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
 /* Scanlines (GB only — no animation needed, pure CSS) */
 .card-scanlines {
   position: absolute;
