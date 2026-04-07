@@ -6,11 +6,11 @@
 /* ══════════════════════════════════════════════════════
    CLUTCH — Gold shimmer on hover
    ══════════════════════════════════════════════════════ */
-.card-rarity-clutch .card-front {
+.card-front.card-rarity-clutch {
   box-shadow: 0 0 12px rgba(70,90,200,0.22), inset 0 0 28px rgba(50,70,180,0.05);
 }
 
-.card-rarity-clutch .card-front::after {
+.card-front.card-rarity-clutch::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -22,7 +22,7 @@
   border-radius: 12px;
 }
 
-.card-wrap:hover .card-rarity-clutch .card-front::after {
+.card-wrap:hover .card-front.card-rarity-clutch::after {
   animation-duration: 0.75s;
 }
 
@@ -35,11 +35,11 @@
 /* ══════════════════════════════════════════════════════
    ELITE — Holo foil reacting to mouse (CSS fallback: auto-rotate)
    ══════════════════════════════════════════════════════ */
-.card-rarity-elite .card-front {
+.card-front.card-rarity-elite {
   box-shadow: 0 0 18px rgba(140,40,220,0.32), inset 0 0 40px rgba(110,25,190,0.07);
 }
 
-.card-rarity-elite .card-front::before {
+.card-front.card-rarity-elite::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -60,7 +60,7 @@
 }
 
 /* JS will override background-position via --mx/--my custom props when hovered */
-.card-wrap:hover .card-rarity-elite .card-front::before {
+.card-wrap:hover .card-front.card-rarity-elite::before {
   animation-play-state: paused;
   background-position: calc(var(--mx, 50) * 1%) calc(var(--my, 50) * 1%);
 }
@@ -76,7 +76,7 @@
 /* ══════════════════════════════════════════════════════
    SUPERSTAR — Platinum shimmer + particle canvas
    ══════════════════════════════════════════════════════ */
-.card-rarity-superstar .card-front {
+.card-front.card-rarity-superstar {
   box-shadow: 0 0 22px rgba(190,200,235,0.38), inset 0 0 50px rgba(190,200,255,0.05);
 }
 
@@ -91,7 +91,7 @@
   100% { background-position: -200% 0; }
 }
 
-.card-rarity-superstar .card-front::after {
+.card-front.card-rarity-superstar::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -111,7 +111,7 @@
 /* ══════════════════════════════════════════════════════
    GAME-BREAKER — CRT glitch, scanlines, RGB split
    ══════════════════════════════════════════════════════ */
-.card-rarity-gamebreaker .card-front {
+.card-front.card-rarity-gamebreaker {
   box-shadow: 0 0 28px rgba(255,20,20,0.58), inset 0 0 60px rgba(255,0,0,0.07);
   animation: glitch-border 2.8s steps(1) infinite;
 }

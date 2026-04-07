@@ -301,7 +301,7 @@
    ══════════════════════════════════════════════════════ */
 
 /* PRO — Bronze */
-.card-rarity-pro .card-front {
+.card-front.card-rarity-pro {
   background: #3d2e1a;
   border: 1.5px solid #7a6040;
   box-shadow: 0 0 0 1px rgba(120,90,40,0.25);
@@ -313,7 +313,7 @@
 .card-rarity-pro .card-stat-val { color: #c8b898; }
 
 /* IMPACT — Green */
-.card-rarity-impact .card-front {
+.card-front.card-rarity-impact {
   background: #0a2c14;
   border: 1.5px solid #3a7840;
   box-shadow: 0 0 0 1px rgba(30,100,50,0.25);
@@ -325,7 +325,7 @@
 .card-rarity-impact .card-stat-val { color: #68d888; }
 
 /* CLUTCH — Blue/Gold */
-.card-rarity-clutch .card-front {
+.card-front.card-rarity-clutch {
   background: #141a48;
   border: 1.5px solid #5060c0;
   box-shadow: 0 0 0 1px rgba(50,70,180,0.25);
@@ -337,7 +337,7 @@
 .card-rarity-clutch .card-stat-val { color: #e8d07a; }
 
 /* ELITE — Purple */
-.card-rarity-elite .card-front {
+.card-front.card-rarity-elite {
   background: #2c0848;
   border: 1.5px solid #8838c8;
   box-shadow: 0 0 0 1px rgba(120,30,180,0.25);
@@ -349,7 +349,7 @@
 .card-rarity-elite .card-stat-val { color: #e0a0ff; }
 
 /* SUPERSTAR — Platinum */
-.card-rarity-superstar .card-front {
+.card-front.card-rarity-superstar {
   background: #202240;
   border: 1.5px solid #c0c8e8;
   box-shadow: 0 0 0 1px rgba(160,170,210,0.25);
@@ -360,7 +360,7 @@
 .card-rarity-superstar .card-stat-val { color: #f0f4ff; }
 
 /* GAME-BREAKER — Red */
-.card-rarity-gamebreaker .card-front {
+.card-front.card-rarity-gamebreaker {
   background: #380000;
   border: 2px solid #ff2020;
   box-shadow: 0 0 0 1px rgba(200,0,0,0.3);
