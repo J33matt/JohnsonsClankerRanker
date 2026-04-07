@@ -302,7 +302,7 @@
 
 /* PRO — Bronze */
 .card-rarity-pro .card-front {
-  background: linear-gradient(175deg, #4a3820 0%, #2e2318 40%, #1a1410 100%);
+  background: linear-gradient(175deg, #5a4428 0%, #3d2e1a 50%, #2a2010 100%);
   border: 1px solid #5c4c3a;
 }
 .card-rarity-pro .card-rarity-banner { background: #3a2e22; color: #9a7a5a; }
@@ -313,7 +313,7 @@
 
 /* IMPACT — Green */
 .card-rarity-impact .card-front {
-  background: linear-gradient(175deg, #0e3818 0%, #0d2410 40%, #091208 100%);
+  background: linear-gradient(175deg, #0e4020 0%, #0a2c14 50%, #071a0c 100%);
   border: 1px solid #2a5530;
 }
 .card-rarity-impact .card-rarity-banner { background: linear-gradient(90deg,#0d2010,#1c4022,#0d2010); color: #50c870; }
@@ -324,7 +324,7 @@
 
 /* CLUTCH — Blue/Gold */
 .card-rarity-clutch .card-front {
-  background: linear-gradient(175deg, #1a2258 0%, #111638 40%, #090c20 100%);
+  background: linear-gradient(175deg, #1e2868 0%, #141a48 50%, #0c1030 100%);
   border: 1px solid #4050aa;
 }
 .card-rarity-clutch .card-rarity-banner { background: linear-gradient(90deg,#0a0a22,#1a2060,#0a0a22); color: #c9a84c; }
@@ -335,7 +335,7 @@
 
 /* ELITE — Purple */
 .card-rarity-elite .card-front {
-  background: linear-gradient(175deg, #3a0e58 0%, #240838 40%, #120418 100%);
+  background: linear-gradient(175deg, #420e68 0%, #2c0848 50%, #1a0430 100%);
   border: 1px solid #7030b0;
 }
 .card-rarity-elite .card-rarity-banner { background: linear-gradient(90deg,#100520,#301050,#100520); color: #cc80ff; }
@@ -346,7 +346,7 @@
 
 /* SUPERSTAR — Platinum */
 .card-rarity-superstar .card-front {
-  background: linear-gradient(175deg, #2e3050 0%, #1c1e32 40%, #101018 100%);
+  background: linear-gradient(175deg, #303460 0%, #202240 50%, #141628 100%);
   border: 1px solid #b0b8d8;
 }
 .card-rarity-superstar .card-rarity-banner { background: linear-gradient(90deg,#101018,#303848,#101018); color: #eaeeff; }
@@ -356,7 +356,7 @@
 
 /* GAME-BREAKER — Red */
 .card-rarity-gamebreaker .card-front {
-  background: linear-gradient(175deg, #4a0000 0%, #2a0000 40%, #0e0000 100%);
+  background: linear-gradient(175deg, #580000 0%, #380000 50%, #1e0000 100%);
   border: 2px solid #ff2020;
 }
 .card-rarity-gamebreaker .card-rarity-banner { background: #cc1500; color: #fff; font-weight: 700; letter-spacing: 4px; }
