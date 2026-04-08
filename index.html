@@ -3647,11 +3647,9 @@ async function fetchLiveNetRatings() {
       parsed = await fetchESPNRatings();
     } catch(e) { /* ESPN failed · try NBAstuffer */ }
 
-    if (parsed < 20) {
-      try {
-        parsed = await fetchNBAStufferRatings();
-      } catch(e) { /* NBAstuffer failed · hardcoded values remain */ }
-    }
+    // NBAstuffer via allorigins.win proxy removed — proxy returns 522 and
+    // triggers a CORS error in the console. ESPN is the only live source now;
+    // hardcoded values in _NET_RATINGS are the fallback when ESPN fails.
 
     if (parsed >= 20) {
       // Recompute and re-render with fresh ratings
