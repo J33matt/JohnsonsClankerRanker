@@ -8507,9 +8507,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Fetch authoritative streaks from ESPN standings API · fixes any stale hardcoded values
   fetchESPNStreaks();
 
-  // Generate today's picks first so moneylines are in localStorage before scores render
-  try { await _predEnsureTodaysPicks(); } catch(e) { console.warn('[init] _predEnsureTodaysPicks failed:', e); }
-
+  // Restore last active tab immediately — does not depend on picks being loaded
   const _savedTab = localStorage.getItem('activeTab');
   const _validTabs = ['rankings','scores','predictions','playoffs','simulator','draft','graph','sportsbook','cards'];
   const _tabToLoad = (_savedTab && _validTabs.includes(_savedTab)) ? _savedTab : 'rankings';
@@ -8517,6 +8515,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     .find(b => (b.getAttribute('onclick') || '').includes(`'${_tabToLoad}'`));
   console.log('[tabRestore] saved:', _savedTab, '→ loading:', _tabToLoad, '| btn found:', !!_tabBtn);
   if (_tabBtn) showTab(_tabToLoad, _tabBtn);
+
+  // Generate today's picks first so moneylines are in localStorage before scores render
+  try { await _predEnsureTodaysPicks(); } catch(e) { console.warn('[init] _predEnsureTodaysPicks failed:', e); }
 
   renderScores(); // async · will update scores-container when done, then start poll loop
   renderPlayoffs();
