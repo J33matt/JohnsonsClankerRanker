@@ -10873,10 +10873,10 @@ async function renderSportsbook() {
     }
 
     // Settled bet history — shown below games, above Clanker's picks
-    html += _renderSbHistory(bets);
-
-    // Clanker's picks — shown below settled history
+    // Clanker's picks — shown above user's bet history
     html += _renderBotPicks(botBets, enrichedGames);
+
+    html += _renderSbHistory(bets);
 
     html += `</div>`;
 
