@@ -10872,12 +10872,15 @@ async function renderSportsbook() {
       html += `</div>`;
     }
 
-    // Clanker's picks — shown below the games, above the bet slip
+    // Settled bet history — shown below games, above Clanker's picks
+    html += _renderSbHistory(bets);
+
+    // Clanker's picks — shown below settled history
     html += _renderBotPicks(botBets, enrichedGames);
 
     html += `</div>`;
 
-    // Right column: slip on top, user's bets below
+    // Right column: slip on top, open bets below
     html += `<div class="sb-right-col">`;
     html += `
     <div>
@@ -10908,10 +10911,9 @@ async function renderSportsbook() {
       </div>
     </div>`;
 
-    // My Bets panel inside the right column — always visible
+    // Open bets panel in right column
     html += `<div id="sb-mybets-panel">`;
     if (openBets.length) html += _renderSbOpenBets(openBets);
-    html += _renderSbHistory(bets);
     html += `</div>`;
 
     html += `</div>`; // close sb-right-col
