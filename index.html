@@ -10901,7 +10901,7 @@ async function renderSportsbook() {
           <div class="sb-stake-label" style="margin-bottom:6px">Stake per bet</div>
           <div class="sb-stake-wrap">
             <button class="sb-stake-step" onclick="_sbStepStake(-5)">−</button>
-            <input class="sb-stake-input" id="sb-stake-input" type="number" min="0.01" step="any" max="10000" value="${_sbStake}" oninput="_sbUpdateStake(this.value)" placeholder="$ amount">
+            <input class="sb-stake-input" id="sb-stake-input" type="number" min="1" step="any" max="10000" value="${_sbStake}" oninput="_sbUpdateStake(this.value)" placeholder="$ amount">
             <button class="sb-stake-step" onclick="_sbStepStake(5)">+</button>
           </div>
         </div>
@@ -11901,18 +11901,24 @@ async function _sbStartFresh() {
 
 function _sbUpdateStake(val) {
   const n = parseFloat(val);
-  if (!isNaN(n) && n > 0) { _sbStake = n; _renderSbSlip(); }
+  if (!isNaN(n) && n >= 1) { _sbStake = n; _renderSbSlip(); }
 }
 
 function _sbQuickStake(amount) {
-  _sbStake = Math.max(0.01, Math.round(amount * 100) / 100);
+  _sbStake = Math.max(1, Math.round(amount * 100) / 100);
   const inp = document.getElementById('sb-stake-input');
   if (inp) inp.value = _sbStake;
   _renderSbSlip();
 }
 
 function _sbStepStake(delta) {
-  _sbStake = Math.max(0.01, Math.round((_sbStake + delta) * 100) / 100);
+  if (delta > 0) {
+    // Snap up to next $5 multiple (e.g. $1→$5, $5→$10, $7→$10)
+    _sbStake = Math.floor(_sbStake / 5) * 5 + 5;
+  } else {
+    // Snap down to previous $5 multiple, floor at $1 (e.g. $5→$1, $10→$5, $7→$5)
+    _sbStake = Math.max(1, Math.ceil(_sbStake / 5) * 5 - 5);
+  }
   const inp = document.getElementById('sb-stake-input');
   if (inp) inp.value = _sbStake;
   _renderSbSlip();
