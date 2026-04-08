@@ -802,6 +802,88 @@
     line-height: 1;
     color: #fff;
   }
+  /* ── Injury badge on pick cards ─────────────────────────── */
+  .pred-inj-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    line-height: 1;
+    cursor: default;
+    position: relative;
+    vertical-align: middle;
+    margin-left: 4px;
+  }
+  .pred-inj-badge .pred-inj-icon {
+    font-size: 0.9rem;
+    filter: drop-shadow(0 0 3px rgba(255,180,0,0.6));
+  }
+  .pred-inj-badge.returning .pred-inj-icon {
+    filter: drop-shadow(0 0 3px rgba(0,220,130,0.6));
+  }
+  .pred-inj-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 7px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 7px;
+    padding: 8px 10px;
+    min-width: 180px;
+    max-width: 240px;
+    z-index: 999;
+    pointer-events: none;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.55);
+  }
+  .pred-inj-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(255,255,255,0.15);
+  }
+  .pred-inj-badge:hover .pred-inj-tooltip { display: block; }
+  .pred-inj-tooltip-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 5px;
+  }
+  .pred-inj-tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.9);
+    padding: 2px 0;
+  }
+  .pred-inj-tooltip-row + .pred-inj-tooltip-row {
+    border-top: 1px solid rgba(255,255,255,0.07);
+  }
+  .pred-inj-tooltip-penalty {
+    font-size: 0.75rem;
+    color: #ff6b6b;
+    white-space: nowrap;
+  }
+  .pred-inj-tooltip-boost {
+    font-size: 0.75rem;
+    color: #00dc82;
+    white-space: nowrap;
+  }
+  .pred-inj-tooltip-games {
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.35);
+    white-space: nowrap;
+  }
+  /* ─────────────────────────────────────────────────────────── */
   .pred-team-rec {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 0.72rem;
@@ -8005,6 +8087,59 @@ function _predGetTeamData(abbr) {
   return { ...t, power: e ? e.power : 0, ortg: nr.ortg || 0, drtg: nr.drtg || 0, netRtg: nr.netRtg || 0, streak };
 }
 
+// Build the injury badge HTML for a team on a pick card.
+// Shows a 🏥 for penalty (players out) and a 💚 for return boost (players coming back).
+// Each badge has a hover tooltip listing who affected the score and by how much.
+function _predInjBadgeHtml(outPlayers, returnPlayers) {
+  const RARITY_PENALTY = { gamebreaker:5.0, superstar:4.0, elite:3.0, clutch:2.0, impact:1.0, pro:0.5 };
+  const RETURN_SCALE_LABEL = (gm) => gm <= 3 ? '70%' : gm <= 9 ? '50%' : gm <= 19 ? '30%' : '15%';
+  let html = '';
+
+  if (outPlayers && outPlayers.length) {
+    const totalPen = outPlayers.reduce((s, p) => s + (RARITY_PENALTY[p.rarity] || 0), 0);
+    const rows = outPlayers.map(p => {
+      const pen = RARITY_PENALTY[p.rarity] || 0;
+      return `<div class="pred-inj-tooltip-row">
+        <span>${p.name}</span>
+        <span class="pred-inj-tooltip-games">${p.gamesMissed}G out</span>
+        <span class="pred-inj-tooltip-penalty">−${pen.toFixed(1)}</span>
+      </div>`;
+    }).join('');
+    html += `<span class="pred-inj-badge" title="">
+      <span class="pred-inj-icon">🏥</span>
+      <span class="pred-inj-tooltip">
+        <div class="pred-inj-tooltip-title">Injury penalty (−${Math.min(totalPen,10).toFixed(1)} pts)</div>
+        ${rows}
+      </span>
+    </span>`;
+  }
+
+  if (returnPlayers && returnPlayers.length) {
+    const totalBoost = returnPlayers.reduce((s, p) => {
+      const base = RARITY_PENALTY[p.rarity] || 0;
+      return s + base * (p.boostScale || 0);
+    }, 0);
+    const rows = returnPlayers.map(p => {
+      const base = RARITY_PENALTY[p.rarity] || 0;
+      const boost = base * (p.boostScale || 0);
+      return `<div class="pred-inj-tooltip-row">
+        <span>${p.name}</span>
+        <span class="pred-inj-tooltip-games">${p.gamesMissed}G out · ${RETURN_SCALE_LABEL(p.gamesMissed)} str</span>
+        <span class="pred-inj-tooltip-boost">+${boost.toFixed(1)}</span>
+      </div>`;
+    }).join('');
+    html += `<span class="pred-inj-badge returning" title="">
+      <span class="pred-inj-icon">💚</span>
+      <span class="pred-inj-tooltip">
+        <div class="pred-inj-tooltip-title">Return boost (+${Math.min(totalBoost,7).toFixed(1)} pts)</div>
+        ${rows}
+      </span>
+    </span>`;
+  }
+
+  return html;
+}
+
 function _predStreakStr(streak) {
   if (!streak) return 'W/L 0';
   return (streak > 0 ? 'W' : 'L') + Math.abs(streak);
@@ -8107,8 +8242,18 @@ const _ESPN_TEAM_SLUGS = {
   UTA:'utah-jazz',WAS:'washington-wizards',
 };
 
-// Statuses considered "out" vs "questionable"
+// Statuses considered "out" for injury impact purposes.
+// IR is included — we use consecutive games missed (≥10) to decide if the team has adjusted,
+// not the status label, since a player can be put on IR the day after they get hurt.
 const _INJ_OUT_STATUSES = ['out','doubtful','injured reserve','day-to-day'];
+
+// ESPN team IDs (stable across seasons) — used for the team schedule endpoint
+const _ESPN_TEAM_IDS = {
+  ATL:1,  BOS:2,  BKN:17, CHA:30, CHI:4,  CLE:5,  DAL:6,  DEN:7,
+  DET:8,  GSW:9,  HOU:10, IND:11, LAC:12, LAL:13, MEM:29, MIA:14,
+  MIL:15, MIN:16, NOP:3,  NYK:18, OKC:25, ORL:19, PHI:20, PHX:21,
+  POR:22, SAC:23, SAS:24, TOR:28, UTA:26, WAS:27,
+};
 
 async function _predFetchInjuries() {
   if (_predInjuryFetching) return _predInjuryCache;
@@ -8126,13 +8271,17 @@ async function _predFetchInjuries() {
       const abbr = teamObj.team?.abbreviation;
       if (!abbr) continue;
       byTeam[abbr] = (teamObj.injuries || []).map(inj => ({
-        name:     inj.athlete?.displayName || '?',
-        status:   (inj.status || '').toLowerCase(),
-        position: inj.athlete?.position?.abbreviation || '',
+        name:       inj.athlete?.displayName || '?',
+        status:     (inj.status || '').toLowerCase(),
+        position:   inj.athlete?.position?.abbreviation || '',
         injuryType: inj.injury?.type || '',
+        athleteId:  inj.athlete?.id || null,
       }));
     }
-    _predInjuryCache = { fetchedAt: Date.now(), byTeam };
+    // Look up how many consecutive team games each CARD_POOL player has missed.
+    // If ≥ 10, the team has fully adjusted and we won't penalize for that absence.
+    const consecMissed = await _predFetchConsecMissed(byTeam).catch(() => ({}));
+    _predInjuryCache = { fetchedAt: Date.now(), byTeam, consecMissed };
   } catch(e) {
     // Fail silently — picks generate without injury data
     _predInjuryCache = _predInjuryCache || { fetchedAt: Date.now(), byTeam: {} };
@@ -8141,33 +8290,158 @@ async function _predFetchInjuries() {
   return _predInjuryCache;
 }
 
-// Returns { scorePenalty, notable: [{name, status, position}] }
-// Significant = starter-caliber positions (G/F/C/PG/SG/SF/PF) who are out/doubtful
-function _predInjuryImpact(abbr, injuryCache) {
-  const injuries = (injuryCache?.byTeam?.[abbr] || []);
-  const STAR_PLAYERS_SET = new Set((STAR_PLAYERS[abbr] || []).map(p => p.name));
-  let penalty = 0;
-  const notable = [];
-  for (const inj of injuries) {
-    const isOut = _INJ_OUT_STATUSES.some(s => inj.status.includes(s));
-    if (!isOut) continue;
-    const isStar = STAR_PLAYERS_SET.has(inj.name);
-    const isStarter = ['PG','SG','SF','PF','C','G','F'].includes(inj.position);
-    if (isStar) {
-      penalty += 4.5;  // star out = big deal
-      notable.push(inj);
-    } else if (isStarter) {
-      penalty += 1.5;  // rotation piece
-      notable.push(inj);
+// For each injured CARD_POOL player, count how many consecutive team games they've missed
+// by cross-referencing the team's recent schedule against the player's game log.
+// Returns { athleteId: consecutiveGamesMissed }
+async function _predFetchConsecMissed(byTeam) {
+  const rarityMap = new Map((CARD_POOL || []).map(c => [c.name, c.rarity]));
+
+  // Collect CARD_POOL players who have an athleteId, deduplicated by athleteId
+  const athleteMap = new Map(); // athleteId → {name, teamAbbr}
+  const teamsNeeded = new Set();
+  for (const [abbr, injuries] of Object.entries(byTeam)) {
+    for (const inj of injuries) {
+      if (inj.athleteId && rarityMap.has(inj.name) && !athleteMap.has(inj.athleteId)) {
+        athleteMap.set(inj.athleteId, { name: inj.name, teamAbbr: abbr });
+        teamsNeeded.add(abbr);
+      }
     }
   }
-  return { scorePenalty: Math.min(penalty, 10), notable };
+  if (!athleteMap.size) return {};
+
+  // Fetch team schedules (last 20 completed games) in parallel — one call per team
+  const teamEventIds = {}; // abbr → [eventId, ...] newest-first
+  await Promise.all([...teamsNeeded].map(async abbr => {
+    const teamId = _ESPN_TEAM_IDS[abbr];
+    if (!teamId) return;
+    try {
+      const res = await fetch(
+        `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/${teamId}/schedule`
+      );
+      if (!res.ok) return;
+      const json = await res.json();
+      teamEventIds[abbr] = (json.events || [])
+        .filter(e => e.competitions?.[0]?.status?.type?.completed)
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 20)
+        .map(e => String(e.id));
+    } catch(e) { /* leave undefined — will default to 0 missed */ }
+  }));
+
+  // Fetch player game logs in parallel — one call per athlete
+  const consecMap = {};
+  await Promise.all([...athleteMap.entries()].map(async ([athleteId, { teamAbbr }]) => {
+    const schedule = teamEventIds[teamAbbr];
+    if (!schedule?.length) { consecMap[athleteId] = 0; return; }
+    try {
+      const res = await fetch(
+        `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/athletes/${athleteId}/gamelog`
+      );
+      if (!res.ok) { consecMap[athleteId] = schedule.length; return; }
+      const json = await res.json();
+      // Collect all event IDs the player actually appeared in
+      const playedIds = new Set();
+      // Game log structure: json.events.items or json.seasonTypes[].events.items
+      const extractItems = (obj) => {
+        if (Array.isArray(obj?.items)) obj.items.forEach(e => { if (e.id) playedIds.add(String(e.id)); });
+      };
+      extractItems(json.events);
+      (json.seasonTypes || []).forEach(st => extractItems(st.events));
+      // Walk team's schedule newest→oldest, count consecutive games without appearance
+      let consec = 0;
+      for (const eventId of schedule) {
+        if (playedIds.has(eventId)) break;
+        consec++;
+      }
+      consecMap[athleteId] = consec;
+    } catch(e) {
+      consecMap[athleteId] = 0; // on error, assume recent → apply penalty
+    }
+  }));
+
+  return consecMap;
 }
 
-// Fingerprint of current injury situation for a game (used to detect changes)
+// Statuses that mean a player might return for this game
+const _INJ_RETURN_STATUSES = ['questionable','probable'];
+
+// Penalty magnitude by card rarity. Players not in CARD_POOL are ignored —
+// if they aren't impactful enough to have a card, their absence doesn't move the needle.
+const _INJ_RARITY_PENALTY = {
+  gamebreaker: 5.0,
+  superstar:   4.0,
+  elite:       3.0,
+  clutch:      2.0,
+  impact:      1.0,
+  pro:         0.5,
+};
+
+// Return boost is a fraction of the player's rarity penalty, scaled down by how long they
+// were out — players returning from extended absences play limited minutes and need time to
+// find their footing again, so the boost tapers off the longer they were gone.
+function _injReturnScale(gamesMissed) {
+  if (gamesMissed <= 3)  return 0.70; // short absence — close to full strength
+  if (gamesMissed <= 9)  return 0.50; // moderate — some rust, possibly limited minutes
+  if (gamesMissed <= 19) return 0.30; // extended — minutes restriction likely
+  return 0.15;                         // long-term — essentially easing back in
+}
+
+// Returns { scorePenalty, scoreBoost, notable, returning }
+//   notable   — players confirmed out (used in reasoning notes)
+//   returning — players listed questionable/probable who missed ≥1 game (returning from injury)
+function _predInjuryImpact(abbr, injuryCache) {
+  const injuries = (injuryCache?.byTeam?.[abbr] || []);
+  const consecMissed = injuryCache?.consecMissed || {};
+  const rarityMap = new Map();
+  for (const card of (CARD_POOL || [])) {
+    if (!rarityMap.has(card.name)) rarityMap.set(card.name, card.rarity);
+  }
+
+  let penalty = 0;
+  let boost   = 0;
+  const notable   = [];
+  const returning = [];
+
+  for (const inj of injuries) {
+    const status = inj.status.toLowerCase();
+    const rarity = rarityMap.get(inj.name);
+    const baseImpact = rarity ? (_INJ_RARITY_PENALTY[rarity] || 0) : 0;
+    if (baseImpact <= 0) continue;
+
+    const gamesMissed = inj.athleteId != null ? (consecMissed[inj.athleteId] ?? 0) : 0;
+
+    const isOut = _INJ_OUT_STATUSES.some(s => status.includes(s));
+    const isReturning = _INJ_RETURN_STATUSES.some(s => status.includes(s));
+
+    if (isOut) {
+      // Skip penalty if team has played ≥10 games without them — fully adjusted
+      if (gamesMissed >= 10) continue;
+      penalty += baseImpact;
+      notable.push({ ...inj, rarity, gamesMissed });
+    } else if (isReturning && gamesMissed >= 1) {
+      // Player is on injury report but might play — boost proportional to their
+      // rarity but scaled down by how long they've been out
+      const scale = _injReturnScale(gamesMissed);
+      boost += baseImpact * scale;
+      returning.push({ ...inj, rarity, gamesMissed, boostScale: scale });
+    }
+  }
+
+  return {
+    scorePenalty: Math.min(penalty, 10),
+    scoreBoost:   Math.min(boost, 7),   // cap boost lower than penalty — it's uncertain
+    notable,
+    returning,
+  };
+}
+
+// Fingerprint of current injury situation for a game (used to detect changes).
+// Tracks both out and returning players so a status change (out→questionable) triggers
+// a re-evaluation of picks.
 function _predInjuryFingerprint(homeAbbr, awayAbbr, injuryCache) {
+  const allRelevant = [..._INJ_OUT_STATUSES, ..._INJ_RETURN_STATUSES];
   const sig = (abbr) => (injuryCache?.byTeam?.[abbr] || [])
-    .filter(i => _INJ_OUT_STATUSES.some(s => i.status.includes(s)))
+    .filter(i => allRelevant.some(s => i.status.includes(s)))
     .map(i => i.name + ':' + i.status).sort().join('|');
   return sig(homeAbbr) + '§' + sig(awayAbbr);
 }
@@ -8204,11 +8478,13 @@ async function _predGeneratePicks(games) {
     homeScore += (home.netRtg || 0) * 0.15;
     awayScore += (away.netRtg || 0) * 0.15;
 
-    // Injury adjustments — deduct from score for each significant player out
+    // Injury adjustments — deduct for confirmed absences, add partial boost for returns
     const homeInj = _predInjuryImpact(g.home, injuryCache);
     const awayInj = _predInjuryImpact(g.away, injuryCache);
     homeScore -= homeInj.scorePenalty;
     awayScore -= awayInj.scorePenalty;
+    homeScore += homeInj.scoreBoost;
+    awayScore += awayInj.scoreBoost;
 
     const rawDiff  = homeScore - awayScore;
     const powerDiff = Math.abs(home.power - away.power).toFixed(1);
@@ -8245,12 +8521,24 @@ async function _predGeneratePicks(games) {
     let injuryNote = '';
     const pickInj  = pick === g.home ? homeInj : awayInj;
     const loserInj = pick === g.home ? awayInj : homeInj;
+    // Return notes — show for either team
+    const pickReturn  = pickInj.returning  || [];
+    const loserReturn = loserInj.returning || [];
+    if (pickReturn.length) {
+      const names = pickReturn.slice(0, 2).map(i => i.name).join(' and ');
+      const caveat = pickReturn[0].gamesMissed >= 10 ? ', though expect limited minutes early on' : '';
+      injuryNote += ` ${pick} could get a boost with ${names} potentially returning${caveat}.`;
+    }
+    if (loserReturn.length) {
+      const names = loserReturn.slice(0, 2).map(i => i.name).join(' and ');
+      injuryNote += ` ${loser} may also have ${names} available — factor that in.`;
+    }
     if (loserInj.notable.length) {
       const names = loserInj.notable.slice(0, 2).map(i => i.name).join(' and ');
-      injuryNote = ` ${loser} is also short-handed with ${names} ${loserInj.notable.length > 1 ? 'both ' : ''}out.`;
+      injuryNote += ` ${loser} is also short-handed with ${names} ${loserInj.notable.length > 1 ? 'both ' : ''}out.`;
     } else if (pickInj.notable.length) {
       const names = pickInj.notable.slice(0, 2).map(i => i.name).join(' and ');
-      injuryNote = ` Worth noting: ${pick} is missing ${names} — this pick factors that in.`;
+      injuryNote += ` Worth noting: ${pick} is missing ${names} — this pick factors that in.`;
     }
 
     return {
@@ -8263,9 +8551,11 @@ async function _predGeneratePicks(games) {
       isUpset,
       reasoning: reasoning + injuryNote,
       injuries: {
-        home: homeInj.notable,
-        away: awayInj.notable,
-        fingerprint: _predInjuryFingerprint(g.home, g.away, injuryCache),
+        home:         homeInj.notable,
+        away:         awayInj.notable,
+        homeReturn:   homeInj.returning,
+        awayReturn:   awayInj.returning,
+        fingerprint:  _predInjuryFingerprint(g.home, g.away, injuryCache),
       },
       result:     null,
       finalScore: null,
@@ -8675,6 +8965,14 @@ async function renderPredictions() {
           pickRight = mlBadge + ' <span style="font-family:\'Barlow Condensed\',sans-serif;font-size:0.78rem;letter-spacing:2px;color:rgba(255,255,255,0.6);position:relative;z-index:1">CONF: ' + pick.confidence.toUpperCase() + '</span>';
         }
 
+        // Injury badges — built from stored notable/returning arrays on the pick
+        const awayInjBadge = _predInjBadgeHtml(
+          pick.injuries?.away, pick.injuries?.awayReturn
+        );
+        const homeInjBadge = _predInjBadgeHtml(
+          pick.injuries?.home, pick.injuries?.homeReturn
+        );
+
         return `<div class="pred-card ${cardClass}">
           <div class="pred-card-header">
             <div class="pred-card-header-bg" style="background:linear-gradient(90deg,${awayHex} 0%,transparent 55%)"></div>
@@ -8685,7 +8983,7 @@ async function renderPredictions() {
               </div>
               <div class="pred-team-info">
                 <div class="pred-team-rank">#${awayRank}</div>
-                <div class="pred-team-abbr">${pick.awayAbbr}</div>
+                <div class="pred-team-abbr">${pick.awayAbbr}${awayInjBadge}</div>
                 <div class="pred-team-rec">${awayT.wins}-${awayT.losses}</div>
               </div>
             </div>
@@ -8696,7 +8994,7 @@ async function renderPredictions() {
               </div>
               <div class="pred-team-info">
                 <div class="pred-team-rank">#${homeRank}</div>
-                <div class="pred-team-abbr">${pick.homeAbbr}</div>
+                <div class="pred-team-abbr">${pick.homeAbbr}${homeInjBadge}</div>
                 <div class="pred-team-rec">${homeT.wins}-${homeT.losses}</div>
               </div>
             </div>
