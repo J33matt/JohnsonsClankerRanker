@@ -10417,24 +10417,21 @@ function _sbToggleLeg(gameKey, type, awayAbbr, homeAbbr, ml, line, label) {
   if (existIdx !== -1) {
     // Remove this specific leg
     _sbSlip.splice(existIdx, 1);
-    if (!_sbSlip.length) _sbSlipMode = 'single';
+    // Drop back to single when only one leg remains
+    if (_sbSlip.length <= 1) _sbSlipMode = 'single';
   } else {
-    if (_sbSlipMode === 'parlay') {
-      // Parlay mode: check correlation rules
+    // Check parlay correlation rules before adding
+    if (_sbSlip.length >= 1) {
       const check = _sbCorrelationBlocked(leg, _sbSlip);
       if (check.blocked) {
         const warn = document.getElementById('sb-slip-warning');
         if (warn) { warn.textContent = check.reason; warn.style.display = 'block'; setTimeout(() => { if(warn) warn.style.display='none'; }, 3500); }
         return;
       }
-      _sbSlip.push(leg);
-    } else {
-      // Single mode: allow multiple legs, each placed as a separate bet
-      // But only one pick per game+side combination (no same type twice)
-      // Remove any conflicting same-game/same-type leg first (shouldn't happen, but safety)
-      _sbSlip = _sbSlip.filter(l => !(l.gameKey === gameKey && l.type === type));
-      _sbSlip.push(leg);
     }
+    _sbSlip.push(leg);
+    // Auto-switch to parlay when 2+ legs are on the slip
+    if (_sbSlip.length >= 2) _sbSlipMode = 'parlay';
   }
   _renderSbSlip();
   _renderSbGameButtons();
@@ -10460,12 +10457,9 @@ function _renderSbSlip() {
   }
 
   let html = '';
-  // Type toggle (only show if 2+ legs)
+  // Mode label (informational only — mode is automatic)
   if (_sbSlip.length >= 2) {
-    html += `<div class="sb-slip-type-toggle">
-      <button class="sb-slip-type-btn ${_sbSlipMode==='single'?'active':''}" onclick="_sbSetMode('single')">Singles</button>
-      <button class="sb-slip-type-btn ${_sbSlipMode==='parlay'?'active':''}" onclick="_sbSetMode('parlay')">Parlay</button>
-    </div>`;
+    html += `<div style="padding:6px 14px;font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:2px;color:var(--accent2);text-transform:uppercase;border-bottom:1px solid var(--border)">🎰 Parlay</div>`;
   }
 
   html += _sbSlip.map(leg => `
