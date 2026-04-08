@@ -8508,7 +8508,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   fetchESPNStreaks();
 
   // Generate today's picks first so moneylines are in localStorage before scores render
-  await _predEnsureTodaysPicks();
+  try { await _predEnsureTodaysPicks(); } catch(e) { console.warn('[init] _predEnsureTodaysPicks failed:', e); }
 
   const _savedTab = localStorage.getItem('activeTab');
   const _validTabs = ['rankings','scores','predictions','playoffs','simulator','draft','graph','sportsbook','cards'];
