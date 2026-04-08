@@ -8948,8 +8948,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (_tabBtn) showTab(_tabToLoad, _tabBtn);
 
   // One-time spread-polarity migration — remove after 2026-04-15
-  if (localStorage.getItem('spreadFixApplied') !== 'true') {
-    _sbFixSpreadBets().then(() => localStorage.setItem('spreadFixApplied', 'true'));
+  if (localStorage.getItem('spreadFixApplied') !== 'v2') {
+    _sbFixSpreadBets().then(() => localStorage.setItem('spreadFixApplied', 'v2'));
   }
 
   // Generate today's picks first so moneylines are in localStorage before scores render
@@ -10019,32 +10019,87 @@ async function _sbFixSpreadBets() {
   let bets;
   try { bets = await _sbLoadBets(); } catch(e) { return; }
   if (!bets || !bets.length) return;
-  let changed = false;
+
+  // Load profile so we can credit/fix stats — load fresh, don't rely on _sbProfile being set yet
+  await _sbLoadProfile();
+  const profile = _sbProfile;
+
+  let betsChanged = false;
+  let bankrollDelta = 0; // total to credit (loss→win corrections only)
+  let wDelta = 0, lDelta = 0, netDelta = 0, earnedDelta = 0, lostDelta = 0;
+
   for (const bet of bets) {
     if (bet.status !== 'settled' || !bet.legs) continue;
     const hasSpread = bet.legs.some(l => l.type === 'spread_away' || l.type === 'spread_home');
     if (!hasSpread) continue;
-    // Parse stored finalScore string "AWAY 112-108 HOME"
     if (!bet.finalScore || typeof bet.finalScore !== 'string') continue;
     const m = bet.finalScore.match(/(\d+)-(\d+)/);
     if (!m) continue;
     const awayScore = +m[1], homeScore = +m[2];
     const fakeGame = { homeScore, awayScore, isFinal: true };
-    // Re-grade each spread leg
-    let legResults = bet.legs.map(l => _sbGradeLeg(l, fakeGame) || 'pending');
-    const anyLoss = legResults.includes('loss');
+
+    const legResults = bet.legs.map(l => _sbGradeLeg(l, fakeGame) || 'pending');
+    const anyLoss    = legResults.includes('loss');
     const anyPending = legResults.includes('pending');
-    const allPush = legResults.every(r => r === 'push');
-    let newResult = anyLoss ? 'loss' : anyPending ? 'pending' : allPush ? 'push' : 'win';
-    if (newResult !== bet.result) {
-      bet.result = newResult;
-      const ml = bet.parlayML || bet.ml || 0;
-      bet.payout = newResult === 'win' ? bet.stake + _mlPayout(ml, bet.stake) : newResult === 'push' ? bet.stake : 0;
-      bet.net = bet.payout - bet.stake;
-      changed = true;
+    const allPush    = legResults.every(r => r === 'push');
+    const newResult  = anyLoss ? 'loss' : anyPending ? 'pending' : allPush ? 'push' : 'win';
+
+    if (newResult === bet.result) continue; // no change needed
+
+    const oldResult = bet.result;
+    const ml        = bet.parlayML || bet.ml || 0;
+    const oldPayout = bet.payout ?? 0;
+    const newPayout = newResult === 'win'  ? bet.stake + _mlPayout(ml, bet.stake)
+                    : newResult === 'push' ? bet.stake
+                    : 0;
+
+    // Update bet log always
+    bet.result  = newResult;
+    bet.payout  = newPayout;
+    bet.net     = newPayout - bet.stake;
+    bet.legResults = legResults;
+    bet._spreadFixed = true; // audit flag
+    betsChanged = true;
+
+    // --- Profile stat corrections (both directions) ---
+    // Undo old result's contribution to stats
+    if (oldResult === 'win')  { wDelta--; netDelta -= (oldPayout - bet.stake); earnedDelta -= (oldPayout - bet.stake); }
+    if (oldResult === 'loss') { lDelta--; netDelta += bet.stake; lostDelta -= bet.stake; }
+    // Apply new result's contribution to stats
+    if (newResult === 'win')  { wDelta++; netDelta += (newPayout - bet.stake); earnedDelta += (newPayout - bet.stake); }
+    if (newResult === 'loss') { lDelta++; netDelta -= bet.stake; lostDelta += bet.stake; }
+
+    // --- Bankroll correction: credit on loss→win only, never debit ---
+    if (oldResult === 'loss' && newResult === 'win') {
+      // User never received their winnings — credit stake (already deducted) + profit
+      bankrollDelta += newPayout;
+    } else if (oldResult === 'loss' && newResult === 'push') {
+      // Push returns stake — credit stake back
+      bankrollDelta += bet.stake;
+    } else if (oldResult === 'win' && newResult === 'loss') {
+      // User received a win they shouldn't have — fix log only, never claw back money
+      // Mark so the UI can note the correction if desired
+      bet._noClawback = true;
+    }
+    // push→win: credit the profit they missed (they already got stake back)
+    if (oldResult === 'push' && newResult === 'win') {
+      bankrollDelta += (newPayout - bet.stake);
     }
   }
-  if (changed) await _sbSaveBets(bets);
+
+  if (!betsChanged) return;
+  await _sbSaveBets(bets);
+
+  if (profile) {
+    if (bankrollDelta > 0) profile.bankroll = (profile.bankroll || 0) + bankrollDelta;
+    profile.allTimeW       = Math.max(0, (profile.allTimeW    || 0) + wDelta);
+    profile.allTimeL       = Math.max(0, (profile.allTimeL    || 0) + lDelta);
+    profile.allTimeNet     = (profile.allTimeNet     || 0) + netDelta;
+    profile.allTimeEarned  = Math.max(0, (profile.allTimeEarned || 0) + earnedDelta);
+    profile.allTimeLost    = Math.max(0, (profile.allTimeLost   || 0) + lostDelta);
+    await _sbSaveProfile();
+    console.log(`[spreadFix] Credited $${bankrollDelta.toFixed(2)} · W${wDelta > 0 ? '+' : ''}${wDelta} L${lDelta > 0 ? '+' : ''}${lDelta} Net${netDelta >= 0 ? '+' : ''}$${netDelta.toFixed(2)}`);
+  }
 }
 
 // ── Determine bet result from final scores ─────────────────────
