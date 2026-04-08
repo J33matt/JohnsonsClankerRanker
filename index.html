@@ -8474,16 +8474,21 @@ function showTab(id, btn) {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('[init] DOMContentLoaded start');
+  try {
   const now = new Date();
   document.getElementById('update-time').textContent = 'Updated ' + now.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' · ' + now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  console.log('[init] step 1: update-time ok');
 
   // One-time spread-polarity migration — remove after 2025-04-14
   if (localStorage.getItem('spreadFixApplied') !== 'true') {
     _sbFixSpreadBets().then(() => localStorage.setItem('spreadFixApplied', 'true'));
   }
+  console.log('[init] step 2: spreadfix ok');
 
   // Seed last-game map from static data so column shows immediately
   seedLastGameMap(RECENT_GAMES.map(g => ({ ...g, isFinal: g.status === 'final' })));
+  console.log('[init] step 3: seedLastGameMap ok');
 
   // Auto-inject a new weekly graph point if 7+ days have passed since last entry
   (function() {
@@ -8500,12 +8505,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       WEEKLY_RANKINGS.push({ date: dateStr, label, rankings: entries });
     }
   })();
+  console.log('[init] step 4: weekly graph ok');
 
   // Fetch live net ratings from ESPN stats API (falls back to NBAstuffer, then hardcoded)
   fetchLiveNetRatings();
+  console.log('[init] step 5: fetchLiveNetRatings ok');
 
   // Fetch authoritative streaks from ESPN standings API · fixes any stale hardcoded values
   fetchESPNStreaks();
+  console.log('[init] step 6: fetchESPNStreaks ok');
 
   // Restore last active tab immediately — does not depend on picks being loaded
   const _savedTab = localStorage.getItem('activeTab');
@@ -8527,6 +8535,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Auto-settle any open sportsbook bets in background
   _sbAutoSettle().catch(() => {});
+  } catch(e) { console.error('[init] CRASH:', e); }
 });
 
 // ============================================================
