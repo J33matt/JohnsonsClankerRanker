@@ -8881,6 +8881,7 @@ async function _predAutoGrade() {
 
 
 function showTab(id, btn) {
+  localStorage.setItem('activeTab', id);
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + id).classList.add('active');
@@ -8938,15 +8939,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Fetch authoritative streaks from ESPN standings API · fixes any stale hardcoded values
   fetchESPNStreaks();
 
-  // Generate today's picks first so moneylines are in localStorage before scores render
-  await _predEnsureTodaysPicks();
+  // Restore last active tab — must run before any await so a hung promise can't block it
+  const _savedTab = localStorage.getItem('activeTab');
+  const _validTabs = ['rankings','scores','predictions','playoffs','simulator','draft','graph','sportsbook','cards'];
+  const _tabToLoad = (_savedTab && _validTabs.includes(_savedTab)) ? _savedTab : 'rankings';
+  const _tabBtn = Array.from(document.querySelectorAll('.tab-btn'))
+    .find(b => (b.getAttribute('onclick') || '').includes(`'${_tabToLoad}'`));
+  if (_tabBtn) showTab(_tabToLoad, _tabBtn);
 
-  renderRankings();
+  // One-time spread-polarity migration — remove after 2026-04-15
+  if (localStorage.getItem('spreadFixApplied') !== 'true') {
+    _sbFixSpreadBets().then(() => localStorage.setItem('spreadFixApplied', 'true'));
+  }
+
+  // Generate today's picks first so moneylines are in localStorage before scores render
+  try { await _predEnsureTodaysPicks(); } catch(e) { console.warn('[init] _predEnsureTodaysPicks failed:', e); }
+
   renderScores(); // async · will update scores-container when done, then start poll loop
   renderPlayoffs();
   renderSimulator();
   renderDraft();
-  fetchAIAnalysis();
   // Graph is rendered lazily when tab is opened
 
   // Auto-settle any open sportsbook bets in background
@@ -9838,6 +9850,7 @@ async function _sbClaimNick(displayNick, uid, oldDisplayNick) {
 }
 
 // ── State ────────────────────────────────────────────────────
+let _sbBets = null;        // in-memory source of truth; null = not yet loaded
 let _sbSlip = [];          // array of leg objects on current slip
 let _sbSlipMode = 'single'; // 'single' | 'parlay'
 let _sbStake = 10;
@@ -9961,12 +9974,15 @@ async function _sbSaveLeaderboard() {
 
 // ── Bet persistence ───────────────────────────────────────────
 async function _sbLoadBets() {
+  if (_sbBets !== null) return _sbBets;
   try {
     const raw = await window.storage.get(SB_KEY_BETLIST);
-    return raw ? JSON.parse(raw.value) : [];
-  } catch(e) { return []; }
+    _sbBets = raw ? JSON.parse(raw.value) : [];
+  } catch(e) { _sbBets = []; }
+  return _sbBets;
 }
 async function _sbSaveBets(bets) {
+  _sbBets = bets; // update in-memory reference before async write
   try { await window.storage.set(SB_KEY_BETLIST, JSON.stringify(bets)); } catch(e) {}
 }
 
@@ -9994,6 +10010,41 @@ function _sbTotal(awayAbbr, homeAbbr) {
   const homeProjPts = homeN.ortg * 0.98;
   const total = Math.round((awayProjPts + homeProjPts) * 2) / 2; // round to 0.5
   return total;
+}
+
+// ── One-time spread-polarity migration ───────────────────────
+// Re-grades settled spread_home bets using the corrected formula.
+// Runs once per browser; gated by localStorage flag. Remove after 2026-04-15.
+async function _sbFixSpreadBets() {
+  let bets;
+  try { bets = await _sbLoadBets(); } catch(e) { return; }
+  if (!bets || !bets.length) return;
+  let changed = false;
+  for (const bet of bets) {
+    if (bet.status !== 'settled' || !bet.legs) continue;
+    const hasSpread = bet.legs.some(l => l.type === 'spread_away' || l.type === 'spread_home');
+    if (!hasSpread) continue;
+    // Parse stored finalScore string "AWAY 112-108 HOME"
+    if (!bet.finalScore || typeof bet.finalScore !== 'string') continue;
+    const m = bet.finalScore.match(/(\d+)-(\d+)/);
+    if (!m) continue;
+    const awayScore = +m[1], homeScore = +m[2];
+    const fakeGame = { homeScore, awayScore, isFinal: true };
+    // Re-grade each spread leg
+    let legResults = bet.legs.map(l => _sbGradeLeg(l, fakeGame) || 'pending');
+    const anyLoss = legResults.includes('loss');
+    const anyPending = legResults.includes('pending');
+    const allPush = legResults.every(r => r === 'push');
+    let newResult = anyLoss ? 'loss' : anyPending ? 'pending' : allPush ? 'push' : 'win';
+    if (newResult !== bet.result) {
+      bet.result = newResult;
+      const ml = bet.parlayML || bet.ml || 0;
+      bet.payout = newResult === 'win' ? bet.stake + _mlPayout(ml, bet.stake) : newResult === 'push' ? bet.stake : 0;
+      bet.net = bet.payout - bet.stake;
+      changed = true;
+    }
+  }
+  if (changed) await _sbSaveBets(bets);
 }
 
 // ── Determine bet result from final scores ─────────────────────
@@ -10027,7 +10078,7 @@ function _sbGradeLeg(leg, game) {
     return 'push';
   }
   if (type === 'spread_home') {
-    const margin = homeScore - line - awayScore;
+    const margin = homeScore + line - awayScore;
     if (margin > 0) return 'win';
     if (margin < 0) return 'loss';
     return 'push';
@@ -11297,7 +11348,8 @@ function _renderSbLeaderboard(entries) {
     const rankColor = rank === 0 ? '#ffd700' : rank === 1 ? '#c0c0c0' : rank === 2 ? '#cd7f32' : 'var(--muted)';
     const rankDisplay = e._notInTop ? '—' : (rank < 3 ? medals[rank] : `#${rank + 1}`);
     const record = `${e.w || 0}W–${e.l || 0}L`;
-    const bal = e.bankroll || 0;
+    // Use live in-memory bankroll for current user so Balance column matches header exactly
+    const bal = isYou && _sbProfile ? _sbProfile.bankroll : (e.bankroll || 0);
     const balColor = bal >= 100 ? 'var(--green)' : 'var(--red)';
     const rowBg = isYou ? 'background:rgba(255,170,0,0.06);' : e._notInTop ? 'background:rgba(255,255,255,0.02);font-style:italic;' : '';
     const youBorder = isYou ? 'border-left:3px solid var(--accent2);' : '';
