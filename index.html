@@ -9232,11 +9232,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     border-top: 1px solid var(--border); margin-top: 12px;
   }
   .sb-stake-label { font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+  .sb-stake-wrap { display: flex; align-items: center; gap: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; transition: border-color 0.2s; }
+  .sb-stake-wrap:focus-within { border-color: var(--accent2); }
+  .sb-stake-step { background: var(--surface2); border: none; color: var(--muted); font-size: 1.1rem; padding: 0 12px; cursor: pointer; height: 38px; line-height: 38px; transition: color 0.15s, background 0.15s; flex-shrink: 0; user-select: none; }
+  .sb-stake-step:hover { color: var(--text); background: rgba(255,255,255,0.08); }
   .sb-stake-input {
-    flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    flex: 1; background: var(--surface2); border: none; border-left: 1px solid var(--border); border-right: 1px solid var(--border);
     color: var(--text); font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 2px;
-    padding: 8px 12px; outline: none; transition: border-color 0.2s; width: 100%;
+    padding: 8px 8px; outline: none; width: 0; min-width: 0; text-align: center;
   }
+  .sb-stake-input::-webkit-inner-spin-button, .sb-stake-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .sb-stake-input[type=number] { -moz-appearance: textfield; }
   .sb-stake-input:focus { border-color: var(--accent2); }
   .sb-quick-stakes { display: flex; gap: 6px; padding: 0 14px 12px; flex-wrap: wrap; }
   .sb-quick-btn { font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; letter-spacing: 1px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); cursor: pointer; transition: all 0.15s; }
@@ -10893,7 +10899,11 @@ async function renderSportsbook() {
         <div id="sb-slip-warning" class="sb-slip-warning" style="display:none"></div>
         <div style="padding:0 14px 4px">
           <div class="sb-stake-label" style="margin-bottom:6px">Stake per bet</div>
-          <input class="sb-stake-input" id="sb-stake-input" type="number" min="0.01" step="5" max="10000" value="${_sbStake}" oninput="_sbUpdateStake(this.value)" placeholder="$ amount">
+          <div class="sb-stake-wrap">
+            <button class="sb-stake-step" onclick="_sbStepStake(-5)">−</button>
+            <input class="sb-stake-input" id="sb-stake-input" type="number" min="0.01" step="any" max="10000" value="${_sbStake}" oninput="_sbUpdateStake(this.value)" placeholder="$ amount">
+            <button class="sb-stake-step" onclick="_sbStepStake(5)">+</button>
+          </div>
         </div>
         <div class="sb-quick-stakes">
           <button class="sb-quick-btn" onclick="_sbQuickStake(5)">$5</button>
@@ -11896,6 +11906,13 @@ function _sbUpdateStake(val) {
 
 function _sbQuickStake(amount) {
   _sbStake = Math.max(0.01, Math.round(amount * 100) / 100);
+  const inp = document.getElementById('sb-stake-input');
+  if (inp) inp.value = _sbStake;
+  _renderSbSlip();
+}
+
+function _sbStepStake(delta) {
+  _sbStake = Math.max(0.01, Math.round((_sbStake + delta) * 100) / 100);
   const inp = document.getElementById('sb-stake-input');
   if (inp) inp.value = _sbStake;
   _renderSbSlip();
