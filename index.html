@@ -10285,13 +10285,17 @@ async function _sbAutoSettle() {
           _sbProfile.brokeCount = (_sbProfile.brokeCount || 0) + 1;
         }
       }
-      // Record bankroll snapshot in history
-      if (!_sbProfile.history) _sbProfile.history = [];
+      // Record bankroll snapshot in history only when all bets for the day are settled.
+      // This prevents a mid-day snapshot with funds still locked in open bets.
       const snapDate = localDateStr(new Date());
-      const last = _sbProfile.history[_sbProfile.history.length - 1];
-      if (!last || last.date !== snapDate || Math.abs(last.balance - _sbProfile.bankroll) > 0.009) {
-        _sbProfile.history.push({ date: snapDate, balance: _sbProfile.bankroll });
-        if (_sbProfile.history.length > 90) _sbProfile.history = _sbProfile.history.slice(-90);
+      const stillOpen = bets.some(b => b.status === 'open' && b.date === snapDate);
+      if (!stillOpen) {
+        if (!_sbProfile.history) _sbProfile.history = [];
+        const last = _sbProfile.history[_sbProfile.history.length - 1];
+        if (!last || last.date !== snapDate || Math.abs(last.balance - _sbProfile.bankroll) > 0.009) {
+          _sbProfile.history.push({ date: snapDate, balance: _sbProfile.bankroll });
+          if (_sbProfile.history.length > 90) _sbProfile.history = _sbProfile.history.slice(-90);
+        }
       }
       await _sbSaveProfile();
       await _sbSaveLeaderboard();
@@ -10840,7 +10844,12 @@ async function renderSportsbook() {
   }
 
   // Bankroll chart (only if there's history)
-  const hist = _sbProfile.history || [];
+  // Deduplicate history by date, keeping only the last entry per day.
+  // This removes stale mid-day snapshots (e.g. recorded at midnight with open bets).
+  const _histRaw = _sbProfile.history || [];
+  const _histMap = new Map();
+  for (const h of _histRaw) _histMap.set(h.date, h);
+  const hist = [..._histMap.values()].sort((a, b) => a.date.localeCompare(b.date));
   if (hist.length >= 2) {
     html += `<div class="sb-bankroll-chart-wrap">
       <div class="sb-section-label" style="margin-bottom:12px">📈 Bankroll History</div>
