@@ -11606,7 +11606,13 @@ function _renderSbBetCard(bet, opts = {}) {
       } else if (bet.result === 'push') {
         legResult = 'push';
       } else {
-        legResult = 'pending'; // loss but no per-leg data — keep gray
+        // No stored per-leg data (old bet) — try to grade from game cache
+        const allGames = (_sbEnrichedGamesCache || []).concat(_sbGames || []);
+        const legGame = allGames.find(g =>
+          (g.home === l.homeAbbr && g.away === l.awayAbbr) ||
+          (g.home === l.awayAbbr && g.away === l.homeAbbr)
+        );
+        legResult = legGame ? _sbGradeLeg(l, legGame) : null;
       }
     } else if (isParlay) {
       // For pending parlays, grade each leg whose game is already final
