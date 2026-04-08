@@ -2812,6 +2812,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+<link rel="stylesheet" href="cards-base.css">
+<link rel="stylesheet" href="cards-animations.css">
 </head>
 <body>
 
@@ -2838,6 +2840,7 @@
     <button class="tab-btn" onclick="showTab('simulator', this)">Simulator</button>
     <button class="tab-btn" onclick="showTab('draft', this)">Draft</button>
     <button class="tab-btn" onclick="showTab('graph', this)">Graph</button>
+    <button class="tab-btn" onclick="showTab('cards', this)">🃏 Cards</button>
   </div>
 </div>
 
@@ -2978,6 +2981,12 @@
   <div id="panel-sportsbook" class="panel">
     <div id="sb-container">
       <div class="loading-spinner"><div class="spinner"></div>Loading Sportsbook…</div>
+    </div>
+  </div>
+
+  <div id="panel-cards" class="panel">
+    <div id="cards-container">
+      <div class="loading-spinner"><div class="spinner"></div>Loading Cards…</div>
     </div>
   </div>
 
@@ -11823,5 +11832,7 @@ function _sbQuickFavParlay() {
 }
 
 </script>
+<script src="cards-data.js"></script>
+<script src="cards-logic.js"></script>
 </body>
 </html>
