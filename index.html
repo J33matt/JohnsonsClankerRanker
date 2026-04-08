@@ -8090,8 +8090,93 @@ function _predBuildReasoning(winner, loser, winnerData, loserData, isHome, power
   return templates[Math.floor(rnd(7) * templates.length)];
 }
 
+// ── INJURY FETCHING & IMPACT ─────────────────────────────────
+let _predInjuryCache = null;      // { fetchedAt, byTeam: { ABBR: [{name, status, position}] } }
+let _predInjuryFetching = false;
+
+// ESPN abbr → internal abbr map for injury endpoint (ESPN uses full city names in team slug)
+const _ESPN_TEAM_SLUGS = {
+  ATL:'atlanta-hawks',BOS:'boston-celtics',BKN:'brooklyn-nets',CHA:'charlotte-hornets',
+  CHI:'chicago-bulls',CLE:'cleveland-cavaliers',DAL:'dallas-mavericks',DEN:'denver-nuggets',
+  DET:'detroit-pistons',GSW:'golden-state-warriors',HOU:'houston-rockets',IND:'indiana-pacers',
+  LAC:'la-clippers',LAL:'los-angeles-lakers',MEM:'memphis-grizzlies',MIA:'miami-heat',
+  MIL:'milwaukee-bucks',MIN:'minnesota-timberwolves',NOP:'new-orleans-pelicans',
+  NYK:'new-york-knicks',OKC:'oklahoma-city-thunder',ORL:'orlando-magic',
+  PHI:'philadelphia-76ers',PHX:'phoenix-suns',POR:'portland-trail-blazers',
+  SAC:'sacramento-kings',SAS:'san-antonio-spurs',TOR:'toronto-raptors',
+  UTA:'utah-jazz',WAS:'washington-wizards',
+};
+
+// Statuses considered "out" vs "questionable"
+const _INJ_OUT_STATUSES = ['out','doubtful','injured reserve','day-to-day'];
+
+async function _predFetchInjuries() {
+  if (_predInjuryFetching) return _predInjuryCache;
+  // Cache for 20 minutes
+  if (_predInjuryCache && (Date.now() - _predInjuryCache.fetchedAt) < 20 * 60 * 1000) {
+    return _predInjuryCache;
+  }
+  _predInjuryFetching = true;
+  try {
+    const res = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/injuries');
+    if (!res.ok) throw new Error(res.status);
+    const json = await res.json();
+    const byTeam = {};
+    for (const teamObj of (json.injuries || [])) {
+      const abbr = teamObj.team?.abbreviation;
+      if (!abbr) continue;
+      byTeam[abbr] = (teamObj.injuries || []).map(inj => ({
+        name:     inj.athlete?.displayName || '?',
+        status:   (inj.status || '').toLowerCase(),
+        position: inj.athlete?.position?.abbreviation || '',
+        injuryType: inj.injury?.type || '',
+      }));
+    }
+    _predInjuryCache = { fetchedAt: Date.now(), byTeam };
+  } catch(e) {
+    // Fail silently — picks generate without injury data
+    _predInjuryCache = _predInjuryCache || { fetchedAt: Date.now(), byTeam: {} };
+  }
+  _predInjuryFetching = false;
+  return _predInjuryCache;
+}
+
+// Returns { scorePenalty, notable: [{name, status, position}] }
+// Significant = starter-caliber positions (G/F/C/PG/SG/SF/PF) who are out/doubtful
+function _predInjuryImpact(abbr, injuryCache) {
+  const injuries = (injuryCache?.byTeam?.[abbr] || []);
+  const STAR_PLAYERS_SET = new Set((STAR_PLAYERS[abbr] || []).map(p => p.name));
+  let penalty = 0;
+  const notable = [];
+  for (const inj of injuries) {
+    const isOut = _INJ_OUT_STATUSES.some(s => inj.status.includes(s));
+    if (!isOut) continue;
+    const isStar = STAR_PLAYERS_SET.has(inj.name);
+    const isStarter = ['PG','SG','SF','PF','C','G','F'].includes(inj.position);
+    if (isStar) {
+      penalty += 4.5;  // star out = big deal
+      notable.push(inj);
+    } else if (isStarter) {
+      penalty += 1.5;  // rotation piece
+      notable.push(inj);
+    }
+  }
+  return { scorePenalty: Math.min(penalty, 10), notable };
+}
+
+// Fingerprint of current injury situation for a game (used to detect changes)
+function _predInjuryFingerprint(homeAbbr, awayAbbr, injuryCache) {
+  const sig = (abbr) => (injuryCache?.byTeam?.[abbr] || [])
+    .filter(i => _INJ_OUT_STATUSES.some(s => i.status.includes(s)))
+    .map(i => i.name + ':' + i.status).sort().join('|');
+  return sig(homeAbbr) + '§' + sig(awayAbbr);
+}
+
 async function _predGeneratePicks(games) {
   const todayStr = localDateStr(new Date());
+
+  // Fetch injuries once for all games
+  const injuryCache = await _predFetchInjuries().catch(() => null);
 
   const picks = games.map(g => {
     const home = _predGetTeamData(g.home);
@@ -8118,6 +8203,12 @@ async function _predGeneratePicks(games) {
     // Net rating is already baked into power score but add a small extra weight
     homeScore += (home.netRtg || 0) * 0.15;
     awayScore += (away.netRtg || 0) * 0.15;
+
+    // Injury adjustments — deduct from score for each significant player out
+    const homeInj = _predInjuryImpact(g.home, injuryCache);
+    const awayInj = _predInjuryImpact(g.away, injuryCache);
+    homeScore -= homeInj.scorePenalty;
+    awayScore -= awayInj.scorePenalty;
 
     const rawDiff  = homeScore - awayScore;
     const powerDiff = Math.abs(home.power - away.power).toFixed(1);
@@ -8150,6 +8241,18 @@ async function _predGeneratePicks(games) {
       pick, loser, pickData, loserData, pickIsHome, powerDiff, isUpset, seed
     );
 
+    // Build injury note for reasoning
+    let injuryNote = '';
+    const pickInj  = pick === g.home ? homeInj : awayInj;
+    const loserInj = pick === g.home ? awayInj : homeInj;
+    if (loserInj.notable.length) {
+      const names = loserInj.notable.slice(0, 2).map(i => i.name).join(' and ');
+      injuryNote = ` ${loser} is also short-handed with ${names} ${loserInj.notable.length > 1 ? 'both ' : ''}out.`;
+    } else if (pickInj.notable.length) {
+      const names = pickInj.notable.slice(0, 2).map(i => i.name).join(' and ');
+      injuryNote = ` Worth noting: ${pick} is missing ${names} — this pick factors that in.`;
+    }
+
     return {
       game:     `${g.away} @ ${g.home}`,
       homeAbbr: g.home,
@@ -8158,7 +8261,12 @@ async function _predGeneratePicks(games) {
       pick,
       confidence,
       isUpset,
-      reasoning,
+      reasoning: reasoning + injuryNote,
+      injuries: {
+        home: homeInj.notable,
+        away: awayInj.notable,
+        fingerprint: _predInjuryFingerprint(g.home, g.away, injuryCache),
+      },
       result:     null,
       finalScore: null,
       homeML: g.homeML || null,
@@ -8172,6 +8280,51 @@ async function _predGeneratePicks(games) {
   _attachMoneylines(picks, todayOdds);
 
   return picks;
+}
+
+// ── INJURY REFRESH ────────────────────────────────────────────
+// Re-generates picks for any game where the injury situation has changed
+// since picks were first generated. Only runs while picks are unlocked.
+async function _predRefreshForInjuries() {
+  const activeDate = _predActiveDate();
+  const stored = await _storageGet(_predKey(activeDate));
+  if (!stored) return;
+  const data = JSON.parse(stored.value);
+  if (!data.picks || !data.picks.length) return;
+
+  // Fetch fresh injury data (cache is 20 min so this is cheap)
+  const injuryCache = await _predFetchInjuries().catch(() => null);
+  if (!injuryCache) return;
+
+  let changed = false;
+  for (const pick of data.picks) {
+    if (pick.result) continue; // already graded, don't touch
+    const currentFP = _predInjuryFingerprint(pick.homeAbbr, pick.awayAbbr, injuryCache);
+    const storedFP  = pick.injuries?.fingerprint || '';
+    if (currentFP === storedFP) continue; // no change
+
+    // Injury situation changed — regenerate this pick
+    const g = { home: pick.homeAbbr, away: pick.awayAbbr,
+                 tipDisplay: pick.tipTime, homeML: pick.homeML, awayML: pick.awayML,
+                 eventId: pick.eventId };
+    const [regenerated] = await _predGeneratePicks([g]);
+    if (!regenerated) continue;
+
+    // Preserve graded fields, update everything else
+    pick.pick        = regenerated.pick;
+    pick.confidence  = regenerated.confidence;
+    pick.isUpset     = regenerated.isUpset;
+    pick.reasoning   = regenerated.reasoning;
+    pick.injuries    = regenerated.injuries;
+    pick._injuryUpdated = new Date().toISOString();
+    changed = true;
+    console.log(`[injuries] Refreshed pick for ${pick.homeAbbr} vs ${pick.awayAbbr} — injury situation changed`);
+  }
+
+  if (changed) {
+    await _storageSet(_predKey(activeDate), JSON.stringify(data));
+  }
+  return changed;
 }
 
 // ── GRADE PICKS ───────────────────────────────────────────────
@@ -8334,11 +8487,21 @@ async function renderPredictions() {
   if (!picksArea) return;
 
   if (storedData && storedData.picks && storedData.picks.length) {
-    const picks = storedData.picks;
+    let picks = storedData.picks;
     // Note: this block uses await so the outer renderPredictions must be async (it is)
     const graded = picks.filter(p => p.result);
     const dayW   = graded.filter(p => p.result === 'correct').length;
     const locked  = isToday ? _predPicksLocked(picks, games) : true;
+
+    // If picks aren't locked yet, check for injury changes and refresh affected picks
+    if (isToday && !locked) {
+      const injuryChanged = await _predRefreshForInjuries().catch(() => false);
+      if (injuryChanged) {
+        // Reload updated picks from storage
+        const refreshed = await _storageGet(_predKey(viewDate));
+        if (refreshed) picks = JSON.parse(refreshed.value).picks || picks;
+      }
+    }
 
     let html = '';
     // Load daily bet ledger for summary line
@@ -8548,10 +8711,10 @@ async function renderPredictions() {
                 <img src="${getLogoUrl(pick.pick)}" alt="${pick.pick}" onerror="this.style.display='none'">
               </div>
               <div class="pred-pick-text">
-                <span class="pred-pick-label-text">PICK</span>
+                <span class="pred-pick-label-text">PICK${pick._injuryUpdated ? ' <span style="font-size:0.58rem;letter-spacing:1px;color:var(--red);border:1px solid rgba(255,51,85,0.4);border-radius:3px;padding:0 4px;margin-left:4px;vertical-align:middle">⚕ INJURY UPDATE</span>' : ''}</span>
                 <span class="pred-pick-name">${pick.pick}</span>
               </div>
-              
+
             </div>
             <div class="pred-pick-right">${pickRight}</div>
           </div>
