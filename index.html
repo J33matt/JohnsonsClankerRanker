@@ -10172,10 +10172,13 @@ async function _sbAutoSettle() {
       if (finalResult === 'win') payout = bet.stake + _mlPayout(bet.parlayML, bet.stake);
       else if (finalResult === 'push') payout = bet.stake;
       else payout = 0;
-      // Store per-leg results so circles fill in correctly
+      // Store per-leg results so circles fill in correctly for all legs,
+      // including legs after a losing leg (parlay is dead but results are still shown)
       bet.legResults = bet.legs.map(l => {
         const g = games.find(g => g.home === l.homeAbbr && g.away === l.awayAbbr);
-        return (g && g.isFinal) ? _sbGradeLeg(l, g) : (finalResult === 'win' ? 'win' : 'pending');
+        if (g && g.isFinal) return _sbGradeLeg(l, g);
+        if (finalResult === 'win') return 'win';
+        return null; // game not yet final — show empty dot
       });
     }
 
@@ -11259,7 +11262,7 @@ function _renderBotPicks(botBets, enrichedGames) {
     }).join('');
 
     const netDisplay = !isPending
-      ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${bet.net >= 0 ? 'var(--green)' : 'var(--red)'}">${bet.net >= 0 ? '+' : ''}$${Math.abs(bet.net).toFixed(2)}</span>`
+      ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${bet.net >= 0 ? 'var(--green)' : 'var(--red)'}">${bet.net >= 0 ? '+' : ''}$${Math.abs(bet.net).toFixed(2)}</span>${isLoss ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);margin-left:6px">would have paid +$${potProfit}</span>` : ''}`
       : `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--green)">To win +$${potProfit}</span>`;
 
     return `<div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.05)">
@@ -11658,7 +11661,7 @@ function _renderSbBetCard(bet, opts = {}) {
       <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:${cardAccent};border-bottom:1px solid rgba(255,255,255,0.05)">
         ${resultPill}
         <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;color:var(--muted);letter-spacing:0.5px">${isParlay ? `${legs.length}-Leg Parlay · ${parlayOdds}` : `Single · ${parlayOdds}`}</span>
-        ${!isPending && bet.net != null ? `<span style="margin-left:auto;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1px;color:${bet.net >= 0 ? 'var(--green)' : 'var(--red)'};">${bet.net >= 0 ? '+' : ''}$${Math.abs(bet.net).toFixed(2)}</span>` : ''}
+        ${!isPending && bet.net != null ? `<span style="margin-left:auto;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1px;color:${bet.net >= 0 ? 'var(--green)' : 'var(--red)'};">${bet.net >= 0 ? '+' : ''}$${Math.abs(bet.net).toFixed(2)}</span>${isLoss ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);margin-left:6px">would have paid +$${_mlPayout(isParlay ? bet.parlayML : (bet.ml || legs[0]?.ml), bet.stake).toFixed(2)}</span>` : ''}` : ''}
       </div>
       ${parlayBanner}
       ${legsHtml}
