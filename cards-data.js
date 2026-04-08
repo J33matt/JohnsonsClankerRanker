@@ -508,9 +508,9 @@ const CARD_POOL = [
     off:60, def:80, clutch:68, cons:78, ath:76,
     desc:'UNIT ALEX CARUSO. Defensive specialist with steal rate in elite tier for role player classification. Hustle and competitive threshold above average. Clanker-certified chaos agent on the defensive end.' },
 
-  { id:'okc_mccain', pid:1642272, name:'Jared McCain', team:'OKC', pos:'SG', rarity:'pro', no:6,
+  { id:'phi_mccain', pid:1642272, name:'Jared McCain', team:'OKC', pos:'SG', rarity:'pro', no:6,
     off:74, def:64, clutch:70, cons:70, ath:76,
-    desc:'UNIT JARED McCAIN. Young scoring guard with three-point shooting as primary function. Oklahoma City developmental unit. Output per-minute metrics encouraging.' },
+    desc:'UNIT JARED McCAIN. Young scoring guard with three-point shooting as primary function. Oklahoma City unit. Output per-minute metrics encouraging.' },
 
   { id:'okc_jwilliams2', pid:1631119, name:'Jaylin Williams', team:'OKC', pos:'PF', rarity:'pro', no:6,
     off:64, def:74, clutch:62, cons:74, ath:76,
