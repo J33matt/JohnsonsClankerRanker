@@ -10893,7 +10893,7 @@ async function renderSportsbook() {
         <div id="sb-slip-warning" class="sb-slip-warning" style="display:none"></div>
         <div style="padding:0 14px 4px">
           <div class="sb-stake-label" style="margin-bottom:6px">Stake per bet</div>
-          <input class="sb-stake-input" id="sb-stake-input" type="number" min="1" max="10000" value="${_sbStake}" oninput="_sbUpdateStake(this.value)" placeholder="$ amount">
+          <input class="sb-stake-input" id="sb-stake-input" type="number" min="0.01" step="0.01" max="10000" value="${_sbStake}" oninput="_sbUpdateStake(this.value)" placeholder="$ amount">
         </div>
         <div class="sb-quick-stakes">
           <button class="sb-quick-btn" onclick="_sbQuickStake(5)">$5</button>
@@ -11895,7 +11895,7 @@ function _sbUpdateStake(val) {
 }
 
 function _sbQuickStake(amount) {
-  _sbStake = Math.max(1, Math.round(amount));
+  _sbStake = Math.max(0.01, Math.round(amount * 100) / 100);
   const inp = document.getElementById('sb-stake-input');
   if (inp) inp.value = _sbStake;
   _renderSbSlip();
