@@ -2982,10 +2982,10 @@
 <div class="nav-tabs" style="padding: 0 0;">
   <div class="nav-tabs-inner" style="max-width:1400px; margin:0 auto; padding:0 40px; display:flex; width:100%;">
     <button class="tab-btn active" onclick="showTab('rankings', this)">Rankings</button>
-    <button class="tab-btn" onclick="showTab('sportsbook', this)">🎰 Sportsbook</button>
     <button class="tab-btn" onclick="showTab('predictions', this)">Picks</button>
+    <button class="tab-btn" onclick="showTab('playoffs', this)">Playoffs</button>
     <button class="tab-btn" onclick="showTab('simulations', this)">Simulations</button>
-    <button class="tab-btn" onclick="showTab('simulator', this)">Simulator</button>
+    <button class="tab-btn" onclick="showTab('sportsbook', this)">🎰 Sportsbook</button>
     <button class="tab-btn" onclick="showTab('cards', this)">🃏 Cards</button>
   </div>
 </div>
@@ -3021,13 +3021,20 @@
 
   <!-- SCORES -->
 
+  <!-- PLAYOFFS -->
+  <div id="panel-playoffs" class="panel">
+    <div id="playoffs-container">
+      <div class="loading-spinner"><div class="spinner"></div>Loading playoffs…</div>
+    </div>
+  </div>
+
   <!-- SIMULATIONS -->
   <div id="panel-simulations" class="panel">
     <div class="sim-subtab-bar">
-      <button class="sim-subtab-btn active" id="sim-tab-playoffs" onclick="_simShowTab('playoffs')">
+      <button class="sim-subtab-btn active" id="sim-tab-season" onclick="_simShowTab('season')">
         <span class="sim-subtab-icon">🏆</span>
-        <span class="sim-subtab-label">Playoffs</span>
-        <span class="sim-subtab-desc">Simulate the postseason</span>
+        <span class="sim-subtab-label">Season</span>
+        <span class="sim-subtab-desc">Simulate the full NBA season</span>
       </button>
       <button class="sim-subtab-btn" id="sim-tab-draft" onclick="_simShowTab('draft')">
         <span class="sim-subtab-icon">📋</span>
@@ -3035,34 +3042,9 @@
         <span class="sim-subtab-desc">Simulate the NBA Draft</span>
       </button>
     </div>
-    <div id="sim-content-playoffs" class="sim-subtab-content active">
-      <!-- Playoffs content injected here by renderPlayoffs() -->
+    <div id="sim-content-season" class="sim-subtab-content active">
     </div>
     <div id="sim-content-draft" class="sim-subtab-content">
-      <!-- Draft content injected here by renderDraft() -->
-    </div>
-  </div>
-
-  <!-- SIMULATOR -->
-  <div id="panel-simulator" class="panel">
-    <div class="section-header">
-      <div class="section-title">Season Simulator</div>
-      <div class="section-sub">Simulate remaining games · Project playoffs · Run the postseason</div>
-    </div>
-    <div id="simulator-container">
-      <div class="loading-spinner"><div class="spinner"></div>Loading simulator...</div>
-    </div>
-    <div id="news-section-sim" style="display:none;margin-top:40px">
-      <div class="section-header">
-        <div class="section-title">📰 Playoff Dispatch</div>
-        <div class="section-sub">Sim-generated headlines from this run</div>
-      </div>
-      <div id="news-container">
-        <div style="text-align:center;padding:80px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.85rem;text-transform:uppercase">
-          <div style="font-size:2rem;margin-bottom:16px">📰</div>
-          Run the Season Simulator first to generate news stories
-        </div>
-      </div>
     </div>
   </div>
 
@@ -4164,8 +4146,8 @@ async function pollAndRefreshAll() {
 
 
   // Re-render other tabs only if visible (avoids resetting bracket picks)
+  if (document.getElementById('panel-playoffs') && document.getElementById('panel-playoffs').classList.contains('active')) renderPlayoffs();
   if (document.getElementById('panel-simulations') && document.getElementById('panel-simulations').classList.contains('active')) _simShowTab(_simActiveSubtab);
-  if (document.getElementById('panel-simulator') && document.getElementById('panel-simulator').classList.contains('active')) renderSimulator();
 
   // Auto-grade any pending predictions now that new games have finished
   _predAutoGrade();
@@ -4846,17 +4828,17 @@ function seedConference(conf) {
   return teams;
 }
 
-let _simActiveSubtab = 'playoffs';
+let _simActiveSubtab = 'season';
 
 function _simShowTab(which) {
   _simActiveSubtab = which;
-  ['playoffs','draft'].forEach(tab => {
+  ['season','draft'].forEach(tab => {
     const btn = document.getElementById('sim-tab-' + tab);
     const content = document.getElementById('sim-content-' + tab);
     if (btn) btn.classList.toggle('active', tab === which);
     if (content) content.classList.toggle('active', tab === which);
   });
-  if (which === 'playoffs') renderPlayoffs();
+  if (which === 'season') renderSimulator();
   else renderDraft();
 }
 
@@ -5641,7 +5623,7 @@ function renderPlayoffs() {
   // ================================================================
   // INITIAL RENDER
   // ================================================================
-  const container = document.getElementById('sim-content-playoffs');
+  const container = document.getElementById('playoffs-container');
 
   // Controls
   let ctrlHtml = `<div class="bracket-controls">
@@ -6072,7 +6054,7 @@ function renderDraft() {
 // SEASON SIMULATOR
 // ============================================================
 function renderSimulator() {
-  document.getElementById('simulator-container').innerHTML = `
+  document.getElementById('sim-content-season').innerHTML = `
     <div class="sim-tab-layout">
       <div class="sim-run-bar">
         <button class="sim-run-btn" id="sim-season-btn" onclick="runSeasonSim()">▶ Simulate Season</button>
@@ -8823,8 +8805,8 @@ function showTab(id, btn) {
     const c = document.getElementById('predictions-container');
     if (c) c.innerHTML = '<div class="pred-no-games">Error loading predictions: ' + (e.message || 'unknown error') + '</div>';
   });
+  if (id === 'playoffs') renderPlayoffs();
   if (id === 'simulations') _simShowTab(_simActiveSubtab);
-  if (id === 'simulator') renderSimulator();
   if (id === 'sportsbook') renderSportsbook();
 }
 
@@ -8846,7 +8828,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Restore last active tab — must run before any await so a hung promise can't block it
   const _savedTab = localStorage.getItem('activeTab');
-  const _validTabs = ['rankings','scores','predictions','simulations','simulator','sportsbook','cards'];
+  const _validTabs = ['rankings','predictions','playoffs','simulations','sportsbook','cards'];
   const _tabToLoad = (_savedTab && _validTabs.includes(_savedTab)) ? _savedTab : 'rankings';
   const _tabBtn = Array.from(document.querySelectorAll('.tab-btn'))
     .find(b => (b.getAttribute('onclick') || '').includes(`'${_tabToLoad}'`));
