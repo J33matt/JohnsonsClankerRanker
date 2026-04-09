@@ -391,9 +391,9 @@ const CARD_POOL = [
     off:82, def:72, clutch:78, cons:78, ath:80,
     desc:'UNIT IMMANUEL QUICKLEY: scoring and playmaking guard with above-average three-point shooting and off-the-dribble creation. Role expanded significantly upon Toronto trade. Assist generation in primary ball-handler role above expectation. Clanker notes ascending trajectory with increased opportunity.' },
 
-  { id:'was_sarr', pid:1642259, name:'Alexandre Sarr', team:'WAS', pos:'C', rarity:'impact', no:5,
+  { id:'was_sarr', pid:1642259, name:'Alex Sarr', team:'WAS', pos:'C', rarity:'impact', no:5,
     off:74, def:82, clutch:70, cons:76, ath:88,
-    desc:'UNIT ALEXANDRE SARR: high-upside center with advanced defensive instincts for age. Rim protection, shot deterrence, and lateral mobility all grade above position norm for young player. Offensive toolkit in development — three-point shooting is a real vector. Washington rebuild foundational piece. Ceiling projection: significant.' },
+    desc:'UNIT ALEX SARR: high-upside center with advanced defensive instincts for age. Rim protection, shot deterrence, and lateral mobility all grade above position norm for young player. Offensive toolkit in development — three-point shooting is a real vector. Washington rebuild foundational piece. Ceiling projection: significant.' },
 
   { id:'det_athompson', pid:1641709, name:'Ausar Thompson', team:'DET', pos:'SF', rarity:'impact', no:5,
     off:74, def:83, clutch:72, cons:76, ath:92,
