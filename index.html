@@ -11189,7 +11189,7 @@ async function renderSportsbook() {
           <button class="sb-quick-btn" onclick="_sbQuickStake(10)">$10</button>
           <button class="sb-quick-btn" onclick="_sbQuickStake(25)">$25</button>
           <button class="sb-quick-btn" onclick="_sbQuickStake(50)">$50</button>
-          <button class="sb-quick-btn" onclick="_sbQuickStake(Math.floor(_sbProfile?.bankroll||0))" title="All In">All In</button>
+          <button class="sb-quick-btn" onclick="_sbQuickStake(_sbProfile?.bankroll||0)" title="All In">All In</button>
         </div>
         <div id="sb-allin-warning" style="display:none;padding:8px 14px;background:rgba(255,51,85,0.1);border-top:1px solid rgba(255,51,85,0.2);font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--red);letter-spacing:1px"></div>
         <div class="sb-payout-row" id="sb-payout-row" style="display:none">
