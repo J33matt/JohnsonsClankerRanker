@@ -7655,6 +7655,13 @@ async function _predFetchInjuries() {
 async function _predFetchConsecMissed(byTeam) {
   const rarityMap = new Map((CARD_POOL || []).map(c => [c.name, c.rarity]));
 
+// Hardcoded long-term injured players — ESPN only stores last update date
+// not true injury date, so we manually set these to 99 games missed
+const longTermInjured = {
+  'Anthony Davis': 99,
+  'Trae Young': 99,
+};
+  
   // Collect teams that have at least one CARD_POOL player with an injury date
   const teamsNeeded = new Set();
   for (const [abbr, injuries] of Object.entries(byTeam)) {
@@ -7691,6 +7698,10 @@ async function _predFetchConsecMissed(byTeam) {
       const injDate = new Date(inj.injuryDate);
       consecMap[inj.name] = gameDates.filter(d => d > injDate).length;
     }
+  }
+  // Apply hardcoded long-term injured overrides
+  for (const [name, count] of Object.entries(longTermInjured)) {
+    consecMap[name] = count;
   }
   return consecMap;
 }
