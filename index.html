@@ -7626,7 +7626,8 @@ async function _predFetchInjuries() {
         status:     (inj.status || '').toLowerCase(),
         position:   inj.athlete?.position?.abbreviation || '',
         injuryType: inj.injury?.type || '',
-        athleteId:  inj.athlete?.id || null,
+        athleteId:  inj.athlete?.id || inj.athlete?.headshot?.href?.match(/\/(\d+)\.png/)?.[1] || null,
+        injuryDate: inj.date || null,
       }));
     }
     // Look up how many consecutive team games each CARD_POOL player has missed.
@@ -7641,27 +7642,24 @@ async function _predFetchInjuries() {
   return _predInjuryCache;
 }
 
-// For each injured CARD_POOL player, count how many consecutive team games they've missed
-// by cross-referencing the team's recent schedule against the player's game log.
-// Returns { athleteId: consecutiveGamesMissed }
+// For each injured CARD_POOL player, count how many completed team games have been played
+// since the player's injury was first reported to ESPN. Uses team schedule dates vs injury
+// report date — avoids the per-player gamelog endpoint which is unreliable.
+// Returns { playerName: gamesMissed }
 async function _predFetchConsecMissed(byTeam) {
   const rarityMap = new Map((CARD_POOL || []).map(c => [c.name, c.rarity]));
 
-  // Collect CARD_POOL players who have an athleteId, deduplicated by athleteId
-  const athleteMap = new Map(); // athleteId → {name, teamAbbr}
+  // Collect teams that have at least one CARD_POOL player with an injury date
   const teamsNeeded = new Set();
   for (const [abbr, injuries] of Object.entries(byTeam)) {
     for (const inj of injuries) {
-      if (inj.athleteId && rarityMap.has(inj.name) && !athleteMap.has(inj.athleteId)) {
-        athleteMap.set(inj.athleteId, { name: inj.name, teamAbbr: abbr });
-        teamsNeeded.add(abbr);
-      }
+      if (rarityMap.has(inj.name) && inj.injuryDate) { teamsNeeded.add(abbr); break; }
     }
   }
-  if (!athleteMap.size) return {};
+  if (!teamsNeeded.size) return {};
 
-  // Fetch team schedules (last 20 completed games) in parallel — one call per team
-  const teamEventIds = {}; // abbr → [eventId, ...] newest-first
+  // Fetch completed team game dates in parallel — one call per team
+  const teamGameDates = {}; // abbr → [Date, ...]
   await Promise.all([...teamsNeeded].map(async abbr => {
     const teamId = _ESPN_TEAM_IDS[abbr];
     if (!teamId) return;
@@ -7671,45 +7669,23 @@ async function _predFetchConsecMissed(byTeam) {
       );
       if (!res.ok) return;
       const json = await res.json();
-      teamEventIds[abbr] = (json.events || [])
+      teamGameDates[abbr] = (json.events || [])
         .filter(e => e.competitions?.[0]?.status?.type?.completed)
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .slice(0, 20)
-        .map(e => String(e.id));
+        .map(e => new Date(e.date));
     } catch(e) { /* leave undefined — will default to 0 missed */ }
   }));
 
-  // Fetch player game logs in parallel — one call per athlete
+  // For each injured CARD_POOL player, count completed team games after their injury date
   const consecMap = {};
-  await Promise.all([...athleteMap.entries()].map(async ([athleteId, { teamAbbr }]) => {
-    const schedule = teamEventIds[teamAbbr];
-    if (!schedule?.length) { consecMap[athleteId] = 0; return; }
-    try {
-      const res = await fetch(
-        `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/athletes/${athleteId}/gamelog`
-      );
-      if (!res.ok) { consecMap[athleteId] = schedule.length; return; }
-      const json = await res.json();
-      // Collect all event IDs the player actually appeared in
-      const playedIds = new Set();
-      // Game log structure: json.events.items or json.seasonTypes[].events.items
-      const extractItems = (obj) => {
-        if (Array.isArray(obj?.items)) obj.items.forEach(e => { if (e.id) playedIds.add(String(e.id)); });
-      };
-      extractItems(json.events);
-      (json.seasonTypes || []).forEach(st => extractItems(st.events));
-      // Walk team's schedule newest→oldest, count consecutive games without appearance
-      let consec = 0;
-      for (const eventId of schedule) {
-        if (playedIds.has(eventId)) break;
-        consec++;
-      }
-      consecMap[athleteId] = consec;
-    } catch(e) {
-      consecMap[athleteId] = 0; // on error, assume recent → apply penalty
+  for (const [abbr, injuries] of Object.entries(byTeam)) {
+    const gameDates = teamGameDates[abbr];
+    if (!gameDates?.length) continue;
+    for (const inj of injuries) {
+      if (!rarityMap.has(inj.name) || !inj.injuryDate) continue;
+      const injDate = new Date(inj.injuryDate);
+      consecMap[inj.name] = gameDates.filter(d => d > injDate).length;
     }
-  }));
-
+  }
   return consecMap;
 }
 
@@ -7759,7 +7735,7 @@ function _predInjuryImpact(abbr, injuryCache) {
     const baseImpact = rarity ? (_INJ_RARITY_PENALTY[rarity] || 0) : 0;
     if (baseImpact <= 0) continue;
 
-    const gamesMissed = inj.athleteId != null ? (consecMissed[inj.athleteId] ?? 0) : 0;
+    const gamesMissed = consecMissed[inj.name] ?? 0;
 
     const isOut = _INJ_OUT_STATUSES.some(s => status.includes(s));
     const isReturning = _INJ_RETURN_STATUSES.some(s => status.includes(s));
