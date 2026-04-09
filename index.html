@@ -7581,6 +7581,23 @@ const _ESPN_TEAM_SLUGS = {
 // not the status label, since a player can be put on IR the day after they get hurt.
 const _INJ_OUT_STATUSES = ['out','doubtful','injured reserve','day-to-day'];
 
+// displayName → abbreviation map for ESPN injuries response
+// The injuries endpoint returns { injuries: [{ displayName: 'Atlanta Hawks', injuries: [...] }] }
+// with no team.abbreviation field, so we resolve the abbr from the full team name.
+const _NBA_DISPLAY_NAME_TO_ABBR = {
+  'Atlanta Hawks':'ATL','Boston Celtics':'BOS','Brooklyn Nets':'BKN',
+  'Charlotte Hornets':'CHA','Chicago Bulls':'CHI','Cleveland Cavaliers':'CLE',
+  'Dallas Mavericks':'DAL','Denver Nuggets':'DEN','Detroit Pistons':'DET',
+  'Golden State Warriors':'GSW','Houston Rockets':'HOU','Indiana Pacers':'IND',
+  'LA Clippers':'LAC','Los Angeles Clippers':'LAC','Los Angeles Lakers':'LAL',
+  'Memphis Grizzlies':'MEM','Miami Heat':'MIA','Milwaukee Bucks':'MIL',
+  'Minnesota Timberwolves':'MIN','New Orleans Pelicans':'NOP','New York Knicks':'NYK',
+  'Oklahoma City Thunder':'OKC','Orlando Magic':'ORL','Philadelphia 76ers':'PHI',
+  'Phoenix Suns':'PHX','Portland Trail Blazers':'POR','Sacramento Kings':'SAC',
+  'San Antonio Spurs':'SAS','Toronto Raptors':'TOR','Utah Jazz':'UTA',
+  'Washington Wizards':'WAS',
+};
+
 // ESPN team IDs (stable across seasons) — used for the team schedule endpoint
 const _ESPN_TEAM_IDS = {
   ATL:1,  BOS:2,  BKN:17, CHA:30, CHI:4,  CLE:5,  DAL:6,  DEN:7,
@@ -7602,7 +7619,7 @@ async function _predFetchInjuries() {
     const json = await res.json();
     const byTeam = {};
     for (const teamObj of (json.injuries || [])) {
-      const abbr = teamObj.team?.abbreviation;
+      const abbr = _NBA_DISPLAY_NAME_TO_ABBR[teamObj.displayName];
       if (!abbr) continue;
       byTeam[abbr] = (teamObj.injuries || []).map(inj => ({
         name:       inj.athlete?.displayName || '?',
