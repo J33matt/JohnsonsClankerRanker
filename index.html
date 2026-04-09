@@ -7323,19 +7323,25 @@ async function _storageGet(key) {
   try {
     const r = await window.storage.get(key, shared);
     if (r && r.value != null) { _memStore[key] = r.value; return { value: r.value }; }
-    return null;
-  } catch(e) {
-    return _memStore[key] ? { value: _memStore[key] } : null;
-  }
+  } catch(e) {}
+  // Fallback 1: localStorage (persists across page reloads when window.storage fails)
+  try {
+    const lv = localStorage.getItem(key);
+    if (lv != null) { _memStore[key] = lv; return { value: lv }; }
+  } catch(e) {}
+  // Fallback 2: in-memory (same session only)
+  return _memStore[key] ? { value: _memStore[key] } : null;
 }
 async function _storageSet(key, val) {
   _memStore[key] = val;
+  try { localStorage.setItem(key, val); } catch(e) {}  // persistent fallback
   const shared = _isSharedKey(key);
   try { await window.storage.set(key, val, shared); } catch(e) {}
   return true;
 }
 async function _storageDelete(key) {
   delete _memStore[key];
+  try { localStorage.removeItem(key); } catch(e) {}
   const shared = _isSharedKey(key);
   try { await window.storage.delete(key, shared); } catch(e) {}
   return true;
