@@ -7585,7 +7585,7 @@ const _ESPN_TEAM_SLUGS = {
 // Statuses considered "out" for injury impact purposes.
 // IR is included — we use consecutive games missed (≥10) to decide if the team has adjusted,
 // not the status label, since a player can be put on IR the day after they get hurt.
-const _INJ_OUT_STATUSES = ['out','doubtful','injured reserve','day-to-day'];
+const _INJ_OUT_STATUSES = ['out', 'injured reserve'];
 
 // displayName → abbreviation map for ESPN injuries response
 // The injuries endpoint returns { injuries: [{ displayName: 'Atlanta Hawks', injuries: [...] }] }
@@ -7679,6 +7679,8 @@ const longTermInjured = {
   'Walker Kessler': 99,
   'Kyshawn George': 99,
   "D'Angelo Russell": 99,
+  "Jimmy Butler III": 99,
+  "Moses Moody": 99,
 };
   
   // Collect teams that have at least one CARD_POOL player with an injury date
@@ -7726,7 +7728,7 @@ const longTermInjured = {
 }
 
 // Statuses that mean a player might return for this game
-const _INJ_RETURN_STATUSES = ['questionable','probable'];
+const _INJ_RETURN_STATUSES = ['questionable','probable' 'day-to-day', 'doubtful'];
 
 // Penalty magnitude by card rarity. Players not in CARD_POOL are ignored —
 // if they aren't impactful enough to have a card, their absence doesn't move the needle.
