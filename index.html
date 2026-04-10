@@ -4581,7 +4581,7 @@ async function fetchAllScoreData() {
     }
   }
 
-  if (recentGames.length === 0) {
+  if (!apiWorked && recentGames.length === 0) {
     recentGames = RECENT_GAMES.map(g => ({
       ...g, isFinal: g.status === 'final', isLive: false, isUpcoming: false, tipDisplay: ''
     }));
