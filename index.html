@@ -9530,7 +9530,7 @@ async function _botMakeDailyPicks(enrichedGames, activeDate) {
 
   // Analyze all possible bets — compute prob + Kelly for each
   const candidates = [];
-  const betTypes = ['ml_away','ml_home','spread_away','spread_home','ou_over','ou_under'];
+  const betTypes = ['ml_away','ml_home','spread_away','spread_home'];
   for (const g of gamesToPick) {
     const mu = _botEstimateMatchup(g.away, g.home); // compute matchup model once per game
     for (const type of betTypes) {
@@ -9559,29 +9559,19 @@ async function _botMakeDailyPicks(enrichedGames, activeDate) {
     picks.push(c);
     if (isOU) ouCount++;
   }
-  // Fallback: if no bets had positive EV, take best available anyway
-  if (!picks.length) {
-    ouCount = 0;
-    for (const c of candidates) {
-      if (picks.length >= 3) break;
-      const isOU = c.type === 'ou_over' || c.type === 'ou_under';
-      if (isOU && ouCount >= 1) continue;
-      picks.push(c);
-      if (isOU) ouCount++;
-    }
-  }
+
   if (!picks.length) return;
 
   // Kelly-based stake sizing helper — 25% fractional Kelly, min $5, max 20% bankroll
   const kellyStake = (prob, ml) => {
     const raw = _botKellyFraction(prob, ml);
-    const frac = Math.min(raw * 0.25, 0.20);
+    const frac = Math.min(raw * 0.10, 0.10);
     return Math.max(5, Math.min(Math.floor(bankroll * frac), bankroll));
   };
 
   let betPlaced = false;
 
-  if (picks.length >= 2) {
+  if (picks.length >= 3) {
     const legs = picks.map(p => ({
       gameKey: p.g.key, type: p.type,
       awayAbbr: p.g.away, homeAbbr: p.g.home, ml: p.ml,
