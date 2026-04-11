@@ -10672,13 +10672,14 @@ async function renderSportsbook() {
 
     return {
       ...g, key,
-      awayML: od.awayML || -110, homeML: od.homeML || -110,
+      awayML: od.awayML || null, homeML: od.homeML || null,
       awaySpread, homeSpread, spreadLine,
-      awaySpreadML: od.awaySpreadML || -110,
-      homeSpreadML: od.homeSpreadML || -110,
+      awaySpreadML: od.awaySpreadML || null,
+      homeSpreadML: od.homeSpreadML || null,
       total,
-      overML:  od.overML  || -110,
-      underML: od.underML || -110,
+      overML:  od.overML  || null,
+      underML: od.underML || null,
+      oddsAvailable: !!(od.awayML && od.homeML),
       awayWinPct: prob.awayPct, homeWinPct: prob.homePct
     };
   });
@@ -10962,8 +10963,14 @@ function _renderSbGameCard(g, openBets) {
     <div class="sb-ou-line" style="margin-top:4px">O/U ${g.total}</div>`;
   }
 
-  // Bet button factory
+// Bet button factory
   const btn = (type, label, ml, line) => {
+    if (ml === null || ml === undefined) {
+      return `<button class="sb-bet-btn" disabled style="opacity:0.4;cursor:not-allowed">
+        <span class="sb-bet-label">${label}</span>
+        <span class="sb-bet-odds" style="color:var(--muted);font-size:0.7rem">TBA</span>
+      </button>`;
+    }
     const isSelected = _sbSlip.some(l => l.gameKey === g.key && l.type === type);
     const mlFmt = _fmtML(ml);
     const mlCls = ml < 0 ? 'fav' : ml > 0 ? 'dog' : 'even';
