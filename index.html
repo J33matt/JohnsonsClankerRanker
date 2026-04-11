@@ -9771,6 +9771,7 @@ let _sbSlipMode = 'single'; // 'single' | 'parlay'
 let _sbStake = 10;
 let _sbProfile = null;
 let _sbGames = [];         // today's games with live odds
+let _sbGamesDate = '';     // date of games currently displayed
 let _sbEnrichedGamesCache = []; // enriched games with odds + spreads + totals
 let _sbHistoryFilter = 'all'; // 'all' | 'open' | 'settled'
 let _sbLbSort = { col: 'bankroll', dir: -1 }; // active leaderboard sort column + direction
@@ -10622,12 +10623,30 @@ async function renderSportsbook() {
     _sbLoadBets()
   ]);
 
-  // Merge with UPCOMING_GAMES
+ // Merge with UPCOMING_GAMES
   let games = fetchedGames || [];
+  let _sbGamesDate = today;
   if (!games.length) {
     games = UPCOMING_GAMES.filter(g => g.date === today).map(g => ({
       ...g, isFinal: false, isLive: false, isUpcoming: true
     }));
+  }
+
+  // If no games today, look ahead up to 3 days
+  if (!games.length || games.every(g => g.isFinal)) {
+    for (let d = 1; d <= 3; d++) {
+      const nextDate = new Date();
+      nextDate.setDate(nextDate.getDate() + d);
+      const nextStr = nextDate.getFullYear() + '-' +
+        String(nextDate.getMonth()+1).padStart(2,'0') + '-' +
+        String(nextDate.getDate()).padStart(2,'0');
+      const nextGames = await espnFetchDate(nextStr).catch(() => null);
+      if (nextGames && nextGames.length && !nextGames.every(g => g.isFinal)) {
+        games = nextGames;
+        _sbGamesDate = nextStr;
+        break;
+      }
+    }
   }
   _sbGames = games;
 
@@ -10775,7 +10794,7 @@ async function renderSportsbook() {
 
     // Today's games
     html += `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
-      <div class="sb-section-label" style="margin-bottom:0">Today's Games <span class="sb-section-sub">${today} · Tap to add to slip</span></div>
+      <div class="sb-section-label" style="margin-bottom:0">${_sbGamesDate === today ? "Today's Games" : _sbGamesDate === (() => { const t = new Date(); t.setDate(t.getDate()+1); return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); })() ? "Tomorrow's Games" : "Upcoming Games"} <span class="sb-section-sub">${_sbGamesDate} · Tap to add to slip</span></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="sb-quick-btn" onclick="_sbQuickFavParlay()" title="Build a parlay with all ML favorites">⚡ Fav Parlay</button>
         <button class="sb-quick-btn" onclick="_sbClearSlip()">🗑 Clear Slip</button>
