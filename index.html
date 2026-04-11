@@ -10639,6 +10639,10 @@ async function renderSportsbook() {
     }
   }
   _sbGames = games;
+  if (_sbGamesDate !== today) {
+    const lookaheadOdds = await fetchOddsForDate(_sbGamesDate).catch(() => ({}));
+    Object.assign(odds, lookaheadOdds);
+  }
 
   // Fetch ESPN matchup predictor win % (only for upcoming games that have an eventId)
   const predictorPcts = await _fetchPredictorWinPcts(games.filter(g => g.isUpcoming && g.eventId)).catch(() => ({}));
