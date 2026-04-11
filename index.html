@@ -11378,7 +11378,6 @@ function _renderSbLeaderboard(entries) {
       <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.allTimeLost || 0) > 0 ? 'color:var(--red)' : ''}">${fmtMoney(e.allTimeLost)}</td>
       <td class="sb-lb-cell sb-lb-hide" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.potReturn || 0) > 0 ? 'color:var(--green)' : ''}">${fmtMoney(e.potReturn)}</td>
       <td class="sb-lb-cell sb-lb-hide" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.brokeCount || 0) > 0 ? 'color:var(--red)' : ''}">${fmtCount(e.brokeCount)}</td>
-      <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.brokeCount || 0) > 0 ? 'color:var(--red)' : ''}">${fmtCount(e.brokeCount)}</td>
     </tr>`;
   }).join('');
 
