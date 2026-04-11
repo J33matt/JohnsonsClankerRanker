@@ -27,11 +27,11 @@ const RARITY_LABELS = {
 const RARITY_TIERS = { pro: 0, impact: 1, clutch: 2, elite: 3, superstar: 4, gamebreaker: 5 };
 
 const CRATE_DEFS = [
-  { id: 'common',    name: 'Common Crate',    icon: '📦', price: 5,  odds: [['pro',0.60],['impact',0.28],['clutch',0.08],['elite',0.03],['superstar',0.008],['gamebreaker',0.002]] },
-  { id: 'uncommon',  name: 'Uncommon Crate',  icon: '🗃️', price: 10, odds: [['impact',0.55],['clutch',0.30],['elite',0.10],['superstar',0.04],['gamebreaker',0.01]] },
-  { id: 'rare',      name: 'Rare Crate',      icon: '💠', price: 25, odds: [['clutch',0.55],['elite',0.30],['superstar',0.12],['gamebreaker',0.03]] },
-  { id: 'epic',      name: 'Epic Crate',      icon: '💜', price: 50, odds: [['elite',0.60],['superstar',0.30],['gamebreaker',0.10]] },
-  { id: 'legendary', name: 'Legendary Crate', icon: '🏆', price: 90, odds: [['superstar',0.75],['gamebreaker',0.25]] }
+  { id: 'common',    name: 'Common Crate',    icon: '<img src="common_crate.png" style="width:80px;height:80px;object-fit:contain">', price: 5,  odds: [['pro',0.60],['impact',0.28],['clutch',0.08],['elite',0.03],['superstar',0.008],['gamebreaker',0.002]] },
+  { id: 'uncommon',  name: 'Uncommon Crate',  icon: '<img src="uncommon_crate.png" style="width:80px;height:80px;object-fit:contain">', price: 10, odds: [['impact',0.55],['clutch',0.30],['elite',0.10],['superstar',0.04],['gamebreaker',0.01]] },
+  { id: 'rare',      name: 'Rare Crate',      icon: '<img src="rare_crate.png" style="width:80px;height:80px;object-fit:contain">', price: 25, odds: [['clutch',0.55],['elite',0.30],['superstar',0.12],['gamebreaker',0.03]] },
+  { id: 'epic',      name: 'Epic Crate',      icon: '<img src="epic_crate.png" style="width:80px;height:80px;object-fit:contain">', price: 50, odds: [['elite',0.60],['superstar',0.30],['gamebreaker',0.10]] },
+  { id: 'legendary', name: 'Legendary Crate', icon: '<img src="legendary_crate.png" style="width:80px;height:80px;object-fit:contain">', price: 90, odds: [['superstar',0.75],['gamebreaker',0.25]] }
 ];
 
 const SHARD_VALUES = {
