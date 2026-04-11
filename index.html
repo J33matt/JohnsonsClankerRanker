@@ -9576,7 +9576,7 @@ async function _botMakeDailyPicks(enrichedGames, activeDate) {
       gameKey: p.g.key, type: p.type,
       awayAbbr: p.g.away, homeAbbr: p.g.home, ml: p.ml,
       line: p.type === 'spread_home' ? p.g.spreadLine
-          : p.type === 'spread_away' ? -p.g.spreadLine
+          : p.type === 'spread_away' ? p.g.spreadLine
           : p.type.startsWith('ou')  ? p.g.total : 0,
       label: p.type
     }));
