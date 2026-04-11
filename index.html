@@ -6620,7 +6620,7 @@ function generateSimNews(result) {
   playoffTeams.forEach(abbr => {
     if (!abbr || !STAR_PLAYERS[abbr] || Math.random() > 0.12) return;
     // Only injure the #1 star (index 0) · never depth players
-    const player = STAR_PLAYERS[abbr][0];
+    const player = STAR_PLAYERS[abbr][Math.floor(Math.random() * STAR_PLAYERS[abbr].length)];
     const injury = INJURY_TYPES[Math.floor(Math.random() * INJURY_TYPES.length)];
     const teamSeries = allSeries.find(s => s && (s.winner?.abbr === abbr || s.loser?.abbr === abbr));
     const opp = teamSeries ? (teamSeries.winner?.abbr === abbr ? teamSeries.loser : teamSeries.winner) : null;
@@ -6630,7 +6630,7 @@ function generateSimNews(result) {
   // 2. Historic scoring performance (4% chance per playoff game)
   const scoringEvents = [
     { pts: 72, desc: "breaks Michael Jordan's single-game playoff scoring record with an ASTOUNDING" },
-    { pts: 68, desc: "erupts for an eye-watering" },
+    { pts: 68, desc: "has the game of a lifetime with" },
     { pts: 65, desc: "drops a mind-bending" },
     { pts: 61, desc: "goes absolutely nuclear with" },
     { pts: 58, desc: "lights up the scoreboard for" },
@@ -6639,7 +6639,7 @@ function generateSimNews(result) {
     const topTeams = [...playoffTeams].filter(a => STAR_PLAYERS[a]);
     const randAbbr = topTeams[Math.floor(Math.random() * topTeams.length)];
     if (randAbbr) {
-      const player = STAR_PLAYERS[randAbbr][0];
+      const player = STAR_PLAYERS[randAbbr][Math.floor(Math.random() * STAR_PLAYERS[randAbbr].length)];
       const evt = scoringEvents[Math.floor(Math.random() * scoringEvents.length)];
       const randSeries = allSeries[Math.floor(Math.random() * allSeries.length)];
       newsItems.push({ type: 'scoring', player, team: STANDINGS_DATA.find(t=>t.abbr===randAbbr), evt, series: randSeries });
