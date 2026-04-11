@@ -2822,6 +2822,7 @@
     .sb-stat-pill b { font-size: 1.1rem; }
     .sb-lb-record { display: none; }
     .sb-lb-cell { display: none; }
+    .sb-lb-hide { display: none; }
     col.sb-lb-cell { visibility: collapse; }
     .sb-history-row { grid-template-columns: 72px 1fr auto; }
     .sb-history-type, .sb-history-stake { display: none; }
@@ -9010,6 +9011,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     font-family: 'Barlow Condensed', sans-serif; font-size: 0.82rem;
     color: var(--muted); text-align: right; letter-spacing: 0.5px;
   }
+  .sb-lb-hide { display: none; }
   .sb-lb-row.not-in-top {
     border-top: 1px solid var(--border); background: rgba(255,255,255,0.02);
     font-style: italic;
@@ -11374,8 +11376,8 @@ function _renderSbLeaderboard(entries) {
       <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.allTimeEarned || 0) > 0 ? 'color:var(--green)' : ''}">${fmtMoney(e.allTimeEarned)}</td>
       <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem">${fmtMoney(e.atRisk)}</td>
       <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.allTimeLost || 0) > 0 ? 'color:var(--red)' : ''}">${fmtMoney(e.allTimeLost)}</td>
-      <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.potReturn || 0) > 0 ? 'color:var(--green)' : ''}">${fmtMoney(e.potReturn)}</td>
-      <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem">${fmtCount(e.bets != null ? e.bets : (e.w || 0) + (e.l || 0))}</td>
+      <td class="sb-lb-cell sb-lb-hide" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.potReturn || 0) > 0 ? 'color:var(--green)' : ''}">${fmtMoney(e.potReturn)}</td>
+      <td class="sb-lb-cell sb-lb-hide" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.brokeCount || 0) > 0 ? 'color:var(--red)' : ''}">${fmtCount(e.brokeCount)}</td>
       <td class="sb-lb-cell" style="${tdBase}font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;${(e.brokeCount || 0) > 0 ? 'color:var(--red)' : ''}">${fmtCount(e.brokeCount)}</td>
     </tr>`;
   }).join('');
@@ -11383,7 +11385,7 @@ function _renderSbLeaderboard(entries) {
   return `<div class="sb-leaderboard" style="margin-bottom:28px">
     <div class="sb-lb-header">
       <span class="sb-lb-title">🏆 Global Leaderboard</span>
-      <span class="sb-lb-sub" style="margin-left:auto">Top ${Math.min(entries.length, 15)} · $100 start</span>
+      <span style="margin-left:auto;font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;letter-spacing:2px;color:var(--text);background:rgba(255,170,0,0.1);border:1px solid rgba(255,170,0,0.25);border-radius:4px;padding:3px 10px">Top ${Math.min(entries.length, 15)} · $100 Start</span>
     </div>
     <table style="width:100%;border-collapse:collapse;table-layout:fixed">
       <colgroup>
@@ -11405,8 +11407,8 @@ function _renderSbLeaderboard(entries) {
           <th class="sb-lb-cell" onclick="_sbSetLbSort('allTimeEarned')" style="${thStyle('allTimeEarned')}">Earnings${arrow('allTimeEarned')}</th>
           <th class="sb-lb-cell" onclick="_sbSetLbSort('atRisk')" style="${thStyle('atRisk')}">In Play${arrow('atRisk')}</th>
           <th class="sb-lb-cell" onclick="_sbSetLbSort('allTimeLost')" style="${thStyle('allTimeLost')}">Losses${arrow('allTimeLost')}</th>
-          <th class="sb-lb-cell" onclick="_sbSetLbSort('potReturn')" style="${thStyle('potReturn')}">Pot. Ret.${arrow('potReturn')}</th>
-          <th class="sb-lb-cell" onclick="_sbSetLbSort('bets')" style="${thStyle('bets')}"># Bets${arrow('bets')}</th>
+          <th class="sb-lb-cell sb-lb-hide" onclick="_sbSetLbSort('potReturn')" style="${thStyle('potReturn')}">Pot. Ret.${arrow('potReturn')}</th>
+          <th class="sb-lb-cell sb-lb-hide" onclick="_sbSetLbSort('brokeCount')" style="${thStyle('brokeCount')}">Bankrupts${arrow('brokeCount')}</th>
           <th class="sb-lb-cell" onclick="_sbSetLbSort('brokeCount')" style="${thStyle('brokeCount')}">Bankrupts${arrow('brokeCount')}</th>
         </tr>
       </thead>
