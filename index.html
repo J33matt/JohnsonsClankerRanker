@@ -11014,18 +11014,18 @@ function _renderSbGameCard(g, openBets) {
     <div class="sb-bet-grid">
       <div class="sb-bet-col">
         <div class="sb-bet-col-header">Moneyline</div>
-        ${btn('ml_away', g.away + ' ML', g.awayML || -110, 0)}
-        ${btn('ml_home', g.home + ' ML', g.homeML || -110, 0)}
+        ${btn('ml_away', g.away + ' ML', g.awayML ?? null, 0)}
+        ${btn('ml_home', g.home + ' ML', g.homeML ?? null, 0)}
       </div>
       <div class="sb-bet-col">
         <div class="sb-bet-col-header">Spread</div>
-        ${btn('spread_away', `${g.away} ${g.awaySpread}`, g.awaySpreadML || -110, -g.spreadLine)}
-        ${btn('spread_home', `${g.home} ${g.homeSpread}`, g.homeSpreadML || -110, g.spreadLine)}
+        ${btn('spread_away', `${g.away} ${g.awaySpread}`, g.awaySpreadML ?? null, -g.spreadLine)}
+        ${btn('spread_home', `${g.home} ${g.homeSpread}`, g.homeSpreadML ?? null, g.spreadLine)}
       </div>
       <div class="sb-bet-col">
         <div class="sb-bet-col-header">Over/Under</div>
-        ${btn('ou_over',  `Over ${g.total}`,  g.overML  || -110, g.total)}
-        ${btn('ou_under', `Under ${g.total}`, g.underML || -110, g.total)}
+        ${btn('ou_over',  `Over ${g.total}`,  g.overML  ?? null, g.total)}
+        ${btn('ou_under', `Under ${g.total}`, g.underML ?? null, g.total)}
       </div>
     </div>
   </div>`;
