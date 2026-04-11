@@ -9511,20 +9511,10 @@ async function _botMakeDailyPicks(enrichedGames, activeDate) {
   let gamesToPick = upcoming.length ? upcoming : enrichedGames;
 
   if (!gamesToPick.length) {
-    // ESPN returned nothing at all — fall back to static schedule so Clanker
-    // always has picks (only happens on days with no ESPN coverage)
-    gamesToPick = UPCOMING_GAMES.slice(0, 10).map(g => {
-      const spread = _sbSpread(g.away, g.home);
-      const total  = _sbTotal(g.away, g.home);
-      return {
-        ...g, date: today, key: g.away + '@' + g.home,
-        awayML: -110, homeML: -110,
-        awaySpread: spread.awaySpread, homeSpread: spread.homeSpread, spreadLine: spread.line,
-        awaySpreadML: -110, homeSpreadML: -110,
-        total, overML: -110, underML: -110,
-        isFinal: false, isLive: false
-      };
-    });
+    // Fall back to look-ahead games from _sbGames if available
+    if (typeof _sbGames !== 'undefined' && _sbGames.length) {
+      gamesToPick = _sbGames.filter(g => !g.isFinal);
+    }
   }
 
   if (!gamesToPick.length) return;
