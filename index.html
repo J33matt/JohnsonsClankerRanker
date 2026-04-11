@@ -11386,17 +11386,16 @@ function _renderSbLeaderboard(entries) {
       <span class="sb-lb-title">🏆 Global Leaderboard</span>
       <span style="margin-left:auto;font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;letter-spacing:2px;color:var(--text);background:rgba(255,170,0,0.1);border:1px solid rgba(255,170,0,0.25);border-radius:4px;padding:3px 10px">Top ${Math.min(entries.length, 15)} · $100 Start</span>
     </div>
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+   <table style="width:100%;border-collapse:collapse;table-layout:auto">
       <colgroup>
         <col style="width:52px">
-        <col style="min-width:120px">
-        <col style="width:96px">
-        <col class="sb-lb-cell" style="width:88px">
-        <col class="sb-lb-cell" style="width:80px">
-        <col class="sb-lb-cell" style="width:80px">
-        <col class="sb-lb-cell" style="width:88px">
-        <col class="sb-lb-cell" style="width:66px">
+        <col>
+        <col style="width:120px">
+        <col class="sb-lb-cell" style="width:100px">
         <col class="sb-lb-cell" style="width:90px">
+        <col class="sb-lb-cell" style="width:90px">
+        <col class="sb-lb-cell sb-lb-hide" style="width:0">
+        <col class="sb-lb-cell sb-lb-hide" style="width:0">
       </colgroup>
       <thead>
         <tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
