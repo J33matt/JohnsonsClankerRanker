@@ -9046,6 +9046,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     overflow: hidden; transition: border-color 0.2s;
   }
+  .sb-game-card.is-live {
+    border-left: 3px solid var(--green);
+  }
   .sb-game-card.locked { opacity: 0.65; pointer-events: none; }
   .sb-game-card:hover:not(.locked) { border-color: rgba(255,170,0,0.3); }
   .sb-game-header {
@@ -11030,7 +11033,7 @@ function _renderSbGameCard(g, openBets) {
   const homeClr = homeBarColor;
 
   return `
-  <div class="sb-game-card${isLocked ? ' locked' : ''}">
+  <div class="sb-game-card${isLocked ? ' locked' : ''}${g.isLive ? ' is-live' : ''}">
     <div class="sb-game-header">
       <span>${g.away} @ ${g.home} ${betBadge}</span>
       <span class="${statusCls}">${statusLabel}</span>
