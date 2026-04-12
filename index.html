@@ -8089,6 +8089,7 @@ async function renderPredictions() {
       </div>
     </div>
     <div id="pred-pnl-chart-area"></div>
+    <div id="pred-injury-area"></div>
     <div id="pred-history-area"></div>`;
 
   // ── Step 2: Load picks + games + odds in parallel ───────────────
@@ -8585,6 +8586,68 @@ async function renderPredictions() {
             <span style="color:var(--red)">${totalUpsetL}L</span>
           </div>`;
         badge.appendChild(div);
+      }
+    }
+
+    // ── Injury Report ────────────────────────────────────────────
+    const injArea = document.getElementById('pred-injury-area');
+    if (injArea && picks.length) {
+      const injCache = await _predFetchInjuries().catch(() => null);
+      if (injCache && injCache.byTeam) {
+        const statusColor = s => {
+          const sl = s.toLowerCase();
+          if (sl === 'out' || sl === 'injured reserve') return 'var(--red)';
+          if (sl === 'doubtful') return '#ff8c00';
+          if (sl === 'day-to-day' || sl === 'questionable') return 'var(--accent2)';
+          if (sl === 'probable') return 'var(--green)';
+          return 'var(--muted)';
+        };
+        const statusLabel = s => {
+          const sl = s.toLowerCase();
+          if (sl === 'injured reserve') return 'IR';
+          return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+        };
+
+        let injHtml = `
+          <div class="section-header" style="margin-top:40px;margin-bottom:14px">
+            <div class="section-title" style="font-size:1.3rem">🏥 Injury Report</div>
+            <div class="section-sub">Today's injury report · organized by matchup</div>
+          </div>`;
+
+        picks.forEach(pick => {
+          const awayInj = injCache.byTeam[pick.awayAbbr] || [];
+          const homeInj = injCache.byTeam[pick.homeAbbr] || [];
+          if (!awayInj.length && !homeInj.length) return;
+
+          const renderTeamInj = (injuries, abbr) => {
+            if (!injuries.length) return `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;letter-spacing:1px;padding:8px 0">No injuries reported</div>`;
+            return injuries.map(inj => `
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);width:20px;text-align:center">${inj.position || '—'}</div>
+                <div style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;font-weight:700;color:var(--text)">${inj.name}</div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:1px;color:${statusColor(inj.status)}">${statusLabel(inj.status)}</div>
+              </div>`).join('');
+          };
+
+          injHtml += `
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px">
+              <div style="background:var(--surface2);padding:10px 16px;font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)">
+                ${pick.awayAbbr} @ ${pick.homeAbbr}
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+                <div style="padding:12px 16px;border-right:1px solid var(--border)">
+                  <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;color:var(--text);margin-bottom:8px">${pick.awayAbbr}</div>
+                  ${renderTeamInj(awayInj, pick.awayAbbr)}
+                </div>
+                <div style="padding:12px 16px">
+                  <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:2px;color:var(--text);margin-bottom:8px">${pick.homeAbbr}</div>
+                  ${renderTeamInj(homeInj, pick.homeAbbr)}
+                </div>
+              </div>
+            </div>`;
+        });
+
+        injArea.innerHTML = injHtml;
       }
     }
 
