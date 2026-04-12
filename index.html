@@ -11714,7 +11714,7 @@ function _renderSbHistory(bets) {
     let divider = '';
     if (b.date !== lastDate) {
       lastDate = b.date;
-      divider = `<div style="padding:8px 20px 4px;font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.06);margin-top:4px">${b.date}</div>`;
+      divider = `<div style="padding:10px 20px 6px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:3px;color:var(--accent2);text-transform:uppercase;border-top:2px solid rgba(255,170,0,0.2);background:rgba(255,170,0,0.04);margin-top:8px">📅 ${b.date}</div>`;
     }
     return divider + _renderSbBetCard(b);
   }).join('');
