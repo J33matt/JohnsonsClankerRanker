@@ -8122,61 +8122,6 @@ async function renderPredictions() {
         return hr <= 10 && ar <= 10;
       });
 
-      if (mustWatch.length) {
-        spotHtml += `<div class="pred-spotlight-section">
-          <div class="pred-spotlight-label"><span class="scores-live-dot" style="margin-right:6px"></span>MUST WATCH TODAY</div>
-          <div class="scores-grid">`;
-        mustWatch.forEach(g => {
-          const hr = powerRanks[g.home] || 30;
-          const ar = powerRanks[g.away] || 30;
-          const homeColors = TEAM_COLORS[g.home] || { bg: '#333' };
-          const awayColors = TEAM_COLORS[g.away] || { bg: '#333' };
-          const showScore = g.isFinal || g.isLive;
-          let statusCls = g.isLive ? 'status-live' : g.isFinal ? 'status-final' : 'status-upcoming';
-          let statusLabel = g.isLive ? (g.status || 'LIVE') : g.isFinal ? 'Final' : (g.tipDisplay || 'Upcoming');
-          spotHtml += `<div class="score-card gtw${g.isLive ? ' is-live' : ''}">
-            <div class="gtw-flag">MUST WATCH</div>
-            <div class="score-card-top">
-              <span class="score-time-badge">Today${g.tipDisplay && !g.isFinal && !g.isLive ? ' · ' + g.tipDisplay : ''}</span>
-              <span class="score-status ${statusCls}">${statusLabel}</span>
-            </div>
-            <div class="score-card-body">
-              <div class="score-teams-row">
-                <div class="score-team-block away">
-                  <div class="score-logo-wrap" style="background:${awayColors.bg};border:1px solid ${awayColors.bg}88">
-                    <img src="${getLogoUrl(g.away)}" alt="${g.away}" onerror="this.style.display='none'">
-                  </div>
-                  <div class="score-team-info">
-                    <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4);line-height:1;margin-bottom:1px">#${ar}</div>
-                    <div class="score-team-abbr-lg" style="color:${awayColors.bg}">${g.away}</div>
-                  </div>
-                </div>
-                <div class="score-vs-block">
-                  ${showScore
-                    ? `<div class="score-final-scores">
-                        <div class="score-vs-num ${g.isFinal ? (g.awayScore > g.homeScore ? 'won' : 'lost') : 'live-score'}">${g.awayScore}</div>
-                        <div class="score-vs-dash">–</div>
-                        <div class="score-vs-num ${g.isFinal ? (g.homeScore > g.awayScore ? 'won' : 'lost') : 'live-score'}">${g.homeScore}</div>
-                       </div>`
-                    : `<span style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;letter-spacing:2px">VS</span>`}
-                </div>
-                <div class="score-team-block home">
-                  <div class="score-logo-wrap" style="background:${homeColors.bg};border:1px solid ${homeColors.bg}88">
-                    <img src="${getLogoUrl(g.home)}" alt="${g.home}" onerror="this.style.display='none'">
-                  </div>
-                  <div class="score-team-info">
-                    <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.4);line-height:1;margin-bottom:1px">#${hr}</div>
-                    <div class="score-team-abbr-lg" style="color:${homeColors.bg}">${g.home}</div>
-                  </div>
-                </div>
-              </div>
-              <div class="gtw-matchup-rank">⭐ #${ar} ${g.away} vs #${hr} ${g.home}</div>
-            </div>
-          </div>`;
-        });
-        spotHtml += `</div></div>`;
-      }
-
       // Close Games — live games in 4th quarter or OT within 5 points
       const closeGames = games.filter(g => {
         if (!g.isLive) return false;
@@ -8188,53 +8133,6 @@ async function renderPredictions() {
                           statusStr.includes('overtime');
         return is4thOrOT;
       });
-
-      if (closeGames.length) {
-        spotHtml += `<div class="pred-spotlight-section">
-          <div class="pred-spotlight-label"><span class="scores-live-dot" style="margin-right:6px"></span>CLOSE GAMES</div>
-          <div class="scores-grid">`;
-        closeGames.forEach(g => {
-          const scoreDiff = Math.abs((g.homeScore || 0) - (g.awayScore || 0));
-          const homeColors = TEAM_COLORS[g.home] || { bg: '#333' };
-          const awayColors = TEAM_COLORS[g.away] || { bg: '#333' };
-          spotHtml += `<div class="score-card is-live">
-            <div class="score-card-top">
-              <span class="score-time-badge">Live</span>
-              <span class="score-status status-live">${g.status || 'LIVE'}</span>
-            </div>
-            <div class="score-card-body">
-              <div class="score-teams-row">
-                <div class="score-team-block away">
-                  <div class="score-logo-wrap" style="background:${awayColors.bg};border:1px solid ${awayColors.bg}88">
-                    <img src="${getLogoUrl(g.away)}" alt="${g.away}" onerror="this.style.display='none'">
-                  </div>
-                  <div class="score-team-info">
-                    <div class="score-team-abbr-lg" style="color:${awayColors.bg}">${g.away}</div>
-                  </div>
-                </div>
-                <div class="score-vs-block">
-                  <div class="score-final-scores">
-                    <div class="score-vs-num live-score">${g.awayScore}</div>
-                    <div class="score-vs-dash">–</div>
-                    <div class="score-vs-num live-score">${g.homeScore}</div>
-                  </div>
-                </div>
-                <div class="score-team-block home">
-                  <div class="score-logo-wrap" style="background:${homeColors.bg};border:1px solid ${homeColors.bg}88">
-                    <img src="${getLogoUrl(g.home)}" alt="${g.home}" onerror="this.style.display='none'">
-                  </div>
-                  <div class="score-team-info">
-                    <div class="score-team-abbr-lg" style="color:${homeColors.bg}">${g.home}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="close-game-banner"><div class="close-game-dot"></div>🔥 CLOSE GAME · ${g.status || 'LIVE'} · ${scoreDiff === 0 ? 'TIED' : scoreDiff + ' PTS'}</div>
-          </div>`;
-        });
-        spotHtml += `</div></div>`;
-      }
-
       spotlightEl.innerHTML = spotHtml;
     }
   }
