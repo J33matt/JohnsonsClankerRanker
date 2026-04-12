@@ -8327,6 +8327,22 @@ async function renderPredictions() {
       predRankMap[t.abbr] = i + 1;
     });
 
+    // Build must watch and close game lookup sets for badge display
+    const powerRanks = buildPowerRankMap();
+    const mustWatchKeys = new Set(
+      games.filter(g => (powerRanks[g.home]||30) <= 10 && (powerRanks[g.away]||30) <= 10)
+           .map(g => g.away + '@' + g.home)
+    );
+    const closeGameKeys = new Set(
+      games.filter(g => {
+        if (!g.isLive) return false;
+        const diff = Math.abs((g.homeScore||0) - (g.awayScore||0));
+        if (diff > 5) return false;
+        const s = (g.status||'').toLowerCase();
+        return /\b4(th|q)\b/i.test(s) || s.startsWith('4th') || s.startsWith('4q') || s.includes('ot') || s.includes('overtime');
+      }).map(g => g.away + '@' + g.home)
+    );
+
     picks.forEach(pick => {
       const homeT      = _predGetTeamData(pick.homeAbbr);
       const awayT      = _predGetTeamData(pick.awayAbbr);
