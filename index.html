@@ -10809,9 +10809,37 @@ async function renderSportsbook() {
     if (!enrichedGames.length) {
       html += `<div style="text-align:center;padding:48px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem;text-transform:uppercase">No games today</div>`;
     } else {
-      html += `<div class="sb-games-grid">`;
-      enrichedGames.forEach(g => { html += _renderSbGameCard(g, openBets); });
-      html += `</div>`;
+      const liveGames = enrichedGames.filter(g => g.isLive);
+      const upcomingGames = enrichedGames.filter(g => !g.isLive && !g.isFinal);
+      const finalGames = enrichedGames.filter(g => g.isFinal);
+
+      if (liveGames.length) {
+        html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div class="live-dot"></div>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;color:var(--green)">LIVE NOW</span>
+        </div>`;
+        html += `<div class="sb-games-grid">`;
+        liveGames.forEach(g => { html += _renderSbGameCard(g, openBets); });
+        html += `</div>`;
+      }
+
+      if (upcomingGames.length) {
+        html += `<div style="display:flex;align-items:center;gap:10px;margin:${liveGames.length ? '24px' : '0px'} 0 12px">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;color:var(--text)">🕐 UPCOMING</span>
+        </div>`;
+        html += `<div class="sb-games-grid">`;
+        upcomingGames.forEach(g => { html += _renderSbGameCard(g, openBets); });
+        html += `</div>`;
+      }
+
+      if (finalGames.length) {
+        html += `<div style="display:flex;align-items:center;gap:10px;margin:24px 0 12px">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;color:var(--muted)">✓ FINAL</span>
+        </div>`;
+        html += `<div class="sb-games-grid">`;
+        finalGames.forEach(g => { html += _renderSbGameCard(g, openBets); });
+        html += `</div>`;
+      }
     }
 
     // Settled bet history — shown below games, above Clanker's picks
