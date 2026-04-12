@@ -8420,6 +8420,8 @@ async function renderPredictions() {
 
         const statsHtml = statRow(awayT.power, 'POWER', homeT.power, true)
           + statRow((awayT.netRtg>0?'+':'') + awayT.netRtg, 'NET RTG', (homeT.netRtg>0?'+':'') + homeT.netRtg, true)
+          + strkRow;
+          + statRow((awayT.netRtg>0?'+':'') + awayT.netRtg, 'NET RTG', (homeT.netRtg>0?'+':'') + homeT.netRtg, true)
           + statRow(awayT.ortg, 'oRTG', homeT.ortg, true)
           + statRow(awayT.drtg, 'dRTG', homeT.drtg, false)
           + strkRow;
