@@ -504,9 +504,9 @@ const CARD_POOL = [
     off:70, def:72, clutch:64, cons:74, ath:68,
     desc:'UNIT ZACH EDEY. NCAA national championship unit. Physical center with rebounding and finishing as primary functions. Developing NBA readiness profile.' },
 
-  { id:'chi_caruso', pid:1627936, name:'Alex Caruso', team:'CHI', pos:'PG', rarity:'pro', no:6,
+  { id:'chi_caruso', pid:1627936, name:'Alex Caruso', team:'OKC', pos:'SF/PG', rarity:'pro', no:6,
     off:60, def:80, clutch:68, cons:78, ath:76,
-    desc:'UNIT ALEX CARUSO. Defensive specialist with steal rate in elite tier for role player classification. Hustle and competitive threshold above average. Clanker-certified chaos agent on the defensive end.' },
+    desc:'UNIT ALEX CARUSO. Bald-headed defensive specialist with steal rate in elite tier for role player classification. Hustle and competitive threshold above average. Clanker-certified chaos agent on the defensive end.' },
 
   { id:'phi_mccain', pid:1642272, name:'Jared McCain', team:'OKC', pos:'SG', rarity:'pro', no:6,
     off:74, def:64, clutch:70, cons:70, ath:76,
@@ -516,7 +516,7 @@ const CARD_POOL = [
     off:64, def:74, clutch:62, cons:74, ath:76,
     desc:'UNIT JAYLIN WILLIAMS. Versatile big man with defensive switchability. OKC developmental unit within elite organizational context. Role player function.' },
 
-  { id:'hou_jenkins', pid:1642450, name:'Daniss Jenkins', team:'HOU', pos:'PG', rarity:'pro', no:2,
+  { id:'hou_jenkins', pid:1642450, name:'Daniss Jenkins', team:'DET', pos:'PG', rarity:'pro', no:2,
     off:62, def:68, clutch:60, cons:66, ath:74,
     desc:'UNIT DANISS JENKINS. Young guard in Houston developmental program. Athletic profile with playmaking instincts. Data sample limited. Clanker monitoring.' },
 
