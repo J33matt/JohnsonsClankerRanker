@@ -540,8 +540,8 @@
 .coll-section-label .gold { color: var(--gold); }
 
 .coll-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 16px;
   padding-bottom: 12px;
 }
