@@ -11709,7 +11709,15 @@ function _renderSbHistory(bets) {
   const netColor = totalNet >= 0 ? 'var(--green)' : 'var(--red)';
   const netStr   = `${totalNet >= 0 ? '+' : ''}$${Math.abs(totalNet).toFixed(2)}`;
 
-  const cards = settled.slice(0, 40).map(b => _renderSbBetCard(b)).join('');
+  let lastDate = null;
+  const cards = settled.slice(0, 40).map(b => {
+    let divider = '';
+    if (b.date !== lastDate) {
+      lastDate = b.date;
+      divider = `<div style="padding:8px 20px 4px;font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.06);margin-top:4px">${b.date}</div>`;
+    }
+    return divider + _renderSbBetCard(b);
+  }).join('');
 
   return `
     <div class="sb-history-card" style="margin-top:32px">
