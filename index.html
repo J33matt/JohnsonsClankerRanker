@@ -8505,8 +8505,8 @@ async function renderPredictions() {
       const isCloseGame = closeGameKeys.has(pickKey);
       const specialBadges = (isMustWatch ? `<div style="display:inline-block;background:var(--accent);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;padding:2px 8px;border-radius:3px;margin-right:4px">⭐ MUST WATCH</div>` : '')
         + (isCloseGame ? `<div style="display:inline-block;background:var(--green);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2px;padding:2px 8px;border-radius:3px">🔥 CLOSE GAME</div>` : '');
-      return `<div class="pred-card ${cardClass}">
-          <div class="pred-card-header" style="position:relative;padding-top:${specialBadges ? '28px' : '0px'}">
+      return `<div class="pred-card ${cardClass}" style="${isMustWatch ? 'border:1px solid rgba(255,77,0,0.6);box-shadow:0 0 12px rgba(255,77,0,0.2)' : ''}">
+          <div class="pred-card-header" style="position:relative;padding-top:28px">
           ${specialBadges ? `<div style="position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:10">${specialBadges}</div>` : ''}
             <div class="pred-card-header-bg" style="background:linear-gradient(90deg,${awayHex} 0%,transparent 55%)"></div>
             <div class="pred-card-header-bg" style="background:linear-gradient(270deg,${homeHex} 0%,transparent 55%)"></div>
