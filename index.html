@@ -8591,9 +8591,11 @@ async function renderPredictions() {
 
     // ── Injury Report ────────────────────────────────────────────
     const injArea = document.getElementById('pred-injury-area');
-    if (injArea && picks.length) {
-      const injCache = await _predFetchInjuries().catch(() => null);
-      if (injCache && injCache.byTeam) {
+  if (injArea) {
+      // Get today's picks from stored data
+      const _injPicks = storedData?.picks || [];
+      if (_injPicks.length) {
+        const injCache = await _predFetchInjuries().catch(() => null);
         const statusColor = s => {
           const sl = s.toLowerCase();
           if (sl === 'out' || sl === 'injured reserve') return 'var(--red)';
@@ -8614,7 +8616,7 @@ async function renderPredictions() {
             <div class="section-sub">Today's injury report · organized by matchup</div>
           </div>`;
 
-        picks.forEach(pick => {
+        _injPicks.forEach(pick => {
           const awayInj = injCache.byTeam[pick.awayAbbr] || [];
           const homeInj = injCache.byTeam[pick.homeAbbr] || [];
           if (!awayInj.length && !homeInj.length) return;
@@ -8648,8 +8650,10 @@ async function renderPredictions() {
         });
 
         injArea.innerHTML = injHtml;
-      }
-    }
+      } // closes if (injCache)
+    } // closes if (_injPicks.length)
+  } // closes if (injArea)
+  }
 
     // Render history
     const histArea = document.getElementById('pred-history-area');
