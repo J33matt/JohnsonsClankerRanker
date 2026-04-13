@@ -7453,13 +7453,13 @@ function _predInjBadgeHtml(outPlayers, returnPlayers) {
       return `<div class="pred-inj-tooltip-row">
         <span>${p.name}</span>
         <span class="pred-inj-tooltip-games">${p.gamesMissed}G out</span>
-        <span class="pred-inj-tooltip-penalty">−${pen.toFixed(1)}</span>
+        <span class="pred-inj-tooltip-penalty">-${pen.toFixed(1)}</span>
       </div>`;
     }).join('');
     html += `<span class="pred-inj-badge" title="">
       <span class="pred-inj-icon">🏥</span>
       <span class="pred-inj-tooltip">
-        <div class="pred-inj-tooltip-title">Injury penalty (−${Math.min(totalPen,10).toFixed(1)} pts)</div>
+        <div class="pred-inj-tooltip-title">Injury penalty (-${Math.min(totalPen,10).toFixed(1)} pts)</div>
         ${rows}
       </span>
     </span>`;
