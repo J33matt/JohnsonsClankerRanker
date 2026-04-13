@@ -4904,6 +4904,7 @@ function _simShowTab(which) {
 
 // ── PLAYOFF BRACKET PERSISTENCE ─────────────────────────────────────────────
 // Module-level state so bracket picks survive re-renders (tab switches, polls).
+let _clankerBracket  = null; // Clanker's pre-generated bracket picks
 let _bktBracketState = null;
 let _bktPIState      = null;
 // Series win counts for live bracket auto-fill: { "OKC|GSW": { OKC: 4, GSW: 2 } }
@@ -5693,6 +5694,8 @@ function renderPlayoffs() {
     if (!container) return;
     container.innerHTML = buildFullBracket();
     updateControls();
+    const clankerOuter = document.getElementById('clanker-bracket-outer');
+    if (clankerOuter) clankerOuter.innerHTML = buildClankerSectionHtml();
   }
 
   function buildFullBracket() {
@@ -5725,6 +5728,152 @@ function renderPlayoffs() {
     html += `</div></div>`;
 
     return html;
+  }
+
+  // ================================================================
+  // CLANKER'S BRACKET — deterministic pre-playoff predictions
+  // ================================================================
+
+  function generateClankerBracket() {
+    if (_clankerBracket) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem('clankerBracket2026') || 'null');
+      if (saved) { _clankerBracket = saved; return; }
+    } catch(e) {}
+
+    const allTeams = west.concat(east);
+    function teamByAbbr(abbr) { return abbr ? allTeams.find(t => t.abbr === abbr) || null : null; }
+    function pickSeries(t1, t2) {
+      const p1 = (!t1 || t1._placeholder) ? 0 : (t1.power || computePowerScore(t1).power || 0);
+      const p2 = (!t2 || t2._placeholder) ? 0 : (t2.power || computePowerScore(t2).power || 0);
+      const winner = (!t1 || (t2 && !t2._placeholder && p2 > p1)) ? t2 : t1;
+      const diff = Math.abs(p1 - p2);
+      const loserWins = diff > 12 ? 0 : diff > 7 ? 1 : diff > 3 ? 2 : 3;
+      return { winnerAbbr: winner ? winner.abbr : null, score: `4-${loserWins}` };
+    }
+
+    const cb = { west: { r1: [], semi: [], cf: null }, east: { r1: [], semi: [], cf: null }, champion: null, scores: {} };
+    ['west', 'east'].forEach(conf => {
+      for (let i = 0; i < 4; i++) {
+        const [t1, t2] = getR1Teams(conf, i);
+        const { winnerAbbr, score } = pickSeries(t1, t2);
+        cb[conf].r1.push(winnerAbbr);
+        cb.scores[`${conf}_r1_${i}`] = score;
+      }
+      for (let i = 0; i < 2; i++) {
+        const { winnerAbbr, score } = pickSeries(teamByAbbr(cb[conf].r1[i*2]), teamByAbbr(cb[conf].r1[i*2+1]));
+        cb[conf].semi.push(winnerAbbr);
+        cb.scores[`${conf}_semi_${i}`] = score;
+      }
+      const { winnerAbbr: cfW, score: cfS } = pickSeries(teamByAbbr(cb[conf].semi[0]), teamByAbbr(cb[conf].semi[1]));
+      cb[conf].cf = cfW; cb.scores[`${conf}_cf`] = cfS;
+    });
+    const { winnerAbbr: champW, score: champS } = pickSeries(teamByAbbr(cb.west.cf), teamByAbbr(cb.east.cf));
+    cb.champion = champW; cb.scores['finals'] = champS;
+
+    _clankerBracket = cb;
+    try { localStorage.setItem('clankerBracket2026', JSON.stringify(cb)); } catch(e) {}
+  }
+
+  function clankerMatchupCard(t1, t2, seed1, seed2, pickedAbbr, score, actualWinner) {
+    const resolved = actualWinner && !actualWinner._placeholder;
+    const isCorrect = resolved ? actualWinner.abbr === pickedAbbr : null;
+    const resultBadge = isCorrect === true ? ' ✅' : isCorrect === false ? ' ❌' : '';
+    const t1Picked = t1 && t1.abbr === pickedAbbr;
+    const t2Picked = t2 && t2.abbr === pickedAbbr;
+    const t1Class = t1Picked ? 'winner-row' : (t1 && pickedAbbr ? 'loser-row' : '');
+    const t2Class = t2Picked ? 'winner-row' : (t2 && pickedAbbr ? 'loser-row' : '');
+    const scoreRow = (score || resultBadge) ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:1px;color:var(--muted);padding:2px 8px 5px;text-align:center;border-top:1px solid var(--border)">${score || ''}${resultBadge}</div>` : '';
+    return `<div class="bkt-matchup">${teamRowHtml(seed1,t1,t1Class,'')}${teamRowHtml(seed2,t2,t2Class,'')}${scoreRow}</div>`;
+  }
+
+  function buildClankerHalfHtml(conf) {
+    if (!_clankerBracket) return '';
+    const cb = _clankerBracket;
+    const allTeams = west.concat(east);
+    const teamByAbbr = abbr => abbr ? allTeams.find(t => t.abbr === abbr) || null : null;
+    const st = _bktBracketState;
+    const SEEDS = [[1,8],[4,5],[3,6],[2,7]];
+    const conn2 = `<div class="bkt-conn-col"><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div></div>`;
+    const conn1 = `<div class="bkt-conn-col"><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div></div>`;
+
+    const r1Html = [0,1,2,3].map(i => {
+      const [t1, t2] = getR1Teams(conf, i);
+      return clankerMatchupCard(t1, t2, SEEDS[i][0], SEEDS[i][1], cb[conf].r1[i], cb.scores[`${conf}_r1_${i}`], st?.[conf]?.r1?.[i]);
+    }).join('');
+
+    const semiHtml = [0,1].map(i => {
+      return clankerMatchupCard(teamByAbbr(cb[conf].r1[i*2]), teamByAbbr(cb[conf].r1[i*2+1]), '', '', cb[conf].semi[i], cb.scores[`${conf}_semi_${i}`], st?.[conf]?.semi?.[i]);
+    }).join('');
+
+    const cfHtml = clankerMatchupCard(teamByAbbr(cb[conf].semi[0]), teamByAbbr(cb[conf].semi[1]), '', '', cb[conf].cf, cb.scores[`${conf}_cf`], st?.[conf]?.cf?.[0]);
+
+    return `<div class="bracket-half ${conf}">
+      <div class="bkt-round bkt-r1">${r1Html}</div>${conn2}
+      <div class="bkt-round bkt-semis">${semiHtml}</div>${conn1}
+      <div class="bkt-round bkt-cf">${cfHtml}</div>
+    </div>`;
+  }
+
+  function buildClankerFinalsHtml() {
+    if (!_clankerBracket) return '';
+    const cb = _clankerBracket;
+    const allTeams = west.concat(east);
+    const ft1 = allTeams.find(t => t.abbr === cb.west.cf) || null;
+    const ft2 = allTeams.find(t => t.abbr === cb.east.cf) || null;
+    const champAbbr = cb.champion;
+    const actualChamp = _bktBracketState?.champion;
+    const champOk = actualChamp && !actualChamp._placeholder ? (actualChamp.abbr === champAbbr ? ' ✅' : ' ❌') : '';
+    const champLogo = champAbbr ? getLogoUrl(champAbbr) : null;
+    return `<div class="bracket-finals-col">
+      <div class="bkt-finals${ft1||ft2?' has-teams':''}">
+        <div>Championship</div>
+        <div class="finals-sub">CLANKER'S PICK</div>
+        <div class="finals-team">${ft1 ? ft1.abbr : '<span style="color:var(--muted);font-size:0.8rem">W Finalist</span>'}</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:var(--muted);margin:1px 0">vs</div>
+        <div class="finals-team">${ft2 ? ft2.abbr : '<span style="color:var(--muted);font-size:0.8rem">E Finalist</span>'}</div>
+        ${cb.scores['finals'] ? `<div class="finals-sub" style="margin-top:6px">${cb.scores['finals']}</div>` : ''}
+        ${champAbbr ? `<div style="margin-top:10px;border-top:1px solid rgba(255,170,0,0.3);padding-top:8px">
+          <div class="finals-sub">CHAMPION</div>
+          ${champLogo ? `<img src="${champLogo}" style="width:34px;height:34px;object-fit:contain;margin:4px 0" onerror="this.style.display='none'">` : ''}
+          <div style="color:var(--accent2);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px">🏆 ${champAbbr}${champOk}</div>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  function buildClankerSectionHtml() {
+    if (!_clankerBracket) return '';
+    const cb = _clankerBracket;
+    const st = _bktBracketState;
+    let total = 0, correct = 0;
+    ['west','east'].forEach(conf => {
+      [st?.[conf]?.r1 || [], st?.[conf]?.semi || [], [st?.[conf]?.cf?.[0]]].forEach((arr, ri) => {
+        const picks = ri === 0 ? cb[conf].r1 : ri === 1 ? cb[conf].semi : [cb[conf].cf];
+        arr.forEach((a, i) => { if (a && !a._placeholder) { total++; if (a.abbr === picks[i]) correct++; } });
+      });
+    });
+    const ca = st?.champion; if (ca && !ca._placeholder) { total++; if (ca.abbr === cb.champion) correct++; }
+    const scoreStr = total > 0 ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:${correct/total>=0.6?'var(--green)':'var(--muted)'};margin-left:10px">${correct} / ${total} correct</span>` : '';
+
+    return `<div style="margin-top:52px;padding-top:36px;border-top:2px solid rgba(255,170,0,0.2)">
+      <div class="section-header" style="margin-bottom:14px">
+        <div style="display:flex;align-items:baseline;gap:4px;flex-wrap:wrap">
+          <div class="section-title" style="font-size:1.4rem">🤖 Clanker's Bracket</div>${scoreStr}
+        </div>
+        <div class="section-sub" style="margin-top:3px"><em>Predictions locked in before the playoffs began</em></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <div class="bracket-conf-label west-label" style="flex:1">WESTERN CONFERENCE</div>
+        <div style="width:106px"></div>
+        <div class="bracket-conf-label east-label" style="flex:1">EASTERN CONFERENCE</div>
+      </div>
+      <div class="bracket-tree-wrap"><div class="bracket-tree">
+        ${buildClankerHalfHtml('west')}
+        ${buildClankerFinalsHtml()}
+        ${buildClankerHalfHtml('east')}
+      </div></div>
+    </div>`;
   }
 
   // ================================================================
@@ -5803,7 +5952,7 @@ function renderPlayoffs() {
     <span class="bracket-hint">Click a team to advance them. Start with Play-In picks above.</span>
   </div>`;
 
-  container.innerHTML = ctrlHtml + `<div id="bracket-inner"></div>`;
+  container.innerHTML = ctrlHtml + `<div id="bracket-inner"></div><div id="clanker-bracket-outer"></div>`;
 
   window._bktUndo = undo;
   window._bktRedo = redo;
@@ -5811,6 +5960,8 @@ function renderPlayoffs() {
 
   document.getElementById('bracket-inner').innerHTML = buildFullBracket();
   updateControls();
+  generateClankerBracket();
+  document.getElementById('clanker-bracket-outer').innerHTML = buildClankerSectionHtml();
 
   // Champion overlay (append to body if not already there)
   if (!document.getElementById('champion-overlay')) {
