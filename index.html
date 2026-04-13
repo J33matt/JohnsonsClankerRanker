@@ -9009,7 +9009,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   .sb-bankroll-sub {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.75rem; color: var(--muted); letter-spacing: 1px; margin-top: 4px;
+    font-size: 0.88rem; color: var(--muted); letter-spacing: 1px; margin-top: 4px;
   }
   .sb-stats-row {
     display: flex; gap: 12px; flex-wrap: wrap; align-items: stretch;
@@ -9032,11 +9032,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     font-family: 'Barlow Condensed', sans-serif; font-size: 0.68rem; letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
   }
   .sb-edit-btn {
-    font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; letter-spacing: 2px;
-    padding: 5px 12px; border-radius: 5px; border: 1px solid var(--border);
-    background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; text-transform: uppercase;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.78rem; letter-spacing: 2px;
+    padding: 6px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.05); color: var(--text); cursor: pointer; transition: all 0.15s; text-transform: uppercase;
   }
-  .sb-edit-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+  .sb-edit-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
 
   /* Onboarding modal */
   .sb-modal-overlay {
@@ -9144,7 +9144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     padding: 10px 14px 0; font-family: 'Barlow Condensed', sans-serif;
     font-size: 0.68rem; letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
   }
-  .sb-game-status-live { color: var(--accent); font-weight: 700; animation: pulse 1.5s infinite; }
+  .sb-game-status-live { color: var(--accent); font-weight: 700; font-size: 0.78rem; animation: pulse 1.5s infinite; }
   .sb-game-status-final { color: var(--muted); }
   .sb-game-status-upcoming { color: var(--green); }
   .sb-teams-row {
@@ -9176,7 +9176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   .sb-bet-col { background: var(--surface2); display: flex; flex-direction: column; gap: 0; padding: 6px 5px; border-right: 1px solid var(--border); }
   .sb-bet-col:last-child { border-right: none; }
   .sb-bet-col-header {
-    font-family: 'Barlow Condensed', sans-serif; font-size: 0.58rem; letter-spacing: 2px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.68rem; letter-spacing: 2px;
     text-transform: uppercase; color: var(--muted); text-align: center; padding: 4px 0 6px;
   }
   .sb-bet-btn {
@@ -9265,7 +9265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   .sb-stake-input[type=number] { -moz-appearance: textfield; }
   .sb-stake-input:focus { border-color: var(--accent2); }
   .sb-quick-stakes { display: flex; gap: 6px; padding: 0 14px 12px; flex-wrap: wrap; }
-  .sb-quick-btn { font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; letter-spacing: 1px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); cursor: pointer; transition: all 0.15s; }
+  .sb-quick-btn { font-family: 'Barlow Condensed', sans-serif; font-size: 0.78rem; letter-spacing: 1px; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); cursor: pointer; transition: all 0.15s; }
   .sb-quick-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
   .sb-payout-row {
     display: flex; justify-content: space-between; align-items: center;
@@ -10915,7 +10915,8 @@ async function renderSportsbook() {
       }
 
       if (upcomingGames.length) {
-        html += `<div style="display:flex;align-items:center;gap:10px;margin:${liveGames.length ? '24px' : '0px'} 0 12px">
+        if (liveGames.length) html += `<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:20px 0 16px">`;
+        html += `<div style="display:flex;align-items:center;gap:10px;margin:${liveGames.length ? '0px' : '0px'} 0 12px">
           <span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;color:var(--text)">🕐 UPCOMING</span>
         </div>`;
         html += `<div class="sb-games-grid">`;
@@ -11403,9 +11404,16 @@ function _renderBotPicks(botBets, enrichedGames) {
     </div>`;
   }).join('');
 
-  return `<div style="background:var(--surface);border:1px solid rgba(255,170,0,0.22);border-radius:12px;overflow:hidden;margin-bottom:28px">
-    ${headerHtml}
-    ${betRows}
+  return `<div style="margin-top:4px">
+    <hr style="border:none;border-top:1px solid rgba(255,255,255,0.07);margin:0 0 16px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:3px;color:var(--accent2)">🤖 Clanker's Picks</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;letter-spacing:1px;color:var(--muted);text-transform:uppercase">AI Sportsbook</span>
+    </div>
+    <div style="background:var(--surface);border:1px solid rgba(255,170,0,0.3);border-radius:12px;overflow:hidden;margin-bottom:28px;box-shadow:0 0 0 1px rgba(255,170,0,0.06) inset">
+      ${headerHtml}
+      ${betRows}
+    </div>
   </div>`;
 }
 
@@ -11569,7 +11577,7 @@ function _sbMarginHtml(leg, game) {
     else if (coverMargin < 0) { label = fin ? `Didn't cover (needed ${amt})` : `Needs ${amt} to cover`; color = 'var(--red)'; }
     else                      { label = 'Push line'; }
   } else if (type === 'spread_home') {
-    const coverMargin = hs - line - as;
+    const coverMargin = hs + line - as;
     const amt = Math.abs(coverMargin).toFixed(1).replace('.0', '');
     if (coverMargin > 0)      { label = fin ? `Covered by ${amt}` : `Covering by ${amt}`;        color = 'var(--green)'; }
     else if (coverMargin < 0) { label = fin ? `Didn't cover (needed ${amt})` : `Needs ${amt} to cover`; color = 'var(--red)'; }
@@ -11779,16 +11787,15 @@ function _renderSbBetCard(bet, opts = {}) {
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">${isPending ? 'Potential Return' : isWin ? 'Returned' : isLoss ? 'Returned' : 'Returned'}</div>
       </div>
     </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 16px 10px;border-top:1px solid rgba(255,255,255,0.04)">
-      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:1px;color:rgba(255,255,255,0.2);text-transform:uppercase">BET ID: ${betIdShort}</span>
-      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:rgba(255,255,255,0.2)">${bet.date}</span>
+    <div style="display:flex;justify-content:flex-end;align-items:center;padding:4px 16px 8px;border-top:1px solid rgba(255,255,255,0.04)">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;color:rgba(255,255,255,0.12)">${bet.date}</span>
     </div>`;
 
   // ── Card wrapper ──────────────────────────────────────────
   const borderColor = isWin ? 'rgba(0,232,122,0.25)' : isLoss ? 'rgba(255,51,85,0.2)' : isPending ? 'rgba(255,170,0,0.22)' : 'rgba(255,255,255,0.08)';
 
   return `
-    <div style="background:var(--surface);border:1px solid ${borderColor};border-radius:10px;overflow:hidden;margin-bottom:14px">
+    <div style="background:var(--surface);border:1px solid ${borderColor};border-radius:10px;overflow:hidden;margin-bottom:20px">
       <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:${cardAccent};border-bottom:1px solid rgba(255,255,255,0.05)">
         ${resultPill}
         <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;color:var(--muted);letter-spacing:0.5px">${isParlay ? `${legs.length}-Leg Parlay · ${parlayOdds}` : `Single · ${parlayOdds}`}</span>
