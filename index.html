@@ -3747,6 +3747,8 @@ async function fetchLiveNetRatings() {
         Object.assign(entry, s, computePowerScore(s), { streak: STREAK_DATA[s.abbr] || 0 });
       });
       renderRankings();
+      // Refresh Clanker reasoning so it matches the updated Rankings numbers
+      if (window._clankerRefreshSection) window._clankerRefreshSection();
     }
   } finally {
     _netRatingsFetching = false;
@@ -5734,17 +5736,22 @@ function renderPlayoffs() {
   // CLANKER'S BRACKET — deterministic pre-playoff predictions
   // ================================================================
 
-  // Reasoning is generated at render time from live ENRICHED_DATA so numbers
-  // always match the Rankings tab. Not cached in localStorage.
+  // Reasoning generated at render time. Reads directly from the same sources as
+  // the Rankings tab: _NET_RATINGS for net rtg, computePowerScore(STANDINGS_DATA)
+  // for power. This guarantees the numbers always match what the user sees there.
   function _clankerReasoning(t1Abbr, t2Abbr, winnerAbbr) {
     const loserAbbr = winnerAbbr === t1Abbr ? t2Abbr : t1Abbr;
-    const wE = ENRICHED_DATA.find(t => t.abbr === winnerAbbr) || {};
-    const lE = ENRICHED_DATA.find(t => t.abbr === loserAbbr)  || {};
-    const wPwr = wE.power  != null ? +wE.power.toFixed(1)  : null;
-    const lPwr = lE.power  != null ? +lE.power.toFixed(1)  : null;
-    const wNet = wE.netRtg != null ? +wE.netRtg.toFixed(1) : null;
-    const lNet = lE.netRtg != null ? +lE.netRtg.toFixed(1) : null;
-    const wWp  = wE.winPct != null ? (wE.winPct * 100).toFixed(1) : null;
+    const wSd = STANDINGS_DATA.find(t => t.abbr === winnerAbbr);
+    const lSd = STANDINGS_DATA.find(t => t.abbr === loserAbbr);
+    const wPs = wSd ? computePowerScore(wSd) : {};
+    const lPs = lSd ? computePowerScore(lSd) : {};
+    const wNr = _NET_RATINGS[winnerAbbr] || {};
+    const lNr = _NET_RATINGS[loserAbbr]  || {};
+    const wPwr = wPs.power  != null ? +wPs.power.toFixed(1)  : null;
+    const lPwr = lPs.power  != null ? +lPs.power.toFixed(1)  : null;
+    const wNet = wNr.netRtg != null ? +wNr.netRtg.toFixed(1) : null;
+    const lNet = lNr.netRtg != null ? +lNr.netRtg.toFixed(1) : null;
+    const wWp  = wPs.winPct != null ? (wPs.winPct * 100).toFixed(1) : null;
     const pwrGap = (wPwr != null && lPwr != null) ? wPwr - lPwr : 0;
     const netGap = (wNet != null && lNet != null) ? wNet - lNet : 0;
     const wNetStr = wNet != null ? (wNet > 0 ? `+${wNet}` : `${wNet}`) : '?';
@@ -5754,11 +5761,11 @@ function renderPlayoffs() {
     } else if (pwrGap >= 4) {
       return `${winnerAbbr}'s power score of ${wPwr} outpaces ${loserAbbr}'s ${lPwr} — that edge holds up over a full series.`;
     } else if (pwrGap <= -4) {
-      return `${winnerAbbr} (power ${wPwr}) upsets ${loserAbbr} (power ${lPwr}); home court and momentum carry them through.`;
+      return `${winnerAbbr} (power ${wPwr}) upsets ${loserAbbr} (power ${lPwr}); recent form and momentum carry them through.`;
     } else if (Math.abs(netGap) >= 3) {
-      return `Closely matched, but ${winnerAbbr}'s net rating (${wNetStr}) over ${loserAbbr}'s (${lNetStr}) tilts the series.`;
+      return `Closely matched on paper, but ${winnerAbbr}'s net rating (${wNetStr}) over ${loserAbbr}'s (${lNetStr}) tilts the series.`;
     } else {
-      return `A true toss-up: ${winnerAbbr} (power ${wPwr}, ${wWp}% win rate) edges ${loserAbbr} (power ${lPwr}).`;
+      return `A tight series: ${winnerAbbr} (power ${wPwr}, net rtg ${wNetStr}) edges ${loserAbbr} (power ${lPwr}, net rtg ${lNetStr}).`;
     }
   }
 
@@ -5768,29 +5775,43 @@ function renderPlayoffs() {
     // Version-aware cache — only winners/scores are cached, not reasoning (generated live)
     try {
       const saved = JSON.parse(localStorage.getItem('clankerBracket2026') || 'null');
-      if (saved && saved.clankerBracketVersion === 6) { _clankerBracket = saved; return; }
+      if (saved && saved.clankerBracketVersion === 7) { _clankerBracket = saved; return; }
     } catch(e) {}
 
-    // Analytic best-of-7: compute P(t1 wins series) from per-game win probabilities,
-    // then pick winner and derive series score from that probability.
-    // No RNG — same result every time, driven purely by team strength.
+    // Analytic best-of-7: compute P(t1 wins series) from per-game win probabilities
+    // plus an L20 trend bonus. t1 = higher seed (home court). No RNG — fully deterministic.
+    //
+    // L20 trend: a team significantly hotter than their season average in the last 20
+    // games earns a series-level bonus. This is the primary data-driven source of upsets —
+    // a lower seed peaking at playoff time can knock out a fading higher seed.
     function seriesProb(t1Abbr, t2Abbr) {
-      // t1 has home court (home in games 1,2,5,7 = 4 games; away in 3,4,6 = 3 games)
+      // Per-game win probability for t1 (home in games 1,2,5,7; away in 3,4,6)
       const { homeWinProb: p1h } = _botEstimateMatchup(t2Abbr, t1Abbr); // t1 at home
       const { homeWinProb: p2h } = _botEstimateMatchup(t1Abbr, t2Abbr); // t2 at home
-      const p1a = 1 - p2h; // t1 winning t2's home games
-      // Weighted average per-game win prob for t1 (4 home + 3 away over potential 7)
-      const p = (4 * p1h + 3 * p1a) / 7;
-      return Math.max(0.01, Math.min(0.99, p));
+      const p1a = 1 - p2h;
+      let p = (4 * p1h + 3 * p1a) / 7;
+
+      // L20 momentum bonus: how much better or worse each team has been recently
+      // vs their full-season win%. Positive = team is trending up (peaking).
+      const t1E = ENRICHED_DATA.find(t => t.abbr === t1Abbr) || {};
+      const t2E = ENRICHED_DATA.find(t => t.abbr === t2Abbr) || {};
+      const t1Trend = (t1E.l20WinPct != null && t1E.winPct != null) ? (t1E.l20WinPct - t1E.winPct) : 0;
+      const t2Trend = (t2E.l20WinPct != null && t2E.winPct != null) ? (t2E.l20WinPct - t2E.winPct) : 0;
+      // Weight = 0.22: a team 20% hotter than their average vs an opponent 10% cooler
+      // can shift p by ~0.066 — enough to flip a close matchup, not enough to manufacture
+      // upsets in dominant mismatches.
+      p = Math.max(0.01, Math.min(0.99, p + (t1Trend - t2Trend) * 0.22));
+
+      return p;
     }
 
     function pickSeries(t1Abbr, t2Abbr) {
       if (!t1Abbr && !t2Abbr) return { winnerAbbr: null, score: null };
       if (!t1Abbr) return { winnerAbbr: t2Abbr, score: '4-0' };
       if (!t2Abbr) return { winnerAbbr: t1Abbr, score: '4-0' };
-      const p = seriesProb(t1Abbr, t2Abbr); // P(t1 wins a game on average)
+      const p = seriesProb(t1Abbr, t2Abbr);
       const winnerAbbr = p >= 0.5 ? t1Abbr : t2Abbr;
-      const edge = Math.abs(p - 0.5); // 0 = coin-flip, 0.5 = guaranteed
+      const edge = Math.abs(p - 0.5);
       const loserWins = edge > 0.18 ? 0 : edge > 0.12 ? 1 : edge > 0.06 ? 2 : 3;
       return { winnerAbbr, score: `4-${loserWins}` };
     }
@@ -5802,7 +5823,7 @@ function renderPlayoffs() {
       west: { r1: [], semi: [], cf: null },
       east: { r1: [], semi: [], cf: null },
       champion: null, scores: {},
-      clankerBracketVersion: 6
+      clankerBracketVersion: 7
     };
 
     ['west', 'east'].forEach(conf => {
@@ -6031,6 +6052,11 @@ function renderPlayoffs() {
     generateClankerBracket();
     const co = document.getElementById('clanker-bracket-outer');
     if (co) co.innerHTML = buildClankerSectionHtml();
+  };
+  // Exposed so fetchLiveNetRatings can refresh reasoning numbers after a net-rating update
+  window._clankerRefreshSection = function() {
+    const co = document.getElementById('clanker-bracket-outer');
+    if (co && _clankerBracket) co.innerHTML = buildClankerSectionHtml();
   };
 
   document.getElementById('bracket-inner').innerHTML = buildFullBracket();
