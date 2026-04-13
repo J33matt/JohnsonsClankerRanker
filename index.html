@@ -10198,10 +10198,17 @@ async function _sbAutoSettle() {
   const open = bets.filter(b => b.status === 'open');
   if (!open.length) return;
 
-  // Fetch games for all unique dates with open bets
-  const dates = [...new Set(open.map(b => b.date))];
+  // Fetch games for all unique dates with open bets, plus the day before each
+  // (guards against bets tagged with calendar date when game was previous day)
+  const betDates = [...new Set(open.map(b => b.date))];
+  const fetchDates = new Set(betDates);
+  betDates.forEach(d => {
+    const prev = new Date(d + 'T12:00:00');
+    prev.setDate(prev.getDate() - 1);
+    fetchDates.add(localDateStr(prev));
+  });
   const allGames = {};
-  await Promise.all(dates.map(async d => {
+  await Promise.all([...fetchDates].map(async d => {
     try { allGames[d] = await espnFetchDate(d) || []; } catch(e) { allGames[d] = []; }
   }));
 
@@ -10216,7 +10223,9 @@ async function _sbAutoSettle() {
 
     if (bet.betType === 'single') {
       const leg = bet.legs[0];
-      const game = games.find(g =>
+      const prevDate = (() => { const p = new Date(bet.date + 'T12:00:00'); p.setDate(p.getDate() - 1); return localDateStr(p); })();
+      const searchGames = [...games, ...(allGames[prevDate] || [])];
+      const game = searchGames.find(g =>
         (g.home === leg.homeAbbr && g.away === leg.awayAbbr) ||
         (g.home === leg.awayAbbr && g.away === leg.homeAbbr)
       );
@@ -10228,7 +10237,9 @@ async function _sbAutoSettle() {
       else payout = 0;
     } else {
       // Parlay
-      const { result } = _sbGradeParlay(bet.legs, games);
+      const prevDate2 = (() => { const p = new Date(bet.date + 'T12:00:00'); p.setDate(p.getDate() - 1); return localDateStr(p); })();
+      const searchGames2 = [...games, ...(allGames[prevDate2] || [])];
+      const { result } = _sbGradeParlay(bet.legs, searchGames2);
       if (result === 'pending') continue;
       finalResult = result;
       if (finalResult === 'win') payout = bet.stake + _mlPayout(bet.parlayML, bet.stake);
@@ -10237,7 +10248,7 @@ async function _sbAutoSettle() {
       // Store per-leg results so circles fill in correctly for all legs,
       // including legs after a losing leg (parlay is dead but results are still shown)
       bet.legResults = bet.legs.map(l => {
-        const g = games.find(g => g.home === l.homeAbbr && g.away === l.awayAbbr);
+        const g = searchGames2.find(g => g.home === l.homeAbbr && g.away === l.awayAbbr);
         if (g && g.isFinal) return _sbGradeLeg(l, g);
         if (finalResult === 'win') return 'win';
         return null; // game not yet final — show empty dot
@@ -10326,7 +10337,7 @@ async function _sbPlaceBet() {
     return;
   }
 
-  const today = localDateStr(new Date());
+  const today = _sbGamesDate || localDateStr(new Date()); // use displayed game date, not calendar date
   const bets = await _sbLoadBets();
   const newBets = [];
 
@@ -10716,7 +10727,7 @@ async function renderSportsbook() {
 
  // Merge with UPCOMING_GAMES
   let games = fetchedGames || [];
-  let _sbGamesDate = today;
+  _sbGamesDate = today; // update module-level var so _sbPlaceBet uses the displayed date
   if (!games.length) {
     games = UPCOMING_GAMES.filter(g => g.date === today).map(g => ({
       ...g, isFinal: false, isLive: false, isUpcoming: true
