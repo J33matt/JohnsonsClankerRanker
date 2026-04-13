@@ -3919,6 +3919,11 @@ async function fetchESPNStreaks() {
 
     if (allFinal.length === 0) return;
 
+    // Apply W/L for any games not yet counted in STANDINGS_DATA.
+    // Safe: _appliedGameKeys deduplication prevents double-counting.
+    // This catches up weeks of missing results when static data is stale.
+    applyLiveGameData(allFinal);
+
     // For each team, collect their results in chronological order
     const teamResults = {};   // abbr → [true=W, false=L, ...]  oldest first
     STANDINGS_DATA.forEach(t => { teamResults[t.abbr] = []; });
