@@ -4142,15 +4142,18 @@ async function pollAndRefreshAll() {
     applyLiveGameData(allFinal);
   }
 
+  // Always apply absolute W/L records from scoreboard data (overrides stale baseline)
+  const recordsChanged = applyRecordsFromGames(allFinal);
+
   // Only re-render rankings/other tabs when something actually changed.
   // This prevents power scores and rankings from flickering mid-game.
-  if (!newFinalsExist) {
+  if (!newFinalsExist && !recordsChanged) {
     schedulePoll();
     return;
   }
 
   // Re-fetch streaks after new games finish
-  fetchESPNStreaks();
+  if (newFinalsExist) fetchESPNStreaks();
 
   renderRankings();
 
@@ -4497,7 +4500,16 @@ function parseESPNGames(data, dateStr) {
     const homeML = oddsData?.homeTeamOdds?.moneyLine || oddsData?.homeTeamOdds?.current?.moneyLine || null;
     const awayML = oddsData?.awayTeamOdds?.moneyLine || oddsData?.awayTeamOdds?.current?.moneyLine || null;
     const eventId = evt.id || null;
-    return { home, away, homeScore, awayScore, date: dateStr, tipDisplay, isFinal, isLive, isUpcoming, status, homeML, awayML, eventId };
+    // Extract each team's current W-L record embedded in the scoreboard response
+    function parseCompRecord(comp) {
+      const rec = (comp?.records || []).find(r => r.type === 'total' || r.name === 'overall');
+      if (!rec?.summary) return null;
+      const [w, l] = rec.summary.split('-').map(Number);
+      return (!isNaN(w) && !isNaN(l)) ? { w, l } : null;
+    }
+    const homeRecord = parseCompRecord(homeComp);
+    const awayRecord  = parseCompRecord(awayComp);
+    return { home, away, homeScore, awayScore, date: dateStr, tipDisplay, isFinal, isLive, isUpcoming, status, homeML, awayML, eventId, homeRecord, awayRecord };
   }).filter(Boolean);
 }
 
@@ -4617,6 +4629,36 @@ async function fetchAllScoreData() {
 // ── SCORE ENGINE INIT ─────────────────────────────────────────
 // Replaces renderScores() — fetches today's game data, applies finished games to
 // live rankings engine, starts the background poll loop. No scores tab needed.
+
+// Apply absolute W/L records extracted from ESPN scoreboard competitor data.
+// Takes the most recent record per team (newest game wins). This is the
+// authoritative source — it overrides any stale static baseline values.
+function applyRecordsFromGames(games) {
+  const recordMap = {};
+  [...games]
+    .filter(g => g.isFinal)
+    .sort((a, b) => b.date.localeCompare(a.date)) // newest first
+    .forEach(g => {
+      if (g.homeRecord && !recordMap[g.home]) recordMap[g.home] = g.homeRecord;
+      if (g.awayRecord  && !recordMap[g.away]) recordMap[g.away]  = g.awayRecord;
+    });
+  if (!Object.keys(recordMap).length) return false;
+  let changed = false;
+  STANDINGS_DATA.forEach(t => {
+    const r = recordMap[t.abbr];
+    if (r && (t.wins !== r.w || t.losses !== r.l)) {
+      t.wins = r.w; t.losses = r.l;
+      changed = true;
+    }
+  });
+  if (!changed) return false;
+  ENRICHED_DATA.forEach((entry, i) => {
+    const s = STANDINGS_DATA[i];
+    Object.assign(entry, s, computePowerScore(s), { streak: STREAK_DATA[s.abbr] || 0 });
+  });
+  return true;
+}
+
 async function _initScoreEngine() {
   let data;
   try { data = await fetchAllScoreData(); }
@@ -4630,6 +4672,9 @@ async function _initScoreEngine() {
     return !_appliedGameKeys.has(key);
   });
   if (hasNewFinals) applyLiveGameData(finishedGames);
+
+  // Overwrite W/L with authoritative records from ESPN scoreboard data
+  applyRecordsFromGames(finishedGames);
   renderRankings();
 
   _hasLiveGames = (data.today || []).some(g => g.isLive);
