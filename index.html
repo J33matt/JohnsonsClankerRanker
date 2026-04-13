@@ -10198,14 +10198,16 @@ async function _sbAutoSettle() {
   const open = bets.filter(b => b.status === 'open');
   if (!open.length) return;
 
-  // Fetch games for all unique dates with open bets, plus the day before each
-  // (guards against bets tagged with calendar date when game was previous day)
+  // Fetch games for all unique dates with open bets, plus ±2 days each
+  // (guards against bets stamped with a different calendar date than the actual game)
   const betDates = [...new Set(open.map(b => b.date))];
   const fetchDates = new Set(betDates);
   betDates.forEach(d => {
-    const prev = new Date(d + 'T12:00:00');
-    prev.setDate(prev.getDate() - 1);
-    fetchDates.add(localDateStr(prev));
+    for (const offset of [-1, 1, 2]) {
+      const adj = new Date(d + 'T12:00:00');
+      adj.setDate(adj.getDate() + offset);
+      fetchDates.add(localDateStr(adj));
+    }
   });
   const allGames = {};
   await Promise.all([...fetchDates].map(async d => {
@@ -10223,8 +10225,10 @@ async function _sbAutoSettle() {
 
     if (bet.betType === 'single') {
       const leg = bet.legs[0];
-      const prevDate = (() => { const p = new Date(bet.date + 'T12:00:00'); p.setDate(p.getDate() - 1); return localDateStr(p); })();
-      const searchGames = [...games, ...(allGames[prevDate] || [])];
+      const searchGames = [-1, 1, 2].reduce((acc, offset) => {
+        const adj = new Date(bet.date + 'T12:00:00'); adj.setDate(adj.getDate() + offset);
+        return acc.concat(allGames[localDateStr(adj)] || []);
+      }, [...games]);
       const game = searchGames.find(g =>
         (g.home === leg.homeAbbr && g.away === leg.awayAbbr) ||
         (g.home === leg.awayAbbr && g.away === leg.homeAbbr)
@@ -10237,8 +10241,10 @@ async function _sbAutoSettle() {
       else payout = 0;
     } else {
       // Parlay
-      const prevDate2 = (() => { const p = new Date(bet.date + 'T12:00:00'); p.setDate(p.getDate() - 1); return localDateStr(p); })();
-      const searchGames2 = [...games, ...(allGames[prevDate2] || [])];
+      const searchGames2 = [-1, 1, 2].reduce((acc, offset) => {
+        const adj = new Date(bet.date + 'T12:00:00'); adj.setDate(adj.getDate() + offset);
+        return acc.concat(allGames[localDateStr(adj)] || []);
+      }, [...games]);
       const { result } = _sbGradeParlay(bet.legs, searchGames2);
       if (result === 'pending') continue;
       finalResult = result;
