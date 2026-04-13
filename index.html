@@ -5740,7 +5740,7 @@ function renderPlayoffs() {
     // Version-aware cache check (version 3 = simulation-based picks with reasoning)
     try {
       const saved = JSON.parse(localStorage.getItem('clankerBracket2026') || 'null');
-      if (saved && saved.clankerBracketVersion === 3) { _clankerBracket = saved; return; }
+      if (saved && saved.clankerBracketVersion === 4) { _clankerBracket = saved; return; }
     } catch(e) {}
 
     const allTeams = west.concat(east);
@@ -5788,16 +5788,26 @@ function renderPlayoffs() {
       const lNr = _NET_RATINGS[loserAbbr]  || {};
       const wE  = ENRICHED_DATA.find(t => t.abbr === winnerAbbr) || {};
       const lE  = ENRICHED_DATA.find(t => t.abbr === loserAbbr)  || {};
+      // Positive = winner is actually better; negative = winner is the underdog
       const netGap = ((wNr.netRtg || 0) - (lNr.netRtg || 0));
       const pwrGap = ((wE.power   || 0) - (lE.power   || 0));
-      const wWp = Math.round((wE.winPct || 0.5) * 100);
-      if (Math.abs(netGap) >= 5) {
-        const sign = netGap > 0 ? '+' : '';
-        return `${winnerAbbr}'s net rating edge (${sign}${netGap.toFixed(1)} pts/100) makes this a clear series win.`;
-      } else if (Math.abs(pwrGap) >= 3) {
-        return `${winnerAbbr} holds a meaningful power score advantage and the depth to close it out over ${loserAbbr}.`;
+      const wWp  = Math.round((wE.winPct || 0.5) * 100);
+      const wNet = (wNr.netRtg != null) ? wNr.netRtg.toFixed(1) : '?';
+      const lNet = (lNr.netRtg != null) ? lNr.netRtg.toFixed(1) : '?';
+      const wPwr = (wE.power != null) ? wE.power.toFixed(1) : '?';
+      const lPwr = (lE.power != null) ? lE.power.toFixed(1) : '?';
+      if (netGap >= 5) {
+        // Winner genuinely has a better net rating
+        return `${winnerAbbr} (+${netGap.toFixed(1)} net rtg vs ${loserAbbr}) dominates on both ends; the efficiency gap is too wide to overcome.`;
+      } else if (netGap <= -5) {
+        // Upset — loser actually has better net rating
+        return `${winnerAbbr} pulls the upset despite ${loserAbbr}'s net rating edge; home court and momentum carry them through.`;
+      } else if (pwrGap >= 3) {
+        return `${winnerAbbr}'s power score (${wPwr}) edges ${loserAbbr} (${lPwr}), giving them a consistent edge across seven games.`;
+      } else if (pwrGap <= -3) {
+        return `${loserAbbr} holds the power score lead (${lPwr} vs ${wPwr}), but ${winnerAbbr} wins the simulation on home court and clutch variance.`;
       } else {
-        return `A coin-flip series, but ${winnerAbbr}'s ${wWp}% season win rate and home court give them the edge.`;
+        return `Even matchup: ${winnerAbbr} (net ${wNet}, ${wWp}% win rate) takes a closely contested series over ${loserAbbr} (net ${lNet}).`;
       }
     }
 
@@ -5814,7 +5824,7 @@ function renderPlayoffs() {
       west: { r1: [], semi: [], cf: null },
       east: { r1: [], semi: [], cf: null },
       champion: null, scores: {}, reasoning: {},
-      clankerBracketVersion: 3
+      clankerBracketVersion: 4
     };
 
     ['west', 'east'].forEach(conf => {
