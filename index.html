@@ -3616,6 +3616,13 @@ async function fetchESPNRatings() {
         const ptsFor     = parseFloat(stats['avgPointsFor']     || 0);
         const ptsAgainst = parseFloat(stats['avgPointsAgainst'] || 0);
         if (ptsFor > 0) ptsByAbbr[abbr] = { ptsFor, ptsAgainst };
+        // Also capture live W/L from the standings API (authoritative, avoids game-log reconstruction)
+        const w = parseInt(stats['wins']   || 0, 10);
+        const l = parseInt(stats['losses'] || 0, 10);
+        if (w + l > 0) {
+          const sd = STANDINGS_DATA.find(t => t.abbr === abbr);
+          if (sd) { sd.wins = w; sd.losses = l; }
+        }
       });
     }
   } catch(e) {}
@@ -3918,11 +3925,6 @@ async function fetchESPNStreaks() {
       .sort((a, b) => a.date.localeCompare(b.date));
 
     if (allFinal.length === 0) return;
-
-    // Apply W/L for any games not yet counted in STANDINGS_DATA.
-    // Safe: _appliedGameKeys deduplication prevents double-counting.
-    // This catches up weeks of missing results when static data is stale.
-    applyLiveGameData(allFinal);
 
     // For each team, collect their results in chronological order
     const teamResults = {};   // abbr → [true=W, false=L, ...]  oldest first
