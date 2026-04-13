@@ -5734,128 +5734,100 @@ function renderPlayoffs() {
   // CLANKER'S BRACKET — deterministic pre-playoff predictions
   // ================================================================
 
+  // Reasoning is generated at render time from live ENRICHED_DATA so numbers
+  // always match the Rankings tab. Not cached in localStorage.
+  function _clankerReasoning(t1Abbr, t2Abbr, winnerAbbr) {
+    const loserAbbr = winnerAbbr === t1Abbr ? t2Abbr : t1Abbr;
+    const wE = ENRICHED_DATA.find(t => t.abbr === winnerAbbr) || {};
+    const lE = ENRICHED_DATA.find(t => t.abbr === loserAbbr)  || {};
+    const wPwr = wE.power  != null ? +wE.power.toFixed(1)  : null;
+    const lPwr = lE.power  != null ? +lE.power.toFixed(1)  : null;
+    const wNet = wE.netRtg != null ? +wE.netRtg.toFixed(1) : null;
+    const lNet = lE.netRtg != null ? +lE.netRtg.toFixed(1) : null;
+    const wWp  = wE.winPct != null ? (wE.winPct * 100).toFixed(1) : null;
+    const pwrGap = (wPwr != null && lPwr != null) ? wPwr - lPwr : 0;
+    const netGap = (wNet != null && lNet != null) ? wNet - lNet : 0;
+    const wNetStr = wNet != null ? (wNet > 0 ? `+${wNet}` : `${wNet}`) : '?';
+    const lNetStr = lNet != null ? (lNet > 0 ? `+${lNet}` : `${lNet}`) : '?';
+    if (pwrGap >= 8 && netGap >= 3) {
+      return `${winnerAbbr} (power ${wPwr}, net rtg ${wNetStr}) is clearly the stronger team over ${loserAbbr} (power ${lPwr}, net rtg ${lNetStr}).`;
+    } else if (pwrGap >= 4) {
+      return `${winnerAbbr}'s power score of ${wPwr} outpaces ${loserAbbr}'s ${lPwr} — that edge holds up over a full series.`;
+    } else if (pwrGap <= -4) {
+      return `${winnerAbbr} (power ${wPwr}) upsets ${loserAbbr} (power ${lPwr}); home court and momentum carry them through.`;
+    } else if (Math.abs(netGap) >= 3) {
+      return `Closely matched, but ${winnerAbbr}'s net rating (${wNetStr}) over ${loserAbbr}'s (${lNetStr}) tilts the series.`;
+    } else {
+      return `A true toss-up: ${winnerAbbr} (power ${wPwr}, ${wWp}% win rate) edges ${loserAbbr} (power ${lPwr}).`;
+    }
+  }
+
   function generateClankerBracket() {
     if (_clankerBracket) return;
 
-    // Version-aware cache check (version 3 = simulation-based picks with reasoning)
+    // Version-aware cache — only winners/scores are cached, not reasoning (generated live)
     try {
       const saved = JSON.parse(localStorage.getItem('clankerBracket2026') || 'null');
-      if (saved && saved.clankerBracketVersion === 5) { _clankerBracket = saved; return; }
+      if (saved && saved.clankerBracketVersion === 6) { _clankerBracket = saved; return; }
     } catch(e) {}
+
+    // Analytic best-of-7: compute P(t1 wins series) from per-game win probabilities,
+    // then pick winner and derive series score from that probability.
+    // No RNG — same result every time, driven purely by team strength.
+    function seriesProb(t1Abbr, t2Abbr) {
+      // t1 has home court (home in games 1,2,5,7 = 4 games; away in 3,4,6 = 3 games)
+      const { homeWinProb: p1h } = _botEstimateMatchup(t2Abbr, t1Abbr); // t1 at home
+      const { homeWinProb: p2h } = _botEstimateMatchup(t1Abbr, t2Abbr); // t2 at home
+      const p1a = 1 - p2h; // t1 winning t2's home games
+      // Weighted average per-game win prob for t1 (4 home + 3 away over potential 7)
+      const p = (4 * p1h + 3 * p1a) / 7;
+      return Math.max(0.01, Math.min(0.99, p));
+    }
+
+    function pickSeries(t1Abbr, t2Abbr) {
+      if (!t1Abbr && !t2Abbr) return { winnerAbbr: null, score: null };
+      if (!t1Abbr) return { winnerAbbr: t2Abbr, score: '4-0' };
+      if (!t2Abbr) return { winnerAbbr: t1Abbr, score: '4-0' };
+      const p = seriesProb(t1Abbr, t2Abbr); // P(t1 wins a game on average)
+      const winnerAbbr = p >= 0.5 ? t1Abbr : t2Abbr;
+      const edge = Math.abs(p - 0.5); // 0 = coin-flip, 0.5 = guaranteed
+      const loserWins = edge > 0.18 ? 0 : edge > 0.12 ? 1 : edge > 0.06 ? 2 : 3;
+      return { winnerAbbr, score: `4-${loserWins}` };
+    }
 
     const allTeams = west.concat(east);
     function teamByAbbr(abbr) { return abbr ? allTeams.find(t => t.abbr === abbr) || null : null; }
 
-    // Deterministic seeded PRNG (mulberry32) — same picks every page load for a given matchup pair
-    function makeRng(seed) {
-      let s = seed >>> 0;
-      return function() {
-        s += 0x6D2B79F5;
-        let t = Math.imul(s ^ (s >>> 15), s | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-      };
-    }
-    function strHash(str) {
-      let h = 0x811c9dc5;
-      for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 0x01000193);
-      return h >>> 0;
-    }
-
-    // Simulate a best-of-7 series game by game using _botEstimateMatchup.
-    // t1Abbr = higher seed (home in games 1,2,5,7); t2Abbr = lower seed (home in games 3,4,6)
-    function simulateSeries(t1Abbr, t2Abbr) {
-      if (!t1Abbr) return { winnerAbbr: t2Abbr, loserWins: 0 };
-      if (!t2Abbr) return { winnerAbbr: t1Abbr, loserWins: 0 };
-      const rng = makeRng(strHash(t1Abbr + '_vs_' + t2Abbr));
-      const t1IsHome = [true, true, false, false, true, false, true]; // games 1–7
-      let w1 = 0, w2 = 0;
-      for (let g = 0; g < 7 && w1 < 4 && w2 < 4; g++) {
-        const homeAbbr = t1IsHome[g] ? t1Abbr : t2Abbr;
-        const awayAbbr = t1IsHome[g] ? t2Abbr : t1Abbr;
-        const { homeWinProb } = _botEstimateMatchup(awayAbbr, homeAbbr);
-        const homeWon = rng() < homeWinProb;
-        if (homeWon) { t1IsHome[g] ? w1++ : w2++; }
-        else          { t1IsHome[g] ? w2++ : w1++; }
-      }
-      return { winnerAbbr: w1 >= 4 ? t1Abbr : t2Abbr, loserWins: w1 >= 4 ? w2 : w1 };
-    }
-
-    // Generate a one-liner reasoning string from live data
-    function makeReasoning(t1Abbr, t2Abbr, winnerAbbr) {
-      const loserAbbr = winnerAbbr === t1Abbr ? t2Abbr : t1Abbr;
-      const wE = ENRICHED_DATA.find(t => t.abbr === winnerAbbr) || {};
-      const lE = ENRICHED_DATA.find(t => t.abbr === loserAbbr)  || {};
-      const wPwr = wE.power  != null ? +wE.power.toFixed(1)  : null;
-      const lPwr = lE.power  != null ? +lE.power.toFixed(1)  : null;
-      const wNet = wE.netRtg != null ? +wE.netRtg.toFixed(1) : null;
-      const lNet = lE.netRtg != null ? +lE.netRtg.toFixed(1) : null;
-      const wWp  = wE.winPct != null ? (wE.winPct * 100).toFixed(1) : null;
-      const pwrGap = (wPwr != null && lPwr != null) ? wPwr - lPwr : 0;
-      const netGap = (wNet != null && lNet != null) ? wNet - lNet : 0;
-      const wNetStr = wNet != null ? (wNet > 0 ? `+${wNet}` : `${wNet}`) : '?';
-      const lNetStr = lNet != null ? (lNet > 0 ? `+${lNet}` : `${lNet}`) : '?';
-      if (pwrGap >= 8 && netGap >= 3) {
-        // Dominant winner across both metrics
-        return `${winnerAbbr} (power ${wPwr}, net rtg ${wNetStr}) is clearly the stronger team over ${loserAbbr} (power ${lPwr}, net rtg ${lNetStr}).`;
-      } else if (pwrGap >= 4) {
-        // Power score advantage is the driver
-        return `${winnerAbbr}'s power score of ${wPwr} outpaces ${loserAbbr}'s ${lPwr} — that edge holds up over a full series.`;
-      } else if (pwrGap <= -4) {
-        // Upset — loser has better power score
-        return `${winnerAbbr} (power ${wPwr}) upsets ${loserAbbr} (power ${lPwr}) in a simulation surprise; home court tips the variance.`;
-      } else if (Math.abs(netGap) >= 3) {
-        // Net rating separates them when power is close
-        return `Closely matched on paper, but ${winnerAbbr}'s net rating (${wNetStr}) over ${loserAbbr}'s (${lNetStr}) tilts the series.`;
-      } else {
-        // Genuine coin-flip
-        return `A true toss-up: ${winnerAbbr} (power ${wPwr}, ${wWp}% win rate) edges ${loserAbbr} (power ${lPwr}) in a game-7 simulation.`;
-      }
-    }
-
-    // Pick a series and return winner, series score, and reasoning
-    function pickSeries(t1Abbr, t2Abbr) {
-      if (!t1Abbr && !t2Abbr) return { winnerAbbr: null, score: null, reasoning: null };
-      if (!t1Abbr) return { winnerAbbr: t2Abbr, score: '4-0', reasoning: null };
-      if (!t2Abbr) return { winnerAbbr: t1Abbr, score: '4-0', reasoning: null };
-      const { winnerAbbr, loserWins } = simulateSeries(t1Abbr, t2Abbr);
-      return { winnerAbbr, score: `4-${loserWins}`, reasoning: makeReasoning(t1Abbr, t2Abbr, winnerAbbr) };
-    }
-
     const cb = {
       west: { r1: [], semi: [], cf: null },
       east: { r1: [], semi: [], cf: null },
-      champion: null, scores: {}, reasoning: {},
-      clankerBracketVersion: 5
+      champion: null, scores: {},
+      clankerBracketVersion: 6
     };
 
     ['west', 'east'].forEach(conf => {
       for (let i = 0; i < 4; i++) {
         const [t1, t2] = getR1Teams(conf, i);
-        const { winnerAbbr, score, reasoning } = pickSeries(
+        const { winnerAbbr, score } = pickSeries(
           (t1 && !t1._placeholder) ? t1.abbr : null,
           (t2 && !t2._placeholder) ? t2.abbr : null
         );
         cb[conf].r1.push(winnerAbbr);
-        if (score)     cb.scores[`${conf}_r1_${i}`]    = score;
-        if (reasoning) cb.reasoning[`${conf}_r1_${i}`] = reasoning;
+        if (score) cb.scores[`${conf}_r1_${i}`] = score;
       }
       for (let i = 0; i < 2; i++) {
-        const { winnerAbbr, score, reasoning } = pickSeries(cb[conf].r1[i*2], cb[conf].r1[i*2+1]);
+        const { winnerAbbr, score } = pickSeries(cb[conf].r1[i*2], cb[conf].r1[i*2+1]);
         cb[conf].semi.push(winnerAbbr);
-        if (score)     cb.scores[`${conf}_semi_${i}`]    = score;
-        if (reasoning) cb.reasoning[`${conf}_semi_${i}`] = reasoning;
+        if (score) cb.scores[`${conf}_semi_${i}`] = score;
       }
-      const { winnerAbbr: cfW, score: cfS, reasoning: cfR } = pickSeries(cb[conf].semi[0], cb[conf].semi[1]);
+      const { winnerAbbr: cfW, score: cfS } = pickSeries(cb[conf].semi[0], cb[conf].semi[1]);
       cb[conf].cf = cfW;
-      if (cfS) cb.scores[`${conf}_cf`]    = cfS;
-      if (cfR) cb.reasoning[`${conf}_cf`] = cfR;
+      if (cfS) cb.scores[`${conf}_cf`] = cfS;
     });
 
-    const { winnerAbbr: champW, score: champS, reasoning: champR } = pickSeries(cb.west.cf, cb.east.cf);
+    const { winnerAbbr: champW, score: champS } = pickSeries(cb.west.cf, cb.east.cf);
     cb.champion = champW;
-    if (champS) cb.scores['finals']    = champS;
-    if (champR) cb.reasoning['finals'] = champR;
+    if (champS) cb.scores['finals'] = champS;
 
     _clankerBracket = cb;
     try { localStorage.setItem('clankerBracket2026', JSON.stringify(cb)); } catch(e) {}
@@ -5884,17 +5856,23 @@ function renderPlayoffs() {
     const conn2 = `<div class="bkt-conn-col"><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div></div>`;
     const conn1 = `<div class="bkt-conn-col"><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div></div>`;
 
-    const rsn = cb.reasoning || {};
     const r1Html = [0,1,2,3].map(i => {
       const [t1, t2] = getR1Teams(conf, i);
-      return clankerMatchupCard(t1, t2, SEEDS[i][0], SEEDS[i][1], cb[conf].r1[i], cb.scores[`${conf}_r1_${i}`], st?.[conf]?.r1?.[i], rsn[`${conf}_r1_${i}`]);
+      const t1a = (t1 && !t1._placeholder) ? t1.abbr : null;
+      const t2a = (t2 && !t2._placeholder) ? t2.abbr : null;
+      const rsn = (t1a && t2a && cb[conf].r1[i]) ? _clankerReasoning(t1a, t2a, cb[conf].r1[i]) : null;
+      return clankerMatchupCard(t1, t2, SEEDS[i][0], SEEDS[i][1], cb[conf].r1[i], cb.scores[`${conf}_r1_${i}`], st?.[conf]?.r1?.[i], rsn);
     }).join('');
 
     const semiHtml = [0,1].map(i => {
-      return clankerMatchupCard(teamByAbbr(cb[conf].r1[i*2]), teamByAbbr(cb[conf].r1[i*2+1]), '', '', cb[conf].semi[i], cb.scores[`${conf}_semi_${i}`], st?.[conf]?.semi?.[i], rsn[`${conf}_semi_${i}`]);
+      const t1a = cb[conf].r1[i*2], t2a = cb[conf].r1[i*2+1];
+      const rsn = (t1a && t2a && cb[conf].semi[i]) ? _clankerReasoning(t1a, t2a, cb[conf].semi[i]) : null;
+      return clankerMatchupCard(teamByAbbr(t1a), teamByAbbr(t2a), '', '', cb[conf].semi[i], cb.scores[`${conf}_semi_${i}`], st?.[conf]?.semi?.[i], rsn);
     }).join('');
 
-    const cfHtml = clankerMatchupCard(teamByAbbr(cb[conf].semi[0]), teamByAbbr(cb[conf].semi[1]), '', '', cb[conf].cf, cb.scores[`${conf}_cf`], st?.[conf]?.cf?.[0], rsn[`${conf}_cf`]);
+    const cfT1a = cb[conf].semi[0], cfT2a = cb[conf].semi[1];
+    const cfRsn = (cfT1a && cfT2a && cb[conf].cf) ? _clankerReasoning(cfT1a, cfT2a, cb[conf].cf) : null;
+    const cfHtml = clankerMatchupCard(teamByAbbr(cfT1a), teamByAbbr(cfT2a), '', '', cb[conf].cf, cb.scores[`${conf}_cf`], st?.[conf]?.cf?.[0], cfRsn);
 
     return `<div class="bracket-half ${conf}">
       <div class="bkt-round bkt-r1">${r1Html}</div>${conn2}
@@ -5913,7 +5891,7 @@ function renderPlayoffs() {
     const actualChamp = _bktBracketState?.champion;
     const champOk = actualChamp && !actualChamp._placeholder ? (actualChamp.abbr === champAbbr ? ' ✅' : ' ❌') : '';
     const champLogo = champAbbr ? getLogoUrl(champAbbr) : null;
-    const finalsRsn = cb.reasoning?.['finals'];
+    const finalsRsn = (cb.west.cf && cb.east.cf && champAbbr) ? _clankerReasoning(cb.west.cf, cb.east.cf, champAbbr) : null;
     return `<div class="bracket-finals-col">
       <div class="bkt-finals${ft1||ft2?' has-teams':''}">
         <div>Championship</div>
