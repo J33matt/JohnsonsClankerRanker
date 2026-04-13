@@ -5734,48 +5734,156 @@ function renderPlayoffs() {
   // CLANKER'S BRACKET — deterministic pre-playoff predictions
   // ================================================================
 
-  function generateClankerBracket() {
-    if (_clankerBracket) return;
-    try {
-      const saved = JSON.parse(localStorage.getItem('clankerBracket2026') || 'null');
-      if (saved) { _clankerBracket = saved; return; }
-    } catch(e) {}
+  async function generateClankerBracket() {
+    const co = document.getElementById('clanker-bracket-outer');
 
-    const allTeams = west.concat(east);
-    function teamByAbbr(abbr) { return abbr ? allTeams.find(t => t.abbr === abbr) || null : null; }
-    function pickSeries(t1, t2) {
-      const p1 = (!t1 || t1._placeholder) ? 0 : (t1.power || computePowerScore(t1).power || 0);
-      const p2 = (!t2 || t2._placeholder) ? 0 : (t2.power || computePowerScore(t2).power || 0);
-      const winner = (!t1 || (t2 && !t2._placeholder && p2 > p1)) ? t2 : t1;
-      const diff = Math.abs(p1 - p2);
-      const loserWins = diff > 12 ? 0 : diff > 7 ? 1 : diff > 3 ? 2 : 3;
-      return { winnerAbbr: winner ? winner.abbr : null, score: `4-${loserWins}` };
+    if (_clankerBracket) {
+      if (co) co.innerHTML = buildClankerSectionHtml();
+      return;
     }
 
-    const cb = { west: { r1: [], semi: [], cf: null }, east: { r1: [], semi: [], cf: null }, champion: null, scores: {} };
-    ['west', 'east'].forEach(conf => {
+    // Version-aware cache check (version 2 = API-generated picks with reasoning)
+    try {
+      const saved = JSON.parse(localStorage.getItem('clankerBracket2026') || 'null');
+      if (saved && saved.clankerBracketVersion === 2) {
+        _clankerBracket = saved;
+        if (co) co.innerHTML = buildClankerSectionHtml();
+        return;
+      }
+    } catch(e) {}
+
+    // Check for API key
+    const apiKey = localStorage.getItem('jcr.anthropicKey') || '';
+    if (!apiKey) {
+      if (co) co.innerHTML = `<div style="margin-top:52px;padding-top:36px;border-top:2px solid rgba(255,170,0,0.2);padding-bottom:36px">
+        <div class="section-header" style="margin-bottom:14px">
+          <div class="section-title" style="font-size:1.4rem">🤖 Clanker's Bracket</div>
+          <div class="section-sub" style="margin-top:3px"><em>AI-powered playoff predictions</em></div>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:20px 24px;max-width:460px">
+          <p style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;color:var(--text);margin:0 0 12px">Enter your Anthropic API key to let Clanker analyze the matchups:</p>
+          <input id="clanker-api-key-input" type="password" placeholder="sk-ant-api03-…"
+            style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px 12px;font-size:0.85rem;color:var(--text);font-family:monospace;margin-bottom:10px">
+          <button onclick="window._clankerSaveKey()"
+            style="background:var(--accent2);color:#000;border:none;border-radius:6px;padding:8px 18px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;letter-spacing:0.5px">Generate Picks</button>
+        </div>
+      </div>`;
+      window._clankerSaveKey = function() {
+        const k = ((document.getElementById('clanker-api-key-input') || {}).value || '').trim();
+        if (k) { localStorage.setItem('jcr.anthropicKey', k); window._clankerGenerate(); }
+      };
+      return;
+    }
+
+    // Show loading state
+    if (co) co.innerHTML = `<div style="margin-top:52px;padding-top:36px;border-top:2px solid rgba(255,170,0,0.2);text-align:center;padding:52px 0 36px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.15rem;letter-spacing:1.5px;color:var(--muted)">🤖 Clanker is studying the matchups…</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;color:rgba(255,255,255,0.25);margin-top:6px;letter-spacing:0.5px">Consulting the tape</div>
+    </div>`;
+
+    // Build team data for prompt
+    const allTeamsForPrompt = west.concat(east);
+    const teamLines = allTeamsForPrompt.map(t => {
+      if (!t || t._placeholder) return null;
+      const ps = computePowerScore(t);
+      const nr = _NET_RATINGS[t.abbr] || {};
+      const sd = (STANDINGS_DATA || []).find(s => s.abbr === t.abbr) || {};
+      const l20 = L20_DATA[t.abbr];
+      const l20str = l20 ? `, L20: ${l20.l20w}/${l20.l20g}` : '';
+      return `  ${t.name} (${t.abbr}): conf=${t.conf||'?'}, seed=${t.seed||'?'}, record=${sd.wins||'?'}-${sd.losses||'?'}, power=${(ps.power||0).toFixed(1)}, l20win%=${l20?((l20.l20w/l20.l20g)*100).toFixed(0)+'%':'?'}, ortg=${nr.ortg||'?'}, drtg=${nr.drtg||'?'}, netRtg=${nr.netRtg||'?'}${l20str}`;
+    }).filter(Boolean).join('\n');
+
+    const matchupDescs = [];
+    ['west','east'].forEach(conf => {
       for (let i = 0; i < 4; i++) {
         const [t1, t2] = getR1Teams(conf, i);
-        const { winnerAbbr, score } = pickSeries(t1, t2);
-        cb[conf].r1.push(winnerAbbr);
-        cb.scores[`${conf}_r1_${i}`] = score;
+        if (t1 && t2 && !t1._placeholder && !t2._placeholder) {
+          matchupDescs.push(`${conf.toUpperCase()} R1[${i}]: ${t1.abbr} (#${t1.seed||'?'}) vs ${t2.abbr} (#${t2.seed||'?'})`);
+        }
       }
-      for (let i = 0; i < 2; i++) {
-        const { winnerAbbr, score } = pickSeries(teamByAbbr(cb[conf].r1[i*2]), teamByAbbr(cb[conf].r1[i*2+1]));
-        cb[conf].semi.push(winnerAbbr);
-        cb.scores[`${conf}_semi_${i}`] = score;
-      }
-      const { winnerAbbr: cfW, score: cfS } = pickSeries(teamByAbbr(cb[conf].semi[0]), teamByAbbr(cb[conf].semi[1]));
-      cb[conf].cf = cfW; cb.scores[`${conf}_cf`] = cfS;
     });
-    const { winnerAbbr: champW, score: champS } = pickSeries(teamByAbbr(cb.west.cf), teamByAbbr(cb.east.cf));
-    cb.champion = champW; cb.scores['finals'] = champS;
 
-    _clankerBracket = cb;
-    try { localStorage.setItem('clankerBracket2026', JSON.stringify(cb)); } catch(e) {}
+    const prompt = `You are Clanker, an elite NBA analyst AI. Predict the entire 2025-26 NBA Playoffs bracket using the team data below. Think like a real analyst: weigh offensive/defensive efficiency, recent form, and matchup dynamics.
+
+PLAYOFF TEAMS:
+${teamLines}
+
+FIRST ROUND MATCHUPS:
+${matchupDescs.join('\n')}
+
+Respond with ONLY valid JSON — no markdown fences, no text outside the JSON. Use this exact structure:
+{
+  "west": { "r1": ["abbr","abbr","abbr","abbr"], "semi": ["abbr","abbr"], "cf": "abbr" },
+  "east": { "r1": ["abbr","abbr","abbr","abbr"], "semi": ["abbr","abbr"], "cf": "abbr" },
+  "champion": "abbr",
+  "scores": {
+    "west_r1_0":"4-X","west_r1_1":"4-X","west_r1_2":"4-X","west_r1_3":"4-X",
+    "west_semi_0":"4-X","west_semi_1":"4-X","west_cf":"4-X",
+    "east_r1_0":"4-X","east_r1_1":"4-X","east_r1_2":"4-X","east_r1_3":"4-X",
+    "east_semi_0":"4-X","east_semi_1":"4-X","east_cf":"4-X",
+    "finals":"4-X"
+  },
+  "reasoning": {
+    "west_r1_0":"one analyst sentence","west_r1_1":"one analyst sentence",
+    "west_r1_2":"one analyst sentence","west_r1_3":"one analyst sentence",
+    "west_semi_0":"one analyst sentence","west_semi_1":"one analyst sentence","west_cf":"one analyst sentence",
+    "east_r1_0":"one analyst sentence","east_r1_1":"one analyst sentence",
+    "east_r1_2":"one analyst sentence","east_r1_3":"one analyst sentence",
+    "east_semi_0":"one analyst sentence","east_semi_1":"one analyst sentence","east_cf":"one analyst sentence",
+    "finals":"one analyst sentence"
+  }
+}
+
+Rules: r1[0..3] winners correspond to matchup indices 0–3; semi[0]=winner of r1[0] vs r1[1], semi[1]=winner of r1[2] vs r1[3]; all abbrs must exactly match the data above; scores use "4-X" where X is loser's wins (0–3); each reasoning value is one crisp analyst sentence explaining the pick.`;
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1500,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`API ${resp.status}: ${errText.slice(0, 200)}`);
+      }
+
+      const data = await resp.json();
+      const raw = (data.content?.[0]?.text || '').trim();
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('No JSON found in response');
+
+      const cb = JSON.parse(jsonMatch[0]);
+      cb.clankerBracketVersion = 2;
+      _clankerBracket = cb;
+      try { localStorage.setItem('clankerBracket2026', JSON.stringify(cb)); } catch(e) {}
+      if (co) co.innerHTML = buildClankerSectionHtml();
+
+    } catch(err) {
+      console.error('Clanker bracket error:', err);
+      if (co) co.innerHTML = `<div style="margin-top:52px;padding-top:36px;border-top:2px solid rgba(255,170,0,0.2);padding-bottom:36px">
+        <div class="section-title" style="font-size:1.4rem;margin-bottom:10px">🤖 Clanker's Bracket</div>
+        <div style="background:rgba(220,50,50,0.1);border:1px solid rgba(220,50,50,0.25);border-radius:8px;padding:14px 18px;max-width:460px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;color:#e05555;margin-bottom:10px">Failed to generate picks: ${String(err.message||err).slice(0,140)}</div>
+          <button onclick="window._clankerGenerate()"
+            style="background:rgba(255,255,255,0.08);color:var(--text);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:7px 16px;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;cursor:pointer;margin-right:10px">↺ Retry</button>
+          <button onclick="localStorage.removeItem('jcr.anthropicKey');window._clankerGenerate()"
+            style="background:transparent;color:var(--muted);border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;cursor:pointer">Change API key</button>
+        </div>
+      </div>`;
+    }
   }
 
-  function clankerMatchupCard(t1, t2, seed1, seed2, pickedAbbr, score, actualWinner) {
+  function clankerMatchupCard(t1, t2, seed1, seed2, pickedAbbr, score, actualWinner, reasoning) {
     const resolved = actualWinner && !actualWinner._placeholder;
     const isCorrect = resolved ? actualWinner.abbr === pickedAbbr : null;
     const resultBadge = isCorrect === true ? ' ✅' : isCorrect === false ? ' ❌' : '';
@@ -5784,7 +5892,8 @@ function renderPlayoffs() {
     const t1Class = t1Picked ? 'winner-row' : (t1 && pickedAbbr ? 'loser-row' : '');
     const t2Class = t2Picked ? 'winner-row' : (t2 && pickedAbbr ? 'loser-row' : '');
     const scoreRow = (score || resultBadge) ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:1px;color:var(--muted);padding:2px 8px 5px;text-align:center;border-top:1px solid var(--border)">${score || ''}${resultBadge}</div>` : '';
-    return `<div class="bkt-matchup">${teamRowHtml(seed1,t1,t1Class,'')}${teamRowHtml(seed2,t2,t2Class,'')}${scoreRow}</div>`;
+    const reasonRow = reasoning ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:rgba(255,255,255,0.3);padding:2px 7px 5px;text-align:center;font-style:italic;line-height:1.35">${reasoning}</div>` : '';
+    return `<div class="bkt-matchup">${teamRowHtml(seed1,t1,t1Class,'')}${teamRowHtml(seed2,t2,t2Class,'')}${scoreRow}${reasonRow}</div>`;
   }
 
   function buildClankerHalfHtml(conf) {
@@ -5797,16 +5906,17 @@ function renderPlayoffs() {
     const conn2 = `<div class="bkt-conn-col"><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div></div>`;
     const conn1 = `<div class="bkt-conn-col"><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div></div>`;
 
+    const rsn = cb.reasoning || {};
     const r1Html = [0,1,2,3].map(i => {
       const [t1, t2] = getR1Teams(conf, i);
-      return clankerMatchupCard(t1, t2, SEEDS[i][0], SEEDS[i][1], cb[conf].r1[i], cb.scores[`${conf}_r1_${i}`], st?.[conf]?.r1?.[i]);
+      return clankerMatchupCard(t1, t2, SEEDS[i][0], SEEDS[i][1], cb[conf].r1[i], cb.scores[`${conf}_r1_${i}`], st?.[conf]?.r1?.[i], rsn[`${conf}_r1_${i}`]);
     }).join('');
 
     const semiHtml = [0,1].map(i => {
-      return clankerMatchupCard(teamByAbbr(cb[conf].r1[i*2]), teamByAbbr(cb[conf].r1[i*2+1]), '', '', cb[conf].semi[i], cb.scores[`${conf}_semi_${i}`], st?.[conf]?.semi?.[i]);
+      return clankerMatchupCard(teamByAbbr(cb[conf].r1[i*2]), teamByAbbr(cb[conf].r1[i*2+1]), '', '', cb[conf].semi[i], cb.scores[`${conf}_semi_${i}`], st?.[conf]?.semi?.[i], rsn[`${conf}_semi_${i}`]);
     }).join('');
 
-    const cfHtml = clankerMatchupCard(teamByAbbr(cb[conf].semi[0]), teamByAbbr(cb[conf].semi[1]), '', '', cb[conf].cf, cb.scores[`${conf}_cf`], st?.[conf]?.cf?.[0]);
+    const cfHtml = clankerMatchupCard(teamByAbbr(cb[conf].semi[0]), teamByAbbr(cb[conf].semi[1]), '', '', cb[conf].cf, cb.scores[`${conf}_cf`], st?.[conf]?.cf?.[0], rsn[`${conf}_cf`]);
 
     return `<div class="bracket-half ${conf}">
       <div class="bkt-round bkt-r1">${r1Html}</div>${conn2}
@@ -5825,6 +5935,7 @@ function renderPlayoffs() {
     const actualChamp = _bktBracketState?.champion;
     const champOk = actualChamp && !actualChamp._placeholder ? (actualChamp.abbr === champAbbr ? ' ✅' : ' ❌') : '';
     const champLogo = champAbbr ? getLogoUrl(champAbbr) : null;
+    const finalsRsn = cb.reasoning?.['finals'];
     return `<div class="bracket-finals-col">
       <div class="bkt-finals${ft1||ft2?' has-teams':''}">
         <div>Championship</div>
@@ -5837,6 +5948,7 @@ function renderPlayoffs() {
           <div class="finals-sub">CHAMPION</div>
           ${champLogo ? `<img src="${champLogo}" style="width:34px;height:34px;object-fit:contain;margin:4px 0" onerror="this.style.display='none'">` : ''}
           <div style="color:var(--accent2);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px">🏆 ${champAbbr}${champOk}</div>
+          ${finalsRsn ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:rgba(255,255,255,0.3);font-style:italic;margin-top:6px;line-height:1.35;padding:0 4px">${finalsRsn}</div>` : ''}
         </div>` : ''}
       </div>
     </div>`;
@@ -5957,11 +6069,11 @@ function renderPlayoffs() {
   window._bktUndo = undo;
   window._bktRedo = redo;
   window._bktClear = clearBracket;
+  window._clankerGenerate = function() { _clankerBracket = null; generateClankerBracket(); };
 
   document.getElementById('bracket-inner').innerHTML = buildFullBracket();
   updateControls();
-  generateClankerBracket();
-  document.getElementById('clanker-bracket-outer').innerHTML = buildClankerSectionHtml();
+  generateClankerBracket(); // async — updates clanker-bracket-outer when done
 
   // Champion overlay (append to body if not already there)
   if (!document.getElementById('champion-overlay')) {
