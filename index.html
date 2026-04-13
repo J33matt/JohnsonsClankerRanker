@@ -4145,9 +4145,12 @@ async function pollAndRefreshAll() {
   // Always apply absolute W/L records from scoreboard data (overrides stale baseline)
   const recordsChanged = applyRecordsFromGames(allFinal);
 
+  // Track playoff series wins (games after PLAYOFF_START between playoff teams)
+  const hasNewPlayoff = _trackPlayoffGames(allFinal);
+
   // Only re-render rankings/other tabs when something actually changed.
   // This prevents power scores and rankings from flickering mid-game.
-  if (!newFinalsExist && !recordsChanged) {
+  if (!newFinalsExist && !recordsChanged && !hasNewPlayoff) {
     schedulePoll();
     return;
   }
@@ -4156,7 +4159,6 @@ async function pollAndRefreshAll() {
   if (newFinalsExist) fetchESPNStreaks();
 
   renderRankings();
-
 
   // Re-render other tabs only if visible (avoids resetting bracket picks)
   if (document.getElementById('panel-playoffs') && document.getElementById('panel-playoffs').classList.contains('active')) renderPlayoffs();
@@ -4677,6 +4679,10 @@ async function _initScoreEngine() {
   applyRecordsFromGames(finishedGames);
   renderRankings();
 
+  // Track playoff game results and re-render bracket if the panel is open
+  const hasNewPlayoff = _trackPlayoffGames(finishedGames);
+  if (hasNewPlayoff && document.getElementById('panel-playoffs')?.classList.contains('active')) renderPlayoffs();
+
   _hasLiveGames = (data.today || []).some(g => g.isLive);
   schedulePoll();
 }
@@ -4847,15 +4853,13 @@ function getDivisionWinners() {
 }
 
 function getConfWinPct(team) {
-  const seed = team.abbr.charCodeAt(0) * 3 + team.abbr.charCodeAt(1) * 7 + team.abbr.charCodeAt(2);
-  const base = team.wins / (team.wins + team.losses);
-  return base + ((seed % 11) - 5) * 0.004;
+  // Use net rating as a conference-record proxy for tiebreaking equal win%
+  return (_NET_RATINGS[team.abbr] || {}).netRtg || 0;
 }
 
 function getDivWinPct(team) {
-  const seed = team.abbr.charCodeAt(0) * 5 + team.abbr.charCodeAt(2) * 3;
-  const base = team.wins / (team.wins + team.losses);
-  return base + ((seed % 9) - 4) * 0.006;
+  // Use net rating for division tiebreaking (best available proxy without real conf/div records)
+  return (_NET_RATINGS[team.abbr] || {}).netRtg || 0;
 }
 
 function getPointDiff(team) {
@@ -4898,25 +4902,67 @@ function _simShowTab(which) {
   else renderDraft();
 }
 
+// ── PLAYOFF BRACKET PERSISTENCE ─────────────────────────────────────────────
+// Module-level state so bracket picks survive re-renders (tab switches, polls).
+let _bktBracketState = null;
+let _bktPIState      = null;
+// Series win counts for live bracket auto-fill: { "OKC|GSW": { OKC: 4, GSW: 2 } }
+let _playoffSeries   = {};
+// Game keys already counted toward series wins (prevents double-counting)
+let _playoffGameKeys = new Set();
+// 2026 NBA playoffs begin April 19
+const PLAYOFF_START  = '2026-04-19';
+
+// Call after every final game fetch to update _playoffSeries.
+// Returns true if any new playoff game was recorded.
+function _trackPlayoffGames(games) {
+  let hasNew = false;
+  (games || []).forEach(g => {
+    if (!g.isFinal || g.date < PLAYOFF_START) return;
+    const key = g.date + '|' + g.home + '|' + g.away;
+    if (_playoffGameKeys.has(key)) return;
+    _playoffGameKeys.add(key);
+    const seriesKey = [g.home, g.away].sort().join('|');
+    if (!_playoffSeries[seriesKey]) _playoffSeries[seriesKey] = { [g.home]: 0, [g.away]: 0 };
+    const winner = g.homeScore > g.awayScore ? g.home : g.away;
+    _playoffSeries[seriesKey][winner] = (_playoffSeries[seriesKey][winner] || 0) + 1;
+    hasNew = true;
+  });
+  return hasNew;
+}
+
 function renderPlayoffs() {
   const west = seedConference('WEST');
   const east = seedConference('EAST');
 
   // ================================================================
-  // BRACKET STATE
+  // BRACKET STATE — loaded from module-level to survive re-renders
   // ================================================================
   // Each conf: 4 R1 matchups, 2 Semis, 1 CF, 1 Finals slot
   // bracket[conf][round][matchupIdx] = winning team object or null
   // play-in: piWinners[conf] = { seed7: team|null, seed8: team|null }
-  const bracketState = {
-    west: { r1: [null,null,null,null], semi: [null,null], cf: [null], finalsTeam: null },
-    east: { r1: [null,null,null,null], semi: [null,null], cf: [null], finalsTeam: null },
-    champion: null
-  };
-  const piState = {
-    west: { game78winner: null, game910winner: null, seed8: null, deciderWinner: null },
-    east: { game78winner: null, game910winner: null, seed8: null, deciderWinner: null }
-  };
+  if (!_bktBracketState) {
+    // Try restoring from localStorage first
+    try {
+      const saved = JSON.parse(localStorage.getItem('playoffBracket2026') || 'null');
+      if (saved) { _bktBracketState = saved.bracket; _bktPIState = saved.pi; }
+    } catch(e) {}
+    if (!_bktBracketState) _bktBracketState = {
+      west: { r1: [null,null,null,null], semi: [null,null], cf: [null], finalsTeam: null },
+      east: { r1: [null,null,null,null], semi: [null,null], cf: [null], finalsTeam: null },
+      champion: null
+    };
+    if (!_bktPIState) _bktPIState = {
+      west: { game78winner: null, game910winner: null, seed8: null, deciderWinner: null },
+      east: { game78winner: null, game910winner: null, seed8: null, deciderWinner: null }
+    };
+  }
+  const bracketState = _bktBracketState;
+  const piState      = _bktPIState;
+
+  function savePlayoffState() {
+    try { localStorage.setItem('playoffBracket2026', JSON.stringify({ bracket: bracketState, pi: piState })); } catch(e) {}
+  }
 
   // R1 pairings: [topSeedIdx, botSeedIdx] into the seeded array (0-based)
   // 1v8, 4v5, 3v6, 2v7 · indices 0,1,2,3,4,5 for seeds 1-6; 6,7 for play-in results
@@ -4954,7 +5000,7 @@ function renderPlayoffs() {
   }
 
   function clearBracket() {
-    // Reset all picks
+    // Reset all picks (including auto-filled results)
     ['west','east'].forEach(c => {
       bracketState[c].r1 = [null,null,null,null];
       bracketState[c].semi = [null,null];
@@ -4966,8 +5012,12 @@ function renderPlayoffs() {
       piState[c].deciderWinner = null;
     });
     bracketState.champion = null;
+    // Also clear live playoff tracking so cleared bracket stays clear
+    _playoffSeries = {};
+    _playoffGameKeys = new Set();
     history.length = 0;
     redoStack.length = 0;
+    try { localStorage.removeItem('playoffBracket2026'); } catch(e) {}
     updateControls();
     rerenderBracket();
     dismissChampion();
@@ -5638,6 +5688,7 @@ function renderPlayoffs() {
   // RE-RENDER
   // ================================================================
   function rerenderBracket() {
+    savePlayoffState();
     const container = document.getElementById('bracket-inner');
     if (!container) return;
     container.innerHTML = buildFullBracket();
@@ -5675,6 +5726,69 @@ function renderPlayoffs() {
 
     return html;
   }
+
+  // ================================================================
+  // AUTO-FILL FROM LIVE PLAYOFF RESULTS
+  // ================================================================
+  // Walk all completed series in _playoffSeries and fill any unsettled bracket slots.
+  // A slot is only overwritten if empty or was previously auto-filled (_autoFilled flag).
+  // Preserves user-made picks in undecided slots.
+  (function autoFillFromLiveResults() {
+    Object.entries(_playoffSeries).forEach(([seriesKey, wins]) => {
+      const [abbr1, abbr2] = seriesKey.split('|');
+      const w1 = wins[abbr1] || 0, w2 = wins[abbr2] || 0;
+      if (w1 < 4 && w2 < 4) return; // series not finished
+      const winnerAbbr = w1 >= 4 ? abbr1 : abbr2;
+      const winner = allTeams.find(t => t.abbr === winnerAbbr);
+      if (!winner) return;
+      const winObj = { ...winner, _autoFilled: true };
+
+      ['west', 'east'].forEach(conf => {
+        // R1 slots
+        for (let i = 0; i < 4; i++) {
+          const [t1, t2] = getR1Teams(conf, i);
+          if (!t1 || !t2) continue;
+          if (new Set([t1.abbr, t2.abbr]).has(abbr1) && new Set([t1.abbr, t2.abbr]).has(abbr2)) {
+            const cur = bracketState[conf].r1[i];
+            if (!cur || cur._autoFilled) {
+              bracketState[conf].r1[i] = winObj;
+              invalidateDownstream(conf, 'r1', i);
+            }
+            return; // only one R1 slot per series
+          }
+        }
+        // Semi slots
+        for (let i = 0; i < 2; i++) {
+          const [t1, t2] = getSemiTeams(conf, i);
+          if (!t1 || !t2) continue;
+          if (new Set([t1.abbr, t2.abbr]).has(abbr1) && new Set([t1.abbr, t2.abbr]).has(abbr2)) {
+            const cur = bracketState[conf].semi[i];
+            if (!cur || cur._autoFilled) {
+              bracketState[conf].semi[i] = winObj;
+              invalidateDownstream(conf, 'semi', i);
+            }
+            return;
+          }
+        }
+        // CF slot
+        const [cf1, cf2] = getCFTeams(conf);
+        if (cf1 && cf2 && new Set([cf1.abbr, cf2.abbr]).has(abbr1) && new Set([cf1.abbr, cf2.abbr]).has(abbr2)) {
+          const cur = bracketState[conf].cf[0];
+          if (!cur || cur._autoFilled) {
+            bracketState[conf].cf[0] = winObj;
+            bracketState[conf].finalsTeam = winObj;
+          }
+        }
+      });
+      // Finals / champion
+      const [ft1, ft2] = getFinalsTeams();
+      if (ft1 && ft2 && new Set([ft1.abbr, ft2.abbr]).has(abbr1) && new Set([ft1.abbr, ft2.abbr]).has(abbr2)) {
+        const cur = bracketState.champion;
+        if (!cur || cur._autoFilled) bracketState.champion = winObj;
+      }
+    });
+    savePlayoffState();
+  })();
 
   // ================================================================
   // INITIAL RENDER
