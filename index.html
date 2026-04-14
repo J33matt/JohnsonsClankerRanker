@@ -1888,27 +1888,21 @@
   }
 
   /* ===================== DRAFT TAB ===================== */
-  .draft-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 32px;
-  }
-  @media (max-width: 1000px) { .draft-layout { grid-template-columns: 1fr; } }
 
-  /* Lottery odds table */
+  /* Merged lottery board card */
   .lottery-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
     overflow: hidden;
+    margin-bottom: 32px;
   }
   .lottery-card-header {
-    padding: 16px 20px 12px;
+    padding: 14px 20px;
     border-bottom: 1px solid var(--border);
     display: flex;
-    align-items: baseline;
-    gap: 10px;
+    align-items: center;
+    gap: 12px;
   }
   .lottery-card-header .lch-title {
     font-family: 'Bebas Neue', sans-serif;
@@ -1922,6 +1916,7 @@
     letter-spacing: 2px;
     color: var(--muted);
     text-transform: uppercase;
+    flex: 1;
   }
   .lottery-table {
     width: 100%;
@@ -1938,17 +1933,71 @@
     border-bottom: 1px solid var(--border);
     white-space: nowrap;
   }
-  .lottery-table th:nth-child(1), .lottery-table th:nth-child(2) { text-align: left; }
+  .lottery-table th:nth-child(1),
+  .lottery-table th:nth-child(2) { text-align: left; }
+  .lottery-table th:last-child { text-align: left; }
   .lottery-table td {
     padding: 9px 12px;
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 0.88rem;
     text-align: right;
     border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
   }
   .lottery-table td:nth-child(1) { text-align: center; color: var(--muted); font-size: 0.8rem; width: 28px; }
   .lottery-table td:nth-child(2) { text-align: left; }
+  .lottery-table td:last-child { text-align: left; }
   .lottery-table tr:hover td { background: var(--surface2); }
+  .lottery-table tr.lot-row-jumped td { background: rgba(255,170,0,0.04); }
+  .lottery-table tr.lot-row-fell td { background: rgba(255,80,0,0.03); }
+
+  /* Result cell — picks filled in after running */
+  .lot-result-cell { min-width: 180px; }
+  .lot-result-dash { color: var(--border); font-size: 1.1rem; }
+  .lot-result-inner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .lot-result-pick-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.35rem;
+    color: var(--gold);
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .lot-result-pick-num.top1 { color: #ffd700; font-size: 1.5rem; }
+  .lot-result-pick-num.top2 { color: var(--accent2); }
+  .lot-result-pick-num.top3 { color: #b8860b; }
+  .lot-result-pick-num.jumped { color: #44cc77; }
+  .lot-result-pick-num.fell   { color: #cc6644; }
+  .lot-result-prospect {
+    flex: 1;
+    min-width: 100px;
+  }
+  .lot-result-prospect-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--accent2);
+    white-space: nowrap;
+  }
+  .lot-result-prospect-sub {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .lot-result-owner {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* Full draft board below table */
+  .lottery-draft-board {
+    border-top: 1px solid var(--border);
+    padding: 0 20px 16px;
+    display: none;
+  }
+  .lottery-draft-board.visible { display: block; }
+
   .lot-odds-pill {
     display: inline-block;
     font-family: 'Bebas Neue', sans-serif;
@@ -2828,10 +2877,10 @@
     .trend-card { padding: 16px; }
 
     /* ── DRAFT TAB ───────────────────────────────────── */
-    .draft-layout { grid-template-columns: 1fr; gap: 16px; }
     .lottery-card { overflow-x: auto; }
-    .lottery-table { min-width: 280px; }
+    .lottery-table { min-width: 480px; }
     .lottery-table th, .lottery-table td { padding: 7px 9px; font-size: 0.82rem; }
+    .lot-result-cell { min-width: 140px; }
 
     /* ── SPORTSBOOK ──────────────────────────────────── */
     .sb-header { flex-direction: column; gap: 14px; }
@@ -2855,7 +2904,7 @@
     .sim-run-bar { padding: 14px 16px; gap: 10px; }
     .sim-run-btn { font-size: 0.95rem; padding: 10px 20px; }
     .sim-run-desc { font-size: 0.78rem; }
-    .sim-card { padding: 16px; }
+    .lottery-draft-board { padding: 0 12px 12px; }
     .sim-controls { flex-wrap: wrap; gap: 8px; }
 
     /* ── BRACKET WRAPPER — controlled scroll, no page overflow ─ */
@@ -6695,20 +6744,26 @@ function renderDraft() {
   const teamNeedsMap = {};
   TEAM_NEEDS.forEach(t => { teamNeedsMap[t.abbr] = t.needs; });
 
-  // Render lottery odds table
-  function lotteryOddsHTML() {
+  // Render merged lottery board (odds + simulator in one card)
+  function lotteryBoardHTML() {
+    const top4 = [52.1, 52.1, 52.1, 48.1, 37.3, 30.3, 23.6, 17.4, 12.0, 7.7, 5.0, 3.7, 2.5, 1.2];
+    const oddsColors = ['#ffd700','#ffd700','#ffd700','#ffaa00','#ff8800','#ff6600','#ff4d00','#c97700','#997700','#667700','#557700','#447700','#336600','#225500'];
     let h = `<div class="lottery-card">
       <div class="lottery-card-header">
-        <div class="lch-title">2026 Lottery Odds</div>
-        <div class="lch-sub">Based on current standings · Top-pick %</div>
+        <div class="lch-title">2026 Draft Lottery</div>
+        <div class="lch-sub">Lottery odds by standing · Run to simulate picks 1–30</div>
+        <button class="sim-btn primary" onclick="runSingleSim()" style="flex-shrink:0">&#127467; Run Lottery</button>
+        <span class="sim-count-label" id="sim-run-count" style="flex-shrink:0"></span>
       </div>
       <table class="lottery-table">
         <thead><tr>
-          <th>#</th><th>Team</th><th>Record</th><th>Top-1 %</th><th>Top-4 %</th>
+          <th>#</th>
+          <th>Team</th>
+          <th>Record</th>
+          <th style="text-align:right">Top-1%</th>
+          <th style="text-align:right">Top-4%</th>
+          <th style="text-align:left;min-width:180px">Draft Result</th>
         </tr></thead><tbody>`;
-    // Top4 odds approximation based on seed
-    const top4 = [52.1, 52.1, 52.1, 48.1, 37.3, 30.3, 23.6, 17.4, 12.0, 7.7, 5.0, 3.7, 2.5, 1.2];
-    const oddsColors = ['#ffd700','#ffd700','#ffd700','#ffaa00','#ff8800','#ff6600','#ff4d00','#c97700','#997700','#667700','#557700','#447700','#336600','#225500'];
     lottery14.forEach((team, i) => {
       if (!team) return;
       const colors = TEAM_COLORS[team.abbr] || { bg: 'var(--surface2)', text: '#fff' };
@@ -6716,64 +6771,45 @@ function renderDraft() {
       const odds1 = LOTTERY_ODDS[i] || 0.5;
       const odds4 = top4[i] || 1.2;
       const color = oddsColors[i];
-      h += `<tr>
-        <td>${i+1}</td>
+      const isPlayIn = i >= 10;
+      h += `<tr id="lot-row-${i}">
+        <td>${i+1}${isPlayIn ? '<div style="font-size:0.6rem;color:var(--muted);letter-spacing:0.5px;margin-top:1px">PI</div>' : ''}</td>
         <td>
           <div style="display:flex;align-items:center;gap:8px">
-            <div class="logo-badge-sm" style="background:${colors.bg};border:1px solid ${colors.bg}88">
+            <div class="logo-badge-sm" style="background:${colors.bg};border:1px solid ${colors.bg}88;flex-shrink:0">
               <img src="${logo}" alt="${team.abbr}" onerror="this.style.display='none'">
             </div>
             <div>
               <div style="font-weight:600;font-size:0.88rem">${team.name}</div>
-              <div style="font-size:0.72rem;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px">${team.abbr}</div>
+              <div style="font-size:0.72rem;color:var(--muted);letter-spacing:1px">${team.abbr}</div>
             </div>
           </div>
         </td>
         <td style="color:var(--muted)">${team.wins}–${team.losses}</td>
         <td>
-          <div style="text-align:right">
-            <span class="lot-odds-pill" style="color:${color};font-size:1rem">${odds1}%</span>
-            <div class="lot-odds-bar" style="width:80px;margin-left:auto">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+            <span class="lot-odds-pill" style="color:${color}">${odds1}%</span>
+            <div class="lot-odds-bar" style="width:60px">
               <div class="lot-odds-bar-fill" style="width:${(odds1/14*100).toFixed(0)}%;background:${color}"></div>
             </div>
           </div>
         </td>
         <td style="color:#6699cc;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px">${odds4}%</td>
+        <td class="lot-result-cell" id="lot-result-${i}"><span class="lot-result-dash">—</span></td>
       </tr>`;
     });
-    h += `</tbody></table></div>`;
-    return h;
-  }
-
-  // Render simulator
-  function simulatorHTML() {
-    return `<div class="sim-card">
-      <div class="sim-card-header">
-        <div class="lch-title">🎱 Lottery Simulator</div>
-        <div class="lch-sub">Run the draft lottery with real odds</div>
-      </div>
-      <div class="sim-controls">
-        <button class="sim-btn primary" onclick="runSingleSim()">Run Lottery</button>
-        <span class="sim-count-label" id="sim-run-count"></span>
-      </div>
-      <div id="sim-results" class="sim-results">
-        <div style="text-align:center;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:2px;font-size:0.8rem;padding:24px 0">
-          PRESS "RUN LOTTERY" TO SIMULATE THE DRAFT
-        </div>
-      </div>
-      <div id="sim-stats" style="display:none" class="sim-stat-row">
-      </div>
+    h += `</tbody></table>
+      <div id="sim-results" class="lottery-draft-board"></div>
+      <div id="sim-stats" style="display:none"></div>
     </div>`;
+    return h;
   }
 
   // Build the page
   let html = '';
 
-  // Top section: odds + simulator side by side
-  html += `<div class="draft-layout">
-    ${lotteryOddsHTML()}
-    ${simulatorHTML()}
-  </div>`;
+  // Merged lottery board (full width)
+  html += lotteryBoardHTML();
 
   // Top prospects
   html += `<div class="prospects-section">
@@ -6842,28 +6878,76 @@ function renderDraft() {
   window.runSingleSim = function() {
     const order = simulateLottery(); // array of indices into lottery14
     const available = [...PROSPECTS];
-    let h = '';
 
-    // ── PICKS 1-14: LOTTERY ──────────────────────────────────────
-    h += sectionLabel('Lottery Picks · 1–14');
+    // ── STEP 1: Fill result cells in the lottery table ────────────
+    // Clear all result cells and row classes first
+    lottery14.forEach((_, i) => {
+      const row = document.getElementById('lot-row-' + i);
+      const cell = document.getElementById('lot-result-' + i);
+      if (row) row.className = '';
+      if (cell) cell.innerHTML = '<span class="lot-result-dash">—</span>';
+    });
+
     order.forEach((seedIdx, pickIdx) => {
       const team = lottery14[seedIdx];
       if (!team) return;
-      const originalSeed = seedIdx + 1;
       const pickNum = pickIdx + 1;
+      const originalSeed = seedIdx + 1;
       const jumped = pickNum < originalSeed;
-      const stayed = pickNum === originalSeed;
-      const jumpBadge = pickNum <= 4 && jumped
-        ? `<span class="sim-jumped-badge">&#x2B06; JUMPED ${originalSeed - pickNum}</span>`
-        : stayed && pickNum <= 4
-        ? `<span class="sim-stayed-badge">STAYED AT ${pickNum}</span>`
-        : '';
-      const isPlayIn = originalSeed >= 11; // lottery seeds 11-14 are play-in eliminated
-      const seedLabel = isPlayIn ? `Play-in eliminated · was PI seed ${originalSeed - 10}` : `Lottery seed ${originalSeed}`;
-      const meta = `${team.abbr} · ${seedLabel} · ${team.wins}-${team.losses}`;
+      const fell = pickNum > originalSeed;
+
       const owner = TRADED_PICKS[pickNum] || null;
       const displayAbbr = owner ? owner.abbr : team.abbr;
-      const displayName = owner ? owner.name : team.name;
+      const needs = teamNeedsMap[displayAbbr] || teamNeedsMap[team.abbr] || null;
+      const prospect = selectProspect(pickNum, needs, available);
+      if (prospect) available.splice(available.findIndex(p => p.rank === prospect.rank), 1);
+
+      const numClass = pickNum === 1 ? 'top1' : pickNum === 2 ? 'top2' : pickNum === 3 ? 'top3'
+        : jumped ? 'jumped' : fell ? 'fell' : '';
+      const moveBadge = pickNum <= 4 && jumped
+        ? `<span class="sim-jumped-badge" style="font-size:0.6rem;padding:1px 5px">&#x2B06;+${originalSeed - pickNum}</span>`
+        : pickNum <= 4 && !jumped && !fell
+        ? `<span class="sim-stayed-badge" style="font-size:0.6rem;padding:1px 5px">HELD</span>`
+        : jumped
+        ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:#44cc77;letter-spacing:1px">&#x2B06;${originalSeed - pickNum}</span>`
+        : fell
+        ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:#cc6644;letter-spacing:1px">&#x2B07;${pickNum - originalSeed}</span>`
+        : '';
+
+      const ownerLine = owner
+        ? `<div class="lot-result-owner">${owner.abbr}${owner.via ? ` <span style="color:var(--border)">via</span> ${owner.via}` : ''}${owner.conditions ? ` <span title="${owner.conditions}" style="cursor:help">ⓘ</span>` : ''}</div>`
+        : '';
+
+      const cell = document.getElementById('lot-result-' + seedIdx);
+      if (cell) {
+        cell.innerHTML = `<div class="lot-result-inner">
+          <div>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span class="lot-result-pick-num ${numClass}">PICK ${pickNum}</span>
+              ${moveBadge}
+            </div>
+            ${ownerLine}
+          </div>
+          ${prospect ? `<div class="lot-result-prospect">
+            <div class="lot-result-prospect-name">${prospect.name} <span style="color:var(--muted);font-weight:400;font-size:0.75rem">${prospect.pos}</span></div>
+            <div class="lot-result-prospect-sub">${prospect.school} · #${prospect.rank}</div>
+          </div>` : ''}
+        </div>`;
+      }
+
+      const row = document.getElementById('lot-row-' + seedIdx);
+      if (row) row.className = jumped ? 'lot-row-jumped' : fell ? 'lot-row-fell' : '';
+    });
+
+    // ── STEP 2: Full 30-pick draft board below the table ─────────
+    // Rebuild available from scratch so board selections match table cells
+    const boardAvailable = [...PROSPECTS];
+    let h = '';
+
+    function boardPickRow(pickNum, team, metaLabel, isPlayoff) {
+      const owner = TRADED_PICKS[pickNum] || null;
+      const displayAbbr = owner ? owner.abbr : (team ? team.abbr : '—');
+      const displayName = owner ? owner.name : (team ? team.name : `Pick ${pickNum}`);
       const displayColors = TEAM_COLORS[displayAbbr] || { bg: '#333', text: '#fff' };
       const displayLogo = getLogoUrl(displayAbbr);
       const viaLabel = owner && owner.via
@@ -6873,72 +6957,55 @@ function renderDraft() {
         ? `<span title="${owner.conditions}" style="cursor:help;color:var(--muted);font-size:0.72rem;margin-left:4px">ⓘ</span>`
         : '';
       const numClass = pickNum === 1 ? 'top1' : pickNum === 2 ? 'top2' : pickNum === 3 ? 'top3' : '';
-      const needs = teamNeedsMap[displayAbbr] || teamNeedsMap[team.abbr] || null;
-      const prospect = selectProspect(pickNum, needs, available);
-      if (prospect) available.splice(available.findIndex(p => p.rank === prospect.rank), 1);
+      const needs = teamNeedsMap[displayAbbr] || (team ? teamNeedsMap[team.abbr] : null) || null;
+      const prospect = selectProspect(pickNum, needs, boardAvailable);
+      if (prospect) boardAvailable.splice(boardAvailable.findIndex(p => p.rank === prospect.rank), 1);
       const fitNote = makeFitNote(prospect, displayAbbr, needs, pickNum);
-      h += `<div class="sim-pick-row">
-        <div class="sim-pick-num ${numClass}">${pickNum}</div>
+      return `<div class="sim-pick-row"${isPlayoff ? ' style="opacity:0.85"' : ''}>
+        <div class="sim-pick-num ${numClass}"${isPlayoff ? ' style="color:var(--muted)"' : ''}>${pickNum}</div>
         <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px;flex-shrink:0">
           <img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">
         </div>
         <div class="sim-pick-detail">
-          <div class="sim-pick-name">${displayName}${viaLabel}${conditionsTip}</div>
-          <div class="sim-pick-meta">${meta}</div>
+          <div class="sim-pick-name"${isPlayoff ? ' style="color:var(--muted)"' : ''}>${displayName}${viaLabel}${conditionsTip}</div>
+          <div class="sim-pick-meta">${metaLabel}</div>
         </div>
         ${prospect ? `<div class="sim-pick-prospect-block">
           <div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem;font-weight:400">${prospect.pos}</span></div>
           <div class="sim-pick-prospect-sub">${prospect.school} · ${prospect.ht} · #${prospect.rank} overall</div>
         </div>` : ''}
-        ${jumpBadge}
         ${fitNote ? `<div class="sim-pick-fit">${fitNote}</div>` : ''}
       </div>`;
+    }
+
+    h += sectionLabel('Full Draft Board · Picks 1–14 (Lottery)');
+    order.forEach((seedIdx, pickIdx) => {
+      const team = lottery14[seedIdx];
+      if (!team) return;
+      const pickNum = pickIdx + 1;
+      const originalSeed = seedIdx + 1;
+      const isPlayIn = originalSeed >= 11;
+      const seedLabel = isPlayIn ? `Play-in elim · PI seed ${originalSeed - 10}` : `Lottery seed ${originalSeed}`;
+      h += boardPickRow(pickNum, team, `${team.abbr} · ${seedLabel} · ${team.wins}–${team.losses}`, false);
     });
 
-    // ── PICKS 15-30: PLAYOFF TEAMS (reverse record order) ────────
-    h += sectionLabel('Playoff Picks · 15–30 · Reverse record order');
+    h += sectionLabel('Full Draft Board · Picks 15–30 (Playoff Teams, worst record first)');
     picks15to30.forEach((team, idx) => {
       const pickNum = 15 + idx;
-      const owner = TRADED_PICKS[pickNum] || null;
-      const displayAbbr = owner ? owner.abbr : team.abbr;
-      const displayName = owner ? owner.name : team.name;
-      const displayColors = TEAM_COLORS[displayAbbr] || { bg: '#333', text: '#fff' };
-      const displayLogo = getLogoUrl(displayAbbr);
-      const viaLabel = owner && owner.via
-        ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);margin-left:4px">via ${owner.via}</span>`
-        : '';
-      const conditionsTip = owner && owner.conditions
-        ? `<span title="${owner.conditions}" style="cursor:help;color:var(--muted);font-size:0.72rem;margin-left:4px">ⓘ</span>`
-        : '';
       const isPlayInTeam = _playInSurv.some(p => p.abbr === team.abbr);
       const confSeedArr = team.conf === 'WEST' ? _dWest : _dEast;
       const confSeed = confSeedArr.findIndex(t => t.abbr === team.abbr) + 1;
       const playoffLabel = isPlayInTeam ? `Play-in qualifier · ${team.conf} #${confSeed}` : `Playoff · ${team.conf} #${confSeed}`;
-      const needs = teamNeedsMap[displayAbbr] || teamNeedsMap[team.abbr] || null;
-      const prospect = selectProspect(pickNum, needs, available);
-      if (prospect) available.splice(available.findIndex(p => p.rank === prospect.rank), 1);
-      const fitNote = makeFitNote(prospect, displayAbbr, needs, pickNum);
-      h += `<div class="sim-pick-row" style="opacity:0.85">
-        <div class="sim-pick-num" style="color:var(--muted)">${pickNum}</div>
-        <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px;flex-shrink:0">
-          <img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">
-        </div>
-        <div class="sim-pick-detail">
-          <div class="sim-pick-name" style="color:var(--muted)">${displayName}${viaLabel}${conditionsTip}</div>
-          <div class="sim-pick-meta">${displayAbbr} · ${playoffLabel} · ${team.wins}-${team.losses}</div>
-        </div>
-        ${prospect ? `<div class="sim-pick-prospect-block">
-          <div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem;font-weight:400">${prospect.pos}</span></div>
-          <div class="sim-pick-prospect-sub">${prospect.school} · ${prospect.ht} · #${prospect.rank} overall</div>
-        </div>` : ''}
-        ${fitNote ? `<div class="sim-pick-fit">${fitNote}</div>` : ''}
-      </div>`;
+      h += boardPickRow(pickNum, team, `${team.abbr} · ${playoffLabel} · ${team.wins}–${team.losses}`, true);
     });
 
-    document.getElementById('sim-results').innerHTML = h;
+    const resultsEl = document.getElementById('sim-results');
+    resultsEl.innerHTML = h;
+    resultsEl.classList.add('visible');
     document.getElementById('sim-stats').style.display = 'none';
     const runNum = (window._draftRunCount = (window._draftRunCount || 0) + 1);
     document.getElementById('sim-run-count').textContent = `Run #${runNum}`;
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   let multiSimData = {};
