@@ -6944,7 +6944,7 @@ function renderDraft() {
     const boardAvailable = [...PROSPECTS];
     let h = '';
 
-    function boardPickRow(pickNum, team, metaLabel, isPlayoff) {
+    function boardPickRow(pickNum, team, metaLabel, isPlayoff, movement) {
       const owner = TRADED_PICKS[pickNum] || null;
       const displayAbbr = owner ? owner.abbr : (team ? team.abbr : '—');
       const displayName = owner ? owner.name : (team ? team.name : `Pick ${pickNum}`);
@@ -6961,8 +6961,16 @@ function renderDraft() {
       const prospect = selectProspect(pickNum, needs, boardAvailable);
       if (prospect) boardAvailable.splice(boardAvailable.findIndex(p => p.rank === prospect.rank), 1);
       const fitNote = makeFitNote(prospect, displayAbbr, needs, pickNum);
+      const moveBadge = (movement > 0)
+        ? `<span class="sim-jumped-badge" style="font-size:0.6rem;padding:1px 5px;align-self:center">&#x2B06;${movement}</span>`
+        : (movement < 0)
+        ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:#cc6644;background:rgba(204,102,68,0.12);border:1px solid rgba(204,102,68,0.3);padding:1px 5px;border-radius:10px;align-self:center;letter-spacing:1px">&#x2B07;${Math.abs(movement)}</span>`
+        : '';
       return `<div class="sim-pick-row"${isPlayoff ? ' style="opacity:0.85"' : ''}>
-        <div class="sim-pick-num ${numClass}"${isPlayoff ? ' style="color:var(--muted)"' : ''}>${pickNum}</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;width:36px">
+          <div class="sim-pick-num ${numClass}"${isPlayoff ? ' style="color:var(--muted)"' : ''}>${pickNum}</div>
+          ${moveBadge}
+        </div>
         <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px;flex-shrink:0">
           <img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">
         </div>
@@ -6986,7 +6994,8 @@ function renderDraft() {
       const originalSeed = seedIdx + 1;
       const isPlayIn = originalSeed >= 11;
       const seedLabel = isPlayIn ? `Play-in elim · PI seed ${originalSeed - 10}` : `Lottery seed ${originalSeed}`;
-      h += boardPickRow(pickNum, team, `${team.abbr} · ${seedLabel} · ${team.wins}–${team.losses}`, false);
+      const movement = seedIdx - pickIdx; // positive = jumped up, negative = fell
+      h += boardPickRow(pickNum, team, `${team.abbr} · ${seedLabel} · ${team.wins}–${team.losses}`, false, movement);
     });
 
     h += sectionLabel('Full Draft Board · Picks 15–30 (Playoff Teams, worst record first)');
