@@ -5883,14 +5883,14 @@ function renderPlayoffs() {
       const t2Trend = (t2E.l20WinPct != null && t2E.winPct != null) ? (t2E.l20WinPct - t2E.winPct) : 0;
       p = Math.max(0.05, Math.min(0.95, p + (t1Trend - t2Trend) * 0.22));
 
-      // H2H regular-season record: teams that dominated head-to-head get a modest boost.
-      // Weight 0.14 → ±0.07 max (a perfect 4-0 H2H). Enough to flip a coin-flip series.
+      // H2H regular-season record: teams that dominated head-to-head get a meaningful boost.
+      // Weight 0.30 → ±0.15 max (a perfect 4-0 H2H). Strong enough to flip most series.
       const h2hKey = [t1Abbr, t2Abbr].sort().join('_');
       const h2h = _H2H_DATA[h2hKey];
       if (h2h && h2h.games >= 2) {
         const t1IsFirst = [t1Abbr, t2Abbr].sort()[0] === t1Abbr;
         const t1Wins = t1IsFirst ? h2h.wins : h2h.losses;
-        p += (t1Wins / h2h.games - 0.5) * 0.14;
+        p += (t1Wins / h2h.games - 0.5) * 0.30;
         p = Math.max(0.05, Math.min(0.95, p));
       }
 
