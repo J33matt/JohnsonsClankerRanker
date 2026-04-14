@@ -5874,28 +5874,35 @@ function renderPlayoffs() {
     const cb = _clankerBracket;
     const allTeams = west.concat(east);
     const teamByAbbr = abbr => abbr ? allTeams.find(t => t.abbr === abbr) || null : null;
-    const st = _bktBracketState;
     const SEEDS = [[1,8],[4,5],[3,6],[2,7]];
     const conn2 = `<div class="bkt-conn-col"><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div></div>`;
     const conn1 = `<div class="bkt-conn-col"><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div></div>`;
+
+    // Build seed map so seeds carry through to later rounds
+    const seedMap = {};
+    [0,1,2,3].forEach(i => {
+      const [t1, t2] = getR1Teams(conf, i);
+      if (t1 && !t1._placeholder) seedMap[t1.abbr] = SEEDS[i][0];
+      if (t2 && !t2._placeholder) seedMap[t2.abbr] = SEEDS[i][1];
+    });
 
     const r1Html = [0,1,2,3].map(i => {
       const [t1, t2] = getR1Teams(conf, i);
       const t1a = (t1 && !t1._placeholder) ? t1.abbr : null;
       const t2a = (t2 && !t2._placeholder) ? t2.abbr : null;
       const rsn = (t1a && t2a && cb[conf].r1[i]) ? _clankerReasoning(t1a, t2a, cb[conf].r1[i]) : null;
-      return clankerMatchupCard(t1, t2, SEEDS[i][0], SEEDS[i][1], cb[conf].r1[i], cb.scores[`${conf}_r1_${i}`], st?.[conf]?.r1?.[i], rsn);
+      return clankerMatchupCard(t1, t2, SEEDS[i][0], SEEDS[i][1], cb[conf].r1[i], cb.scores[`${conf}_r1_${i}`], null, rsn);
     }).join('');
 
     const semiHtml = [0,1].map(i => {
       const t1a = cb[conf].r1[i*2], t2a = cb[conf].r1[i*2+1];
       const rsn = (t1a && t2a && cb[conf].semi[i]) ? _clankerReasoning(t1a, t2a, cb[conf].semi[i]) : null;
-      return clankerMatchupCard(teamByAbbr(t1a), teamByAbbr(t2a), '', '', cb[conf].semi[i], cb.scores[`${conf}_semi_${i}`], st?.[conf]?.semi?.[i], rsn);
+      return clankerMatchupCard(teamByAbbr(t1a), teamByAbbr(t2a), seedMap[t1a] || '', seedMap[t2a] || '', cb[conf].semi[i], cb.scores[`${conf}_semi_${i}`], null, rsn);
     }).join('');
 
     const cfT1a = cb[conf].semi[0], cfT2a = cb[conf].semi[1];
     const cfRsn = (cfT1a && cfT2a && cb[conf].cf) ? _clankerReasoning(cfT1a, cfT2a, cb[conf].cf) : null;
-    const cfHtml = clankerMatchupCard(teamByAbbr(cfT1a), teamByAbbr(cfT2a), '', '', cb[conf].cf, cb.scores[`${conf}_cf`], st?.[conf]?.cf?.[0], cfRsn);
+    const cfHtml = clankerMatchupCard(teamByAbbr(cfT1a), teamByAbbr(cfT2a), seedMap[cfT1a] || '', seedMap[cfT2a] || '', cb[conf].cf, cb.scores[`${conf}_cf`], null, cfRsn);
 
     return `<div class="bracket-half ${conf}">
       <div class="bkt-round bkt-r1">${r1Html}</div>${conn2}
@@ -5911,22 +5918,32 @@ function renderPlayoffs() {
     const ft1 = allTeams.find(t => t.abbr === cb.west.cf) || null;
     const ft2 = allTeams.find(t => t.abbr === cb.east.cf) || null;
     const champAbbr = cb.champion;
-    const actualChamp = _bktBracketState?.champion;
-    const champOk = actualChamp && !actualChamp._placeholder ? (actualChamp.abbr === champAbbr ? ' ✅' : ' ❌') : '';
     const champLogo = champAbbr ? getLogoUrl(champAbbr) : null;
     const finalsRsn = (cb.west.cf && cb.east.cf && champAbbr) ? _clankerReasoning(cb.west.cf, cb.east.cf, champAbbr) : null;
+    // Build cross-conference seed map so seeds show next to finalists
+    const SEEDS = [[1,8],[4,5],[3,6],[2,7]];
+    const allSeedMap = {};
+    ['west','east'].forEach(c => {
+      [0,1,2,3].forEach(i => {
+        const [t1, t2] = getR1Teams(c, i);
+        if (t1 && !t1._placeholder) allSeedMap[t1.abbr] = SEEDS[i][0];
+        if (t2 && !t2._placeholder) allSeedMap[t2.abbr] = SEEDS[i][1];
+      });
+    });
+    const s1 = ft1 && allSeedMap[ft1.abbr] ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:var(--muted);margin-right:3px">${allSeedMap[ft1.abbr]}</span>` : '';
+    const s2 = ft2 && allSeedMap[ft2.abbr] ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:var(--muted);margin-right:3px">${allSeedMap[ft2.abbr]}</span>` : '';
     return `<div class="bracket-finals-col">
       <div class="bkt-finals${ft1||ft2?' has-teams':''}">
         <div>Championship</div>
         <div class="finals-sub">CLANKER'S PICK</div>
-        <div class="finals-team">${ft1 ? ft1.abbr : '<span style="color:var(--muted);font-size:0.8rem">W Finalist</span>'}</div>
+        <div class="finals-team">${ft1 ? s1 + ft1.abbr : '<span style="color:var(--muted);font-size:0.8rem">W Finalist</span>'}</div>
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:var(--muted);margin:1px 0">vs</div>
-        <div class="finals-team">${ft2 ? ft2.abbr : '<span style="color:var(--muted);font-size:0.8rem">E Finalist</span>'}</div>
+        <div class="finals-team">${ft2 ? s2 + ft2.abbr : '<span style="color:var(--muted);font-size:0.8rem">E Finalist</span>'}</div>
         ${cb.scores['finals'] ? `<div class="finals-sub" style="margin-top:6px">${cb.scores['finals']}</div>` : ''}
         ${champAbbr ? `<div style="margin-top:10px;border-top:1px solid rgba(255,170,0,0.3);padding-top:8px">
           <div class="finals-sub">CHAMPION</div>
           ${champLogo ? `<img src="${champLogo}" style="width:34px;height:34px;object-fit:contain;margin:4px 0" onerror="this.style.display='none'">` : ''}
-          <div style="color:var(--accent2);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px">🏆 ${champAbbr}${champOk}</div>
+          <div style="color:var(--accent2);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px">🏆 ${champAbbr}</div>
           ${finalsRsn ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:rgba(255,255,255,0.3);font-style:italic;margin-top:6px;line-height:1.35;padding:0 4px">${finalsRsn}</div>` : ''}
         </div>` : ''}
       </div>
