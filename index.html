@@ -2151,6 +2151,28 @@
     font-family: 'Barlow Condensed', sans-serif;
     letter-spacing: 1px;
   }
+  .sim-draft-up-badge {
+    font-size: 0.82rem;
+    background: rgba(40,210,100,0.2);
+    color: #2ed874;
+    border: 1px solid rgba(40,210,100,0.5);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+  .sim-draft-down-badge {
+    font-size: 0.82rem;
+    background: rgba(230,50,50,0.2);
+    color: #f05050;
+    border: 1px solid rgba(230,50,50,0.5);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
   .sim-stat-row {
     display: flex;
     gap: 16px;
@@ -6988,9 +7010,9 @@ function renderDraft() {
       if (prospect && forcedProspect === undefined) boardAvailable.splice(boardAvailable.findIndex(p => p.rank === prospect.rank), 1);
       const fitNote = makeFitNote(prospect, displayAbbr, needs, pickNum);
       const moveBadge = (movement > 0)
-        ? `<span class="sim-jumped-badge" style="font-size:0.6rem;padding:1px 5px">&#x2B06;${movement}</span>`
+        ? `<span class="sim-draft-up-badge">&#x2B06;${movement}</span>`
         : (movement < 0)
-        ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:#cc6644;background:rgba(204,102,68,0.12);border:1px solid rgba(204,102,68,0.3);padding:1px 5px;border-radius:10px;letter-spacing:1px">&#x2B07;${Math.abs(movement)}</span>`
+        ? `<span class="sim-draft-down-badge">&#x2B07;${Math.abs(movement)}</span>`
         : '';
       return `<div class="sim-pick-row"${isPlayoff ? ' style="opacity:0.85"' : ''}>
         <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;width:36px">
