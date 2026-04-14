@@ -6306,23 +6306,84 @@ function renderDraft() {
   // Official NBA lottery odds by seed position (top-pick odds)
   const LOTTERY_ODDS = [14.0, 14.0, 14.0, 12.5, 10.5, 9.0, 7.5, 6.0, 4.5, 3.0, 2.0, 1.5, 1.0, 0.5];
 
-  // Top prospects for 2026 draft — 10 for lottery picks + 2 extras shown in prospects section
-  // Sources: ESPN Big Board, Bleacher Report, The Athletic (as of late March 2026)
+  // Top 40 prospects for 2026 draft
+  // Sources: ESPN Big Board, Bleacher Report, The Athletic (as of April 2026)
   const PROSPECTS = [
-    { rank: 1,  name: 'AJ Dybantsa',       school: 'BYU',         pos: 'SF',  ht: '6\'9"',  pts: 25.5, reb: 6.8, ast: 3.7, tier: 1, blurb: 'Nation\'s leading scorer and the statistical case for #1 overall. Pro-ready frame, 7\'0" wingspan, elite shot creation at any level. Went out of the tournament with 35 points — the Dybantsa hype is real.' },
-    { rank: 2,  name: 'Darryn Peterson',    school: 'Kansas',      pos: 'SG',  ht: '6\'6"',  pts: 18.2, reb: 4.5, ast: 4.8, tier: 1, blurb: 'Most scouts have him as the most talented player in the class. Elite two-way profile, Kobe comp from the day he walked in the door. Lingering health questions are the only thing keeping this from being a runaway.' },
-    { rank: 3,  name: 'Cameron Boozer',     school: 'Duke',        pos: 'PF',  ht: '6\'10"', pts: 23.0, reb: 10.0, ast: 4.1, tier: 1, blurb: 'ACC Player of the Year and one of the safest bets in the class. Double-double machine with advanced feel and a shooting range that keeps expanding. Some question the ceiling but the floor is undeniable.' },
-    { rank: 4,  name: 'Caleb Wilson',       school: 'N. Carolina', pos: 'PF',  ht: '6\'10"', pts: 19.8, reb: 9.4, ast: 2.7, tier: 2, blurb: 'Top-3 box plus-minus in the country. Explosive athlete who rebounds, defends, and does damage in transition. Three-point shooting (26%) is the one thing standing between him and the top three.' },
-    { rank: 5,  name: 'Kingston Flemings',  school: 'Houston',     pos: 'PG',  ht: '6\'4"',  pts: 16.5, reb: 3.9, ast: 5.4, tier: 2, blurb: 'Most explosive guard in the draft. His burst off the bounce is reminiscent of prime Derrick Rose. 49-point game against Alabama turned heads. Downhill style and elite finishing make him a nightmare in the open court.' },
-    { rank: 6,  name: 'Keaton Wagler',      school: 'Illinois',    pos: 'SG',  ht: '6\'6"',  pts: 17.9, reb: 4.9, ast: 4.3, tier: 2, blurb: 'Big Ten Freshman of the Year who came out of nowhere to lock in a lottery spot. 41% from three, impeccable decision-making, and 6\'6" size at the guard position. Athleticism is the only real concern.' },
-    { rank: 7,  name: 'Darius Acuff Jr.',   school: 'Arkansas',    pos: 'PG',  ht: '6\'2"',  pts: 22.2, reb: 3.0, ast: 6.4, tier: 2, blurb: 'Pure offensive engine with a Trae Young comp and sky-high ceiling. Footwork and ball handling are already NBA-ready. Defensive projection is the question mark but the scoring toolkit is elite.' },
-    { rank: 8,  name: 'Nate Ament',         school: 'Tennessee',   pos: 'SF',  ht: '6\'10"', pts: 17.4, reb: 6.4, ast: 2.1, tier: 2, blurb: 'Big wing with a shot that translates and tools on both ends. Has been consistently putting up 20-point games down the stretch. Missed time with injury earlier in the year but is playing his best ball now.' },
-    { rank: 9,  name: 'Mikel Brown Jr.',    school: 'Louisville',  pos: 'PG',  ht: '6\'3"',  pts: 18.2, reb: 3.3, ast: 4.7, tier: 3, blurb: 'Dynamic perimeter scorer who can go for 45 on any given night. Lightning-rod style offense with NBA-level shot-making and creativity. Back injury has teams doing extra due diligence at the combine.' },
-    { rank: 10, name: 'Koa Peat',           school: 'Arizona',     pos: 'PF',  ht: '6\'8"',  pts: 13.8, reb: 5.3, ast: 2.7, tier: 3, blurb: 'Skilled, high-IQ forward who rebounds, defends, and distributes. Missed time with a leg injury and has been inconsistent since returning. Some execs think he helps himself by coming back in 2027.' },
-    // Extra prospects shown in the prospects grid but not part of the lottery sim
-    { rank: 11, name: 'Labaron Philon Jr.', school: 'Alabama',     pos: 'PG',  ht: '6\'3"',  pts: 21.5, reb: 4.2, ast: 5.4, tier: 3, blurb: 'Returned to college and has improved in every category. 53.6% FG, 38.6% from three. Opened the tournament with 29 points, 8 rebounds, 7 assists against Hofstra. Could push into the lottery by draft night.' },
-    { rank: 12, name: 'Chris Cenac Jr.',    school: 'Houston',     pos: 'C',   ht: '6\'11"', pts: 13.6, reb: 8.2, ast: 1.9, tier: 3, blurb: 'Fluid 6\'11" big who has developed noticeably since November. Hauled in 18 rebounds against Idaho in the tournament. Developing offensive game with strong defensive instincts and real first-round upside.' },
+    { rank: 1,  name: 'AJ Dybantsa',        school: 'BYU',           pos: 'F',  ht: '6\'9"',  pts: 25.5, reb: 6.8, ast: 3.7, tier: 1, blurb: 'A high-volume wing scorer with elite physical tools, Dybantsa is the consensus favorite for the top pick due to his star-level offensive trajectory.' },
+    { rank: 2,  name: 'Darryn Peterson',     school: 'Kansas',        pos: 'G',  ht: '6\'6"',  pts: 18.2, reb: 4.5, ast: 4.8, tier: 1, blurb: 'Widely considered the most naturally gifted shotmaker in the class, Peterson\'s stock remains high as teams look past a season hampered by early health setbacks.' },
+    { rank: 3,  name: 'Cameron Boozer',      school: 'Duke',          pos: 'F',  ht: '6\'9"',  pts: 23.0, reb: 10.0, ast: 4.1, tier: 1, blurb: 'The most productive player in college basketball, Boozer offers an elite offensive feel and floor-raiser capability reminiscent of a modern-day double-double machine.' },
+    { rank: 4,  name: 'Caleb Wilson',        school: 'North Carolina', pos: 'F', ht: '6\'10"', pts: 19.8, reb: 9.4, ast: 2.7, tier: 2, blurb: 'An explosive and toolsy forward, Wilson is a high-upside developmental prospect who projects as a versatile defender and secondary playmaker.' },
+    { rank: 5,  name: 'Keaton Wagler',       school: 'Illinois',      pos: 'G',  ht: '6\'6"',  pts: 17.9, reb: 4.9, ast: 4.3, tier: 2, blurb: 'A tall, high-IQ lead guard who enhances lineups through elite passing and efficient perimeter shooting.' },
+    { rank: 6,  name: 'Darius Acuff Jr.',    school: 'Arkansas',      pos: 'G',  ht: '6\'3"',  pts: 22.2, reb: 3.0, ast: 6.4, tier: 2, blurb: 'The most NBA-ready floor general in the draft, Acuff pairs a heavy offensive usage rate with impressive efficiency and clutch shotmaking.' },
+    { rank: 7,  name: 'Kingston Flemings',   school: 'Houston',       pos: 'G',  ht: '6\'4"',  pts: 16.5, reb: 3.9, ast: 5.4, tier: 2, blurb: 'An explosive, downhill playmaker who excels at putting pressure on the rim and anchoring a high-level defense.' },
+    { rank: 8,  name: 'Nate Ament',          school: 'Tennessee',     pos: 'F',  ht: '6\'10"', pts: 17.4, reb: 6.4, ast: 2.1, tier: 2, blurb: 'A fluid 6-foot-10 shooter who fits the highly coveted jumbo wing archetype, though he remains a long-term developmental project.' },
+    { rank: 9,  name: 'Mikel Brown Jr.',     school: 'Louisville',    pos: 'G',  ht: '6\'5"',  pts: 18.2, reb: 3.3, ast: 4.7, tier: 2, blurb: 'A shifty guard with plus positional size and high-level vision, though a late-season back injury has made his medical report a key focus.' },
+    { rank: 10, name: 'Brayden Burries',     school: 'Arizona',       pos: 'G',  ht: '6\'4"',  pts: 16.8, reb: 4.1, ast: 3.2, tier: 2, blurb: 'A multifaceted, physical guard who relies on strength and craft to contribute across the entire box score.' },
+    { rank: 11, name: 'Karim Lopez',         school: 'NZ Breakers',   pos: 'F',  ht: '6\'8"',  pts: 14.2, reb: 6.5, ast: 2.3, tier: 3, blurb: 'A versatile international prospect who made history in the NBL with his defensive production and ability to compete against grown men.' },
+    { rank: 12, name: 'Yaxel Lendeborg',     school: 'Michigan',      pos: 'F',  ht: '6\'9"',  pts: 12.4, reb: 8.1, ast: 1.8, tier: 3, blurb: 'A national champion and high-floor plug-and-play senior who offers elite defensive versatility and a reliable outside shot.' },
+    { rank: 13, name: 'Thomas Haugh',        school: 'Florida',       pos: 'F',  ht: '6\'9"',  pts: 13.8, reb: 6.2, ast: 2.1, tier: 3, blurb: 'A high-motor glue guy with the size and toughness to contribute immediately to an NBA rotation.' },
+    { rank: 14, name: 'Aday Mara',           school: 'Michigan',      pos: 'C',  ht: '7\'3"',  pts: 12.0, reb: 9.5, ast: 3.4, tier: 3, blurb: 'A massive, elite-passing center who revitalized his draft stock with a dominant postseason run and unique offensive skill set.' },
+    { rank: 15, name: 'Hannes Steinbach',    school: 'Washington',    pos: 'F',  ht: '6\'11"', pts: 13.5, reb: 7.8, ast: 1.9, tier: 3, blurb: 'A dependable double-double machine with floor-spacing potential, projecting safely as a high-IQ rotation big.' },
+    { rank: 16, name: 'Labaron Philon Jr.',  school: 'Alabama',       pos: 'G',  ht: '6\'4"',  pts: 21.5, reb: 4.2, ast: 5.4, tier: 3, blurb: 'A microwave scorer who projects as a dynamic combo guard capable of providing instant offense off the bench.' },
+    { rank: 17, name: 'Braylon Mullins',     school: 'UConn',         pos: 'G',  ht: '6\'6"',  pts: 18.3, reb: 3.8, ast: 2.9, tier: 3, blurb: 'A clutch perimeter specialist whose deep shooting range and tournament heroics have him on the verge of the lottery.' },
+    { rank: 18, name: 'Chris Cenac Jr.',     school: 'Houston',       pos: 'F',  ht: '6\'11"', pts: 13.6, reb: 8.2, ast: 1.9, tier: 3, blurb: 'A fluid and athletic big man with massive raw potential, though he currently lacks the consistency of his peers.' },
+    { rank: 19, name: 'Christian Anderson',  school: 'Texas Tech',    pos: 'G',  ht: '6\'3"',  pts: 16.9, reb: 3.2, ast: 3.8, tier: 3, blurb: 'A premier marksman and game manager who navigated a difficult sophomore season with elite shooting percentages.' },
+    { rank: 20, name: 'Jayden Quaintance',   school: 'Kentucky',      pos: 'C',  ht: '6\'10"', pts: 11.4, reb: 8.7, ast: 1.5, tier: 3, blurb: 'A high-upside defensive anchor and lob threat whose draft position will depend heavily on his medical evaluation.' },
+    { rank: 21, name: 'Isaiah Evans',        school: 'Duke',          pos: 'G',  ht: '6\'6"',  pts: 17.2, reb: 4.3, ast: 2.1, tier: 4, blurb: 'A long-limbed scoring wing who can create his own shot and project as a high-level movement shooter at the next level.' },
+    { rank: 22, name: 'Koa Peat',            school: 'Arizona',       pos: 'F',  ht: '6\'8"',  pts: 13.8, reb: 5.3, ast: 2.7, tier: 4, blurb: 'A physical, high-intangible winner who excels in the midrange and on the defensive end, though his perimeter game is still evolving.' },
+    { rank: 23, name: 'Bennett Stirtz',      school: 'Iowa',          pos: 'G',  ht: '6\'4"',  pts: 19.4, reb: 3.7, ast: 5.2, tier: 4, blurb: 'A poised, high-usage senior who proved he could lead a team deep into March through elite ball-screen navigation.' },
+    { rank: 24, name: 'Cameron Carr',        school: 'Baylor',        pos: 'G',  ht: '6\'5"',  pts: 17.6, reb: 3.5, ast: 2.8, tier: 4, blurb: 'An explosive athlete with a massive wingspan and shotmaking ability that makes him a prototype for the modern NBA wing.' },
+    { rank: 25, name: 'Motiejus Krivas',     school: 'Arizona',       pos: 'C',  ht: '7\'2"',  pts: 10.8, reb: 7.9, ast: 1.2, tier: 4, blurb: 'A traditional, high-effort paint protector who offers immediate value as a defensive anchor and reliable play finisher.' },
+    { rank: 26, name: 'Dailyn Swain',        school: 'Texas',         pos: 'G',  ht: '6\'8"',  pts: 16.3, reb: 5.8, ast: 3.7, tier: 4, blurb: 'A versatile tall guard who has blossomed as an on-ball scorer and playmaker, though he needs to improve his perimeter consistency to secure a rotation spot.' },
+    { rank: 27, name: 'Morez Johnson Jr.',   school: 'Michigan',      pos: 'F',  ht: '6\'9"',  pts: 11.2, reb: 9.6, ast: 1.4, tier: 4, blurb: 'A high-motor interior force known for elite rebounding and versatile defense, playing much larger than his listed height as a rim-finishing small-ball five.' },
+    { rank: 28, name: 'Meleek Thomas',       school: 'Arkansas',      pos: 'G',  ht: '6\'5"',  pts: 18.8, reb: 3.4, ast: 2.6, tier: 4, blurb: 'A smooth, high-level shotmaker with a quick first step and deep shooting range, Thomas is a classic one-and-done scoring talent.' },
+    { rank: 29, name: 'Amari Allen',         school: 'Alabama',       pos: 'F',  ht: '6\'8"',  pts: 13.6, reb: 4.8, ast: 2.4, tier: 4, blurb: 'A heady, high-IQ wing with a consistent three-point stroke who excels at making the right play within the flow of an offense.' },
+    { rank: 30, name: 'Alex Condon',         school: 'Florida',       pos: 'C',  ht: '6\'11"', pts: 11.3, reb: 7.2, ast: 3.1, tier: 4, blurb: 'A mobile, high-feel big man from Australia who functions as a brilliant high-post passer and disciplined drop-coverage defender.' },
+    { rank: 31, name: 'Dame Sarr',           school: 'Duke',          pos: 'G',  ht: '6\'8"',  pts: 15.4, reb: 5.2, ast: 2.8, tier: 4, blurb: 'An athletic Italian wing with immense upside in the open court and downhill attacking, though his outside shooting remains a work in progress.' },
+    { rank: 32, name: 'Allen Graves',        school: 'Santa Clara',   pos: 'F',  ht: '6\'9"',  pts: 14.7, reb: 6.3, ast: 2.3, tier: 4, blurb: 'A mature, skilled forward who impacts winning through precision, interior touch, and high-level defensive awareness.' },
+    { rank: 33, name: 'Tyler Tanner',        school: 'Vanderbilt',    pos: 'G',  ht: '6\'0"',  pts: 18.2, reb: 3.9, ast: 4.5, tier: 4, blurb: 'An outlier small guard with elite burst and vertical pop, Tanner breaks historical precedents with his high-volume rim finishing and defensive playmaking.' },
+    { rank: 34, name: 'Patrick Ngongba II',  school: 'Duke',          pos: 'C',  ht: '6\'11"', pts: 9.6,  reb: 8.4, ast: 1.1, tier: 4, blurb: 'A physically imposing, fundamentally sound big man who provides immense value through rebounding and steady interior defense.' },
+    { rank: 35, name: 'Joshua Jefferson',    school: 'Iowa State',    pos: 'F',  ht: '6\'9"',  pts: 13.8, reb: 7.2, ast: 5.4, tier: 4, blurb: 'A unique point forward and high-level connector whose elite passing and court vision draw comparisons to veteran playmaking hubs.' },
+    { rank: 36, name: 'Alex Karaban',        school: 'UConn',         pos: 'F',  ht: '6\'8"',  pts: 14.6, reb: 5.1, ast: 2.7, tier: 4, blurb: 'A battle-tested champion with a quick release and elite basketball IQ, Karaban is a prototypical 3-and-D forward who thrives in winning environments.' },
+    { rank: 37, name: 'Zuby Ejiofor',        school: 'St. John\'s',   pos: 'F',  ht: '6\'9"',  pts: 13.1, reb: 8.8, ast: 1.8, tier: 4, blurb: 'A powerful, explosive athlete who has developed into a double-double threat with the verticality to be a high-level rim protector.' },
+    { rank: 38, name: 'Ebuka Okorie',        school: 'Stanford',      pos: 'G',  ht: '6\'2"',  pts: 19.8, reb: 3.5, ast: 2.9, tier: 4, blurb: 'A microwave scoring machine with a relentless motor and downhill aggression, Okorie led his team in scoring through pure shot-creation will.' },
+    { rank: 39, name: 'Juke Harris',         school: 'Wake Forest',   pos: 'G',  ht: '6\'7"',  pts: 20.4, reb: 5.6, ast: 2.5, tier: 4, blurb: 'A breakout wing with elite scoring volume and a soft midrange touch, Harris offers high-gravity floor spacing for any backcourt.' },
+    { rank: 40, name: 'Tounde Yessoufou',    school: 'Baylor',        pos: 'F',  ht: '6\'5"',  pts: 14.3, reb: 6.7, ast: 2.1, tier: 4, blurb: 'A physically imposing lab-built wing with an elite motor, Yessoufou excels as a bruising slasher and defensive disruptor.' },
   ];
+
+  // 2026 first-round pick ownership (includes trades) — maps pick slot → actual owning team
+  const TRADED_PICKS = {
+    1:  { abbr: 'WAS', name: 'Washington Wizards',        via: null,  conditions: null },
+    2:  { abbr: 'IND', name: 'Indiana Pacers',             via: null,  conditions: 'Protected 1\u20134; falls to LAC (via Zubac trade) if picks 5\u20136' },
+    3:  { abbr: 'BKN', name: 'Brooklyn Nets',              via: null,  conditions: null },
+    4:  { abbr: 'UTA', name: 'Utah Jazz',                  via: null,  conditions: 'Protected 1\u20138; conveys to OKC if picks 9\u201330' },
+    5:  { abbr: 'SAC', name: 'Sacramento Kings',           via: null,  conditions: null },
+    6:  { abbr: 'MEM', name: 'Memphis Grizzlies',          via: null,  conditions: null },
+    7:  { abbr: 'ATL', name: 'Atlanta Hawks',              via: 'NOP', conditions: 'ATL receives more favorable of MIL or NOP pick' },
+    8:  { abbr: 'DAL', name: 'Dallas Mavericks',           via: null,  conditions: null },
+    9:  { abbr: 'CHI', name: 'Chicago Bulls',              via: null,  conditions: null },
+    10: { abbr: 'MIL', name: 'Milwaukee Bucks',            via: null,  conditions: 'Less favorable of own and NOP pick via swap' },
+    11: { abbr: 'GSW', name: 'Golden State Warriors',      via: null,  conditions: null },
+    12: { abbr: 'OKC', name: 'Oklahoma City Thunder',      via: 'LAC', conditions: 'Unprotected' },
+    13: { abbr: 'MIA', name: 'Miami Heat',                 via: null,  conditions: null },
+    14: { abbr: 'CHA', name: 'Charlotte Hornets',          via: null,  conditions: null },
+    15: { abbr: 'CHI', name: 'Chicago Bulls',              via: 'POR', conditions: 'Protected 1\u201314; rolls to 2027 if Portland in lottery' },
+    16: { abbr: 'MEM', name: 'Memphis Grizzlies',          via: 'ORL', conditions: 'MEM receives more favorable of own and ORL pick' },
+    17: { abbr: 'CHA', name: 'Charlotte Hornets',          via: 'PHX', conditions: 'Least favorable of PHX/ORL/WSH/NYK swap pool' },
+    18: { abbr: 'OKC', name: 'Oklahoma City Thunder',      via: 'PHI', conditions: 'Top-4 protected; conveys to OKC if picks 5\u201330' },
+    19: { abbr: 'SAS', name: 'San Antonio Spurs',          via: 'ATL', conditions: 'More favorable of SAS or ATL pick via SAS swap right' },
+    20: { abbr: 'TOR', name: 'Toronto Raptors',            via: null,  conditions: null },
+    21: { abbr: 'DET', name: 'Detroit Pistons',            via: null,  conditions: 'Conveys to Minnesota if outside top-18' },
+    22: { abbr: 'ATL', name: 'Atlanta Hawks',              via: 'CLE', conditions: 'Second-most favorable of MIN/CLE/UTA pick pool' },
+    23: { abbr: 'PHI', name: 'Philadelphia 76ers',         via: 'HOU', conditions: 'Top-4 protected; conveys to PHI via OKC if picks 5\u201330' },
+    24: { abbr: 'NYK', name: 'New York Knicks',            via: null,  conditions: null },
+    25: { abbr: 'LAL', name: 'LA Lakers',                  via: null,  conditions: null },
+    26: { abbr: 'DEN', name: 'Denver Nuggets',             via: null,  conditions: null },
+    27: { abbr: 'BOS', name: 'Boston Celtics',             via: null,  conditions: null },
+    28: { abbr: 'MIN', name: 'Minnesota Timberwolves',     via: 'DET', conditions: 'Protected 1\u201318' },
+    29: { abbr: 'CLE', name: 'Cleveland Cavaliers',        via: 'SAS', conditions: '2026 mid-season trade' },
+    30: { abbr: 'DAL', name: 'Dallas Mavericks',           via: 'OKC', conditions: 'Least favorable of OKC/HOU/LAC/PHI pick pool' },
+  };
 
   // Team needs for lottery teams based on ESPN/Bleacher Report expert analysis
   const TEAM_NEEDS = [
@@ -6555,10 +6616,10 @@ function renderDraft() {
     </div>
     <div class="prospects-grid">`;
 
-  const prospectColors = ['#ffd700','#ffaa00','#c8a000','#ff6600','#ff4400','#dd3300','#aa2200','#882200','#662200','#552200','#444','#444'];
+  const prospectColors = ['#ffd700','#ffaa00','#c8a000','#ff8800','#ff6600','#ff4400','#dd3300','#bb2200','#992200','#772200','#662200','#552200','#445500','#336600','#336655','#2255aa','#335588','#334466','#444','#444'];
   PROSPECTS.forEach((p, i) => {
     const col = prospectColors[i] || '#444';
-    const isNonLottery = p.rank > 10;
+    const isNonLottery = p.rank > 14;
     html += `<div class="prospect-card" style="border-top:2px solid ${col}20${isNonLottery ? ';opacity:0.75' : ''}">
       <div class="prospect-rank-badge" style="background:${col}18;color:${col};border:1px solid ${col}44">#${p.rank} Overall${isNonLottery ? ' · Non-Lottery' : ''}</div>
       <div class="prospect-name">${p.name}</div>
@@ -6612,13 +6673,11 @@ function renderDraft() {
     let available = [...PROSPECTS]; // prospects not yet selected
     let h = '';
 
-    // Show all 10 lottery picks
-    const displayCount = Math.min(10, order.length);
+    // Show all 14 lottery picks
+    const displayCount = Math.min(14, order.length);
     order.slice(0, displayCount).forEach((seedIdx, pickIdx) => {
       const team = lottery14[seedIdx];
       if (!team) return;
-      const colors = TEAM_COLORS[team.abbr] || { bg: '#333', text: '#fff' };
-      const logo = getLogoUrl(team.abbr);
       const originalSeed = seedIdx + 1;
       const pickNum = pickIdx + 1;
       const jumped = pickNum < originalSeed;
@@ -6630,39 +6689,65 @@ function renderDraft() {
         ? `<span class="sim-stayed-badge">STAYED AT ${pickNum}</span>`
         : '';
 
+      // Traded pick ownership
+      const owner = TRADED_PICKS[pickNum] || null;
+      const displayAbbr = owner ? owner.abbr : team.abbr;
+      const displayName = owner ? owner.name : team.name;
+      const displayColors = TEAM_COLORS[displayAbbr] || { bg: '#333', text: '#fff' };
+      const displayLogo = getLogoUrl(displayAbbr);
+      const viaLabel = owner && owner.via
+        ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);margin-left:4px">via ${owner.via}</span>`
+        : '';
+      const conditionsTip = owner && owner.conditions
+        ? `<span title="${owner.conditions}" style="cursor:help;color:var(--muted);font-size:0.72rem;margin-left:4px">ⓘ</span>`
+        : '';
+
       // Smart prospect selection using positional needs
-      const needs = teamNeedsMap[team.abbr] || null;
+      const needs = teamNeedsMap[displayAbbr] || teamNeedsMap[team.abbr] || null;
       const prospect = selectProspect(pickNum, needs, available);
       if (prospect) available = available.filter(p => p.rank !== prospect.rank);
 
       h += `<div class="sim-pick-row">
         <div class="sim-pick-num ${numClass}">${pickNum}</div>
-        <div class="logo-badge-sm" style="width:36px;height:28px;background:${colors.bg};border:1px solid ${colors.bg}88;border-radius:5px;padding:2px 3px">
-          <img src="${logo}" alt="${team.abbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">
+        <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px">
+          <img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">
         </div>
         <div class="sim-pick-detail">
-          <div class="sim-pick-name">${team.name}</div>
-          <div class="sim-pick-meta">${team.abbr} · Was seed ${originalSeed} · ${team.wins}-${team.losses}</div>
+          <div class="sim-pick-name">${displayName}${viaLabel}${conditionsTip}</div>
+          <div class="sim-pick-meta">${displayAbbr} · Earned by ${team.abbr} (seed ${originalSeed}) · ${team.wins}-${team.losses}</div>
         </div>
         ${prospect ? `<div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem">${prospect.pos}</span></div>` : ''}
         ${jumpBadge}
       </div>`;
     });
 
-    // Picks 11-12: show extra prospects only, no team (lottery is only 10 picks)
+    // Picks 15-16: projected non-lottery range
     const extraLabel = `<div style="margin-top:14px;padding:6px 0 4px;font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;border-top:1px solid var(--border)">
-      Other Projected Lottery-Fringe Prospects
+      Projected Non-Lottery Picks
     </div>`;
     h += extraLabel;
-    [11, 12].forEach(pickNum => {
-      const prospect = available[0]; // next best available
+    [15, 16].forEach(pickNum => {
+      const prospect = available[0];
       if (prospect) available = available.slice(1);
       if (!prospect) return;
-      h += `<div class="sim-pick-row" style="opacity:0.65">
+      const owner = TRADED_PICKS[pickNum] || null;
+      const displayAbbr = owner ? owner.abbr : '—';
+      const displayName = owner ? owner.name : `Pick ${pickNum}`;
+      const displayColors = owner ? (TEAM_COLORS[displayAbbr] || { bg: '#333', text: '#fff' }) : { bg: '#333', text: '#fff' };
+      const displayLogo = owner ? getLogoUrl(displayAbbr) : null;
+      const viaLabel = owner && owner.via
+        ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);margin-left:4px">via ${owner.via}</span>`
+        : '';
+      const conditionsTip = owner && owner.conditions
+        ? `<span title="${owner.conditions}" style="cursor:help;color:var(--muted);font-size:0.72rem;margin-left:4px">ⓘ</span>`
+        : '';
+      h += `<div class="sim-pick-row" style="opacity:0.75">
         <div class="sim-pick-num" style="color:var(--muted)">${pickNum}</div>
-        <div style="width:36px;height:28px;flex-shrink:0"></div>
+        <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px;flex-shrink:0">
+          ${displayLogo ? `<img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">` : ''}
+        </div>
         <div class="sim-pick-detail">
-          <div class="sim-pick-name" style="color:var(--muted)">Pick ${pickNum}</div>
+          <div class="sim-pick-name" style="color:var(--muted)">${displayName}${viaLabel}${conditionsTip}</div>
           <div class="sim-pick-meta">Non-lottery range</div>
         </div>
         <div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem">${prospect.pos}</span></div>
