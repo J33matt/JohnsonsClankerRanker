@@ -6587,8 +6587,8 @@ function renderDraft() {
     { abbr: 'UTA', name: 'Utah Jazz', pick: '4', needs: ['Backcourt Scorer', 'Two-Way Guard', 'Secondary Creator'], target: 'Darryn Peterson', blurb: 'After finishing with a defense that ranked last in the league, Utah desperately needs defensive reinforcements. Beyond that, they must find reliable perimeter scoring off the bench to avoid the cold stretches that plagued them this year.' },
     { abbr: 'SAC', name: 'Sacramento Kings', pick: '5', needs: ['Franchise Player', 'Point Guard', 'Athletic Wing'], target: 'Darius Acuff Jr.', blurb: 'The Kings enter the offseason with a glaring hole at the point guard position. They need to secure a high-level starter to facilitate the offense while simultaneously building a more cohesive and predictable defensive identity.' },
     { abbr: 'MEM', name: 'Memphis Grizzlies', pick: '6', needs: ['Guard Depth', 'Shooting', 'Versatile Wing'], target: 'Kingston Flemings', blurb: 'Given Zach Edey’s recent injury concerns, Memphis needs to secure a reliable reserve big man who can rebound and protect the rim. They also need to see a significant leap in shooting consistency from their core of young wings.' },
-    { abbr: 'NOP', name: 'New Orleans Pelicans', pick: 'ATL\'s via trade', needs: ['Backcourt Star', 'Young Creator', 'Scorer'], target: 'Darryn Peterson', blurb: 'New Orleans struggled mightily on the glass this past season. To fix their bottom-tier board percentage, the front office needs to prioritize interior rebounding and find a true defensive anchor for the paint.' },
-    { abbr: 'DAL', name: 'Dallas Mavericks', pick: '8', needs: ['Wing Scorer', 'Playmaker', 'Secondary Star'], target: 'Cameron Boozer', blurb: 'The goal in Dallas is clear: find high-level playmaking to ease the burden on Cooper Flagg. Additionally, they are in the market for a stretch big to provide more versatility within their nightly lineup rotations.' },
+    { abbr: 'ATL', name: 'Atlanta Hawks', pick: '7', needs: ['Backcourt Star', 'Young Creator', 'Scorer'], target: 'Darryn Peterson', blurb: 'New Orleans struggled mightily on the glass this past season. To fix their bottom-tier board percentage, the front office needs to prioritize interior rebounding and find a true defensive anchor for the paint.' },
+    { abbr: 'DAL', name: 'Dallas Mavericks', pick: '8', needs: ['Wing Scorer', 'Playmaker', 'Secondary Star'], target: 'Kingston Flemings, Amari Allen', blurb: 'The goal in Dallas is clear: find high-level playmaking to ease the burden on Cooper Flagg. Additionally, they are in the market for a stretch big to provide more versatility within their nightly lineup rotations.' },
     { abbr: 'CHI', name: 'Chicago Bulls', pick: '9', needs: ['Stretch Big', 'Shooting Wing', 'Secondary Scorer'], target: 'Nate Ament', blurb: 'As the franchise transitions into a younger phase, the Bulls must prioritize adding reliable perimeter shooting and bolstering their frontcourt depth to provide a more balanced internal structure.' },
     { abbr: 'MIL', name: 'Milwaukee Bucks', pick: '10', needs: ['Athletic Big', 'Versatile Defender', 'Development Wing'], target: 'Koa Peat', blurb: 'After a defensive collapse that saw the unit fall to 27th in the league, the Bucks are searching for an identity. They need to find a new lead guard and implement a defensive-first mentality to return to the postseason conversation.' },
   ];
@@ -6927,7 +6927,7 @@ function renderDraft() {
         </div>
         <div class="needs-team-info">
           <div class="needs-team-name">${t.name}</div>
-          <div class="needs-pick-label">Projected ${t.pick}</div>
+          <div class="needs-pick-label">Pick ${t.pick}</div>
         </div>
       </div>
       <div class="needs-tags">${t.needs.map(n => `<span class="needs-tag">${n}</span>`).join('')}</div>
