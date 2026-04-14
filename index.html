@@ -5770,13 +5770,9 @@ function renderPlayoffs() {
   }
 
   function generateClankerBracket() {
-    if (_clankerBracket) return;
-
-    // Version-aware cache — only winners/scores are cached, not reasoning (generated live)
-    try {
-      const saved = JSON.parse(localStorage.getItem('clankerBracket2026') || 'null');
-      if (saved && saved.clankerBracketVersion === 7) { _clankerBracket = saved; return; }
-    } catch(e) {}
+    // Always regenerate — no localStorage cache. Picks must use the current live
+    // seedings (west/east) which change as applyRecordsFromGames updates STANDINGS_DATA.
+    // Caching with stale seedings causes wrong teams to appear highlighted.
 
     // Analytic best-of-7: compute P(t1 wins series) from per-game win probabilities
     // plus an L20 trend bonus. t1 = higher seed (home court). No RNG — fully deterministic.
@@ -5851,7 +5847,6 @@ function renderPlayoffs() {
     if (champS) cb.scores['finals'] = champS;
 
     _clankerBracket = cb;
-    try { localStorage.setItem('clankerBracket2026', JSON.stringify(cb)); } catch(e) {}
   }
 
   function clankerMatchupCard(t1, t2, seed1, seed2, pickedAbbr, score, actualWinner, reasoning) {
@@ -6048,7 +6043,6 @@ function renderPlayoffs() {
   window._bktClear = clearBracket;
   window._clankerGenerate = function() {
     _clankerBracket = null;
-    try { localStorage.removeItem('clankerBracket2026'); } catch(e) {}
     generateClankerBracket();
     const co = document.getElementById('clanker-bracket-outer');
     if (co) co.innerHTML = buildClankerSectionHtml();
@@ -6061,6 +6055,7 @@ function renderPlayoffs() {
 
   document.getElementById('bracket-inner').innerHTML = buildFullBracket();
   updateControls();
+  _clankerBracket = null;
   generateClankerBracket();
   document.getElementById('clanker-bracket-outer').innerHTML = buildClankerSectionHtml();
 
