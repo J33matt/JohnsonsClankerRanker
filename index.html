@@ -3033,6 +3033,13 @@
   }
   .sim-subtab-content { display: none; }
   .sim-subtab-content.active { display: block; }
+
+  /* Playoffs subtab visibility */
+  #panel-playoffs[data-playoffs-tab="winner"] #clanker-bracket-outer { display: none !important; }
+  #panel-playoffs[data-playoffs-tab="clanker"] #bracket-inner { display: none !important; }
+  #panel-playoffs[data-playoffs-tab="clanker"] .bracket-controls { display: none !important; }
+  #panel-playoffs[data-playoffs-tab="sim"] #playoffs-container { display: none !important; }
+  #panel-playoffs:not([data-playoffs-tab="sim"]) #sim-content-season { display: none !important; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
@@ -3060,7 +3067,7 @@
     <button class="tab-btn active" onclick="showTab('rankings', this)">Rankings</button>
     <button class="tab-btn" onclick="showTab('predictions', this)">Picks</button>
     <button class="tab-btn" onclick="showTab('playoffs', this)">Playoffs</button>
-    <button class="tab-btn" onclick="showTab('simulations', this)">Simulations</button>
+    <button class="tab-btn" onclick="showTab('simulations', this)">Draft</button>
     <button class="tab-btn" onclick="showTab('sportsbook', this)">🎰 Sportsbook</button>
     <button class="tab-btn" onclick="showTab('cards', this)">The Locker</button>
   </div>
@@ -3098,29 +3105,34 @@
   <!-- SCORES -->
 
   <!-- PLAYOFFS -->
-  <div id="panel-playoffs" class="panel">
+  <div id="panel-playoffs" class="panel" data-playoffs-tab="winner">
+    <div class="sim-subtab-bar">
+      <button class="sim-subtab-btn active" id="playoffs-tab-winner" onclick="_playoffsShowTab('winner')">
+        <span class="sim-subtab-icon">🏆</span>
+        <span class="sim-subtab-label">Pick Your Winner</span>
+        <span class="sim-subtab-desc">Fill in your bracket picks</span>
+      </button>
+      <button class="sim-subtab-btn" id="playoffs-tab-clanker" onclick="_playoffsShowTab('clanker')">
+        <span class="sim-subtab-icon">🤖</span>
+        <span class="sim-subtab-label">Clanker's Bracket</span>
+        <span class="sim-subtab-desc">Clanker's auto-filled picks</span>
+      </button>
+      <button class="sim-subtab-btn" id="playoffs-tab-sim" onclick="_playoffsShowTab('sim')">
+        <span class="sim-subtab-icon">🎲</span>
+        <span class="sim-subtab-label">Playoff Simulator</span>
+        <span class="sim-subtab-desc">Simulate the full NBA season</span>
+      </button>
+    </div>
     <div id="playoffs-container">
       <div class="loading-spinner"><div class="spinner"></div>Loading playoffs…</div>
     </div>
+    <div id="sim-content-season">
+    </div>
   </div>
 
-  <!-- SIMULATIONS -->
+  <!-- SIMULATIONS (Draft) -->
   <div id="panel-simulations" class="panel">
-    <div class="sim-subtab-bar">
-      <button class="sim-subtab-btn active" id="sim-tab-season" onclick="_simShowTab('season')">
-        <span class="sim-subtab-icon">🏆</span>
-        <span class="sim-subtab-label">Season</span>
-        <span class="sim-subtab-desc">Simulate the full NBA season</span>
-      </button>
-      <button class="sim-subtab-btn" id="sim-tab-draft" onclick="_simShowTab('draft')">
-        <span class="sim-subtab-icon">📋</span>
-        <span class="sim-subtab-label">Draft</span>
-        <span class="sim-subtab-desc">Simulate the NBA Draft</span>
-      </button>
-    </div>
-    <div id="sim-content-season" class="sim-subtab-content active">
-    </div>
-    <div id="sim-content-draft" class="sim-subtab-content">
+    <div id="sim-content-draft" class="sim-subtab-content active">
     </div>
   </div>
 
@@ -5028,7 +5040,7 @@ function seedConference(conf) {
   return teams;
 }
 
-let _simActiveSubtab = 'season';
+let _simActiveSubtab = 'draft';
 
 function _simShowTab(which) {
   _simActiveSubtab = which;
@@ -5040,6 +5052,18 @@ function _simShowTab(which) {
   });
   if (which === 'season') renderSimulator();
   else renderDraft();
+}
+
+let _playoffsActiveTab = 'winner';
+function _playoffsShowTab(which) {
+  _playoffsActiveTab = which;
+  ['winner','clanker','sim'].forEach(tab => {
+    const btn = document.getElementById('playoffs-tab-' + tab);
+    if (btn) btn.classList.toggle('active', tab === which);
+  });
+  const panel = document.getElementById('panel-playoffs');
+  if (panel) panel.setAttribute('data-playoffs-tab', which);
+  if (which === 'sim') renderSimulator();
 }
 
 // ── PLAYOFF BRACKET PERSISTENCE ─────────────────────────────────────────────
