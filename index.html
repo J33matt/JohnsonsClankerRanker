@@ -3593,18 +3593,18 @@ const STANDINGS_DATA = [
   {name:"Miami Heat",abbr:"MIA",wins:39,losses:36,conf:"EAST",div:"Southeast",streak:-1},
   {name:"Charlotte Hornets",abbr:"CHA",wins:39,losses:36,conf:"EAST",div:"Southeast",streak:-1},
   {name:"LA Clippers",abbr:"LAC",wins:39,losses:36,conf:"WEST",div:"Pacific",streak:2},
-  {name:"Portland Trail Blazers",abbr:"POR",wins:38,losses:38,conf:"WEST",div:"Northwest",streak:1},
+  {name:"Portland Trail Blazers",abbr:"POR",wins:40,losses:36,conf:"WEST",div:"Northwest",streak:1},
   {name:"Golden State Warriors",abbr:"GSW",wins:36,losses:39,conf:"WEST",div:"Pacific",streak:-2},
   {name:"Milwaukee Bucks",abbr:"MIL",wins:29,losses:45,conf:"EAST",div:"Central",streak:-3},
-  {name:"Chicago Bulls",abbr:"CHI",wins:29,losses:45,conf:"EAST",div:"Central",streak:-1},
-  {name:"Memphis Grizzlies",abbr:"MEM",wins:25,losses:49,conf:"WEST",div:"Southwest",streak:1},
+  {name:"Chicago Bulls",abbr:"CHI",wins:28,losses:46,conf:"EAST",div:"Central",streak:-1},
+  {name:"Memphis Grizzlies",abbr:"MEM",wins:24,losses:50,conf:"WEST",div:"Southwest",streak:1},
   {name:"New Orleans Pelicans",abbr:"NOP",wins:25,losses:51,conf:"WEST",div:"Southwest",streak:-3},
-  {name:"Dallas Mavericks",abbr:"DAL",wins:24,losses:50,conf:"WEST",div:"Southwest",streak:1},
-  {name:"Utah Jazz",abbr:"UTA",wins:21,losses:54,conf:"WEST",div:"Northwest",streak:-3},
-  {name:"Indiana Pacers",abbr:"IND",wins:17,losses:58,conf:"EAST",div:"Central",streak:1},
+  {name:"Dallas Mavericks",abbr:"DAL",wins:25,losses:49,conf:"WEST",div:"Southwest",streak:1},
+  {name:"Utah Jazz",abbr:"UTA",wins:19,losses:57,conf:"WEST",div:"Northwest",streak:-3},
+  {name:"Indiana Pacers",abbr:"IND",wins:17,losses:57,conf:"EAST",div:"Central",streak:1},
   {name:"Brooklyn Nets",abbr:"BKN",wins:18,losses:57,conf:"EAST",div:"Atlantic",streak:-1},
-  {name:"Washington Wizards",abbr:"WAS",wins:17,losses:57,conf:"EAST",div:"Southeast",streak:-3},
-  {name:"Sacramento Kings",abbr:"SAC",wins:19,losses:57,conf:"WEST",div:"Pacific",streak:-2},
+  {name:"Washington Wizards",abbr:"WAS",wins:17,losses:58,conf:"EAST",div:"Southeast",streak:-3},
+  {name:"Sacramento Kings",abbr:"SAC",wins:21,losses:54,conf:"WEST",div:"Pacific",streak:-2},
 ];
 
 const RECENT_GAMES = [
@@ -6833,8 +6833,11 @@ function renderDraft() {
         </tr></thead><tbody>`;
     lottery14.forEach((team, i) => {
       if (!team) return;
-      const colors = TEAM_COLORS[team.abbr] || { bg: 'var(--surface2)', text: '#fff' };
-      const logo = getLogoUrl(team.abbr);
+      const tradeOwner = Object.entries(TRADED_PICKS).find(([slot, e]) => +slot <= 14 && e.via === team.abbr)?.[1] || null;
+      const displayAbbr = tradeOwner ? tradeOwner.abbr : team.abbr;
+      const displayName = tradeOwner ? tradeOwner.name : team.name;
+      const colors = TEAM_COLORS[displayAbbr] || { bg: 'var(--surface2)', text: '#fff' };
+      const logo = getLogoUrl(displayAbbr);
       const odds1 = LOTTERY_ODDS[i] || 0.5;
       const odds4 = top4[i] || 1.2;
       const color = oddsColors[i];
@@ -6844,11 +6847,11 @@ function renderDraft() {
         <td>
           <div style="display:flex;align-items:center;gap:8px">
             <div class="logo-badge-sm" style="background:${colors.bg};border:1px solid ${colors.bg}88;flex-shrink:0">
-              <img src="${logo}" alt="${team.abbr}" onerror="this.style.display='none'">
+              <img src="${logo}" alt="${displayAbbr}" onerror="this.style.display='none'">
             </div>
             <div>
-              <div style="font-weight:600;font-size:0.88rem">${team.name}</div>
-              <div style="font-size:0.72rem;color:var(--muted);letter-spacing:1px">${team.abbr}</div>
+              <div style="font-weight:600;font-size:0.88rem">${displayName}</div>
+              <div style="font-size:0.72rem;color:var(--muted);letter-spacing:1px">${displayAbbr}${tradeOwner ? ` <span style="color:var(--muted);font-size:0.65rem">via ${team.abbr}</span>` : ''}</div>
             </div>
           </div>
         </td>
