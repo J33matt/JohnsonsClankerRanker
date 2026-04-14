@@ -2017,9 +2017,10 @@
   }
   .sim-pick-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 10px;
-    padding: 8px 0;
+    padding: 10px 0;
     border-bottom: 1px solid rgba(255,255,255,0.04);
     font-family: 'Barlow Condensed', sans-serif;
     animation: fadeIn 0.4s ease;
@@ -2033,6 +2034,7 @@
     width: 36px;
     text-align: center;
     flex-shrink: 0;
+    padding-top: 2px;
   }
   .sim-pick-num.top1 { color: #ffd700; font-size: 1.6rem; }
   .sim-pick-num.top2 { color: var(--accent2); }
@@ -2049,14 +2051,36 @@
   .sim-pick-detail {
     flex: 1;
     font-size: 0.88rem;
+    min-width: 120px;
   }
   .sim-pick-name { font-weight: 700; color: var(--text); }
   .sim-pick-meta { font-size: 0.78rem; color: var(--muted); }
+  .sim-pick-prospect-block {
+    text-align: right;
+    flex-shrink: 0;
+    min-width: 130px;
+  }
   .sim-pick-prospect {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.82rem;
+    font-size: 0.88rem;
     color: var(--accent2);
-    font-weight: 600;
+    font-weight: 700;
+  }
+  .sim-pick-prospect-sub {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .sim-pick-fit {
+    width: 100%;
+    padding-left: 92px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 1px;
+    line-height: 1.4;
   }
   .sim-jumped-badge {
     font-size: 0.65rem;
@@ -6540,28 +6564,82 @@ function renderDraft() {
     return [...drawn, ...remaining];
   }
 
-  // Positional fit map: which positions match each team's needs
-  // Keys are need strings, values are prospect positions that satisfy them
+  // Positional fit map (uses simplified F/G/C positions to match PROSPECTS array)
   const NEED_POS_MAP = {
-    'Star Wing': ['SF','PF','SG'], 'Scoring Guard': ['SG','PG','SF'],
-    'Two-Way Player': ['SF','SG','PG'], 'Blue-Chip Star': ['SF','SG','PF','PG'],
-    'Franchise Cornerstone': ['SF','PG','SG','PF'], 'Wing': ['SF','SG'],
-    'Star Forward': ['PF','SF'], 'Complementary Scorer': ['SG','SF','PF'],
-    'Franchise Player': ['PG','SG','SF','PF'], 'Point Guard': ['PG'],
-    'Athletic Wing': ['SF','SG'], 'Backcourt Scorer': ['SG','PG'],
-    'Two-Way Guard': ['SG','PG'], 'Secondary Creator': ['PG','SG'],
-    'Wing Scorer': ['SF','SG'], 'Playmaker': ['PG','SG'],
-    'Secondary Star': ['SF','SG','PF'], 'Guard Depth': ['PG','SG'],
-    'Shooting': ['SG','SF','PF'], 'Versatile Wing': ['SF','SG'],
-    'Backcourt Star': ['SG','PG'], 'Young Creator': ['PG','SG'],
-    'Scorer': ['SG','SF','PF'], 'Athletic Big': ['C','PF'],
-    'Versatile Defender': ['SF','PF','C'], 'Development Wing': ['SF','SG'],
-    'Athletic Playmaker': ['PG','SG','SF'], 'Versatile Big': ['PF','C'],
-    'Future Core Piece': ['SF','PG','SG','PF','C'],
-    'Stretch Big': ['PF','C'], 'Shooting Wing': ['SF','SG'],
-    'Secondary Scorer': ['SG','SF'], 'Big Man': ['C','PF'],
-    'Two-Way Big': ['PF','C'], 'Front Court Depth': ['PF','C'],
+    'Star Wing': ['F','G'], 'Scoring Guard': ['G'],
+    'Two-Way Player': ['F','G'], 'Blue-Chip Star': ['F','G'],
+    'Franchise Cornerstone': ['F','G'], 'Wing': ['F','G'],
+    'Star Forward': ['F'], 'Complementary Scorer': ['G','F'],
+    'Franchise Player': ['G','F'], 'Point Guard': ['G'],
+    'Athletic Wing': ['F','G'], 'Backcourt Scorer': ['G'],
+    'Two-Way Guard': ['G'], 'Secondary Creator': ['G'],
+    'Wing Scorer': ['F','G'], 'Playmaker': ['G'],
+    'Secondary Star': ['F','G'], 'Guard Depth': ['G'],
+    'Shooting': ['G','F'], 'Versatile Wing': ['F','G'],
+    'Backcourt Star': ['G'], 'Young Creator': ['G'],
+    'Scorer': ['G','F'], 'Athletic Big': ['C','F'],
+    'Versatile Defender': ['F','C'], 'Development Wing': ['F','G'],
+    'Athletic Playmaker': ['G','F'], 'Versatile Big': ['F','C'],
+    'Future Core Piece': ['F','G','C'],
+    'Stretch Big': ['F','C'], 'Shooting Wing': ['F','G'],
+    'Secondary Scorer': ['G','F'], 'Big Man': ['C','F'],
+    'Two-Way Big': ['F','C'], 'Front Court Depth': ['F','C'],
   };
+
+  // Generate a Clanker-style fit note for a prospect-team pairing
+  function makeFitNote(prospect, teamAbbr, teamNeeds, pickNum) {
+    if (!prospect) return '';
+    const posWord = prospect.pos === 'C' ? 'big man' : prospect.pos === 'F' ? 'forward' : 'guard';
+    const matchedNeed = teamNeeds
+      ? (teamNeeds.find(n => (NEED_POS_MAP[n] || []).includes(prospect.pos)) || null)
+      : null;
+    // Seed variation deterministically off pick/rank so re-runs of same board are consistent
+    const v = (prospect.rank + pickNum) % 4;
+
+    if (pickNum === 1) {
+      return `The consensus #1 overall. No deliberation needed — ${prospect.name} is the pick.`;
+    }
+    if (prospect.tier === 1) {
+      return matchedNeed
+        ? `Tier-1 talent who also addresses the ${matchedNeed.toLowerCase()} need — ${teamAbbr} doesn't have to choose between fit and upside here.`
+        : `You don't pass on tier-1 talent at #${pickNum}. ${prospect.name} may not be a perfect positional match but the ceiling demands the pick.`;
+    }
+    if (matchedNeed) {
+      const angles = [
+        `Directly addresses the ${matchedNeed.toLowerCase()} need. ${prospect.name}'s profile slots right into ${teamAbbr}'s system.`,
+        `${teamAbbr} gets exactly what they were hunting — a ${posWord} who fills the ${matchedNeed.toLowerCase()} void.`,
+        `Need-based slam dunk. ${prospect.name} checks the ${matchedNeed.toLowerCase()} box and brings legit upside on a cheap deal.`,
+        `${matchedNeed} addressed. ${prospect.name} has the skill set to contribute early and grow into a rotation staple.`,
+      ];
+      return angles[v];
+    }
+    if (pickNum >= 25) {
+      const contenderAngles = [
+        `Contender pick. ${prospect.name} gives ${teamAbbr} a low-cost ${posWord} who can learn the system and contribute in Year 2.`,
+        `Championship teams still get to add. ${prospect.name} on a rookie deal is pure organizational value.`,
+        `${teamAbbr} isn't drafting for need — they're drafting for depth. ${prospect.name} is the best player available.`,
+        `Late first value. ${prospect.name}'s skill set is real; the role just needs to be defined.`,
+      ];
+      return contenderAngles[v];
+    }
+    if (pickNum >= 18) {
+      const midAngles = [
+        `Best available without a perfect positional fit. ${prospect.name} adds a ${posWord} with real development upside at a cost-controlled number.`,
+        `${teamAbbr} takes value over position. ${prospect.name} is the most talented player left on the board.`,
+        `No exact need match, but talent wins at ${pickNum}. ${prospect.name} has the tools to carve out a rotation spot.`,
+        `${prospect.name} falls into ${teamAbbr}'s lap — this is a value pick at #${pickNum}.`,
+      ];
+      return midAngles[v];
+    }
+    // Default mid-lottery
+    const defaultAngles = [
+      `${teamAbbr} takes the best available at #${pickNum}. ${prospect.name}'s ${prospect.tier <= 2 ? 'high ceiling' : 'NBA-ready skill set'} fits the timeline.`,
+      `No clean positional match, but ${prospect.name} at #${pickNum} is still strong value for ${teamAbbr}.`,
+      `${prospect.name}'s ${posWord} game is the best available here. ${teamAbbr} takes the talent and figures out the fit.`,
+      `Talent-based selection. ${prospect.name} may not fill a primary need but brings enough to the table to justify #${pickNum}.`,
+    ];
+    return defaultAngles[v];
+  }
 
   // Realistic draft selection: top-3 are interchangeable, rest driven by need + tier
   function selectProspect(pickNum, teamNeeds, availableProspects) {
@@ -6756,38 +6834,6 @@ function renderDraft() {
 
   document.getElementById('sim-content-draft').innerHTML = html;
 
-  // Helper: build a pick row HTML
-  function buildPickRow(pickNum, team, meta, available, isPlayoff) {
-    const owner = TRADED_PICKS[pickNum] || null;
-    const displayAbbr  = owner ? owner.abbr  : (team ? team.abbr  : '—');
-    const displayName  = owner ? owner.name  : (team ? team.name  : `Pick ${pickNum}`);
-    const displayColors = TEAM_COLORS[displayAbbr] || { bg: '#333', text: '#fff' };
-    const displayLogo  = getLogoUrl(displayAbbr);
-    const viaLabel = owner && owner.via
-      ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);margin-left:4px">via ${owner.via}</span>`
-      : '';
-    const conditionsTip = owner && owner.conditions
-      ? `<span title="${owner.conditions}" style="cursor:help;color:var(--muted);font-size:0.72rem;margin-left:4px">ⓘ</span>`
-      : '';
-    const numClass = pickNum === 1 ? 'top1' : pickNum === 2 ? 'top2' : pickNum === 3 ? 'top3' : '';
-    const needsKey = displayAbbr !== '—' ? displayAbbr : (team ? team.abbr : null);
-    const needs = needsKey ? (teamNeedsMap[needsKey] || null) : null;
-    const prospect = selectProspect(pickNum, needs, available);
-    if (prospect) available.splice(available.findIndex(p => p.rank === prospect.rank), 1);
-    const opacity = isPlayoff ? ' style="opacity:0.8"' : '';
-    return `<div class="sim-pick-row"${opacity}>
-      <div class="sim-pick-num ${numClass}">${pickNum}</div>
-      <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px;flex-shrink:0">
-        <img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">
-      </div>
-      <div class="sim-pick-detail">
-        <div class="sim-pick-name"${isPlayoff ? ' style="color:var(--muted)"' : ''}>${displayName}${viaLabel}${conditionsTip}</div>
-        <div class="sim-pick-meta">${meta}</div>
-      </div>
-      ${prospect ? `<div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem">${prospect.pos}</span></div>` : ''}
-    </div>`;
-  }
-
   function sectionLabel(text) {
     return `<div style="margin-top:14px;padding:6px 0 4px;font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;border-top:1px solid var(--border)">${text}</div>`;
   }
@@ -6830,6 +6876,7 @@ function renderDraft() {
       const needs = teamNeedsMap[displayAbbr] || teamNeedsMap[team.abbr] || null;
       const prospect = selectProspect(pickNum, needs, available);
       if (prospect) available.splice(available.findIndex(p => p.rank === prospect.rank), 1);
+      const fitNote = makeFitNote(prospect, displayAbbr, needs, pickNum);
       h += `<div class="sim-pick-row">
         <div class="sim-pick-num ${numClass}">${pickNum}</div>
         <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px;flex-shrink:0">
@@ -6839,8 +6886,12 @@ function renderDraft() {
           <div class="sim-pick-name">${displayName}${viaLabel}${conditionsTip}</div>
           <div class="sim-pick-meta">${meta}</div>
         </div>
-        ${prospect ? `<div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem">${prospect.pos}</span></div>` : ''}
+        ${prospect ? `<div class="sim-pick-prospect-block">
+          <div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem;font-weight:400">${prospect.pos}</span></div>
+          <div class="sim-pick-prospect-sub">${prospect.school} · ${prospect.ht} · #${prospect.rank} overall</div>
+        </div>` : ''}
         ${jumpBadge}
+        ${fitNote ? `<div class="sim-pick-fit">${fitNote}</div>` : ''}
       </div>`;
     });
 
@@ -6866,7 +6917,8 @@ function renderDraft() {
       const needs = teamNeedsMap[displayAbbr] || teamNeedsMap[team.abbr] || null;
       const prospect = selectProspect(pickNum, needs, available);
       if (prospect) available.splice(available.findIndex(p => p.rank === prospect.rank), 1);
-      h += `<div class="sim-pick-row" style="opacity:0.8">
+      const fitNote = makeFitNote(prospect, displayAbbr, needs, pickNum);
+      h += `<div class="sim-pick-row" style="opacity:0.85">
         <div class="sim-pick-num" style="color:var(--muted)">${pickNum}</div>
         <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px;flex-shrink:0">
           <img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">
@@ -6875,7 +6927,11 @@ function renderDraft() {
           <div class="sim-pick-name" style="color:var(--muted)">${displayName}${viaLabel}${conditionsTip}</div>
           <div class="sim-pick-meta">${displayAbbr} · ${playoffLabel} · ${team.wins}-${team.losses}</div>
         </div>
-        ${prospect ? `<div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem">${prospect.pos}</span></div>` : ''}
+        ${prospect ? `<div class="sim-pick-prospect-block">
+          <div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem;font-weight:400">${prospect.pos}</span></div>
+          <div class="sim-pick-prospect-sub">${prospect.school} · ${prospect.ht} · #${prospect.rank} overall</div>
+        </div>` : ''}
+        ${fitNote ? `<div class="sim-pick-fit">${fitNote}</div>` : ''}
       </div>`;
     });
 
