@@ -2132,14 +2132,15 @@
     line-height: 1.4;
   }
   .sim-jumped-badge {
-    font-size: 0.65rem;
-    background: rgba(255,77,0,0.15);
-    color: var(--accent);
-    border: 1px solid rgba(255,77,0,0.3);
-    padding: 2px 6px;
+    font-size: 0.82rem;
+    background: rgba(40,210,100,0.2);
+    color: #2ed874;
+    border: 1px solid rgba(40,210,100,0.5);
+    padding: 2px 8px;
     border-radius: 10px;
     font-family: 'Barlow Condensed', sans-serif;
     letter-spacing: 1px;
+    font-weight: 600;
   }
   .sim-stayed-badge {
     font-size: 0.65rem;
@@ -6829,7 +6830,7 @@ function renderDraft() {
           <th>Record</th>
           <th style="text-align:right">Top-1%</th>
           <th style="text-align:right">Top-4%</th>
-          <th style="text-align:left;min-width:180px">Draft Result</th>
+          <th style="text-align:left;min-width:180px">Lottery Result</th>
         </tr></thead><tbody>`;
     lottery14.forEach((team, i) => {
       if (!team) return;
@@ -6981,14 +6982,12 @@ function renderDraft() {
         : pickNum <= 4 && !jumped && !fell
         ? `<span class="sim-stayed-badge" style="font-size:0.6rem;padding:1px 5px">HELD</span>`
         : jumped
-        ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:#44cc77;letter-spacing:1px">&#x2B06;${originalSeed - pickNum}</span>`
+        ? `<span class="sim-jumped-badge">&#x2B06;${originalSeed - pickNum}</span>`
         : fell
-        ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:#cc6644;letter-spacing:1px">&#x2B07;${pickNum - originalSeed}</span>`
+        ? `<span class="sim-draft-down-badge">&#x2B07;${pickNum - originalSeed}</span>`
         : '';
 
-      const ownerLine = owner
-        ? `<div class="lot-result-owner">${owner.abbr}${owner.via ? ` <span style="color:var(--border)">via</span> ${owner.via}` : ''}${owner.conditions ? ` <span title="${owner.conditions}" style="cursor:help">ⓘ</span>` : ''}</div>`
-        : '';
+      const ownerLine = '';
 
       const cell = document.getElementById('lot-result-' + seedIdx);
       if (cell) {
@@ -7000,10 +6999,6 @@ function renderDraft() {
             </div>
             ${ownerLine}
           </div>
-          ${prospect ? `<div class="lot-result-prospect">
-            <div class="lot-result-prospect-name">${prospect.name} <span style="color:var(--muted);font-weight:400;font-size:0.75rem">${prospect.pos}</span></div>
-            <div class="lot-result-prospect-sub">${prospect.school} · #${prospect.rank}</div>
-          </div>` : ''}
         </div>`;
       }
 
