@@ -6401,26 +6401,34 @@ function renderDraft() {
     { abbr: 'CHA', name: 'Charlotte Hornets', pick: '~#12', needs: ['Big Man', 'Two-Way Big', 'Front Court Depth'], target: 'Chris Cenac Jr.', blurb: 'Surging late in the season. If Charlotte believes in its young core, Peat or Cenac provide useful complementary skills without requiring to swing for the fences.' },
   ];
 
-  // Build lottery order from current standings
-  const lotteryTeams = STANDINGS_DATA
-    .filter(t => {
-      const west = seedConference('WEST');
-      const east = seedConference('EAST');
-      const wPlay = new Set(west.slice(0,10).map(t=>t.abbr));
-      const ePlay = new Set(east.slice(0,10).map(t=>t.abbr));
-      return !wPlay.has(t.abbr) && !ePlay.has(t.abbr);
-    });
+  // Build full 30-pick draft order from current standings
+  const _dWest = seedConference('WEST');
+  const _dEast = seedConference('EAST');
+  const winPct = t => t.wins / (t.wins + t.losses);
 
-  // Sort by losses desc (worst record = best lottery odds)
-  lotteryTeams.sort((a, b) => {
-    const apct = a.wins / (a.wins + a.losses);
-    const bpct = b.wins / (b.wins + b.losses);
-    return apct - bpct;
-  });
+  // Play-in teams: seeds 7-10 each conf (8 total)
+  const _playInAll = [..._dWest.slice(6,10), ..._dEast.slice(6,10)];
+  _playInAll.sort((a,b) => winPct(a) - winPct(b)); // worst first
+  // 4 worst = lottery seeds 11-14 (eliminated placeholder); 4 best = make playoffs
+  const _playInElim = _playInAll.slice(0,4);
+  const _playInSurv = _playInAll.slice(4);
 
-  // If fewer than 14 lottery teams (edge case), pad
-  while (lotteryTeams.length < 14) lotteryTeams.push(null);
-  const lottery14 = lotteryTeams.slice(0, 14);
+  // Bottom 10 non-playoff, non-play-in teams (lottery seeds 1-10)
+  const _inTop10 = new Set([..._dWest.slice(0,10), ..._dEast.slice(0,10)].map(t=>t.abbr));
+  const _bottom10 = STANDINGS_DATA
+    .filter(t => !_inTop10.has(t.abbr))
+    .sort((a,b) => winPct(a) - winPct(b))
+    .slice(0,10);
+
+  // lottery14: indices 0-9 = bottom 10, indices 10-13 = 4 worst play-in teams
+  while (_bottom10.length < 10) _bottom10.push(null);
+  const lottery14 = [..._bottom10, ..._playInElim];
+
+  // Picks 15-30: 12 direct playoff teams (seeds 1-6 each conf) + 4 play-in survivors
+  // Sorted worst→best record; pick 15 = worst record, pick 30 = best record
+  const _directPlayoff = [..._dWest.slice(0,6), ..._dEast.slice(0,6)];
+  const picks15to30 = [..._directPlayoff, ..._playInSurv]
+    .sort((a,b) => winPct(a) - winPct(b)); // worst first → pick 15
 
   // Lottery simulation engine (weighted random using ping-pong ball combos)
   function simulateLottery() {
@@ -6667,29 +6675,65 @@ function renderDraft() {
 
   document.getElementById('sim-content-draft').innerHTML = html;
 
+  // Helper: build a pick row HTML
+  function buildPickRow(pickNum, team, meta, available, isPlayoff) {
+    const owner = TRADED_PICKS[pickNum] || null;
+    const displayAbbr  = owner ? owner.abbr  : (team ? team.abbr  : '—');
+    const displayName  = owner ? owner.name  : (team ? team.name  : `Pick ${pickNum}`);
+    const displayColors = TEAM_COLORS[displayAbbr] || { bg: '#333', text: '#fff' };
+    const displayLogo  = getLogoUrl(displayAbbr);
+    const viaLabel = owner && owner.via
+      ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);margin-left:4px">via ${owner.via}</span>`
+      : '';
+    const conditionsTip = owner && owner.conditions
+      ? `<span title="${owner.conditions}" style="cursor:help;color:var(--muted);font-size:0.72rem;margin-left:4px">ⓘ</span>`
+      : '';
+    const numClass = pickNum === 1 ? 'top1' : pickNum === 2 ? 'top2' : pickNum === 3 ? 'top3' : '';
+    const needsKey = displayAbbr !== '—' ? displayAbbr : (team ? team.abbr : null);
+    const needs = needsKey ? (teamNeedsMap[needsKey] || null) : null;
+    const prospect = selectProspect(pickNum, needs, available);
+    if (prospect) available.splice(available.findIndex(p => p.rank === prospect.rank), 1);
+    const opacity = isPlayoff ? ' style="opacity:0.8"' : '';
+    return `<div class="sim-pick-row"${opacity}>
+      <div class="sim-pick-num ${numClass}">${pickNum}</div>
+      <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px;flex-shrink:0">
+        <img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">
+      </div>
+      <div class="sim-pick-detail">
+        <div class="sim-pick-name"${isPlayoff ? ' style="color:var(--muted)"' : ''}>${displayName}${viaLabel}${conditionsTip}</div>
+        <div class="sim-pick-meta">${meta}</div>
+      </div>
+      ${prospect ? `<div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem">${prospect.pos}</span></div>` : ''}
+    </div>`;
+  }
+
+  function sectionLabel(text) {
+    return `<div style="margin-top:14px;padding:6px 0 4px;font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;border-top:1px solid var(--border)">${text}</div>`;
+  }
+
   // ---- Simulator functions ----
   window.runSingleSim = function() {
-    const order = simulateLottery();
-    let available = [...PROSPECTS]; // prospects not yet selected
+    const order = simulateLottery(); // array of indices into lottery14
+    const available = [...PROSPECTS];
     let h = '';
 
-    // Show all 14 lottery picks
-    const displayCount = Math.min(14, order.length);
-    order.slice(0, displayCount).forEach((seedIdx, pickIdx) => {
+    // ── PICKS 1-14: LOTTERY ──────────────────────────────────────
+    h += sectionLabel('Lottery Picks · 1–14');
+    order.forEach((seedIdx, pickIdx) => {
       const team = lottery14[seedIdx];
       if (!team) return;
       const originalSeed = seedIdx + 1;
       const pickNum = pickIdx + 1;
       const jumped = pickNum < originalSeed;
       const stayed = pickNum === originalSeed;
-      const numClass = pickNum === 1 ? 'top1' : pickNum === 2 ? 'top2' : pickNum === 3 ? 'top3' : '';
       const jumpBadge = pickNum <= 4 && jumped
         ? `<span class="sim-jumped-badge">&#x2B06; JUMPED ${originalSeed - pickNum}</span>`
         : stayed && pickNum <= 4
         ? `<span class="sim-stayed-badge">STAYED AT ${pickNum}</span>`
         : '';
-
-      // Traded pick ownership
+      const isPlayIn = originalSeed >= 11; // lottery seeds 11-14 are play-in eliminated
+      const seedLabel = isPlayIn ? `Play-in eliminated · was PI seed ${originalSeed - 10}` : `Lottery seed ${originalSeed}`;
+      const meta = `${team.abbr} · ${seedLabel} · ${team.wins}-${team.losses}`;
       const owner = TRADED_PICKS[pickNum] || null;
       const displayAbbr = owner ? owner.abbr : team.abbr;
       const displayName = owner ? owner.name : team.name;
@@ -6701,56 +6745,56 @@ function renderDraft() {
       const conditionsTip = owner && owner.conditions
         ? `<span title="${owner.conditions}" style="cursor:help;color:var(--muted);font-size:0.72rem;margin-left:4px">ⓘ</span>`
         : '';
-
-      // Smart prospect selection using positional needs
+      const numClass = pickNum === 1 ? 'top1' : pickNum === 2 ? 'top2' : pickNum === 3 ? 'top3' : '';
       const needs = teamNeedsMap[displayAbbr] || teamNeedsMap[team.abbr] || null;
       const prospect = selectProspect(pickNum, needs, available);
-      if (prospect) available = available.filter(p => p.rank !== prospect.rank);
-
+      if (prospect) available.splice(available.findIndex(p => p.rank === prospect.rank), 1);
       h += `<div class="sim-pick-row">
         <div class="sim-pick-num ${numClass}">${pickNum}</div>
-        <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px">
+        <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px;flex-shrink:0">
           <img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">
         </div>
         <div class="sim-pick-detail">
           <div class="sim-pick-name">${displayName}${viaLabel}${conditionsTip}</div>
-          <div class="sim-pick-meta">${displayAbbr} · Earned by ${team.abbr} (seed ${originalSeed}) · ${team.wins}-${team.losses}</div>
+          <div class="sim-pick-meta">${meta}</div>
         </div>
         ${prospect ? `<div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem">${prospect.pos}</span></div>` : ''}
         ${jumpBadge}
       </div>`;
     });
 
-    // Picks 15-16: projected non-lottery range
-    const extraLabel = `<div style="margin-top:14px;padding:6px 0 4px;font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;border-top:1px solid var(--border)">
-      Projected Non-Lottery Picks
-    </div>`;
-    h += extraLabel;
-    [15, 16].forEach(pickNum => {
-      const prospect = available[0];
-      if (prospect) available = available.slice(1);
-      if (!prospect) return;
+    // ── PICKS 15-30: PLAYOFF TEAMS (reverse record order) ────────
+    h += sectionLabel('Playoff Picks · 15–30 · Reverse record order');
+    picks15to30.forEach((team, idx) => {
+      const pickNum = 15 + idx;
       const owner = TRADED_PICKS[pickNum] || null;
-      const displayAbbr = owner ? owner.abbr : '—';
-      const displayName = owner ? owner.name : `Pick ${pickNum}`;
-      const displayColors = owner ? (TEAM_COLORS[displayAbbr] || { bg: '#333', text: '#fff' }) : { bg: '#333', text: '#fff' };
-      const displayLogo = owner ? getLogoUrl(displayAbbr) : null;
+      const displayAbbr = owner ? owner.abbr : team.abbr;
+      const displayName = owner ? owner.name : team.name;
+      const displayColors = TEAM_COLORS[displayAbbr] || { bg: '#333', text: '#fff' };
+      const displayLogo = getLogoUrl(displayAbbr);
       const viaLabel = owner && owner.via
         ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);margin-left:4px">via ${owner.via}</span>`
         : '';
       const conditionsTip = owner && owner.conditions
         ? `<span title="${owner.conditions}" style="cursor:help;color:var(--muted);font-size:0.72rem;margin-left:4px">ⓘ</span>`
         : '';
-      h += `<div class="sim-pick-row" style="opacity:0.75">
+      const isPlayInTeam = _playInSurv.some(p => p.abbr === team.abbr);
+      const confSeedArr = team.conf === 'WEST' ? _dWest : _dEast;
+      const confSeed = confSeedArr.findIndex(t => t.abbr === team.abbr) + 1;
+      const playoffLabel = isPlayInTeam ? `Play-in qualifier · ${team.conf} #${confSeed}` : `Playoff · ${team.conf} #${confSeed}`;
+      const needs = teamNeedsMap[displayAbbr] || teamNeedsMap[team.abbr] || null;
+      const prospect = selectProspect(pickNum, needs, available);
+      if (prospect) available.splice(available.findIndex(p => p.rank === prospect.rank), 1);
+      h += `<div class="sim-pick-row" style="opacity:0.8">
         <div class="sim-pick-num" style="color:var(--muted)">${pickNum}</div>
         <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px;flex-shrink:0">
-          ${displayLogo ? `<img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">` : ''}
+          <img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">
         </div>
         <div class="sim-pick-detail">
           <div class="sim-pick-name" style="color:var(--muted)">${displayName}${viaLabel}${conditionsTip}</div>
-          <div class="sim-pick-meta">Non-lottery range</div>
+          <div class="sim-pick-meta">${displayAbbr} · ${playoffLabel} · ${team.wins}-${team.losses}</div>
         </div>
-        <div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem">${prospect.pos}</span></div>
+        ${prospect ? `<div class="sim-pick-prospect">${prospect.name} <span style="color:var(--muted);font-size:0.75rem">${prospect.pos}</span></div>` : ''}
       </div>`;
     });
 
