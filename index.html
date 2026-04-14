@@ -6990,6 +6990,13 @@ function renderDraft() {
     h += boardPickRow(pickNum, team, `${team.abbr} · ${seedLabel} · ${team.wins}–${team.losses}`, false, lotteryPicks[pickNum], true);
     });
 
+    // Remove lottery picks from boardAvailable before playoff picks draw
+    Object.values(lotteryPicks).forEach(p => {
+      if (p) {
+        const idx = boardAvailable.findIndex(x => x.rank === p.rank);
+        if (idx !== -1) boardAvailable.splice(idx, 1);
+      }
+    });
     h += sectionLabel('Full Draft Board · Picks 15–30 (Playoff Teams, worst record first)');
     picks15to30.forEach((team, idx) => {
       const pickNum = 15 + idx;
