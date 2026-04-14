@@ -6945,8 +6945,8 @@ function renderDraft() {
     const boardAvailable = [...PROSPECTS];
     let h = '';
 
-    function boardPickRow(pickNum, team, metaLabel, isPlayoff, forcedProspect) {
-      const owner = TRADED_PICKS[pickNum] || null;
+    function boardPickRow(pickNum, team, metaLabel, isPlayoff, forcedProspect, isLotteryResult) {
+      const owner = (!isLotteryResult && TRADED_PICKS[pickNum]) ? TRADED_PICKS[pickNum] : null;
       const displayAbbr = owner ? owner.abbr : (team ? team.abbr : '—');
       const displayName = owner ? owner.name : (team ? team.name : `Pick ${pickNum}`);
       const displayColors = TEAM_COLORS[displayAbbr] || { bg: '#333', text: '#fff' };
@@ -6987,7 +6987,7 @@ function renderDraft() {
       const originalSeed = seedIdx + 1;
       const isPlayIn = originalSeed >= 11;
       const seedLabel = isPlayIn ? `Play-in elim · PI seed ${originalSeed - 10}` : `Lottery seed ${originalSeed}`;
-     h += boardPickRow(pickNum, team, `${team.abbr} · ${seedLabel} · ${team.wins}–${team.losses}`, false, lotteryPicks[pickNum]);
+    h += boardPickRow(pickNum, team, `${team.abbr} · ${seedLabel} · ${team.wins}–${team.losses}`, false, lotteryPicks[pickNum], true);
     });
 
     h += sectionLabel('Full Draft Board · Picks 15–30 (Playoff Teams, worst record first)');
