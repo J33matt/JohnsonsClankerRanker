@@ -6497,7 +6497,7 @@ function renderPlayoffs() {
 // ============================================================
 function renderDraft() {
   // Official NBA lottery odds by seed position (top-pick odds)
-  const LOTTERY_ODDS = [14.0, 14.0, 14.0, 12.5, 10.5, 9.0, 7.5, 6.0, 4.5, 3.0, 2.0, 1.5, 1.0, 0.5];
+  const LOTTERY_ODDS = [14.0, 14.0, 14.0, 11.5, 11.5, 9.0, 6.8, 6.7, 4.5, 3.0, 2.0, 1.5, 1.0, 0.5];
 
   // Top 40 prospects for 2026 draft
   // Sources: ESPN Big Board, Bleacher Report, The Athletic (as of April 2026)
@@ -6566,7 +6566,7 @@ function renderDraft() {
     18: { abbr: 'OKC', name: 'Oklahoma City Thunder',      via: 'PHI', conditions: 'Top-4 protected; conveys to OKC if picks 5\u201330' },
     19: { abbr: 'SAS', name: 'San Antonio Spurs',          via: 'ATL', conditions: 'More favorable of SAS or ATL pick via SAS swap right' },
     20: { abbr: 'TOR', name: 'Toronto Raptors',            via: null,  conditions: null },
-    21: { abbr: 'DET', name: 'Detroit Pistons',            via: null,  conditions: 'Conveys to Minnesota if outside top-18' },
+    21: { abbr: 'DET', name: 'Detroit Pistons',            via: 'MIN',  conditions: 'Protected 1\u201318' },
     22: { abbr: 'ATL', name: 'Atlanta Hawks',              via: 'CLE', conditions: 'Second-most favorable of MIN/CLE/UTA pick pool' },
     23: { abbr: 'PHI', name: 'Philadelphia 76ers',         via: 'HOU', conditions: 'Top-4 protected; conveys to PHI via OKC if picks 5\u201330' },
     24: { abbr: 'NYK', name: 'New York Knicks',            via: null,  conditions: null },
@@ -6654,7 +6654,7 @@ function renderDraft() {
   // Lottery simulation engine (weighted random using ping-pong ball combos)
   function simulateLottery() {
     // Assign ping pong ball counts (out of 1000)
-    const ballCounts = [140, 140, 140, 125, 105, 90, 75, 60, 45, 30, 20, 15, 10, 5];
+    const ballCounts = [140, 140, 140, 115, 115, 90, 68, 67, 45, 30, 20, 15, 10, 5];
     let pool = [];
     lottery14.forEach((team, i) => {
       const count = ballCounts[i] || 0;
@@ -6813,7 +6813,7 @@ function renderDraft() {
 
   // Render merged lottery board (odds + simulator in one card)
   function lotteryBoardHTML() {
-    const top4 = [52.1, 52.1, 52.1, 48.1, 37.3, 30.3, 23.6, 17.4, 12.0, 7.7, 5.0, 3.7, 2.5, 1.2];
+    const top4 = [52.1, 52.1, 52.1, 44.2, 40.9, 30.3, 21.4, 19.4, 12.0, 7.7, 5.0, 3.7, 2.5, 1.2];
     const oddsColors = ['#ffd700','#ffd700','#ffd700','#ffaa00','#ff8800','#ff6600','#ff4d00','#c97700','#997700','#667700','#557700','#447700','#336600','#225500'];
     let h = `<div class="lottery-card">
       <div class="lottery-card-header">
