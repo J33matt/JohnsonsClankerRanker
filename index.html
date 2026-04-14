@@ -5911,16 +5911,59 @@ function renderPlayoffs() {
     const allTeams = west.concat(east);
     function teamByAbbr(abbr) { return abbr ? allTeams.find(t => t.abbr === abbr) || null : null; }
 
+    // ── Play-in picks ──────────────────────────────────────────────────────────
+    // Clanker runs its own play-in independently of the user's piState.
+    // Single-game probability reuses the same net-rating logistic as seriesProb.
+    function singleGameProb(homeAbbr, awayAbbr) {
+      const hE = ENRICHED_DATA.find(t => t.abbr === homeAbbr) || {};
+      const aE = ENRICHED_DATA.find(t => t.abbr === awayAbbr) || {};
+      const nrH = ((_NET_RATINGS[homeAbbr] || {}).netRtg) ?? hE.netRtg ?? 0;
+      const nrA = ((_NET_RATINGS[awayAbbr] || {}).netRtg) ?? aE.netRtg ?? 0;
+      return 1 / (1 + Math.exp(-((nrH - nrA) + 3.0) * 0.09));
+    }
+    function pickPlayIn(conf) {
+      const pi = (conf === 'west' ? west : east).slice(6, 10);
+      if (pi.length < 4 || pi.some(t => !t || t._placeholder)) return { seed7: null, seed8: null };
+      const [s7, s8, s9, s10] = pi.map(t => t.abbr);
+      // Game 1: seed 7 (home) vs seed 8
+      const g1w = singleGameProb(s7, s8) >= 0.5 ? s7 : s8;
+      const g1l = g1w === s7 ? s8 : s7;
+      // Game 2: seed 9 (home) vs seed 10
+      const g2w = singleGameProb(s9, s10) >= 0.5 ? s9 : s10;
+      // Decider: loser of game 1 (home, higher seed) vs winner of game 2
+      const seed8 = singleGameProb(g1l, g2w) >= 0.5 ? g1l : g2w;
+      return { seed7: g1w, seed8 };
+    }
+    const piSeeds = { west: pickPlayIn('west'), east: pickPlayIn('east') };
+
+    // R1 team lookup using Clanker's play-in picks
+    function clankerGetR1Teams(conf, matchupIdx) {
+      const seeds = conf === 'west' ? west : east;
+      const pairing = R1_PAIRINGS[matchupIdx];
+      let topTeam = seeds[pairing[0]];
+      let botTeam = seeds[pairing[1]];
+      if (matchupIdx === 0) {
+        const a = piSeeds[conf].seed8;
+        botTeam = a ? (allTeams.find(t => t.abbr === a) || makePlaceholder(8, conf)) : makePlaceholder(8, conf);
+      }
+      if (matchupIdx === 3) {
+        const a = piSeeds[conf].seed7;
+        botTeam = a ? (allTeams.find(t => t.abbr === a) || makePlaceholder(7, conf)) : makePlaceholder(7, conf);
+      }
+      return [topTeam, botTeam];
+    }
+
     const cb = {
       west: { r1: [], semi: [], cf: null },
       east: { r1: [], semi: [], cf: null },
       champion: null, scores: {},
-      clankerBracketVersion: 7
+      clankerBracketVersion: 7,
+      piSeeds  // stored so buildClankerHalfHtml can use Clanker's seed picks
     };
 
     ['west', 'east'].forEach(conf => {
       for (let i = 0; i < 4; i++) {
-        const [t1, t2] = getR1Teams(conf, i);
+        const [t1, t2] = clankerGetR1Teams(conf, i);
         const { winnerAbbr, score } = pickSeries(
           (t1 && !t1._placeholder) ? t1.abbr : null,
           (t2 && !t2._placeholder) ? t2.abbr : null
@@ -5967,16 +6010,34 @@ function renderPlayoffs() {
     const conn2 = `<div class="bkt-conn-col"><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div></div>`;
     const conn1 = `<div class="bkt-conn-col"><div class="bkt-conn"><div class="conn-top"></div><div class="conn-bot"></div></div></div>`;
 
+    // Use Clanker's own play-in picks (stored in cb.piSeeds) instead of the user's piState
+    const cpiSeeds = cb.piSeeds?.[conf] || {};
+    function clankerGetR1Pair(matchupIdx) {
+      const seeds = conf === 'west' ? west : east;
+      const pairing = R1_PAIRINGS[matchupIdx];
+      let topTeam = seeds[pairing[0]];
+      let botTeam = seeds[pairing[1]];
+      if (matchupIdx === 0) {
+        const a = cpiSeeds.seed8;
+        botTeam = a ? (allTeams.find(t => t.abbr === a) || makePlaceholder(8, conf)) : makePlaceholder(8, conf);
+      }
+      if (matchupIdx === 3) {
+        const a = cpiSeeds.seed7;
+        botTeam = a ? (allTeams.find(t => t.abbr === a) || makePlaceholder(7, conf)) : makePlaceholder(7, conf);
+      }
+      return [topTeam, botTeam];
+    }
+
     // Build seed map so seeds carry through to later rounds
     const seedMap = {};
     [0,1,2,3].forEach(i => {
-      const [t1, t2] = getR1Teams(conf, i);
+      const [t1, t2] = clankerGetR1Pair(i);
       if (t1 && !t1._placeholder) seedMap[t1.abbr] = SEEDS[i][0];
       if (t2 && !t2._placeholder) seedMap[t2.abbr] = SEEDS[i][1];
     });
 
     const r1Html = [0,1,2,3].map(i => {
-      const [t1, t2] = getR1Teams(conf, i);
+      const [t1, t2] = clankerGetR1Pair(i);
       const t1a = (t1 && !t1._placeholder) ? t1.abbr : null;
       const t2a = (t2 && !t2._placeholder) ? t2.abbr : null;
       const rsn = (t1a && t2a && cb[conf].r1[i]) ? _clankerReasoning(t1a, t2a, cb[conf].r1[i]) : null;
@@ -6060,6 +6121,23 @@ function renderPlayoffs() {
         </div>
         <div class="section-sub" style="margin-top:3px"><em>Predictions locked in before the playoffs began</em></div>
       </div>
+      ${(function() {
+        const pi = cb.piSeeds || {};
+        function piConf(conf) {
+          const p = pi[conf] || {};
+          if (!p.seed7 && !p.seed8) return '';
+          const label = conf === 'west' ? 'West' : 'East';
+          const s7html = p.seed7 ? `<span style="font-family:'Bebas Neue',sans-serif;letter-spacing:1px">${p.seed7}</span>` : '<span style="color:var(--muted)">TBD</span>';
+          const s8html = p.seed8 ? `<span style="font-family:'Bebas Neue',sans-serif;letter-spacing:1px">${p.seed8}</span>` : '<span style="color:var(--muted)">TBD</span>';
+          return `<div style="flex:1;text-align:${conf==='west'?'left':'right'}">
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase">${label} Play-In → </span>
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:rgba(255,255,255,0.6)">7th: ${s7html} &nbsp;·&nbsp; 8th: ${s8html}</span>
+          </div>`;
+        }
+        const wHtml = piConf('west'), eHtml = piConf('east');
+        if (!wHtml && !eHtml) return '';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:6px 2px;border-bottom:1px solid rgba(255,255,255,0.06)">${wHtml}<div style="width:106px"></div>${eHtml}</div>`;
+      })()}
       <div style="display:flex;justify-content:space-between;margin-bottom:4px">
         <div class="bracket-conf-label west-label" style="flex:1">WESTERN CONFERENCE</div>
         <div style="width:106px"></div>
