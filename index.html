@@ -2154,7 +2154,7 @@
   .lottery-rerun-fab {
     display: none;
     position: fixed;
-    bottom: 28px;
+    top: 28px;
     right: 28px;
     z-index: 200;
     font-family: 'Bebas Neue', sans-serif;
@@ -6819,7 +6819,7 @@ function renderDraft() {
       <div class="lottery-card-header">
         <div class="lch-title">2026 Draft Lottery</div>
         <div class="lch-sub">Lottery odds by standing · Run to simulate picks 1–30</div>
-        <button class="sim-btn primary" onclick="runSingleSim()" style="flex-shrink:0">&#127467; Run Lottery</button>
+        <button class="sim-btn primary" onclick="runSingleSim()" style="flex-shrink:0">▶ Run Lottery</button>
         <span class="sim-count-label" id="sim-run-count" style="flex-shrink:0"></span>
       </div>
       <table class="lottery-table">
@@ -6868,7 +6868,7 @@ function renderDraft() {
     h += `</tbody></table>
       <div id="sim-results" class="lottery-draft-board"></div>
       <div id="sim-stats" style="display:none"></div>
-      <button id="lottery-rerun-fab" class="lottery-rerun-fab" onclick="runSingleSim()">&#127467; Re-run Lottery</button>
+      <button id="lottery-rerun-fab" class="lottery-rerun-fab" onclick="runSingleSim()">▶ Re-run Lottery</button>
     </div>`;
     return h;
   }
