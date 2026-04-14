@@ -1952,7 +1952,7 @@
   .lottery-table tr.lot-row-fell td { background: rgba(255,80,0,0.03); }
 
   /* Result cell — picks filled in after running */
-  .lot-result-cell { min-width: 0; text-align: right; padding-right: 48px; }
+  .lot-result-cell { min-width: 0; text-align: right; padding-right: 256px; }
   .lot-result-dash { color: var(--border); font-size: 1.1rem; }
   .lot-result-inner { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
   .lot-result-pick-num {
@@ -6994,8 +6994,8 @@ function renderDraft() {
         cell.innerHTML = `<div class="lot-result-inner">
           <div>
             <div style="display:flex;align-items:center;gap:4px">
-              <span class="lot-result-pick-num ${numClass}">PICK ${pickNum}</span>
               ${moveBadge}
+              <span class="lot-result-pick-num ${numClass}">PICK ${pickNum}</span>
             </div>
             ${ownerLine}
           </div>
