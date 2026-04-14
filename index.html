@@ -3584,6 +3584,13 @@ const ESPN_ID_TO_ABBR = {
   22:'POR', 23:'SAC', 24:'SAS', 28:'TOR', 26:'UTA', 27:'WAS'
 };
 
+// Reverse map: our abbr → ESPN team ID (used for H2H schedule fetching)
+const ABBR_TO_ESPN_ID = {};
+Object.entries(ESPN_ID_TO_ABBR).forEach(([id, abbr]) => { ABBR_TO_ESPN_ID[abbr] = +id; });
+// H2H regular-season records for Clanker bracket. Key: sorted 'AAA_BBB' → { wins, losses, games, avgMargin }
+let _H2H_DATA = {};
+const _h2hScheduleCache = {}; // espnId → Promise<{home,away,homeScore,awayScore}[]>
+
 // NBAstuffer full team name → our abbreviation (secondary fallback parser)
 const _STUFFER_NAME_TO_ABBR = {
   'Atlanta':'ATL','Boston':'BOS','Brooklyn':'BKN','Charlotte':'CHA','Chicago':'CHI',
@@ -3596,6 +3603,62 @@ const _STUFFER_NAME_TO_ABBR = {
 };
 
 let _netRatingsFetching = false;
+
+// ── HEAD-TO-HEAD DATA ─────────────────────────────────────────────────────────
+// Fetches a team's full regular-season schedule from ESPN (one call per matchup)
+// and computes H2H wins/losses/avgMargin vs. a specific opponent.
+// Results are stored in _H2H_DATA and used by seriesProb inside generateClankerBracket.
+
+function _fetchTeamScheduleGames(espnId) {
+  if (!_h2hScheduleCache[espnId]) {
+    _h2hScheduleCache[espnId] = (async () => {
+      try {
+        const url = `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/${espnId}/schedule?season=2026&seasontype=2`;
+        const res = await fetch(url);
+        if (!res.ok) return [];
+        const json = await res.json();
+        return (json.events || []).flatMap(evt => {
+          const comp = evt.competitions?.[0];
+          if (!comp?.status?.type?.completed) return [];
+          const hc = comp.competitors?.find(c => c.homeAway === 'home');
+          const ac = comp.competitors?.find(c => c.homeAway === 'away');
+          if (!hc || !ac) return [];
+          const ha = normAbbr(hc.team?.abbreviation || '');
+          const aa = normAbbr(ac.team?.abbreviation || '');
+          const hs = +(hc.score || 0), as_ = +(ac.score || 0);
+          if (!hs && !as_) return [];
+          return [{ home: ha, away: aa, homeScore: hs, awayScore: as_ }];
+        });
+      } catch(e) { return []; }
+    })();
+  }
+  return _h2hScheduleCache[espnId];
+}
+
+async function fetchClankerH2HData(matchups) {
+  // matchups: array of [abbr1, abbr2] for each R1 playoff series
+  await Promise.all(matchups.map(async ([t1a, t2a]) => {
+    const key = [t1a, t2a].sort().join('_');
+    if (_H2H_DATA[key] !== undefined) return; // already fetched this session
+    const id = ABBR_TO_ESPN_ID[t1a];
+    if (!id) { _H2H_DATA[key] = null; return; }
+    const games = await _fetchTeamScheduleGames(id);
+    const h2h = games.filter(g =>
+      (g.home === t1a && g.away === t2a) || (g.home === t2a && g.away === t1a)
+    );
+    const firstAbbr = [t1a, t2a].sort()[0]; // stats stored from firstAbbr's perspective
+    let w = 0, l = 0, marginSum = 0;
+    h2h.forEach(g => {
+      const fs = g.home === firstAbbr ? g.homeScore : g.awayScore;
+      const ss = g.home === firstAbbr ? g.awayScore : g.homeScore;
+      const margin = fs - ss;
+      if (margin > 0) w++; else l++;
+      marginSum += margin;
+    });
+    _H2H_DATA[key] = { wins: w, losses: l, games: h2h.length,
+      avgMargin: h2h.length > 0 ? marginSum / h2h.length : 0 };
+  }));
+}
 
 // Primary: ESPN standings (pts/ptsAllowed) + core stats (avgEstimatedPossessions)
 // This matches NBA.com's pace-adjusted oRTG/dRTG within ~0.1 points.
@@ -5756,14 +5819,29 @@ function renderPlayoffs() {
     const netGap = (wNet != null && lNet != null) ? wNet - lNet : 0;
     const wNetStr = wNet != null ? (wNet > 0 ? `+${wNet}` : `${wNet}`) : '?';
     const lNetStr = lNet != null ? (lNet > 0 ? `+${lNet}` : `${lNet}`) : '?';
+    // H2H context — only surface it when it's notably lopsided and we have enough games
+    const h2hKey = [winnerAbbr, loserAbbr].sort().join('_');
+    const h2h = _H2H_DATA[h2hKey];
+    const h2hStr = (() => {
+      if (!h2h || h2h.games < 2) return null;
+      const firstIsWinner = [winnerAbbr, loserAbbr].sort()[0] === winnerAbbr;
+      const wWins = firstIsWinner ? h2h.wins : h2h.losses;
+      const lWins = h2h.games - wWins;
+      if (wWins > lWins) return `went ${wWins}-${lWins} vs ${loserAbbr} this season`;
+      return null; // loser had winning H2H — don't contradict the pick in the blurb
+    })();
     if (pwrGap >= 8 && netGap >= 3) {
       return `${winnerAbbr} (power ${wPwr}, net rtg ${wNetStr}) is clearly the stronger team over ${loserAbbr} (power ${lPwr}, net rtg ${lNetStr}).`;
     } else if (pwrGap >= 4) {
       return `${winnerAbbr}'s power score of ${wPwr} outpaces ${loserAbbr}'s ${lPwr} — that edge holds up over a full series.`;
     } else if (pwrGap <= -4) {
-      return `${winnerAbbr} (power ${wPwr}) upsets ${loserAbbr} (power ${lPwr}); recent form and momentum carry them through.`;
+      const h2hNote = h2hStr ? ` (${h2hStr})` : '';
+      return `${winnerAbbr} (power ${wPwr}) upsets ${loserAbbr} (power ${lPwr}); recent form and momentum carry them through${h2hNote}.`;
     } else if (Math.abs(netGap) >= 3) {
-      return `Closely matched on paper, but ${winnerAbbr}'s net rating (${wNetStr}) over ${loserAbbr}'s (${lNetStr}) tilts the series.`;
+      const h2hNote = h2hStr ? `; also ${h2hStr}` : '';
+      return `Closely matched on paper, but ${winnerAbbr}'s net rating (${wNetStr}) over ${loserAbbr}'s (${lNetStr}) tilts the series${h2hNote}.`;
+    } else if (h2hStr) {
+      return `A tight series, but ${winnerAbbr} ${h2hStr} and has the edge (net rtg ${wNetStr} vs ${lNetStr}).`;
     } else {
       return `A tight series: ${winnerAbbr} (power ${wPwr}, net rtg ${wNetStr}) edges ${loserAbbr} (power ${lPwr}, net rtg ${lNetStr}).`;
     }
@@ -5804,6 +5882,17 @@ function renderPlayoffs() {
       const t1Trend = (t1E.l20WinPct != null && t1E.winPct != null) ? (t1E.l20WinPct - t1E.winPct) : 0;
       const t2Trend = (t2E.l20WinPct != null && t2E.winPct != null) ? (t2E.l20WinPct - t2E.winPct) : 0;
       p = Math.max(0.05, Math.min(0.95, p + (t1Trend - t2Trend) * 0.22));
+
+      // H2H regular-season record: teams that dominated head-to-head get a modest boost.
+      // Weight 0.14 → ±0.07 max (a perfect 4-0 H2H). Enough to flip a coin-flip series.
+      const h2hKey = [t1Abbr, t2Abbr].sort().join('_');
+      const h2h = _H2H_DATA[h2hKey];
+      if (h2h && h2h.games >= 2) {
+        const t1IsFirst = [t1Abbr, t2Abbr].sort()[0] === t1Abbr;
+        const t1Wins = t1IsFirst ? h2h.wins : h2h.losses;
+        p += (t1Wins / h2h.games - 0.5) * 0.14;
+        p = Math.max(0.05, Math.min(0.95, p));
+      }
 
       return p;
     }
@@ -6087,6 +6176,24 @@ function renderPlayoffs() {
   _clankerBracket = null;
   generateClankerBracket();
   document.getElementById('clanker-bracket-outer').innerHTML = buildClankerSectionHtml();
+
+  // Fetch H2H records for all R1 matchups asynchronously; regenerate picks when ready.
+  // Initial render above uses no H2H data; this updates it once the API responds.
+  (function() {
+    const matchups = [];
+    ['west','east'].forEach(function(conf) {
+      for (let i = 0; i < 4; i++) {
+        const pair = getR1Teams(conf, i);
+        const t1 = pair[0], t2 = pair[1];
+        const t1a = (t1 && !t1._placeholder) ? t1.abbr : null;
+        const t2a = (t2 && !t2._placeholder) ? t2.abbr : null;
+        if (t1a && t2a) matchups.push([t1a, t2a]);
+      }
+    });
+    fetchClankerH2HData(matchups).then(function() {
+      if (window._clankerRefreshSection) window._clankerRefreshSection();
+    }).catch(function() {});
+  })();
 
   // Champion overlay (append to body if not already there)
   if (!document.getElementById('champion-overlay')) {
