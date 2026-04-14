@@ -6945,7 +6945,7 @@ function renderDraft() {
     const boardAvailable = [...PROSPECTS];
     let h = '';
 
-    function boardPickRow(pickNum, team, metaLabel, isPlayoff, forcedProspect, isLotteryResult) {
+    function boardPickRow(pickNum, team, metaLabel, isPlayoff, forcedProspect, isLotteryResult, movement) {
       const lotteryTradeOwner = isLotteryResult && TRADED_PICKS[pickNum] && TRADED_PICKS[pickNum].via && team && TRADED_PICKS[pickNum].via === team.abbr ? TRADED_PICKS[pickNum] : null;
       const owner = lotteryTradeOwner ? lotteryTradeOwner : (!isLotteryResult && TRADED_PICKS[pickNum]) ? TRADED_PICKS[pickNum] : null;
       const displayAbbr = owner ? owner.abbr : (team ? team.abbr : '—');
@@ -6959,12 +6959,20 @@ function renderDraft() {
         ? `<span title="${owner.conditions}" style="cursor:help;color:var(--muted);font-size:0.72rem;margin-left:4px">ⓘ</span>`
         : '';
       const numClass = pickNum === 1 ? 'top1' : pickNum === 2 ? 'top2' : pickNum === 3 ? 'top3' : '';
-     const needs = teamNeedsMap[displayAbbr] || (team ? teamNeedsMap[team.abbr] : null) || null;
+      const needs = teamNeedsMap[displayAbbr] || (team ? teamNeedsMap[team.abbr] : null) || null;
       const prospect = forcedProspect !== undefined ? forcedProspect : selectProspect(pickNum, needs, boardAvailable);
       if (prospect && forcedProspect === undefined) boardAvailable.splice(boardAvailable.findIndex(p => p.rank === prospect.rank), 1);
       const fitNote = makeFitNote(prospect, displayAbbr, needs, pickNum);
+      const moveBadge = (movement > 0)
+        ? `<span class="sim-jumped-badge" style="font-size:0.6rem;padding:1px 5px">&#x2B06;${movement}</span>`
+        : (movement < 0)
+        ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:#cc6644;background:rgba(204,102,68,0.12);border:1px solid rgba(204,102,68,0.3);padding:1px 5px;border-radius:10px;letter-spacing:1px">&#x2B07;${Math.abs(movement)}</span>`
+        : '';
       return `<div class="sim-pick-row"${isPlayoff ? ' style="opacity:0.85"' : ''}>
-        <div class="sim-pick-num ${numClass}"${isPlayoff ? ' style="color:var(--muted)"' : ''}>${pickNum}</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;width:36px">
+          <div class="sim-pick-num ${numClass}"${isPlayoff ? ' style="color:var(--muted)"' : ''}>${pickNum}</div>
+          ${moveBadge}
+        </div>
         <div class="logo-badge-sm" style="width:36px;height:28px;background:${displayColors.bg};border:1px solid ${displayColors.bg}88;border-radius:5px;padding:2px 3px;flex-shrink:0">
           <img src="${displayLogo}" alt="${displayAbbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'">
         </div>
@@ -6988,7 +6996,8 @@ function renderDraft() {
       const originalSeed = seedIdx + 1;
       const isPlayIn = originalSeed >= 11;
       const seedLabel = isPlayIn ? `Play-in elim · PI seed ${originalSeed - 10}` : `Lottery seed ${originalSeed}`;
-    h += boardPickRow(pickNum, team, `${team.abbr} · ${seedLabel} · ${team.wins}–${team.losses}`, false, lotteryPicks[pickNum], true);
+      const movement = seedIdx - pickIdx; // positive = jumped up, negative = fell
+      h += boardPickRow(pickNum, team, `${team.abbr} · ${seedLabel} · ${team.wins}–${team.losses}`, false, lotteryPicks[pickNum], true, movement);
     });
 
     // Remove lottery picks from boardAvailable before playoff picks draw
