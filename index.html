@@ -6965,7 +6965,7 @@ function renderDraft() {
       const jumped = pickNum < originalSeed;
       const fell = pickNum > originalSeed;
 
-      const owner = TRADED_PICKS[pickNum] || null;
+      const owner = Object.values(TRADED_PICKS).find(e => e.via === team.abbr) || null;
       const displayAbbr = owner ? owner.abbr : team.abbr;
       const needs = teamNeedsMap[displayAbbr] || teamNeedsMap[team.abbr] || null;
       const prospect = selectProspect(pickNum, needs, available);
@@ -7014,7 +7014,9 @@ function renderDraft() {
     let h = '';
 
     function boardPickRow(pickNum, team, metaLabel, isPlayoff, forcedProspect, isLotteryResult, movement) {
-      const lotteryTradeOwner = isLotteryResult && TRADED_PICKS[pickNum] && TRADED_PICKS[pickNum].via && team && TRADED_PICKS[pickNum].via === team.abbr ? TRADED_PICKS[pickNum] : null;
+      const lotteryTradeOwner = (isLotteryResult && team)
+        ? (Object.values(TRADED_PICKS).find(e => e.via === team.abbr) || null)
+        : null;
       const owner = lotteryTradeOwner ? lotteryTradeOwner : (!isLotteryResult && TRADED_PICKS[pickNum]) ? TRADED_PICKS[pickNum] : null;
       const displayAbbr = owner ? owner.abbr : (team ? team.abbr : '—');
       const displayName = owner ? owner.name : (team ? team.name : `Pick ${pickNum}`);
