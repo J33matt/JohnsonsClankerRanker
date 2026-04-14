@@ -5781,22 +5781,29 @@ function renderPlayoffs() {
     // games earns a series-level bonus. This is the primary data-driven source of upsets —
     // a lower seed peaking at playoff time can knock out a fading higher seed.
     function seriesProb(t1Abbr, t2Abbr) {
-      // Per-game win probability for t1 (home in games 1,2,5,7; away in 3,4,6)
-      const { homeWinProb: p1h } = _botEstimateMatchup(t2Abbr, t1Abbr); // t1 at home
-      const { homeWinProb: p2h } = _botEstimateMatchup(t1Abbr, t2Abbr); // t2 at home
-      const p1a = 1 - p2h;
-      let p = (4 * p1h + 3 * p1a) / 7;
-
-      // L20 momentum bonus: how much better or worse each team has been recently
-      // vs their full-season win%. Positive = team is trending up (peaking).
+      // Net-rating-first model. Win% correlates with seed by definition (seeds are sorted
+      // by win%), so using win% (log5) as a signal causes the higher seed to almost always
+      // win regardless of underlying quality. Net rating is more predictive for playoffs.
+      //
+      // t1 = higher seed → home court (games 1,2,5,7); t2 = lower seed → home (3,4,6).
       const t1E = ENRICHED_DATA.find(t => t.abbr === t1Abbr) || {};
       const t2E = ENRICHED_DATA.find(t => t.abbr === t2Abbr) || {};
+      const nr1 = ((_NET_RATINGS[t1Abbr] || {}).netRtg) ?? t1E.netRtg ?? 0;
+      const nr2 = ((_NET_RATINGS[t2Abbr] || {}).netRtg) ?? t2E.netRtg ?? 0;
+      const netEdge = nr1 - nr2; // positive = t1 is better
+
+      // Logistic conversion: each 1 pt net rating ≈ ~3% per-game win prob shift.
+      // Home court ≈ +3 pts net rating equivalent.
+      const k = 0.09;
+      const HOME = 3.0;
+      const p1h = 1 / (1 + Math.exp(-(netEdge + HOME) * k)); // t1 home
+      const p1a = 1 / (1 + Math.exp(-(netEdge - HOME) * k)); // t1 away
+      let p = (4 * p1h + 3 * p1a) / 7;
+
+      // L20 momentum: team trending hot vs their season avg can flip close matchups.
       const t1Trend = (t1E.l20WinPct != null && t1E.winPct != null) ? (t1E.l20WinPct - t1E.winPct) : 0;
       const t2Trend = (t2E.l20WinPct != null && t2E.winPct != null) ? (t2E.l20WinPct - t2E.winPct) : 0;
-      // Weight = 0.22: a team 20% hotter than their average vs an opponent 10% cooler
-      // can shift p by ~0.066 — enough to flip a close matchup, not enough to manufacture
-      // upsets in dominant mismatches.
-      p = Math.max(0.01, Math.min(0.99, p + (t1Trend - t2Trend) * 0.22));
+      p = Math.max(0.05, Math.min(0.95, p + (t1Trend - t2Trend) * 0.22));
 
       return p;
     }
@@ -6047,10 +6054,15 @@ function renderPlayoffs() {
     const co = document.getElementById('clanker-bracket-outer');
     if (co) co.innerHTML = buildClankerSectionHtml();
   };
-  // Exposed so fetchLiveNetRatings can refresh reasoning numbers after a net-rating update
+  // Exposed so fetchLiveNetRatings can refresh picks + reasoning after a net-rating update.
+  // Must regenerate picks (not just re-render) because net ratings affect series outcomes.
   window._clankerRefreshSection = function() {
     const co = document.getElementById('clanker-bracket-outer');
-    if (co && _clankerBracket) co.innerHTML = buildClankerSectionHtml();
+    if (co) {
+      _clankerBracket = null;
+      generateClankerBracket();
+      co.innerHTML = buildClankerSectionHtml();
+    }
   };
 
   document.getElementById('bracket-inner').innerHTML = buildFullBracket();
