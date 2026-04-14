@@ -6830,7 +6830,7 @@ function renderDraft() {
           <th>Record</th>
           <th style="text-align:right">Top-1%</th>
           <th style="text-align:right">Top-4%</th>
-          <th style="text-align:right;padding-right:12px">Lottery Result</th>
+          <th style="text-align:right;padding-right:48px">Lottery Result</th>
         </tr></thead><tbody>`;
     lottery14.forEach((team, i) => {
       if (!team) return;
@@ -6866,7 +6866,7 @@ function renderDraft() {
           </div>
         </td>
         <td style="color:#6699cc;font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px">${odds4}%</td>
-        <td class="lot-result-cell" id="lot-result-${i}"><span class="lot-result-dash">—</span></td>
+        <td class="lot-result-cell" id="lot-result-${i}" style="padding-right:48px"><span class="lot-result-dash">—</span></td>
       </tr>`;
     });
     h += `</tbody></table>
