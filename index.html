@@ -1952,9 +1952,9 @@
   .lottery-table tr.lot-row-fell td { background: rgba(255,80,0,0.03); }
 
   /* Result cell — picks filled in after running */
-  .lot-result-cell { min-width: 180px; }
+  .lot-result-cell { min-width: 0; text-align: right; padding-right: 12px; }
   .lot-result-dash { color: var(--border); font-size: 1.1rem; }
-  .lot-result-inner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .lot-result-inner { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
   .lot-result-pick-num {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 1.35rem;
@@ -6830,7 +6830,7 @@ function renderDraft() {
           <th>Record</th>
           <th style="text-align:right">Top-1%</th>
           <th style="text-align:right">Top-4%</th>
-          <th style="text-align:left;min-width:180px">Lottery Result</th>
+          <th style="text-align:right;padding-right:12px">Lottery Result</th>
         </tr></thead><tbody>`;
     lottery14.forEach((team, i) => {
       if (!team) return;
