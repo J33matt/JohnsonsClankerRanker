@@ -6946,7 +6946,7 @@ function renderDraft() {
     let h = '';
 
     function boardPickRow(pickNum, team, metaLabel, isPlayoff, forcedProspect, isLotteryResult) {
-      const lotteryTradeOwner = isLotteryResult && TRADED_PICKS[pickNum] && TRADED_PICKS[pickNum].via ? TRADED_PICKS[pickNum] : null;
+      const lotteryTradeOwner = isLotteryResult && TRADED_PICKS[pickNum] && TRADED_PICKS[pickNum].via && team && TRADED_PICKS[pickNum].via === team.abbr ? TRADED_PICKS[pickNum] : null;
       const owner = lotteryTradeOwner ? lotteryTradeOwner : (!isLotteryResult && TRADED_PICKS[pickNum]) ? TRADED_PICKS[pickNum] : null;
       const displayAbbr = owner ? owner.abbr : (team ? team.abbr : '—');
       const displayName = owner ? owner.name : (team ? team.name : `Pick ${pickNum}`);
