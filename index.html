@@ -4212,6 +4212,7 @@ async function pollAndRefreshAll() {
 
   // Track playoff series wins (games after PLAYOFF_START between playoff teams)
   const hasNewPlayoff = _trackPlayoffGames(allFinal);
+  _trackPlayInGames(allFinal);
 
   // Only re-render rankings/other tabs when something actually changed.
   // This prevents power scores and rankings from flickering mid-game.
@@ -4744,7 +4745,8 @@ async function _initScoreEngine() {
   applyRecordsFromGames(finishedGames);
   renderRankings();
 
-  // Track playoff game results and re-render bracket if the panel is open
+  // Track playoff/play-in game results and re-render bracket if the panel is open
+  _trackPlayInGames(finishedGames);
   const hasNewPlayoff = _trackPlayoffGames(finishedGames);
   if (hasNewPlayoff && document.getElementById('panel-playoffs')?.classList.contains('active')) renderPlayoffs();
 
@@ -4978,6 +4980,57 @@ let _playoffSeries   = {};
 let _playoffGameKeys = new Set();
 // 2026 NBA playoffs begin April 19
 const PLAYOFF_START  = '2026-04-19';
+
+// Play-in tracking: games April 15-18 determine eliminated teams for draft slots 11-14
+// { abbr: { wins: N, losses: N, games: [{opp, won}] } }
+let _playInResults   = {};
+let _playInGameKeys  = new Set();
+const PLAYIN_START   = '2026-04-15';
+const PLAYIN_END     = '2026-04-18';
+
+// Call after every final game fetch to record play-in game results.
+// Returns true if any new play-in game was recorded.
+function _trackPlayInGames(games) {
+  let hasNew = false;
+  (games || []).forEach(g => {
+    if (!g.isFinal) return;
+    if (g.date < PLAYIN_START || g.date > PLAYIN_END) return;
+    const key = g.date + '|' + g.home + '|' + g.away;
+    if (_playInGameKeys.has(key)) return;
+    _playInGameKeys.add(key);
+    const winner = g.homeScore > g.awayScore ? g.home : g.away;
+    const loser  = winner === g.home ? g.away : g.home;
+    if (!_playInResults[winner]) _playInResults[winner] = { wins: 0, losses: 0, games: [] };
+    if (!_playInResults[loser])  _playInResults[loser]  = { wins: 0, losses: 0, games: [] };
+    _playInResults[winner].wins++;
+    _playInResults[winner].games.push({ opp: loser,  won: true  });
+    _playInResults[loser].losses++;
+    _playInResults[loser].games.push({ opp: winner, won: false });
+    hasNew = true;
+  });
+  return hasNew;
+}
+
+// Returns array of teams that are definitively eliminated from the play-in
+// (lost without a second chance). A team is eliminated if:
+//   - It lost its only game (9/10-seed loser of game 1) OR
+//   - It lost the 7/8 game AND ALSO lost the second-chance game (7/8 loser who lost decider)
+// Returns null if play-in data not yet available (no games recorded).
+function getPlayInEliminated() {
+  const abbrs = Object.keys(_playInResults);
+  if (abbrs.length === 0) return null; // no play-in data yet
+  const eliminated = [];
+  abbrs.forEach(abbr => {
+    const r = _playInResults[abbr];
+    // 2 losses = definitively out
+    if (r.losses >= 2) { eliminated.push(abbr); return; }
+    // 1 loss and 1 win and 1 loss — impossible, but guard anyway
+    // Check: if a team played 2 games and has 1 loss, they survived (one-game loser who won second)
+    // A team with exactly 1 loss and 0 wins has only played once and lost → eliminated (9/10-seed)
+    if (r.losses === 1 && r.wins === 0) eliminated.push(abbr);
+  });
+  return eliminated.length > 0 ? eliminated : null;
+}
 
 // Call after every final game fetch to update _playoffSeries.
 // Returns true if any new playoff game was recorded.
@@ -6406,12 +6459,40 @@ function renderDraft() {
   const _dEast = seedConference('EAST');
   const winPct = t => t.wins / (t.wins + t.losses);
 
-  // Play-in teams: seeds 7-10 each conf (8 total)
+  // Play-in teams: seeds 7-10 each conf (8 total), sorted worst→best record
   const _playInAll = [..._dWest.slice(6,10), ..._dEast.slice(6,10)];
   _playInAll.sort((a,b) => winPct(a) - winPct(b)); // worst first
-  // 4 worst = lottery seeds 11-14 (eliminated placeholder); 4 best = make playoffs
-  const _playInElim = _playInAll.slice(0,4);
-  const _playInSurv = _playInAll.slice(4);
+
+  // Determine play-in eliminated (slots 11-14) and survivors (slots for picks 15-30)
+  // Use real game results if available, fall back to record-based ordering otherwise
+  const _realElimAbbrs = getPlayInEliminated(); // null = not yet available
+  let _playInElim, _playInSurv;
+  if (_realElimAbbrs && _realElimAbbrs.length >= 2) {
+    // Real results: eliminated teams fill slots 11-14 (sorted worst record first)
+    _playInElim = _playInAll
+      .filter(t => _realElimAbbrs.includes(t.abbr))
+      .sort((a,b) => winPct(a) - winPct(b));
+    _playInSurv = _playInAll.filter(t => !_realElimAbbrs.includes(t.abbr));
+    // Pad to 4 if play-in is still mid-way (only 2 eliminated so far)
+    if (_playInElim.length < 4) {
+      // Fill remaining elim slots from record-based ordering of not-yet-decided teams
+      const _undecided = _playInAll.filter(t =>
+        !_realElimAbbrs.includes(t.abbr) && !_playInSurv.includes(t)
+      );
+      // Already in _playInSurv means they won — keep as survivors
+      // Remaining undecided: use worst record as placeholder
+      const _extraElim = _playInAll
+        .filter(t => !_playInElim.some(e => e.abbr === t.abbr) && !_playInSurv.some(s => s.abbr === t.abbr))
+        .sort((a,b) => winPct(a) - winPct(b))
+        .slice(0, 4 - _playInElim.length);
+      _playInElim = [..._playInElim, ..._extraElim];
+      _playInSurv = _playInAll.filter(t => !_playInElim.some(e => e.abbr === t.abbr));
+    }
+  } else {
+    // No play-in data yet: use worst 4 records as placeholder eliminated
+    _playInElim = _playInAll.slice(0,4);
+    _playInSurv = _playInAll.slice(4);
+  }
 
   // Bottom 10 non-playoff, non-play-in teams (lottery seeds 1-10)
   const _inTop10 = new Set([..._dWest.slice(0,10), ..._dEast.slice(0,10)].map(t=>t.abbr));
