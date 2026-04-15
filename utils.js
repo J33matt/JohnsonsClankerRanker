@@ -194,3 +194,18 @@ function sortRankings(key) {
   }
   renderRankings();
 }
+
+
+function getSortValue(t, key) {
+  switch(key) {
+    case 'power':    return t.power;
+    case 'name':     return t.name.toLowerCase();
+    case 'record':   return t.winPct;
+    case 'winPct':   return t.winPct;
+    case 'netRtg':   return t.netRtg;
+    case 'ortg':     return t.ortg;
+    case 'drtg':     return t.drtg;
+    case 'streak':   return t.streak;
+    default:         return 0;
+  }
+}
