@@ -442,3 +442,30 @@ function seedConferenceSim(teams, byAbbr) {
     return b.power - a.power;
   });
 }
+
+// ============================================================
+function buildBaselineRankMap() {
+  // Always use the last entry in WEEKLY_RANKINGS as the week's starting point.
+  // When the auto-inject fires (7+ days elapsed), the newly appended snapshot
+  // becomes the new baseline automatically on the next call.
+  const last = WEEKLY_RANKINGS[WEEKLY_RANKINGS.length - 1];
+  const map = {};
+  if (last && last.rankings) {
+    last.rankings.forEach(function(e) { map[e.team] = e.rank; });
+  }
+  return map;
+}
+// Get all remaining regular season game dates from the ESPN calendar
+function getRemainingSeasonDates() {
+  const today = new Date();
+  const dates = [];
+  // Regular season typically ends around April 13; generate dates through Apr 15 to be safe
+  const endDate = new Date(today.getFullYear(), 3, 15); // April 15
+  const d = new Date(today);
+  d.setDate(d.getDate() + 1); // start from tomorrow
+  while (d <= endDate) {
+    dates.push(localDateStr(new Date(d)));
+    d.setDate(d.getDate() + 1);
+  }
+  return dates;
+}
