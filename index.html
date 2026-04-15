@@ -1834,19 +1834,23 @@ function renderPlayoffs() {
       const seeds = _getLockedSeeds(c);
       const pi = seeds.slice(6, 10);
       if (pi.length < 4) return;
+      // Games 1 and 2 are independent — check each separately
       const r78 = getPlayInGameWinner(pi[0].abbr, pi[1].abbr);
-      if (!r78) return;
-      piState[c].game78winner = pi.find(t => t.abbr === r78) || null;
+      if (r78) piState[c].game78winner = pi.find(t => t.abbr === r78) || null;
       const r910 = getPlayInGameWinner(pi[2].abbr, pi[3].abbr);
-      if (!r910) return;
-      piState[c].game910winner = pi.find(t => t.abbr === r910) || null;
-      const loserOf78 = pi.find(t => (t === pi[0] || t === pi[1]) && t.abbr !== r78);
-      if (!loserOf78) return;
-      const rd = getPlayInGameWinner(loserOf78.abbr, r910);
-      if (!rd) return;
-      const rdTeam = pi.find(t => t.abbr === rd) || null;
-      piState[c].seed8 = rdTeam;
-      piState[c].deciderWinner = rdTeam;
+      if (r910) piState[c].game910winner = pi.find(t => t.abbr === r910) || null;
+      // Game 3 (decider) only possible once both Game 1 and Game 2 are decided
+      if (r78 && r910) {
+        const loserOf78 = pi.find(t => (t === pi[0] || t === pi[1]) && t.abbr !== r78);
+        if (loserOf78) {
+          const rd = getPlayInGameWinner(loserOf78.abbr, r910);
+          if (rd) {
+            const rdTeam = pi.find(t => t.abbr === rd) || null;
+            piState[c].seed8 = rdTeam;
+            piState[c].deciderWinner = rdTeam;
+          }
+        }
+      }
     });
     try { localStorage.removeItem('playoffBracket2026'); } catch(e) {}
     autoFillFromLiveResults();
