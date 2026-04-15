@@ -689,3 +689,248 @@ function buildSimFinalsCol(result) {
   </div>`;
 }
 
+
+// ============================================================
+// NEWS RENDERING
+// ============================================================
+
+function renderNewsCard(item) {
+  let html = '';
+
+  if (item.type === 'finals') {
+    const { champion, finalist, finalsResult, leaders } = item.data;
+    const cc = TEAM_COLORS[champion.abbr] || { bg: '#ffaa00' };
+    const fmvp = leaders.fmvp;
+    html = `<div class="news-finals-card" style="border-color:${cc.bg}55">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+        <div style="font-size:2.5rem">🏆</div>
+        <div>
+          <div class="news-finals-title">${champion.name} are NBA Champions!</div>
+          <div class="news-finals-sub">Defeated ${finalist.name} ${finalsResult.wWins}–${finalsResult.lWins} in ${finalsResult.games} games</div>
+        </div>
+      </div>
+      ${fmvp.player ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:10px">🥇 Finals MVP: <strong style="color:#fff">${fmvp.player.name}</strong> · ${fmvp.ppg} PPG / ${fmvp.rpg} RPG / ${fmvp.apg} APG</div>` : ''}
+      <div class="news-leaders-grid">
+        ${renderLeader(leaders.ppgLeader)}
+        ${renderLeader(leaders.astLeader)}
+        ${renderLeader(leaders.rebLeader)}
+        ${leaders.defPlayer.player ? `<div class="news-leader-card">
+          <div class="news-leader-cat">Def. Player</div>
+          <div class="news-leader-name">${leaders.defPlayer.player.name}</div>
+          <div class="news-leader-team">${leaders.defPlayer.team?.abbr || ''}</div>
+          <div class="news-leader-val">🛡️</div>
+        </div>` : ''}
+      </div>
+    </div>`;
+    return html;
+  }
+
+  const catMap = {
+    sweep: ['news-cat-record','SWEEP'],
+    upset: ['news-cat-upset','UPSET'],
+    injury: ['news-cat-injury','INJURY'],
+    scoring: ['news-cat-performance','PERFORMANCE'],
+    winrecord: ['news-cat-record','RECORD'],
+    seven: ['news-cat-drama','DRAMA'],
+    margin: ['news-cat-record','RECORD'],
+    cinderella: ['news-cat-upset','CINDERELLA'],
+    goat: ['news-cat-performance','LEGACY'],
+    firingRumor: ['news-cat-drama','COACHING'],
+    controversial: ['news-cat-drama','CONTROVERSY'],
+    comeback: ['news-cat-upset','COMEBACK'],
+  };
+  const [catClass, catLabel] = catMap[item.type] || ['news-cat-record','NEWS'];
+  const stripeColors = { 'news-cat-injury':'#ff3355','news-cat-record':'#ffaa00','news-cat-performance':'#00e87a','news-cat-drama':'#cc88ff','news-cat-upset':'#ff8844' };
+  const stripeColor = stripeColors[catClass] || '#ff4d00';
+
+  let headline = '', body = '', statsHtml = '';
+  const now = new Date();
+  const timestamps = ['Round 1','Second Round','Conference Semifinals','Conference Finals','NBA Finals'];
+  const ts = timestamps[Math.floor(Math.random() * timestamps.length)];
+
+  if (item.type === 'sweep') {
+    const { series } = item;
+    headline = `${series.winner.name.toUpperCase()} MAKE IT LOOK EASY IN DOMINANT SWEEP`;
+    body = `<strong>${series.winner.name}</strong> wasted absolutely no time, dispatching <strong>${series.loser.name}</strong> without dropping a single game. It was a clinical, suffocating display · the kind that sends a message to every other team left in the bracket. Rest advantage? ${series.winner.name} will have plenty of it.`;
+  } else if (item.type === 'upset') {
+    const { series } = item;
+    headline = `STUNNER: ${series.winner.name.toUpperCase()} ELIMINATE FAVORED ${series.loser.name.toUpperCase()}`;
+    body = `Nobody had <strong>${series.winner.name}</strong> winning this series, and yet here we are. The <strong>${series.loser.name}</strong> · expected to cruise · were exposed in ways that will haunt their front office all summer. This is the magic of the playoffs. Anything can happen, and it just did.`;
+  } else if (item.type === 'injury') {
+    const { player, injury, team, opp, series } = item;
+    const oppName = opp ? opp.name : 'their opponents';
+    const gameNum = Math.floor(Math.random() * 5) + 1;
+    const teamName = team?.name || 'the team';
+
+    // Pick from varied ESPN-style headline templates
+    const injuryHeadlines = [
+      `BREAKING: ${player.name.toUpperCase()} EXITS GAME ${gameNum} · ${injury.type.toUpperCase()}, STATUS ${injury.severity.toUpperCase()}`,
+      `INJURY ALERT: ${player.name.toUpperCase()} GOES DOWN IN GAME ${gameNum}, ${teamName.toUpperCase()} HOLDING BREATH`,
+      `${player.name.toUpperCase()} LIMPS OFF IN GAME ${gameNum} · SOURCE: ${injury.type.toUpperCase()}`,
+      `SOURCES: ${player.name.toUpperCase()} ${injury.type.toUpperCase()} IN GAME ${gameNum}, STATUS IS ${injury.severity.toUpperCase()}`,
+      `REPORT: ${player.name.toUpperCase()} HURT IN GAME ${gameNum} · INITIAL DIAGNOSIS IS ${injury.type.toUpperCase()}`,
+    ];
+    headline = injuryHeadlines[Math.floor(Math.random() * injuryHeadlines.length)];
+
+    const bodyVariants = [
+      `Trainers rushed onto the floor in Game ${gameNum} after <strong>${player.name}</strong> went down. Sources confirm the ${teamName} superstar <em>${injury.type}</em>. Severity is listed as <em>${injury.severity}</em>. The arena fell silent · this is the nightmare scenario everyone feared for the ${teamName} postseason run.`,
+      `A collective gasp rippled through the arena in Game ${gameNum}. <strong>${player.name}</strong> crumpled to the floor after <em>${injury.type}</em>. The ${teamName} franchise player was helped to the locker room. Medical staff confirmed the injury is <em>${injury.severity}</em>. ${oppName} just got a massive advantage.`,
+      `In what could be a season-altering moment, <strong>${player.name}</strong> left Game ${gameNum} in the ${Math.random() > 0.5 ? 'first half' : 'fourth quarter'} after appearing to <em>${injury.type}</em>. The ${teamName} locker room is reportedly in shock. The diagnosis: <em>${injury.severity}</em>. The basketball world is watching.`,
+      `<strong>${player.name}</strong> was trending on social media within seconds of going down in Game ${gameNum}. The ${teamName} star <em>${injury.type}</em> and did not return. Team sources describe the injury as <em>${injury.severity}</em>. Whether this derails ${teamName}'s entire playoff run remains to be seen.`,
+    ];
+    body = bodyVariants[Math.floor(Math.random() * bodyVariants.length)];
+  } else if (item.type === 'scoring') {
+    const { player, team, evt, series } = item;
+    const assists = Math.floor(Math.random() * 10) + 3;
+    const rebounds = Math.floor(Math.random() * 10) + 4;
+    const gameNum = Math.floor(Math.random() * 6) + 1;
+    headline = `${player.name.toUpperCase()} DROPS ${evt.pts} IN GAME ${gameNum} · ALL-TIME PERFORMANCE`;
+    body = `Historians are scrambling through the record books. <strong>${player.name}</strong> ${evt.desc} <strong>${evt.pts} points</strong> in Game ${gameNum}, adding ${rebounds} rebounds and ${assists} assists for good measure. The building was in absolute pandemonium. Opponents looked defeated before halftime. This is a performance they'll be talking about for decades.`;
+    statsHtml = `<div class="news-stats-row">
+      <div class="news-stat-item"><div class="news-stat-val" style="color:var(--accent)">${evt.pts}</div><div class="news-stat-lbl">Points</div></div>
+      <div class="news-stat-item"><div class="news-stat-val" style="color:var(--green)">${rebounds}</div><div class="news-stat-lbl">Rebounds</div></div>
+      <div class="news-stat-item"><div class="news-stat-val" style="color:var(--blue)">${assists}</div><div class="news-stat-lbl">Assists</div></div>
+    </div>`;
+  } else if (item.type === 'winrecord') {
+    const { team } = item;
+    headline = `${team.name.toUpperCase()} FINISH WITH ALL-TIME GREAT RECORD: ${team.simWins}–${team.simLosses}`;
+    body = `The <strong>${team.name}</strong> have completed one of the most dominant regular seasons in NBA history, finishing ${team.simWins}–${team.simLosses}. Basketball Reference servers are reportedly overloaded with fans looking up historical comparisons. <em>"Nobody was stopping this team,"</em> said one Western Conference scout. <em>"Nobody."</em>`;
+  } else if (item.type === 'seven') {
+    const { series } = item;
+    headline = `EPIC: ${series.winner.name.toUpperCase()} SURVIVE 7-GAME WAR WITH ${series.loser.name.toUpperCase()}`;
+    body = `They needed all seven games, and every single one of them felt like a Game 7. <strong>${series.winner.name}</strong> and <strong>${series.loser.name}</strong> gave the fans exactly what they paid for · a brutal, beautiful war that ended with the slimmest of margins. <strong>${series.winner.name}</strong> advance, but they'll need to recover fast.`;
+  } else if (item.type === 'cinderella') {
+    const { team } = item;
+    headline = `THE CINDERELLA STORY: ${team.name.toUpperCase()} MAKE IMPROBABLE DEEP RUN`;
+    body = `Nobody circled <strong>${team.name}</strong> in their bracket. Their ${team.simWins}–${team.simLosses} regular season record didn't exactly scream contender. And yet, here they are, thriving in the playoffs. Call it chemistry, call it luck, call it destiny · this team refuses to quit and the NBA world is absolutely riveted.`;
+  } else if (item.type === 'goat') {
+    const { player, team } = item;
+    headline = `IS ${player.name.toUpperCase()} THE GREATEST PLAYOFF PERFORMER WE'VE EVER SEEN?`;
+    body = `The GOAT conversation isn't going away after this. <strong>${player.name}</strong>'s postseason résumé after this championship run is nothing short of historic. Social media is melting, analysts are arguing, and grandparents are asking what a GOAT is. This performance demands respect regardless of where you stand.`;
+  } else if (item.type === 'firingRumor') {
+    const { team, coach } = item;
+    headline = `RUMOR MILL: ${coach.toUpperCase()} COACHING FUTURE IN QUESTION AFTER FINALS LOSS`;
+    body = `Sources close to the <strong>${team.name}</strong> organization say conversations have already begun about the team's direction. <strong>${coach}</strong> went to the Finals, but the question of "what could have been" is already creeping into boardroom discussions. A championship-or-bust mandate was always in play. Now the bust part may have consequences.`;
+  } else if (item.type === 'controversial') {
+    const { series } = item;
+    const gameNum = Math.floor(Math.random() * 6) + 1;
+    headline = `CONTROVERSY IN GAME ${gameNum}: REFS BLOW CALL IN ${series.winner.abbr} vs ${series.loser.abbr}`;
+    body = `The basketball internet is on fire. With seconds remaining in Game ${gameNum}, a pivotal call · or non-call · has the <strong>${series.loser.name}</strong> fanbase convinced they were robbed. The NBA's Last Two Minute Report is already being prepped. The debate will rage for weeks. Whether it changed the series is impossible to say, but everyone has an opinion.`;
+  } else if (item.type === 'comeback') {
+    const { series } = item;
+    headline = `DOWN 3-1, ${series.winner.name.toUpperCase()} STAGE MIRACLE COMEBACK`;
+    body = `History said it was over. Statistically, <strong>${series.winner.name}</strong> had almost no chance. Trailing 3-1, they somehow did what almost no team in NBA history has done · won three straight to advance. The locker room speech on the eve of Game 5 will become the stuff of legend. The <strong>${series.loser.name}</strong> are absolutely devastated.`;
+  }
+
+  if (!headline) return '';
+
+  html = `<div class="news-card">
+    <div class="news-card-stripe" style="background:${stripeColor}"></div>
+    <div class="news-card-body">
+      <div class="news-card-meta">
+        <span class="news-category-pill ${catClass}">${catLabel}</span>
+        <span class="news-timestamp">${ts} · 2026 Playoffs</span>
+      </div>
+      <div class="news-headline">${headline}</div>
+      <div class="news-body">${body}${statsHtml}</div>
+    </div>
+  </div>`;
+  return html;
+}
+
+function renderLeader(l) {
+  if (!l || !l.player) return '';
+  return `<div class="news-leader-card">
+    <div class="news-leader-cat">${l.label}</div>
+    <div class="news-leader-name">${l.player.name}</div>
+    <div class="news-leader-team">${l.team?.abbr || ''}</div>
+    <div class="news-leader-val" style="color:var(--accent2)">${l.stat}</div>
+  </div>`;
+}
+
+function renderNews(newsItems) {
+  if (!newsItems || newsItems.length === 0) {
+    document.getElementById('news-container').innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:2px">NO NEWS STORIES GENERATED THIS SIMULATION</div>`;
+    return;
+  }
+
+  let html = `<div class="news-layout">
+    <div class="news-run-bar">
+      <button class="news-run-btn" onclick="runSeasonSim()">▶ Re-Simulate & Refresh News</button>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;letter-spacing:1px;color:var(--muted);flex:1">
+        ${newsItems.length} stories generated · Click stories may vary each simulation
+      </div>
+    </div>
+    <div class="news-feed">`;
+
+  // Finals card first
+  const finalsItem = newsItems.find(i => i.type === 'finals');
+  if (finalsItem) html += renderNewsCard(finalsItem);
+
+  // Rest shuffled
+  const rest = newsItems.filter(i => i.type !== 'finals');
+  rest.sort(() => Math.random() - 0.5);
+  rest.forEach(item => { html += renderNewsCard(item); });
+
+  html += `</div></div>`;
+  document.getElementById('news-container').innerHTML = html;
+}
+
+// ============================================================
+// BETTING UTILITIES
+// ============================================================
+
+// American odds → payout on $10 stake (returns net profit, not total return)
+// e.g. -110 → $9.09 profit;  +150 → $15.00 profit;  +100 → $10.00 profit
+function _mlPayout(moneyLine, stake) {
+  stake = stake || 10;
+  if (!moneyLine || moneyLine === 0) return stake; // no line → treat as even money
+  if (moneyLine > 0) {
+    return Math.round((stake * moneyLine / 100) * 100) / 100;
+  } else {
+    return Math.round((stake / (Math.abs(moneyLine) / 100)) * 100) / 100;
+  }
+}
+
+
+// Format dollar amount with sign: +$9.09 or -$10.00
+function _fmtDollars(amt) {
+  const sign = amt >= 0 ? '+' : '-';
+  return sign + '$' + Math.abs(amt).toFixed(2);
+}
+
+// Attach moneylines to stored picks from the odds cache for a date
+// Mutates picks in place, returns true if anything was added
+function _attachMoneylines(picks, oddsMap) {
+  let changed = false;
+  picks.forEach(pick => {
+    const key = pick.awayAbbr + '@' + pick.homeAbbr;
+    const odds = oddsMap[key];
+    if (!odds) return;
+    if (pick.homeML !== odds.homeML || pick.awayML !== odds.awayML) {
+      pick.homeML = odds.homeML;
+      pick.awayML = odds.awayML;
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+// Compute net P&L for a single graded pick ($10 stake)
+// Returns { payout, net } where net is profit (positive) or loss (negative)
+function _pickBetResult(pick) {
+  const STAKE = 10;
+  if (!pick.result) return null;
+  if (pick.result !== 'correct') return { payout: 0, net: -STAKE }; // lost $10
+  // Won — determine which ML to use
+  const pickIsHome = pick.pick === pick.homeAbbr;
+  const ml = pickIsHome ? pick.homeML : pick.awayML;
+  if (!ml) {
+    // No odds — treat as -110 (standard)
+    const payout = _mlPayout(-110, STAKE);
+    return { payout, net: payout };
+  }
+  const payout = _mlPayout(ml, STAKE);
+  return { payout, net: payout };
+}
+
