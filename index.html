@@ -1829,6 +1829,25 @@ function renderPlayoffs() {
     bracketState.champion = null;
     history.length = 0;
     redoStack.length = 0;
+    // Re-apply concluded play-in results so seed 7/8 resolve correctly in autoFill
+    ['west', 'east'].forEach(c => {
+      const seeds = _getLockedSeeds(c);
+      const pi = seeds.slice(6, 10);
+      if (pi.length < 4) return;
+      const r78 = getPlayInGameWinner(pi[0].abbr, pi[1].abbr);
+      if (!r78) return;
+      piState[c].game78winner = pi.find(t => t.abbr === r78) || null;
+      const r910 = getPlayInGameWinner(pi[2].abbr, pi[3].abbr);
+      if (!r910) return;
+      piState[c].game910winner = pi.find(t => t.abbr === r910) || null;
+      const loserOf78 = pi.find(t => (t === pi[0] || t === pi[1]) && t.abbr !== r78);
+      if (!loserOf78) return;
+      const rd = getPlayInGameWinner(loserOf78.abbr, r910);
+      if (!rd) return;
+      const rdTeam = pi.find(t => t.abbr === rd) || null;
+      piState[c].seed8 = rdTeam;
+      piState[c].deciderWinner = rdTeam;
+    });
     try { localStorage.removeItem('playoffBracket2026'); } catch(e) {}
     autoFillFromLiveResults();
     updateControls();
