@@ -1266,47 +1266,6 @@ async function espnFetchDate(dateStr) {
   }
 }
 
-function parseESPNGames(data, dateStr) {
-  const events = data?.events || [];
-  return events.map(evt => {
-    const comp = evt.competitions?.[0];
-    if (!comp) return null;
-    const homeComp = comp.competitors?.find(c => c.homeAway === 'home');
-    const awayComp = comp.competitors?.find(c => c.homeAway === 'away');
-    const home = normAbbr(homeComp?.team?.abbreviation || '');
-    const away = normAbbr(awayComp?.team?.abbreviation || '');
-    const homeScore = +(homeComp?.score || 0);
-    const awayScore = +(awayComp?.score || 0);
-    const statusType = comp.status?.type;
-    const isFinal = statusType?.completed === true;
-    const isLive = !isFinal && (statusType?.state === 'in');
-    const isUpcoming = !isFinal && !isLive;
-    const statusText = statusType?.shortDetail || comp.status?.type?.detail || '';
-    let tipDisplay = '';
-    if (isUpcoming && statusText) {
-      // Extract time from status text like "3/27 - 7:00 PM ET" or "7:00 PM ET"
-      const timeMatch = statusText.match(/(\d{1,2}:\d{2}\s*[AP]M)/i);
-      tipDisplay = timeMatch ? timeMatch[1].toUpperCase() : statusText.replace(/ ET$/,'').toUpperCase();
-    }
-    const status = isLive ? statusText : (isFinal ? 'Final' : statusText);
-    // Extract moneylines from ESPN odds data
-    const oddsData = comp.odds && comp.odds[0];
-    const homeML = oddsData?.homeTeamOdds?.moneyLine || oddsData?.homeTeamOdds?.current?.moneyLine || null;
-    const awayML = oddsData?.awayTeamOdds?.moneyLine || oddsData?.awayTeamOdds?.current?.moneyLine || null;
-    const eventId = evt.id || null;
-    // Extract each team's current W-L record embedded in the scoreboard response
-    function parseCompRecord(comp) {
-      const rec = (comp?.records || []).find(r => r.type === 'total' || r.name === 'overall');
-      if (!rec?.summary) return null;
-      const [w, l] = rec.summary.split('-').map(Number);
-      return (!isNaN(w) && !isNaN(l)) ? { w, l } : null;
-    }
-    const homeRecord = parseCompRecord(homeComp);
-    const awayRecord  = parseCompRecord(awayComp);
-    return { home, away, homeScore, awayScore, date: dateStr, tipDisplay, isFinal, isLive, isUpcoming, status, homeML, awayML, eventId, homeRecord, awayRecord };
-  }).filter(Boolean);
-}
-
 // Get all remaining regular season game dates from the ESPN calendar
 function getRemainingSeasonDates() {
   const today = new Date();
