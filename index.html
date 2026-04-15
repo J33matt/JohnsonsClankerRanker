@@ -912,16 +912,6 @@ const ENRICHED_DATA = STANDINGS_DATA.map(t => ({ ...t, ...computePowerScore(t), 
 // Seeded from static RECENT_GAMES at init; updated live.
 let _lastGameMap = {};
 
-function seedLastGameMap(games) {
-  const sorted = [...games].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-  sorted.forEach(g => {
-    const isFinal = g.isFinal || g.status === 'final';
-    if (!isFinal) return;
-    _lastGameMap[g.home] = g;
-    _lastGameMap[g.away] = g;
-  });
-}
-
 // ── LIVE UPDATE ENGINE ───────────────────────────────────────
 // Called after every ESPN fetch. Mutates STANDINGS_DATA, STREAK_DATA,
 // _RECENT_RESULTS, ENRICHED_DATA in-place so all render functions
@@ -1073,16 +1063,6 @@ function schedulePoll() {
 // fetchLiveNetRatings() already calls renderRankings() internally when data changes.
 setInterval(function() { fetchLiveNetRatings(); }, 10 * 60 * 1000);
 
-
-function sortRankings(key) {
-  if (rankingsSortKey === key) {
-    rankingsSortDir = rankingsSortDir === 'desc' ? 'asc' : 'desc';
-  } else {
-    rankingsSortKey = key;
-    rankingsSortDir = (key === 'drtg' || key === 'name') ? 'asc' : 'desc';
-  }
-  renderRankings();
-}
 
 function setRankingsView(view, btn) {
   rankingsView = view;

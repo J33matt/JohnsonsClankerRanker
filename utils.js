@@ -173,3 +173,24 @@ function getStreakLabel(streak) {
   if (abs >= 5 && streak < 0) emoji = '\u2744\uFE0F ';
   return `${emoji}${prefix}${abs}`;
 }
+
+
+function seedLastGameMap(games) {
+  const sorted = [...games].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  sorted.forEach(g => {
+    const isFinal = g.isFinal || g.status === 'final';
+    if (!isFinal) return;
+    _lastGameMap[g.home] = g;
+    _lastGameMap[g.away] = g;
+  });
+}
+
+function sortRankings(key) {
+  if (rankingsSortKey === key) {
+    rankingsSortDir = rankingsSortDir === 'desc' ? 'asc' : 'desc';
+  } else {
+    rankingsSortKey = key;
+    rankingsSortDir = (key === 'drtg' || key === 'name') ? 'asc' : 'desc';
+  }
+  renderRankings();
+}
