@@ -688,4 +688,4 @@ function buildSimFinalsCol(result) {
     </div>
   </div>`;
 }
-async function fetchAIAnalysis() {
+
