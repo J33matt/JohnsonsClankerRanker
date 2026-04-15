@@ -4910,10 +4910,10 @@ async function _initScoreEngine() {
   applyRecordsFromGames(finishedGames);
 
   // Track playoff/play-in game results BEFORE rendering so elimination state is current
-  _trackPlayInGames(finishedGames);
+  const hasNewPlayIn  = _trackPlayInGames(finishedGames);
   const hasNewPlayoff = _trackPlayoffGames(finishedGames);
   renderRankings();
-  if (hasNewPlayoff && document.getElementById('panel-playoffs')?.classList.contains('active')) renderPlayoffs();
+  if ((hasNewPlayoff || hasNewPlayIn) && document.getElementById('panel-playoffs')?.classList.contains('active')) renderPlayoffs();
 
   _hasLiveGames = (data.today || []).some(g => g.isLive);
   schedulePoll();
@@ -5956,10 +5956,14 @@ function renderPlayoffs() {
     const g78Loser = g78Winner ? piTeams.find(t => (t === piTeams[0] || t === piTeams[1]) && t.abbr !== g78Winner) : null;
     const deciderWinner = pi.deciderWinner ? pi.deciderWinner.abbr : null;
     // Real concluded results — lock buttons and show FINAL label
-    const real78Winner      = getPlayInGameWinner(piTeams[0].abbr, piTeams[1].abbr);
-    const real910Winner     = getPlayInGameWinner(piTeams[2].abbr, piTeams[3].abbr);
-    const realDeciderWinner = (g78Loser && pi.game910winner)
-      ? getPlayInGameWinner(g78Loser.abbr, pi.game910winner.abbr) : null;
+    const real78Winner   = getPlayInGameWinner(piTeams[0].abbr, piTeams[1].abbr);
+    const real910Winner  = getPlayInGameWinner(piTeams[2].abbr, piTeams[3].abbr);
+    // Derive decider teams from real results (not user picks) so the lock works
+    // even when the user hasn't made picks yet for games 1 & 2.
+    const realLoserOf78  = real78Winner  ? piTeams.find(t => (t === piTeams[0] || t === piTeams[1]) && t.abbr !== real78Winner)  : null;
+    const real910Team    = real910Winner ? piTeams.find(t => t.abbr === real910Winner) : null;
+    const realDeciderWinner = (realLoserOf78 && real910Team)
+      ? getPlayInGameWinner(realLoserOf78.abbr, real910Team.abbr) : null;
 
     let h = `<div class="playin-conf">`;
     h += `<div class="playin-title">${conf === 'west' ? 'Western' : 'Eastern'} <span class="playin-badge">Play-In Tournament</span></div>`;
