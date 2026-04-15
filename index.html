@@ -1830,6 +1830,7 @@ function renderPlayoffs() {
     history.length = 0;
     redoStack.length = 0;
     try { localStorage.removeItem('playoffBracket2026'); } catch(e) {}
+    autoFillFromLiveResults();
     updateControls();
     rerenderBracket();
     dismissChampion();
@@ -2985,7 +2986,7 @@ function renderPlayoffs() {
   // Walk all completed series in _playoffSeries and fill any unsettled bracket slots.
   // A slot is only overwritten if empty or was previously auto-filled (_autoFilled flag).
   // Preserves user-made picks in undecided slots.
-  (function autoFillFromLiveResults() {
+  function autoFillFromLiveResults() {
     Object.entries(_playoffSeries).forEach(([seriesKey, wins]) => {
       const [abbr1, abbr2] = seriesKey.split('|');
       const w1 = wins[abbr1] || 0, w2 = wins[abbr2] || 0;
@@ -3040,7 +3041,8 @@ function renderPlayoffs() {
       }
     });
     savePlayoffState();
-  })();
+  }
+  autoFillFromLiveResults();
 
   // ================================================================
   // INITIAL RENDER
