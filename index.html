@@ -5182,11 +5182,11 @@ function _getLockedSeeds(conf) {
   return [...top10, ...rest];
 }
 
-// Play-in tracking: games April 15-18 determine eliminated teams for draft slots 11-14
+// Play-in tracking: games April 14-18 determine eliminated teams for draft slots 11-14
 // { abbr: { wins: N, losses: N, games: [{opp, won}] } }
 let _playInResults   = {};
 let _playInGameKeys  = new Set();
-const PLAYIN_START   = '2026-04-15';
+const PLAYIN_START   = '2026-04-14';
 const PLAYIN_END     = '2026-04-18';
 
 // Call after every final game fetch to record play-in game results.
@@ -5220,15 +5220,29 @@ function _trackPlayInGames(games) {
 function getPlayInEliminated() {
   const abbrs = Object.keys(_playInResults);
   if (abbrs.length === 0) return null; // no play-in data yet
+
+  // Seeds 9 and 10 are immediately eliminated if they lose their first game.
+  // Seeds 7 and 8 losers advance to the decider — not eliminated until they lose that too.
+  const seeds910 = new Set([
+    PLAYOFF_SEEDS.west[8], PLAYOFF_SEEDS.west[9],
+    PLAYOFF_SEEDS.east[8], PLAYOFF_SEEDS.east[9]
+  ]);
+
   const eliminated = [];
   abbrs.forEach(abbr => {
     const r = _playInResults[abbr];
-    // 2 losses = definitively out
+    // Lost 2 games: 7/8 loser who also lost the decider
     if (r.losses >= 2) { eliminated.push(abbr); return; }
-    // 1 loss and 1 win and 1 loss — impossible, but guard anyway
-    // Check: if a team played 2 games and has 1 loss, they survived (one-game loser who won second)
-    // A team with exactly 1 loss and 0 wins has only played once and lost → eliminated (9/10-seed)
-    if (r.losses === 1 && r.wins === 0) eliminated.push(abbr);
+    // 9/10 seed with 1 loss, 0 wins → immediately eliminated (no second chance)
+    if (r.losses === 1 && r.wins === 0 && seeds910.has(abbr)) {
+      eliminated.push(abbr); return;
+    }
+    // 1 win, 1 loss → either seed 8 (won the decider) or 9/10 winner who lost the decider.
+    // Eliminated only if their last game was a loss.
+    if (r.losses === 1 && r.wins === 1) {
+      const lastGame = r.games[r.games.length - 1];
+      if (lastGame && !lastGame.won) eliminated.push(abbr);
+    }
   });
   return eliminated.length > 0 ? eliminated : null;
 }
