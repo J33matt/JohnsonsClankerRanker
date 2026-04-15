@@ -1447,6 +1447,27 @@
   .bkt-matchup.empty-slot .bkt-team-row {
     justify-content: center;
   }
+  .bracket-series-score {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 2px;
+    letter-spacing: 0.5px;
+  }
+  .bracket-slot-locked {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .bracket-lock-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 2px;
+  }
   .bkt-round-label {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 0.6rem;
@@ -5742,8 +5763,26 @@ function renderPlayoffs() {
     // Allow interaction if at least one team is present (one-sided picks allowed)
     const hasAny = topTeam || botTeam;
     const classes = ['bkt-matchup'];
-    if (hasAny && clickable) classes.push('clickable');
+
+    // Look up live series data from _playoffSeries for lock/score display
+    let seriesLocked = false, seriesScoreHtml = '', lockLabelHtml = '';
+    if (topTeam && botTeam && !topTeam._placeholder && !botTeam._placeholder) {
+      const sk = [topTeam.abbr, botTeam.abbr].sort().join('|');
+      const sw = _playoffSeries[sk];
+      if (sw) {
+        const wa = sw[topTeam.abbr] || 0, wb = sw[botTeam.abbr] || 0;
+        if (wa >= 4 || wb >= 4) {
+          seriesLocked = true;
+          lockLabelHtml = `<div class="bracket-lock-label">FINAL &#x1F512;</div>`;
+        } else if (wa + wb > 0) {
+          seriesScoreHtml = `<div class="bracket-series-score">${wa}–${wb}</div>`;
+        }
+      }
+    }
+
+    if (hasAny && clickable && !seriesLocked) classes.push('clickable');
     if (hasAny && !winner) classes.push('pending');
+    if (seriesLocked) classes.push('bracket-slot-locked');
 
     let topClass = '', botClass = '';
     if (winner) {
@@ -5751,13 +5790,15 @@ function renderPlayoffs() {
       botClass = botTeam && winner.abbr === botTeam.abbr ? 'winner-row' : (botTeam ? 'loser-row' : '');
     }
 
-    // Build click handlers · a team is clickable as long as it exists; opponent can be TBD
-    const topClick = (hasAny && clickable && topTeam) ? `_bktPick('${conf}','${round}',${matchupIdx},'${topTeam.abbr}')` : '';
-    const botClick = (hasAny && clickable && botTeam) ? `_bktPick('${conf}','${round}',${matchupIdx},'${botTeam.abbr}')` : '';
+    // Build click handlers · locked when series concluded, otherwise clickable if team exists
+    const canClick = hasAny && clickable && !seriesLocked;
+    const topClick = (canClick && topTeam) ? `_bktPick('${conf}','${round}',${matchupIdx},'${topTeam.abbr}')` : '';
+    const botClick = (canClick && botTeam) ? `_bktPick('${conf}','${round}',${matchupIdx},'${botTeam.abbr}')` : '';
 
     return `<div class="${classes.join(' ')}">
       ${teamRowHtml(topSeed, topTeam, topClass, topClick)}
       ${teamRowHtml(botSeed, botTeam, botClass, botClick)}
+      ${lockLabelHtml}${seriesScoreHtml}
     </div>`;
   }
 
