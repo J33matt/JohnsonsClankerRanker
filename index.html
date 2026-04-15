@@ -1827,9 +1827,6 @@ function renderPlayoffs() {
       piState[c].deciderWinner = null;
     });
     bracketState.champion = null;
-    // Also clear live playoff tracking so cleared bracket stays clear
-    _playoffSeries = {};
-    _playoffGameKeys = new Set();
     history.length = 0;
     redoStack.length = 0;
     try { localStorage.removeItem('playoffBracket2026'); } catch(e) {}
