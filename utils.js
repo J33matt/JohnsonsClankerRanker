@@ -60,3 +60,116 @@ function _predInjBadgeHtml(outPlayers, returnPlayers) {
 
   return html;
 }
+
+// The live game engine appends to this as games finish.
+function _buildRecentResults() {
+  const results = {};
+  STANDINGS_DATA.forEach(t => { results[t.abbr] = { recentWins: 0, recentLosses: 0, opponents: [] }; });
+  RECENT_GAMES.forEach(g => {
+    if (g.status !== 'final') return;
+    const homeWon = g.homeScore > g.awayScore;
+    if (results[g.home]) {
+      homeWon ? results[g.home].recentWins++ : results[g.home].recentLosses++;
+      results[g.home].opponents.push(g.away);
+    }
+    if (results[g.away]) {
+      homeWon ? results[g.away].recentLosses++ : results[g.away].recentWins++;
+      results[g.away].opponents.push(g.home);
+    }
+  });
+  return results;
+}
+// ── POWER SCORE ───────────────────────────────────────────────────────────────
+function computePowerScore(team) {
+  const gp = team.wins + team.losses;
+  if (gp === 0) return { power: 0, winPct: 0, ortg: 0, drtg: 0, netRtg: 0,
+                          l20WinPct: 0, oppL20WinPct: 0.5, normalizedNRTG: 0.5 };
+
+  // 1. Season win%
+  const winPct = team.wins / gp;
+
+  // 2. L20 win% and Opp L20 win%
+  //    Merge the hardcoded L20_DATA baseline with any new live games in
+  //    _RECENT_RESULTS, sliding the 20-game window forward as games come in.
+  const liveData = _RECENT_RESULTS[team.abbr] || { recentWins: 0, recentLosses: 0, opponents: [] };
+  const baseL20  = L20_DATA[team.abbr];
+  let l20WinPct, oppL20WinPct;
+
+  if (baseL20) {
+    const liveGP = liveData.recentWins + liveData.recentLosses;
+    if (liveGP > 0) {
+      // Slide the window: drop the oldest liveGP games from the baseline,
+      // add the new live games.
+      const dropGP = Math.min(liveGP, baseL20.l20g);
+      const dropW  = Math.round((dropGP / baseL20.l20g) * baseL20.l20w);
+      const newW   = baseL20.l20w - dropW + liveData.recentWins;
+      const newG   = baseL20.l20g - dropGP + liveGP;
+      l20WinPct = newG > 0 ? newW / newG : winPct;
+
+      // Opponent win% for the new live games
+      let liveOppSum = 0, liveOppCnt = 0;
+      liveData.opponents.forEach(function(o) {
+        const opp = STANDINGS_DATA.find(function(t) { return t.abbr === o; });
+        if (opp && (opp.wins + opp.losses) > 0) {
+          liveOppSum += opp.wins / (opp.wins + opp.losses);
+          liveOppCnt++;
+        }
+      });
+      const baseOppAvg = baseL20.oppCnt > 0 ? baseL20.oppSum / baseL20.oppCnt : 0.500;
+      const keptOpp = Math.max(0, baseL20.oppCnt - dropGP);
+      oppL20WinPct = (liveOppCnt + keptOpp) > 0
+        ? (baseOppAvg * keptOpp + liveOppSum) / (liveOppCnt + keptOpp)
+        : 0.500;
+    } else {
+      l20WinPct    = baseL20.l20g > 0 ? baseL20.l20w / baseL20.l20g : winPct;
+      oppL20WinPct = baseL20.oppCnt > 0 ? baseL20.oppSum / baseL20.oppCnt : 0.500;
+    }
+  } else {
+    // Team not in L20_DATA · use season win% as proxy
+    l20WinPct    = winPct;
+    oppL20WinPct = 0.500;
+  }
+
+  // 3. Net Rating · live from NBAstuffer fetch (or hardcoded fallback)
+  const nrtgData = _NET_RATINGS[team.abbr];
+  const ortg   = nrtgData ? nrtgData.ortg   : 110.0;
+  const drtg   = nrtgData ? nrtgData.drtg   : 115.0;
+  const netRtg = nrtgData ? nrtgData.netRtg : (ortg - drtg);
+
+  // 4. Normalize: (netRtg + 15) / 30, clamped to [0, 1]
+  const normalizedNRTG = Math.max(0, Math.min(1, (netRtg + 15) / 30));
+
+  // 5. Final power score on 0–100 scale
+  const power = (
+    (winPct          * 0.25) +
+    (l20WinPct       * 0.20) +
+    (oppL20WinPct    * 0.15) +
+    (normalizedNRTG  * 0.40)
+  ) * 100;
+
+  return {
+    power:  Math.round(power * 10) / 10,
+    winPct, ortg, drtg, netRtg,
+    l20WinPct:    Math.round(l20WinPct    * 1000) / 1000,
+    oppL20WinPct: Math.round(oppL20WinPct * 1000) / 1000,
+    normalizedNRTG: Math.round(normalizedNRTG * 1000) / 1000,
+  };
+}
+
+function getStreakClass(streak) {
+  if (streak === _streakBest)  return 'streak-best';
+  if (streak === _streakWorst) return 'streak-worst';
+  const abs = Math.abs(streak);
+  if (abs <= 1) return 'streak-grey';
+  if (streak > 0) return abs >= 5 ? 'streak-w5' : 'streak-w' + abs;
+  return abs >= 5 ? 'streak-l5' : 'streak-l' + abs;
+}
+
+function getStreakLabel(streak) {
+  const abs = Math.abs(streak);
+  const prefix = streak > 0 ? 'W' : 'L';
+  let emoji = '';
+  if (abs >= 5 && streak > 0) emoji = '\uD83D\uDD25 ';
+  if (abs >= 5 && streak < 0) emoji = '\u2744\uFE0F ';
+  return `${emoji}${prefix}${abs}`;
+}
