@@ -4913,7 +4913,10 @@ async function _initScoreEngine() {
   const hasNewPlayIn  = _trackPlayInGames(finishedGames);
   const hasNewPlayoff = _trackPlayoffGames(finishedGames);
   renderRankings();
-  if ((hasNewPlayoff || hasNewPlayIn) && document.getElementById('panel-playoffs')?.classList.contains('active')) renderPlayoffs();
+  // Always re-render the bracket after data loads so records and locking are
+  // correct from the start — the panel doesn't need to be active since
+  // renderPlayoffs() updates the DOM regardless of visibility.
+  renderPlayoffs();
 
   _hasLiveGames = (data.today || []).some(g => g.isLive);
   schedulePoll();
