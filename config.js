@@ -233,14 +233,3 @@ const PLAYOFF_SEEDS = {
 };
 // Build the locked seed arrays (full team objects) from PLAYOFF_SEEDS.
 
-
-// Storage keys
-const _BET_KEY_PREFIX = 'bets:';
-const _BET_ALLTIME_KEY = 'bets:alltime';
-
-const SB_KEY_BETLIST  = 'sb.bets';
-const SB_KEY_PARLAY   = 'sb.parlay.slip';
-const SB_NICK_MAP_KEY = 'sb:nick_map'; // shared: nick_lower → uid  (uniqueness guard)
-const SB_UID_NICK_KEY = 'sb:uid_nick'; // shared: uid → display_nick (returning-user lookup)
-
-
