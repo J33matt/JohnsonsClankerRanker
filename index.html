@@ -1606,6 +1606,19 @@
     height: 22px;
     object-fit: contain;
   }
+  .elim-badge {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #ff4444;
+    background: rgba(255,50,50,0.12);
+    border: 1px solid rgba(255,50,50,0.3);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
   .eliminated-record {
     color: var(--muted);
     font-size: 0.85rem;
@@ -4466,6 +4479,7 @@ function renderRankings() {
   const allPowers = ENRICHED_DATA.map(t => t.power);
   const maxP = Math.max(...allPowers);
   const minP = Math.min(...allPowers);
+  const elimSet = getPlayoffEliminatedSet();
 
   function thSortable(key, label, isCenter) {
     const isActive = rankingsSortKey === key;
@@ -4528,16 +4542,17 @@ function renderRankings() {
       </td>`;
     }
 
-    return `<tr>
+    const isElim = elimSet.has(t.abbr);
+    return `<tr${isElim ? ' style="opacity:0.45"' : ''}>
       <td><div class="rank-num ${isTop3?'top3':''}">${rank}</div></td>
       ${rankMoveCell(movement)}
       <td>
         <div class="team-cell">
           <div style="width:36px;height:28px;border-radius:5px;background:${colors.bg};border:1px solid ${colors.bg}88;display:flex;align-items:center;justify-content:center;padding:2px 3px;flex-shrink:0">
-            <img src="${logo}" alt="${t.abbr}" style="width:100%;height:100%;object-fit:contain" onerror="this.outerHTML='<span style=font-family:Bebas Neue,sans-serif;font-size:0.75rem;color:${colors.text};padding:0 2px>${t.abbr}</span>'">
+            <img src="${logo}" alt="${t.abbr}" style="width:100%;height:100%;object-fit:contain${isElim ? ';filter:grayscale(0.7)' : ''}" onerror="this.outerHTML='<span style=font-family:Bebas Neue,sans-serif;font-size:0.75rem;color:${colors.text};padding:0 2px>${t.abbr}</span>'">
           </div>
           <div>
-            <div class="team-name-full">${t.name}</div>
+            <div class="team-name-full">${t.name}${isElim ? '<span class="elim-badge">ELIM</span>' : ''}</div>
             <div class="team-conf">${t.conf} · ${t.div}</div>
           </div>
         </div>
@@ -5192,6 +5207,19 @@ function getPlayInEliminated() {
     if (r.losses === 1 && r.wins === 0) eliminated.push(abbr);
   });
   return eliminated.length > 0 ? eliminated : null;
+}
+
+// Returns a Set of team abbreviations that have been eliminated from the NBA playoffs.
+// A team is eliminated when its opponent reaches 4 series wins in _playoffSeries.
+function getPlayoffEliminatedSet() {
+  const elim = new Set();
+  Object.entries(_playoffSeries).forEach(([key, wins]) => {
+    const [a, b] = key.split('|');
+    const wa = wins[a] || 0, wb = wins[b] || 0;
+    if (wa >= 4) elim.add(b);
+    else if (wb >= 4) elim.add(a);
+  });
+  return elim;
 }
 
 // Call after every final game fetch to update _playoffSeries.
