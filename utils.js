@@ -292,3 +292,26 @@ function seedConference(conf) {
   });
   return teams;
 }
+
+// Build a power-rank map (rank 1 = best) for "Games to Watch" logic
+function buildPowerRankMap() {
+  const ranked = STANDINGS_DATA
+    .map(t => ({ abbr: t.abbr, power: computePowerScore(t).power }))
+    .sort((a, b) => b.power - a.power);
+  const map = {};
+  ranked.forEach((t, i) => { map[t.abbr] = i + 1; });
+  return map;
+}
+// Compute win probability for upcoming game display
+function gameWinProb(awayAbbr, homeAbbr) {
+  const awayT = STANDINGS_DATA.find(t => t.abbr === awayAbbr);
+  const homeT = STANDINGS_DATA.find(t => t.abbr === homeAbbr);
+  if (!awayT || !homeT) return { homePct: 55, awayPct: 45 };
+  const awayPwr = computePowerScore(awayT).power;
+  const homePwr = computePowerScore(homeT).power;
+  const diff = (homePwr - awayPwr) * 0.4 + 2.0; // home court ~2pts
+  const homeProb = 1 / (1 + Math.exp(-diff * 0.15));
+  const homePct = Math.round(Math.max(28, Math.min(75, homeProb * 100)));
+  return { homePct, awayPct: 100 - homePct };
+}
+
