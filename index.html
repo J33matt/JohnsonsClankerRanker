@@ -5122,6 +5122,27 @@ let _playoffGameKeys = new Set();
 // 2026 NBA playoffs begin April 19
 const PLAYOFF_START  = '2026-04-19';
 
+// ── LOCKED PLAYOFF SEEDS ─────────────────────────────────────────────────────
+// Regular season is over. Seeds are frozen here so live W/L updates from
+// ongoing playoff games can never re-sort the bracket or play-in display.
+// Indices 0-5 = direct playoff seeds 1-6; indices 6-9 = play-in seeds 7-10.
+const PLAYOFF_SEEDS = {
+  west: ['OKC','SAS','LAL','DEN','MIN','HOU','PHX','POR','LAC','GSW'],
+  east: ['DET','BOS','NYK','CLE','TOR','ATL','PHI','ORL','MIA','CHA']
+};
+// Build the locked seed arrays (full team objects) from PLAYOFF_SEEDS.
+// Remaining conference teams (seeds 11-15) appended for any code that
+// expects a full 15-team array from seedConference().
+function _getLockedSeeds(conf) {
+  const confTeams = STANDINGS_DATA.filter(t => t.conf === conf.toUpperCase());
+  const top10 = PLAYOFF_SEEDS[conf].map(abbr => confTeams.find(t => t.abbr === abbr)).filter(Boolean);
+  const top10Abbrs = new Set(PLAYOFF_SEEDS[conf]);
+  const rest = confTeams
+    .filter(t => !top10Abbrs.has(t.abbr))
+    .sort((a, b) => (b.wins / (b.wins + b.losses)) - (a.wins / (a.wins + a.losses)));
+  return [...top10, ...rest];
+}
+
 // Play-in tracking: games April 15-18 determine eliminated teams for draft slots 11-14
 // { abbr: { wins: N, losses: N, games: [{opp, won}] } }
 let _playInResults   = {};
@@ -5192,8 +5213,8 @@ function _trackPlayoffGames(games) {
 }
 
 function renderPlayoffs() {
-  const west = seedConference('WEST');
-  const east = seedConference('EAST');
+  const west = _getLockedSeeds('west');
+  const east = _getLockedSeeds('east');
 
   // ================================================================
   // BRACKET STATE — loaded from module-level to survive re-renders
