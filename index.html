@@ -5240,16 +5240,30 @@ function getPlayInGameWinner(abbr1, abbr2) {
   return g.won ? abbr1 : abbr2;
 }
 
-// Returns a Set of team abbreviations that have been eliminated from the NBA playoffs.
-// A team is eliminated when its opponent reaches 4 series wins in _playoffSeries.
+// Returns a Set of team abbreviations that are eliminated from playoff contention.
+// Three sources, applied in order:
+//   1. Teams not in the playoff/play-in pool at all (missed both cutoffs)
+//   2. Teams knocked out of the play-in tournament (_playInResults)
+//   3. Teams eliminated in the actual playoffs (_playoffSeries, starts Apr 19)
 function getPlayoffEliminatedSet() {
   const elim = new Set();
+
+  // 1. Non-playoff, non-play-in teams — always eliminated
+  const playoffPool = new Set([...PLAYOFF_SEEDS.west, ...PLAYOFF_SEEDS.east]);
+  STANDINGS_DATA.forEach(t => { if (!playoffPool.has(t.abbr)) elim.add(t.abbr); });
+
+  // 2. Play-in eliminated teams (lost without a surviving path)
+  const piElim = getPlayInEliminated();
+  if (piElim) piElim.forEach(a => elim.add(a));
+
+  // 3. Teams eliminated in the actual playoff bracket (wins reach 4)
   Object.entries(_playoffSeries).forEach(([key, wins]) => {
     const [a, b] = key.split('|');
     const wa = wins[a] || 0, wb = wins[b] || 0;
     if (wa >= 4) elim.add(b);
     else if (wb >= 4) elim.add(a);
   });
+
   return elim;
 }
 
