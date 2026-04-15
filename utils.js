@@ -226,3 +226,21 @@ function rankMoveCell(movement) {
   }
   return '<td class="rank-move-cell"></td>';
 }
+
+// Format a date as YYYY-MM-DD in local time
+function localDateStr(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+// Returns array of YYYY-MM-DD strings for today + past N days + future N days
+function getDateRange(pastDays, futureDays) {
+  const dates = [];
+  for (let i = -pastDays; i <= futureDays; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    dates.push(localDateStr(d));
+  }
+  return dates;
+}
