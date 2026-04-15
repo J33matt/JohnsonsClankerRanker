@@ -360,3 +360,9 @@ function parseESPNGames(data, dateStr) {
     return { home, away, homeScore, awayScore, date: dateStr, tipDisplay, isFinal, isLive, isUpcoming, status, homeML, awayML, eventId, homeRecord, awayRecord };
   }).filter(Boolean);
 }
+
+function getLogoUrl(abbr) {
+  const id = NBA_TEAM_IDS[abbr];
+  return id ? `https://cdn.nba.com/logos/nba/${id}/global/L/logo.svg` : '';
+}
+
