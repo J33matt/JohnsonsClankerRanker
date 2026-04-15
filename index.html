@@ -6,6 +6,7 @@
 <title>Johnson's Clanker Ranker</title>
 <link rel="icon" type="image/jpeg" href="favicon.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
@@ -595,38 +596,6 @@ const UPCOMING_GAMES = [
 // Hardcoded baseline from NBA.com advanced stats (Apr 1 2026, 75-76 GP).
 // 14 values exact from NBA.com screenshot; remaining 16 estimated within ~0.5.
 // fetchLiveNetRatings() overwrites these on every page load with live values.
-let _NET_RATINGS = {
-  OKC: { ortg:117.1, drtg:106.3, netRtg: 10.9 },
-  SAS: { ortg:118.4, drtg:110.1, netRtg:  8.3 },
-  DET: { ortg:116.9, drtg:108.8, netRtg:  8.1 },
-  BOS: { ortg:119.2, drtg:111.5, netRtg:  7.6 },
-  NYK: { ortg:118.4, drtg:112.4, netRtg:  6.0 },
-  CHA: { ortg:118.3, drtg:113.5, netRtg:  4.8 },
-  DEN: { ortg:120.7, drtg:116.0, netRtg:  4.7 },
-  HOU: { ortg:116.7, drtg:112.1, netRtg:  4.6 },
-  CLE: { ortg:118.2, drtg:114.1, netRtg:  4.1 },
-  MIN: { ortg:115.5, drtg:111.9, netRtg:  3.6 },
-  TOR: { ortg:114.5, drtg:112.3, netRtg:  2.2 },
-  MIA: { ortg:114.9, drtg:112.7, netRtg:  2.2 },
-  LAL: { ortg:117.4, drtg:115.5, netRtg:  1.9 },
-  ATL: { ortg:114.8, drtg:113.0, netRtg:  1.8 },
-  PHX: { ortg:114.8, drtg:113.2, netRtg:  1.6 },
-  LAC: { ortg:116.4, drtg:115.1, netRtg:  1.3 },
-  ORL: { ortg:114.6, drtg:113.7, netRtg:  0.9 },
-  GSW: { ortg:114.2, drtg:113.9, netRtg:  0.3 },
-  PHI: { ortg:114.6, drtg:114.9, netRtg: -0.3 },
-  POR: { ortg:112.9, drtg:114.2, netRtg: -1.3 },
-  MEM: { ortg:112.5, drtg:116.5, netRtg: -4.0 },
-  NOP: { ortg:113.5, drtg:117.6, netRtg: -4.1 },
-  CHI: { ortg:112.5, drtg:117.0, netRtg: -4.5 },
-  DAL: { ortg:110.1, drtg:115.0, netRtg: -4.9 },
-  MIL: { ortg:111.7, drtg:118.2, netRtg: -6.5 },
-  UTA: { ortg:113.5, drtg:121.3, netRtg: -7.8 },
-  IND: { ortg:109.6, drtg:118.2, netRtg: -8.6 },
-  BKN: { ortg:108.0, drtg:117.8, netRtg: -9.8 },
-  SAC: { ortg:110.1, drtg:120.5, netRtg:-10.4 },
-  WAS: { ortg:110.3, drtg:121.2, netRtg:-10.9 },
-};
 
 // ESPN team ID → our abbreviation (stable identifiers used by ESPN's own web app)
 const ESPN_ID_TO_ABBR = {
@@ -1097,18 +1066,6 @@ function getStreakClass(streak) {
 }
 
 // NBA team colors for abbreviation badges
-const TEAM_COLORS = {
-  ATL: {bg:'#E03A3E',text:'#fff'}, BKN: {bg:'#333333',text:'#fff'}, BOS: {bg:'#007A33',text:'#fff'},
-  CHA: {bg:'#1D1160',text:'#00788C'}, CHI: {bg:'#CE1141',text:'#fff'}, CLE: {bg:'#860038',text:'#FDBB30'},
-  DAL: {bg:'#00538C',text:'#fff'}, DEN: {bg:'#0E2240',text:'#FEC524'}, DET: {bg:'#C8102E',text:'#fff'},
-  GSW: {bg:'#1D428A',text:'#FFC72C'}, HOU: {bg:'#CE1141',text:'#fff'}, IND: {bg:'#002D62',text:'#FDBB30'},
-  LAC: {bg:'#C8102E',text:'#fff'}, LAL: {bg:'#552583',text:'#FDB927'}, MEM: {bg:'#5D76A9',text:'#12173F'},
-  MIA: {bg:'#98002E',text:'#F9A01B'}, MIL: {bg:'#00471B',text:'#EEE1C6'}, MIN: {bg:'#0C2340',text:'#78BE20'},
-  NOP: {bg:'#0C2340',text:'#C8102E'}, NYK: {bg:'#006BB6',text:'#F58426'}, OKC: {bg:'#007AC1',text:'#fff'},
-  ORL: {bg:'#0077C0',text:'#fff'}, PHI: {bg:'#006BB6',text:'#ED174C'}, PHX: {bg:'#1D1160',text:'#E56020'},
-  POR: {bg:'#E03A3E',text:'#fff'}, SAC: {bg:'#5A2D81',text:'#fff'}, SAS: {bg:'#C4CED4',text:'#000'},
-  TOR: {bg:'#CE1141',text:'#fff'}, UTA: {bg:'#002B5C',text:'#F9A01B'}, WAS: {bg:'#002B5C',text:'#E31837'},
-};
 
 function getStreakLabel(streak) {
   const abs = Math.abs(streak);
@@ -1303,15 +1260,6 @@ function schedulePoll() {
 // fetchLiveNetRatings() already calls renderRankings() internally when data changes.
 setInterval(function() { fetchLiveNetRatings(); }, 10 * 60 * 1000);
 
-const SORT_COLUMNS = [
-  { key: 'power',    label: 'Power Score', center: false },
-  { key: 'record',   label: 'Record',      center: false },
-  { key: 'winPct',   label: 'Win%',        center: true  },
-  { key: 'netRtg',   label: 'Net Rtg',     center: true  },
-  { key: 'ortg',     label: 'oRtg',        center: true  },
-  { key: 'drtg',     label: 'dRtg',        center: true  },
-  { key: 'streak',   label: 'Streak',      center: true  },
-];
 
 function sortRankings(key) {
   if (rankingsSortKey === key) {
