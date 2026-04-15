@@ -934,3 +934,182 @@ function _pickBetResult(pick) {
   return { payout, net: payout };
 }
 
+
+// ============================================================
+// NEWS GENERATION ENGINE
+// ============================================================
+
+function generateSimNews(result) {
+  const { simWest, simEast, playoffResult, standings } = result;
+  const allSeries = [
+    ...playoffResult.wR1, ...playoffResult.eR1,
+    ...playoffResult.wSemi, ...playoffResult.eSemi,
+    playoffResult.wCF, playoffResult.eCF, playoffResult.finals
+  ];
+  const champion = playoffResult.finals.winner;
+  const finalist = playoffResult.finals.loser;
+  const newsItems = [];
+
+  // ── ALWAYS: Finals recap card ──────────────────────────────
+  const finalsLeaders = generateFinalsLeaders(allSeries, champion, finalist);
+  newsItems.push({ type: 'finals', data: { champion, finalist, finalsResult: playoffResult.finals, leaders: finalsLeaders } });
+
+  // ── SWEEPS ─────────────────────────────────────────────────
+  allSeries.forEach(series => {
+    if (series && series.lWins === 0 && Math.random() < 0.7) {
+      newsItems.push({ type: 'sweep', series });
+    }
+  });
+
+  // ── UPSETS ─────────────────────────────────────────────────
+  allSeries.forEach(series => {
+    if (!series || !series.winner || !series.loser) return;
+    const winPow = series.winner.power || computePowerScore(series.winner).power;
+    const losPow = series.loser.power || computePowerScore(series.loser).power;
+    if (losPow - winPow > 3 && Math.random() < 0.85) {
+      newsItems.push({ type: 'upset', series });
+    }
+  });
+
+  // ── RANDOM EVENTS (each with realistic probability) ─────────
+
+  // 1. Star player injury · only for genuine stars, 12% chance per playoff team
+  const playoffTeams = new Set();
+  allSeries.forEach(s => { if(s){ playoffTeams.add(s.winner?.abbr); playoffTeams.add(s.loser?.abbr); }});
+  playoffTeams.forEach(abbr => {
+    if (!abbr || !STAR_PLAYERS[abbr] || Math.random() > 0.12) return;
+    // Only injure the #1 star (index 0) · never depth players
+    const player = STAR_PLAYERS[abbr][Math.floor(Math.random() * STAR_PLAYERS[abbr].length)];
+    const injury = INJURY_TYPES[Math.floor(Math.random() * INJURY_TYPES.length)];
+    const teamSeries = allSeries.find(s => s && (s.winner?.abbr === abbr || s.loser?.abbr === abbr));
+    const opp = teamSeries ? (teamSeries.winner?.abbr === abbr ? teamSeries.loser : teamSeries.winner) : null;
+    newsItems.push({ type: 'injury', player, injury, team: STANDINGS_DATA.find(t => t.abbr === abbr), opp, series: teamSeries });
+  });
+
+  // 2. Historic scoring performance (4% chance per playoff game)
+  const scoringEvents = [
+    { pts: 72, desc: "breaks Michael Jordan's single-game playoff scoring record with an ASTOUNDING" },
+    { pts: 68, desc: "has the game of a lifetime with" },
+    { pts: 65, desc: "drops a mind-bending" },
+    { pts: 61, desc: "goes absolutely nuclear with" },
+    { pts: 58, desc: "lights up the scoreboard for" },
+  ];
+  if (Math.random() < 0.18) {
+    const topTeams = [...playoffTeams].filter(a => STAR_PLAYERS[a]);
+    const randAbbr = topTeams[Math.floor(Math.random() * topTeams.length)];
+    if (randAbbr) {
+      const player = STAR_PLAYERS[randAbbr][Math.floor(Math.random() * STAR_PLAYERS[randAbbr].length)];
+      const evt = scoringEvents[Math.floor(Math.random() * scoringEvents.length)];
+      const randSeries = allSeries[Math.floor(Math.random() * allSeries.length)];
+      newsItems.push({ type: 'scoring', player, team: STANDINGS_DATA.find(t=>t.abbr===randAbbr), evt, series: randSeries });
+    }
+  }
+
+  // 3. Regular season record (champion wins record)
+  const champStanding = standings.find(t => t.abbr === champion.abbr);
+  if (champStanding && champStanding.simWins >= 65 && Math.random() < 0.75) {
+    newsItems.push({ type: 'winrecord', team: champStanding });
+  }
+
+  // 4. Series going 7 games
+  const sevenGamers = allSeries.filter(s => s && s.games === 7);
+  if (sevenGamers.length > 0 && Math.random() < 0.8) {
+    newsItems.push({ type: 'seven', series: sevenGamers[Math.floor(Math.random() * sevenGamers.length)] });
+  }
+
+  // 5. Margin of victory record
+  const chStanding = standings.find(t => t.abbr === champion.abbr);
+  if (chStanding && Math.random() < 0.12) {
+    newsItems.push({ type: 'margin', team: chStanding });
+  }
+
+  // 6. Underdog run (team seeded 5+ wins conf finals)
+  const confFinalistsSeeds = [
+    ...playoffResult.wSemi.map(s => s.winner),
+    ...playoffResult.eSemi.map(s => s.winner),
+  ];
+  // Check if CF winner was lower seeded
+  const wCFLoser = playoffResult.wCF.loser;
+  const eCFLoser = playoffResult.eCF.loser;
+  if (Math.random() < 0.2) {
+    const udTeam = Math.random() < 0.5 ? playoffResult.wCF.winner : playoffResult.eCF.winner;
+    const udStand = standings.find(t => t.abbr === udTeam?.abbr);
+    if (udStand) newsItems.push({ type: 'cinderella', team: udStand, champion });
+  }
+
+  // 7. Goat debate moment (8% chance)
+  if (Math.random() < 0.08 && STAR_PLAYERS[champion.abbr]) {
+    const player = STAR_PLAYERS[champion.abbr][0];
+    newsItems.push({ type: 'goat', player, team: champion });
+  }
+
+  // 8. Coach fired (losing team) 8% chance
+  const COACHES = {OKC:"Mark Daigneault",SAS:"Gregg Popovich",DET:"JB Bickerstaff",BOS:"Joe Mazzulla",NYK:"Tom Thibodeau",LAL:"JJ Redick",DEN:"Michael Malone",CLE:"Kenny Atkinson",MIN:"Chris Finch",HOU:"Ime Udoka",ATL:"Quin Snyder",TOR:"Darko Rajakovic",PHI:"Nick Nurse",PHX:"Mike Budenholzer",CHA:"Charles Lee",MIA:"Erik Spoelstra",ORL:"Jamahl Mosley",LAC:"Tyronn Lue",POR:"Chauncey Billups",GSW:"Steve Kerr",MEM:"Taylor Jenkins",DAL:"Jason Kidd",SAC:"Doug Christie",IND:"Rick Carlisle"};
+  if (Math.random() < 0.08) {
+    const losingTeam = playoffResult.finals.loser;
+    const coach = COACHES[losingTeam.abbr] || "the head coach";
+    newsItems.push({ type: 'firingRumor', team: losingTeam, coach });
+  }
+
+  // 9. Controversial call (12% chance)
+  if (Math.random() < 0.12) {
+    const randSeries = allSeries[Math.floor(Math.random() * allSeries.length)];
+    if (randSeries) newsItems.push({ type: 'controversial', series: randSeries });
+  }
+
+  // 10. Historic comeback
+  if (Math.random() < 0.1) {
+    const candidates = allSeries.filter(s => s && s.games >= 6);
+    if (candidates.length) {
+      newsItems.push({ type: 'comeback', series: candidates[Math.floor(Math.random() * candidates.length)] });
+    }
+  }
+
+  return newsItems;
+}
+
+function generateFinalsLeaders(allSeries, champion, finalist) {
+  // Generate plausible playoff stat leaders
+  const playoffTeams = [...new Set(allSeries.flatMap(s => s ? [s.winner?.abbr, s.loser?.abbr].filter(Boolean) : []))];
+
+  function randStar(abbr) {
+    if (!abbr || !STAR_PLAYERS[abbr]) return null;
+    return STAR_PLAYERS[abbr][0];
+  }
+
+  // PPG leader: tends to be from champion or finalist
+  const pTeam = Math.random() < 0.6 ? champion.abbr : finalist.abbr;
+  const ppgLeader = randStar(pTeam) || randStar(champion.abbr);
+  const ppg = (28 + Math.random() * 12).toFixed(1);
+
+  // Assists: PG type
+  const pgTeams = playoffTeams.filter(a => STAR_PLAYERS[a]?.[0]?.pos === 'PG');
+  const aTeam = pgTeams[Math.floor(Math.random() * pgTeams.length)] || champion.abbr;
+  const astLeader = randStar(aTeam);
+  const apg = (7 + Math.random() * 5).toFixed(1);
+
+  // Rebounds: C type
+  const cTeams = playoffTeams.filter(a => STAR_PLAYERS[a]?.[0]?.pos === 'C' || STAR_PLAYERS[a]?.[1]?.pos === 'C');
+  const rTeam = cTeams[Math.floor(Math.random() * cTeams.length)] || champion.abbr;
+  const rebLeader = (STAR_PLAYERS[rTeam] || []).find(p => p.pos === 'C') || randStar(rTeam);
+  const rpg = (10 + Math.random() * 5).toFixed(1);
+
+  // Finals MVP: best player on champion
+  const fmvp = randStar(champion.abbr);
+  const fmvpPpg = (25 + Math.random() * 15).toFixed(1);
+  const fmvpRpg = (6 + Math.random() * 8).toFixed(1);
+  const fmvpApg = (4 + Math.random() * 7).toFixed(1);
+
+  // Defensive player: usually a big
+  const defTeam = playoffTeams[Math.floor(Math.random() * playoffTeams.length)];
+  const defPlayer = (STAR_PLAYERS[defTeam] || []).find(p => p.pos === 'C' || p.pos === 'PF') || randStar(defTeam);
+
+  return {
+    ppgLeader: { player: ppgLeader, team: STANDINGS_DATA.find(t=>t.abbr===pTeam), stat: ppg, label: 'PPG Leader' },
+    astLeader: { player: astLeader, team: STANDINGS_DATA.find(t=>t.abbr===aTeam), stat: apg, label: 'APG Leader' },
+    rebLeader: { player: rebLeader, team: STANDINGS_DATA.find(t=>t.abbr===rTeam), stat: rpg, label: 'RPG Leader' },
+    fmvp: { player: fmvp, team: champion, ppg: fmvpPpg, rpg: fmvpRpg, apg: fmvpApg },
+    defPlayer: { player: defPlayer, team: STANDINGS_DATA.find(t=>t.abbr===defTeam), label: 'Def. Player of Playoffs' },
+  };
+}
+
