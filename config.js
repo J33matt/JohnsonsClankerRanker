@@ -200,3 +200,27 @@ const INJURY_TYPES = [
   { type: "pulls his quad", severity: "1-2 games", games: 1 },
 ];
 
+
+const ESPN_ID_TO_ABBR = {
+  1:'ATL', 2:'BOS', 17:'BKN', 30:'CHA', 4:'CHI', 5:'CLE', 6:'DAL', 7:'DEN',
+  8:'DET', 9:'GSW', 10:'HOU', 11:'IND', 12:'LAC', 13:'LAL', 29:'MEM', 14:'MIA',
+  15:'MIL', 16:'MIN', 3:'NOP', 18:'NYK', 25:'OKC', 19:'ORL', 20:'PHI', 21:'PHX',
+  22:'POR', 23:'SAC', 24:'SAS', 28:'TOR', 26:'UTA', 27:'WAS'
+};
+
+// Reverse map: our abbr → ESPN team ID (used for H2H schedule fetching)
+const ABBR_TO_ESPN_ID = {};
+Object.entries(ESPN_ID_TO_ABBR).forEach(([id, abbr]) => { ABBR_TO_ESPN_ID[abbr] = +id; });
+
+// NBAstuffer full team name → our abbreviation (secondary fallback parser)
+const _STUFFER_NAME_TO_ABBR = {
+  'Atlanta':'ATL','Boston':'BOS','Brooklyn':'BKN','Charlotte':'CHA','Chicago':'CHI',
+  'Cleveland':'CLE','Dallas':'DAL','Denver':'DEN','Detroit':'DET','Golden State':'GSW',
+  'Houston':'HOU','Indiana':'IND','LA Clippers':'LAC','LA Lakers':'LAL','Memphis':'MEM',
+  'Miami':'MIA','Milwaukee':'MIL','Minnesota':'MIN','New Orleans':'NOP','New York':'NYK',
+  'Oklahoma City':'OKC','Orlando':'ORL','Philadelphia':'PHI','Phoenix':'PHX',
+  'Portland':'POR','Sacramento':'SAC','San Antonio':'SAS','Toronto':'TOR',
+  'Utah':'UTA','Washington':'WAS',
+};
+
+
