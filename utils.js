@@ -209,3 +209,20 @@ function getSortValue(t, key) {
     default:         return 0;
   }
 }
+
+
+function getRankMovement(abbr, baselineMap, currentMap) {
+  const base = baselineMap[abbr];
+  const curr = currentMap[abbr];
+  if (!base || !curr) return 0;
+  return base - curr; // positive = moved up (lower rank number = better)
+}
+
+function rankMoveCell(movement) {
+  if (movement > 0) {
+    return '<td class="rank-move-cell"><div class="rank-move up"><span class="rank-move-arrow">▲</span><span class="rank-move-num">' + movement + '</span></div></td>';
+  } else if (movement < 0) {
+    return '<td class="rank-move-cell"><div class="rank-move down"><span class="rank-move-arrow">▼</span><span class="rank-move-num">' + Math.abs(movement) + '</span></div></td>';
+  }
+  return '<td class="rank-move-cell"></td>';
+}
