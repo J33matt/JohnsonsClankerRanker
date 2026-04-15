@@ -7,6 +7,7 @@
 <link rel="icon" type="image/jpeg" href="favicon.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="config.js"></script>
+<script src="utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
@@ -1074,13 +1075,6 @@ function getStreakLabel(streak) {
   if (abs >= 5 && streak > 0) emoji = '\uD83D\uDD25 ';
   if (abs >= 5 && streak < 0) emoji = '\u2744\uFE0F ';
   return `${emoji}${prefix}${abs}`;
-}
-
-function getPowerColor(score, min, max) {
-  const pct = (score - min) / (max - min);
-  if (pct > 0.7) return "#ff4d00";
-  if (pct > 0.4) return "#ffaa00";
-  return "#3399ff";
 }
 
 // ============================================================
@@ -5138,11 +5132,6 @@ function _mlPayout(moneyLine, stake) {
   }
 }
 
-// Format moneyline for display: +150 or -110
-function _fmtML(ml) {
-  if (!ml) return 'EVEN';
-  return (ml > 0 ? '+' : '') + ml;
-}
 
 // Format dollar amount with sign: +$9.09 or -$10.00
 function _fmtDollars(amt) {
@@ -5515,56 +5504,6 @@ function _predGetTeamData(abbr) {
 
 // Build the injury badge HTML for a team on a pick card.
 // Shows a 🏥 for penalty (players out) and a 💚 for return boost (players coming back).
-// Each badge has a hover tooltip listing who affected the score and by how much.
-function _predInjBadgeHtml(outPlayers, returnPlayers) {
-  const RARITY_PENALTY = { gamebreaker:5.0, superstar:4.0, elite:3.0, clutch:2.0, impact:1.0, pro:0.5 };
-  const RETURN_SCALE_LABEL = (gm) => gm <= 3 ? '70%' : gm <= 9 ? '50%' : gm <= 19 ? '30%' : '15%';
-  let html = '';
-
-  if (outPlayers && outPlayers.length) {
-    const totalPen = outPlayers.reduce((s, p) => s + (RARITY_PENALTY[p.rarity] || 0), 0);
-    const rows = outPlayers.map(p => {
-      const pen = RARITY_PENALTY[p.rarity] || 0;
-      return `<div class="pred-inj-tooltip-row">
-        <span>${p.name}</span>
-        <span class="pred-inj-tooltip-games">${p.gamesMissed}G out</span>
-        <span class="pred-inj-tooltip-penalty">-${pen.toFixed(1)}</span>
-      </div>`;
-    }).join('');
-    html += `<span class="pred-inj-badge" title="">
-      <span class="pred-inj-icon">🏥</span>
-      <span class="pred-inj-tooltip">
-        <div class="pred-inj-tooltip-title">Injury penalty (-${Math.min(totalPen,10).toFixed(1)} pts)</div>
-        ${rows}
-      </span>
-    </span>`;
-  }
-
-  if (returnPlayers && returnPlayers.length) {
-    const totalBoost = returnPlayers.reduce((s, p) => {
-      const base = RARITY_PENALTY[p.rarity] || 0;
-      return s + base * (p.boostScale || 0);
-    }, 0);
-    const rows = returnPlayers.map(p => {
-      const base = RARITY_PENALTY[p.rarity] || 0;
-      const boost = base * (p.boostScale || 0);
-      return `<div class="pred-inj-tooltip-row">
-        <span>${p.name}</span>
-        <span class="pred-inj-tooltip-games">${p.gamesMissed}G out · ${RETURN_SCALE_LABEL(p.gamesMissed)} str</span>
-        <span class="pred-inj-tooltip-boost">+${boost.toFixed(1)}</span>
-      </div>`;
-    }).join('');
-    html += `<span class="pred-inj-badge returning" title="">
-      <span class="pred-inj-icon">💚</span>
-      <span class="pred-inj-tooltip">
-        <div class="pred-inj-tooltip-title">Return boost (+${Math.min(totalBoost,7).toFixed(1)} pts)</div>
-        ${rows}
-      </span>
-    </span>`;
-  }
-
-  return html;
-}
 
 function _predStreakStr(streak) {
   if (!streak) return 'W/L 0';
