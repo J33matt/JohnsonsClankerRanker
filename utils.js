@@ -1113,3 +1113,220 @@ function generateFinalsLeaders(allSeries, champion, finalist) {
   };
 }
 
+
+// ============================================================
+// PURE UTILITY FUNCTIONS (extracted from index.html)
+// ============================================================
+
+// _isSharedKey
+function _isSharedKey(key) { return key.startsWith('predictions:') || key.startsWith('bets:'); }
+
+// _predKey
+function _predKey(dateStr) { return 'predictions:' + dateStr; }
+
+// _predStreakStr
+function _predStreakStr(streak) {
+  if (!streak) return 'W/L 0';
+  return (streak > 0 ? 'W' : 'L') + Math.abs(streak);
+}
+
+// _predRecentForm
+function _predRecentForm(abbr) {
+  const results = [];
+  [...RECENT_GAMES].reverse().forEach(g => {
+    if (results.length >= 5) return;
+    if (g.home === abbr) results.push(g.homeScore > g.awayScore ? 'W' : 'L');
+    else if (g.away === abbr) results.push(g.awayScore > g.homeScore ? 'W' : 'L');
+  });
+  return results.join('') || '';
+}
+
+// _predDateSeed
+function _predDateSeed(dateStr, homeAbbr, awayAbbr) {
+  // Deterministic seed so the same day always produces the same picks
+  let h = 0;
+  const s = (dateStr + homeAbbr + awayAbbr);
+  for (let i = 0; i < s.length; i++) { h = (Math.imul(31, h) + s.charCodeAt(i)) | 0; }
+  return Math.abs(h);
+}
+
+// _predSeededRandom
+function _predSeededRandom(seed) {
+  // Simple LCG · returns float [0, 1)
+  const x = Math.sin(seed + 1) * 10000;
+  return x - Math.floor(x);
+}
+
+// _injReturnScale
+function _injReturnScale(gamesMissed) {
+  if (gamesMissed <= 3)  return 0.70; // short absence — close to full strength
+  if (gamesMissed <= 9)  return 0.50; // moderate — some rust, possibly limited minutes
+  if (gamesMissed <= 19) return 0.30; // extended — minutes restriction likely
+  return 0.15;                         // long-term — essentially easing back in
+}
+
+// _predFmtDate
+function _predFmtDate(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// _botNormalCDF
+function _botNormalCDF(z) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const poly = t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  const p = 1 - 0.398942280 * Math.exp(-0.5 * z * z) * poly;
+  return z >= 0 ? p : 1 - p;
+}
+
+// _botKellyFraction
+function _botKellyFraction(prob, ml) {
+  if (prob <= 0 || prob >= 1) return 0;
+  const decNet = ml >= 100 ? ml / 100 : 100 / Math.abs(ml); // net profit per $1 wagered
+  const kelly = (prob * (decNet + 1) - 1) / decNet;
+  return Math.max(0, kelly);
+}
+
+// _sbCorrelationBlocked
+function _sbCorrelationBlocked(newLeg, existingLegs) {
+  // Can't parlay ML + Spread from the SAME team in the SAME game
+  for (const leg of existingLegs) {
+    if (leg.gameKey !== newLeg.gameKey) continue; // different game, fine
+    // Same game legs — check specific restrictions
+    const newType  = newLeg.type;   // 'ml_away'|'ml_home'|'spread_away'|'spread_home'|'ou_over'|'ou_under'
+    const legType  = leg.type;
+    // ML + Spread of same team = blocked
+    if ((newType === 'ml_away'    && legType === 'spread_away') ||
+        (newType === 'spread_away'&& legType === 'ml_away')    ||
+        (newType === 'ml_home'    && legType === 'spread_home') ||
+        (newType === 'spread_home'&& legType === 'ml_home'))    return { blocked: true, reason: 'Cannot parlay a team\'s ML + Spread in the same game.' };
+    // ML + Spread of opposite teams = also blocked
+    if ((newType === 'ml_away'    && legType === 'spread_home') ||
+        (newType === 'spread_home'&& legType === 'ml_away')    ||
+        (newType === 'ml_home'    && legType === 'spread_away') ||
+        (newType === 'spread_away'&& legType === 'ml_home'))    return { blocked: true, reason: 'Cannot parlay ML + Spread on opposite teams in the same game.' };
+    // Same type (duplicate) = blocked
+    if (newType === legType) return { blocked: true, reason: 'That bet is already on your slip.' };
+    // Large spread favorite + over is technically allowed (just a warning) — allow it
+  }
+  return { blocked: false };
+}
+
+// _mlToDecimal
+function _mlToDecimal(ml) {
+  if (!ml || ml === 0) return 1.909; // -110 default
+  return ml > 0 ? (ml / 100) + 1 : (100 / Math.abs(ml)) + 1;
+}
+
+// _parlayOddsToML
+function _parlayOddsToML(decimalOdds) {
+  // Convert combined decimal parlay odds back to American
+  if (decimalOdds >= 2) return Math.round((decimalOdds - 1) * 100);
+  return Math.round(-100 / (decimalOdds - 1));
+}
+
+// _sbGradeLeg
+function _sbGradeLeg(leg, game) {
+  const { homeScore, awayScore, isFinal } = game;
+  if (homeScore == null || awayScore == null) return null;
+  const { type, line } = leg;
+  // Under bet: once the total exceeds the line the score can never come back down, so it's an immediate loss
+  if (type === 'ou_under') {
+    const tot = homeScore + awayScore;
+    if (tot > line) return 'loss';
+    if (!isFinal) return null; // still alive — game is in progress
+    return tot < line ? 'win' : 'push';
+  }
+  // All other bet types can only be graded on a final score
+  if (!isFinal) return null;
+  if (type === 'ml_away') {
+    if (awayScore > homeScore) return 'win';
+    if (awayScore < homeScore) return 'loss';
+    return 'push';
+  }
+  if (type === 'ml_home') {
+    if (homeScore > awayScore) return 'win';
+    if (homeScore < awayScore) return 'loss';
+    return 'push';
+  }
+  if (type === 'spread_away') {
+    const margin = awayScore + line - homeScore;
+    if (margin > 0) return 'win';
+    if (margin < 0) return 'loss';
+    return 'push';
+  }
+  if (type === 'spread_home') {
+    const margin = homeScore + line - awayScore;
+    if (margin > 0) return 'win';
+    if (margin < 0) return 'loss';
+    return 'push';
+  }
+  if (type === 'ou_over') {
+    const tot = homeScore + awayScore;
+    if (tot > line) return 'win';
+    if (tot < line) return 'loss';
+    return 'push';
+  }
+  return null;
+}
+
+// _sbGradeParlay
+function _sbGradeParlay(legs, games) {
+  let anyPending = false;
+  let hasPush = false;
+  for (const leg of legs) {
+    const game = games.find(g =>
+      (g.home === leg.homeAbbr && g.away === leg.awayAbbr) ||
+      (g.home === leg.awayAbbr && g.away === leg.homeAbbr)
+    );
+    if (!game) { anyPending = true; continue; }
+    const result = _sbGradeLeg(leg, game);
+    if (result === null) { anyPending = true; continue; }
+    if (result === 'loss') return { result: 'loss', settledLegs: legs.length };
+    if (result === 'push') hasPush = true;
+  }
+  if (anyPending) return { result: 'pending' };
+  return { result: hasPush ? 'push' : 'win', settledLegs: legs.length };
+}
+
+// _sbLegDesc
+function _sbLegDesc(leg) {
+  const { type, awayAbbr, homeAbbr, line } = leg;
+  if (type === 'ml_away') return `${awayAbbr} ML`;
+  if (type === 'ml_home') return `${homeAbbr} ML`;
+  // spread_away leg stores line = -spreadLine (away's number), spread_home stores line = spreadLine (home's number)
+  if (type === 'spread_away') return `${awayAbbr} ${line >= 0 ? '+' : ''}${line}`;
+  if (type === 'spread_home') return `${homeAbbr} ${line >= 0 ? '+' : ''}${line}`;
+  if (type === 'ou_over') return `OVER ${line}`;
+  if (type === 'ou_under') return `UNDER ${line}`;
+  return leg.label || '';
+}
+
+// _sbWinPct
+function _sbWinPct(awayML, homeML, awayAbbr, homeAbbr) {
+  if (awayML && homeML && awayML !== -110 && homeML !== -110) {
+    const toRaw = ml => ml > 0 ? 100 / (ml + 100) : Math.abs(ml) / (Math.abs(ml) + 100);
+    const awayRaw = toRaw(awayML), homeRaw = toRaw(homeML);
+    const total = awayRaw + homeRaw;
+    return {
+      awayPct: Math.round((awayRaw / total) * 100),
+      homePct: Math.round((homeRaw / total) * 100)
+    };
+  }
+  return gameWinProb(awayAbbr, homeAbbr);
+}
+
+// _sbColorDist
+function _sbColorDist(h1, h2) {
+  const parse = h => {
+    h = (h || '').replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) throw new Error('not hex');
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  };
+  try {
+    const [r1,g1,b1] = parse(h1);
+    const [r2,g2,b2] = parse(h2);
+    return Math.sqrt((r1-r2)**2 + (g1-g2)**2 + (b1-b2)**2);
+  } catch(e) { return 999; }
+}
+
