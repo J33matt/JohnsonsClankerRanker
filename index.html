@@ -5230,6 +5230,16 @@ function getPlayInEliminated() {
   return eliminated.length > 0 ? eliminated : null;
 }
 
+// Returns the winner abbr if a concluded play-in game between abbr1 and abbr2
+// exists in _playInResults, otherwise null.
+function getPlayInGameWinner(abbr1, abbr2) {
+  const r = _playInResults[abbr1];
+  if (!r) return null;
+  const g = r.games.find(game => game.opp === abbr2);
+  if (!g) return null;
+  return g.won ? abbr1 : abbr2;
+}
+
 // Returns a Set of team abbreviations that have been eliminated from the NBA playoffs.
 // A team is eliminated when its opponent reaches 4 series wins in _playoffSeries.
 function getPlayoffEliminatedSet() {
@@ -5931,40 +5941,50 @@ function renderPlayoffs() {
     const g910Winner = pi.game910winner ? pi.game910winner.abbr : null;
     const g78Loser = g78Winner ? piTeams.find(t => (t === piTeams[0] || t === piTeams[1]) && t.abbr !== g78Winner) : null;
     const deciderWinner = pi.deciderWinner ? pi.deciderWinner.abbr : null;
+    // Real concluded results — lock buttons and show FINAL label
+    const real78Winner      = getPlayInGameWinner(piTeams[0].abbr, piTeams[1].abbr);
+    const real910Winner     = getPlayInGameWinner(piTeams[2].abbr, piTeams[3].abbr);
+    const realDeciderWinner = (g78Loser && pi.game910winner)
+      ? getPlayInGameWinner(g78Loser.abbr, pi.game910winner.abbr) : null;
 
     let h = `<div class="playin-conf">`;
     h += `<div class="playin-title">${conf === 'west' ? 'Western' : 'Eastern'} <span class="playin-badge">Play-In Tournament</span></div>`;
 
     // Game 1: 7 vs 8 · winner is 7th seed
     h += `<div class="playin-game-label">Game 1 (7 vs 8) · Winner = 7th Seed</div>`;
-    h += `<div class="playin-matchup">
+    h += `<div class="playin-matchup"${real78Winner ? ' style="pointer-events:none;opacity:0.7"' : ''}>
       ${piTeamBtn(7, piTeams[0], '78', 0, g78Winner, g78Winner && piTeams[1].abbr === g78Winner ? piTeams[0].abbr : null)}
       ${piTeamBtn(8, piTeams[1], '78', 1, g78Winner, g78Winner && piTeams[0].abbr === g78Winner ? piTeams[1].abbr : null)}
     </div>`;
-    if (g78Winner) {
+    if (real78Winner) {
+      h += `<div class="bracket-lock-label">FINAL &#x1F512;</div>`;
+    } else if (g78Winner) {
       h += `<div class="playin-result-label visible">✓ ${g78Winner} locks in as 7th seed</div>`;
     }
 
     // Game 2: 9 vs 10 · winner advances to decider
     h += `<div class="playin-game-label" style="margin-top:14px">Game 2 (9 vs 10) · Winner advances to decider</div>`;
-    h += `<div class="playin-matchup">
+    h += `<div class="playin-matchup"${real910Winner ? ' style="pointer-events:none;opacity:0.7"' : ''}>
       ${piTeamBtn(9, piTeams[2], '910', 0, g910Winner, g910Winner && piTeams[3].abbr === g910Winner ? piTeams[2].abbr : null)}
       ${piTeamBtn(10, piTeams[3], '910', 1, g910Winner, g910Winner && piTeams[2].abbr === g910Winner ? piTeams[3].abbr : null)}
     </div>`;
-    if (g910Winner && !g78Loser) {
+    if (real910Winner) {
+      h += `<div class="bracket-lock-label">FINAL &#x1F512;</div>`;
+    } else if (g910Winner && !g78Loser) {
       h += `<div class="playin-result-label visible" style="color:var(--accent2)">↓ Pick Game 1 result first</div>`;
     }
 
     // Game 3: loser of 7/8 vs winner of 9/10 · winner is 8th seed
     if (g78Loser && g910Winner) {
       h += `<div class="playin-game-label" style="margin-top:14px">Game 3 (8th Seed Decider) · Winner = 8th Seed</div>`;
-      h += `<div class="playin-matchup">`;
+      h += `<div class="playin-matchup"${realDeciderWinner ? ' style="pointer-events:none;opacity:0.7"' : ''}>`;
       // Btn for loser of 7/8 (teamArrIdx 0 means "pick loserOf78")
       const loserColors = TEAM_COLORS[g78Loser.abbr] || { bg: 'var(--surface2)' };
       const loserLogo = getLogoUrl(g78Loser.abbr);
       const loserIsWinner = deciderWinner === g78Loser.abbr;
       const loserIsLoser = deciderWinner && deciderWinner !== g78Loser.abbr;
-      h += `<button class="pi-team-btn ${loserIsWinner?'winner':loserIsLoser?'loser':''}" onclick="_bktPickPlayIn('${conf}','decider',0)">
+      const decider0Click = realDeciderWinner ? '' : `onclick="_bktPickPlayIn('${conf}','decider',0)"`;
+      h += `<button class="pi-team-btn ${loserIsWinner?'winner':loserIsLoser?'loser':''}" ${decider0Click}>
         <span class="pi-seed" style="font-size:0.7rem;color:var(--accent2)">L78</span>
         <div class="pi-logo-badge" style="background:${loserColors.bg};border:1px solid ${loserColors.bg}88">
           <img class="pi-logo" src="${loserLogo}" alt="${g78Loser.abbr}" onerror="this.style.display='none'">
@@ -5978,7 +5998,8 @@ function renderPlayoffs() {
       const w910Logo = getLogoUrl(w910Team.abbr);
       const w910IsWinner = deciderWinner === w910Team.abbr;
       const w910IsLoser = deciderWinner && deciderWinner !== w910Team.abbr;
-      h += `<button class="pi-team-btn ${w910IsWinner?'winner':w910IsLoser?'loser':''}" onclick="_bktPickPlayIn('${conf}','decider',1)">
+      const decider1Click = realDeciderWinner ? '' : `onclick="_bktPickPlayIn('${conf}','decider',1)"`;
+      h += `<button class="pi-team-btn ${w910IsWinner?'winner':w910IsLoser?'loser':''}" ${decider1Click}>
         <span class="pi-seed" style="font-size:0.7rem;color:var(--accent2)">W910</span>
         <div class="pi-logo-badge" style="background:${w910Colors.bg};border:1px solid ${w910Colors.bg}88">
           <img class="pi-logo" src="${w910Logo}" alt="${w910Team.abbr}" onerror="this.style.display='none'">
@@ -5987,7 +6008,9 @@ function renderPlayoffs() {
         <span class="pi-record">${w910Team.wins}–${w910Team.losses}</span>
       </button>`;
       h += `</div>`;
-      if (deciderWinner) {
+      if (realDeciderWinner) {
+        h += `<div class="bracket-lock-label">FINAL &#x1F512;</div>`;
+      } else if (deciderWinner) {
         h += `<div class="playin-result-label visible">✓ ${deciderWinner} earns the 8th seed</div>`;
       }
     } else if (!g78Loser || !g910Winner) {
@@ -6434,6 +6457,51 @@ function renderPlayoffs() {
       </div></div>
     </div>`;
   }
+
+  // ================================================================
+  // AUTO-FILL PLAY-IN FROM LIVE RESULTS
+  // ================================================================
+  // Walk _playInResults and auto-fill piState for any concluded play-in games.
+  // Preserves user-made picks; only overwrites empty or auto-filled slots.
+  (function autoFillPlayInFromResults() {
+    ['west', 'east'].forEach(conf => {
+      const piTeams = conf === 'west' ? wPI : ePI;
+      const pi = piState[conf];
+
+      // Game 78
+      const g78Win = getPlayInGameWinner(piTeams[0].abbr, piTeams[1].abbr);
+      if (g78Win && (!pi.game78winner || pi.game78winner._autoFilled)) {
+        const winTeam = piTeams.find(t => t.abbr === g78Win);
+        if (winTeam) {
+          pi.game78winner = { ...winTeam, _autoFilled: true };
+          replacePlaceholderInBracket(conf, 7, winTeam);
+        }
+      }
+
+      // Game 910
+      const g910Win = getPlayInGameWinner(piTeams[2].abbr, piTeams[3].abbr);
+      if (g910Win && (!pi.game910winner || pi.game910winner._autoFilled)) {
+        const winTeam = piTeams.find(t => t.abbr === g910Win);
+        if (winTeam) pi.game910winner = { ...winTeam, _autoFilled: true };
+      }
+
+      // Decider (Game 3): loser of 78 vs winner of 910
+      if (pi.game78winner && pi.game910winner) {
+        const loserOf78 = piTeams.find(t => (t === piTeams[0] || t === piTeams[1]) && t.abbr !== pi.game78winner.abbr);
+        if (loserOf78) {
+          const deciderWin = getPlayInGameWinner(loserOf78.abbr, pi.game910winner.abbr);
+          if (deciderWin && (!pi.deciderWinner || pi.deciderWinner._autoFilled)) {
+            const winTeam = [loserOf78, pi.game910winner].find(t => t.abbr === deciderWin);
+            if (winTeam) {
+              pi.seed8 = { ...winTeam, _autoFilled: true };
+              pi.deciderWinner = { ...winTeam, _autoFilled: true };
+              replacePlaceholderInBracket(conf, 8, winTeam);
+            }
+          }
+        }
+      }
+    });
+  })();
 
   // ================================================================
   // AUTO-FILL FROM LIVE PLAYOFF RESULTS
