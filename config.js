@@ -121,3 +121,15 @@ const UPCOMING_GAMES = [
   {home:"GSW",away:"WAS",date:"2026-03-27",tipDisplay:"10:00 PM",status:"upcoming"},
   {home:"LAL",away:"BKN",date:"2026-03-27",tipDisplay:"10:30 PM",status:"upcoming"},
 ];
+
+// Normalize ESPN team abbreviations → our internal abbrs
+const ABBR_MAP = {
+  'ATL':'ATL','BKN':'BKN','BOS':'BOS','CHA':'CHA','CHI':'CHI',
+  'CLE':'CLE','DAL':'DAL','DEN':'DEN','DET':'DET','GSW':'GSW',
+  'HOU':'HOU','IND':'IND','LAC':'LAC','LAL':'LAL','MEM':'MEM',
+  'MIA':'MIA','MIL':'MIL','MIN':'MIN','NOP':'NOP','NYK':'NYK',
+  'OKC':'OKC','ORL':'ORL','PHI':'PHI','PHX':'PHX','POR':'POR',
+  'SAC':'SAC','SAS':'SAS','TOR':'TOR','UTA':'UTA','WAS':'WAS',
+  'GS':'GSW','SA':'SAS','NY':'NYK','NO':'NOP','PHO':'PHX',
+  'UTAH':'UTA','WSH':'WAS','BRK':'BKN','NOR':'NOP'
+};

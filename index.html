@@ -1249,19 +1249,6 @@ function renderRankings() {
 
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard';
 
-// Normalize ESPN team abbreviations → our internal abbrs
-const ABBR_MAP = {
-  'ATL':'ATL','BKN':'BKN','BOS':'BOS','CHA':'CHA','CHI':'CHI',
-  'CLE':'CLE','DAL':'DAL','DEN':'DEN','DET':'DET','GSW':'GSW',
-  'HOU':'HOU','IND':'IND','LAC':'LAC','LAL':'LAL','MEM':'MEM',
-  'MIA':'MIA','MIL':'MIL','MIN':'MIN','NOP':'NOP','NYK':'NYK',
-  'OKC':'OKC','ORL':'ORL','PHI':'PHI','PHX':'PHX','POR':'POR',
-  'SAC':'SAC','SAS':'SAS','TOR':'TOR','UTA':'UTA','WAS':'WAS',
-  'GS':'GSW','SA':'SAS','NY':'NYK','NO':'NOP','PHO':'PHX',
-  'UTAH':'UTA','WSH':'WAS','BRK':'BKN','NOR':'NOP'
-};
-function normAbbr(a) { return ABBR_MAP[a] || a; }
-
 
 
 

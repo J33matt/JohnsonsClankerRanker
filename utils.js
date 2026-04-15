@@ -315,3 +315,6 @@ function gameWinProb(awayAbbr, homeAbbr) {
   return { homePct, awayPct: 100 - homePct };
 }
 
+
+function normAbbr(a) { return ABBR_MAP[a] || a; }
+
