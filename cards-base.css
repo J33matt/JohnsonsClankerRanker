@@ -950,14 +950,6 @@
   text-align: center;
 }
 
-.crate-reveal-shard {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 0.8rem;
-  letter-spacing: 1px;
-  color: var(--muted);
-  text-align: center;
-}
-
 .crate-reveal-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
 .crate-reveal-btn {
@@ -974,6 +966,7 @@
 .crate-reveal-btn:hover { opacity: 0.85; }
 .crate-reveal-btn.primary { background: var(--accent); color: #fff; }
 .crate-reveal-btn.secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+.crate-reveal-btn.sell-btn { background: rgba(0,200,120,0.18); border: 1px solid rgba(0,200,120,0.4); color: #00e87a; }
 
 /* ══════════════════════════════════════════════════════
    LEADERBOARD CARD INTEGRATION

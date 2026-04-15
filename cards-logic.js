@@ -7,7 +7,6 @@
 /* ── Storage Keys ────────────────────────────────────── */
 const CK_COLLECTION = 'cards.collection';   // {[cardId]: {count, firstPulled, season}}
 const CK_INVENTORY  = 'cards.inventory';    // {common:0, uncommon:0, rare:0, epic:0, legendary:0}
-const CK_SHARDS     = 'cards.shards';       // number (dollar value)
 const CK_SHOWCASE   = 'cards.showcase';     // string[] up to 5 cardIds
 const CK_DAILY      = 'cards.daily';        // {date, claimed}
 const CK_NEWUSER    = 'cards.newuserused';  // 'true' if used
@@ -16,7 +15,6 @@ const CK_PROCESSED  = 'cards.lastbet';      // last processed bet id (float)
 /* ── Module State ────────────────────────────────────── */
 let _cardsCollection = {};   // {cardId: {count, firstPulled, season}}
 let _cardsInventory  = {};   // {crateId: count}
-let _cardsShards     = 0;
 let _cardsShowcase   = [];   // cardId[] up to 5
 let _cardsDaily      = null; // {date, claimed}
 let _cardsNewUserUsed = false;
@@ -52,13 +50,12 @@ async function _cardsLoadBankroll() {
 }
 
 async function _cardsLoad() {
-  const [col, inv, shards, showcase, daily, newuser] = await Promise.all([
-    _cGet(CK_COLLECTION), _cGet(CK_INVENTORY), _cGet(CK_SHARDS),
+  const [col, inv, showcase, daily, newuser] = await Promise.all([
+    _cGet(CK_COLLECTION), _cGet(CK_INVENTORY),
     _cGet(CK_SHOWCASE),   _cGet(CK_DAILY),     _cGet(CK_NEWUSER)
   ]);
   _cardsCollection  = col  || {};
   _cardsInventory   = inv  || {};
-  _cardsShards      = typeof shards === 'number' ? shards : 0;
   _cardsShowcase    = Array.isArray(showcase) ? showcase.slice(0,5) : [];
   _cardsDaily       = daily || null;
   _cardsNewUserUsed = newuser === true;
@@ -69,7 +66,6 @@ async function _cardsSave() {
   await Promise.all([
     _cSet(CK_COLLECTION, _cardsCollection),
     _cSet(CK_INVENTORY,  _cardsInventory),
-    _cSet(CK_SHARDS,     _cardsShards),
     _cSet(CK_SHOWCASE,   _cardsShowcase),
     _cSet(CK_DAILY,      _cardsDaily)
   ]);
@@ -116,17 +112,15 @@ function _cardsCount(cardId) {
   return _cardsCollection[cardId] ? _cardsCollection[cardId].count : 0;
 }
 
-/* Add a card to collection; returns true if new, false if duplicate */
+/* Add a card to collection; returns true if new, false if duplicate.
+   For duplicates the count is NOT incremented here — the reveal UI
+   lets the user choose Keep (increments count) or Sell (credits bankroll). */
 function _cardsAddCard(card) {
   if (!_cardsCollection[card.id]) {
     _cardsCollection[card.id] = { count: 1, firstPulled: Date.now(), season: CARDS_SEASON };
     return true;
-  } else {
-    _cardsCollection[card.id].count++;
-    // Convert to shards
-    _cardsShards = Math.round((_cardsShards + SHARD_VALUES[card.rarity]) * 100) / 100;
-    return false;
   }
+  return false; // duplicate — deferred to reveal handler
 }
 
 /* Add a crate to inventory */
@@ -426,20 +420,21 @@ function _showLotteryReveal(def, card, isNew) {
 function _showFinalReveal(overlay, def, card, isNew) {
   const rarityLabel = RARITY_LABELS[card.rarity] || card.rarity;
   const rarityClass = 'rarity-color-' + card.rarity;
-  const dupMsg = isNew ? '' :
-    `<div class="crate-reveal-dup">DUPLICATE</div>
-     <div class="crate-reveal-shard">+$${SHARD_VALUES[card.rarity].toFixed(2)} added to shards</div>`;
+  const sellValue   = SHARD_VALUES[card.rarity] || 0;
 
   overlay.innerHTML = `
     <div class="crate-reveal-eyebrow">You pulled a…</div>
     <div class="crate-reveal-card-wrap lottery-card-reveal" id="reveal-card-wrap"></div>
     <div class="crate-reveal-rarity ${rarityClass}">${rarityLabel}</div>
-    ${dupMsg}
+    ${!isNew ? '<div class="crate-reveal-dup">DUPLICATE</div>' : ''}
     <div class="crate-reveal-actions">
-      <button class="crate-reveal-btn primary" id="reveal-close-btn">
-        ${isNew ? 'Add to Collection' : 'Got it'}
-      </button>
-      <button class="crate-reveal-btn secondary" id="reveal-view-btn">View Collection</button>
+      ${!isNew ? `
+        <button class="crate-reveal-btn primary"   id="reveal-keep-btn">Keep</button>
+        <button class="crate-reveal-btn sell-btn"  id="reveal-sell-btn">Sell for $${sellValue.toFixed(2)}</button>
+      ` : `
+        <button class="crate-reveal-btn primary" id="reveal-close-btn">Add to Collection</button>
+        <button class="crate-reveal-btn secondary" id="reveal-view-btn">View Collection</button>
+      `}
     </div>
   `;
   overlay.className = 'crate-reveal-overlay';
@@ -447,15 +442,42 @@ function _showFinalReveal(overlay, def, card, isNew) {
   const wrap = overlay.querySelector('#reveal-card-wrap');
   wrap.appendChild(_buildCardElement(card, 0, false));
 
-  overlay.querySelector('#reveal-close-btn').addEventListener('click', () => {
-    overlay.remove();
-    if (document.getElementById('panel-cards')?.classList.contains('active')) renderCards();
-  });
-  overlay.querySelector('#reveal-view-btn').addEventListener('click', () => {
-    overlay.remove();
-    _cardsActiveTab = 'collection';
-    renderCards();
-  });
+  if (isNew) {
+    overlay.querySelector('#reveal-close-btn').addEventListener('click', () => {
+      overlay.remove();
+      if (document.getElementById('panel-cards')?.classList.contains('active')) renderCards();
+    });
+    overlay.querySelector('#reveal-view-btn').addEventListener('click', () => {
+      overlay.remove();
+      _cardsActiveTab = 'collection';
+      renderCards();
+    });
+  } else {
+    // Keep: increment the duplicate count and close
+    overlay.querySelector('#reveal-keep-btn').addEventListener('click', async () => {
+      if (_cardsCollection[card.id]) _cardsCollection[card.id].count++;
+      else _cardsCollection[card.id] = { count: 2, firstPulled: Date.now(), season: CARDS_SEASON };
+      await _cardsSave();
+      overlay.remove();
+      if (document.getElementById('panel-cards')?.classList.contains('active')) renderCards();
+    });
+    // Sell: credit bankroll, don't change collection count
+    overlay.querySelector('#reveal-sell-btn').addEventListener('click', async () => {
+      // Credit the sportsbook bankroll
+      try {
+        const raw = await window.storage.get('sb.profile');
+        const prof = JSON.parse(raw.value);
+        prof.bankroll = Math.round((prof.bankroll + sellValue) * 100) / 100;
+        await window.storage.set('sb.profile', JSON.stringify(prof));
+        // Sync in-memory profiles
+        if (typeof _sbProfile !== 'undefined' && _sbProfile) _sbProfile.bankroll = prof.bankroll;
+        _cardsBankroll = prof.bankroll;
+      } catch(e) {}
+      await _cardsSave();
+      overlay.remove();
+      if (document.getElementById('panel-cards')?.classList.contains('active')) renderCards();
+    });
+  }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -653,10 +675,6 @@ async function renderCards() {
     <div class="cards-top-bar">
       <div class="cards-page-title">Clanker's <span>Card Ranker</span></div>
       <div class="cards-wallet-row">
-        <div class="cards-wallet-pill">
-          <span>Shards</span>
-          <span class="wval">$${_cardsShards.toFixed(2)}</span>
-        </div>
         <div class="cards-wallet-pill">
           <span>Bankroll</span>
           <span class="wval">${bankroll}</span>
