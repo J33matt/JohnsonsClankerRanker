@@ -224,3 +224,12 @@ const _STUFFER_NAME_TO_ABBR = {
 };
 
 
+
+// ongoing playoff games can never re-sort the bracket or play-in display.
+// Indices 0-5 = direct playoff seeds 1-6; indices 6-9 = play-in seeds 7-10.
+const PLAYOFF_SEEDS = {
+  west: ['OKC','SAS','LAL','DEN','MIN','HOU','PHX','POR','LAC','GSW'],
+  east: ['DET','BOS','NYK','CLE','TOR','ATL','PHI','ORL','MIA','CHA']
+};
+// Build the locked seed arrays (full team objects) from PLAYOFF_SEEDS.
+

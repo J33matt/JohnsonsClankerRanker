@@ -1560,13 +1560,6 @@ const PLAYOFF_START  = '2026-04-19';
 
 // ── LOCKED PLAYOFF SEEDS ─────────────────────────────────────────────────────
 // Regular season is over. Seeds are frozen here so live W/L updates from
-// ongoing playoff games can never re-sort the bracket or play-in display.
-// Indices 0-5 = direct playoff seeds 1-6; indices 6-9 = play-in seeds 7-10.
-const PLAYOFF_SEEDS = {
-  west: ['OKC','SAS','LAL','DEN','MIN','HOU','PHX','POR','LAC','GSW'],
-  east: ['DET','BOS','NYK','CLE','TOR','ATL','PHI','ORL','MIA','CHA']
-};
-// Build the locked seed arrays (full team objects) from PLAYOFF_SEEDS.
 // Remaining conference teams (seeds 11-15) appended for any code that
 // expects a full 15-team array from seedConference().
 function _getLockedSeeds(conf) {
