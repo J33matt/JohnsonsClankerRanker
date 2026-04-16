@@ -87,26 +87,21 @@ const STANDINGS_DATA = [
 ];
 
 const RECENT_GAMES = [
-  {home:"TOR",away:"NOP",homeScore:119,awayScore:106,date:"2026-03-27",status:"final"},
-  {home:"DEN",away:"UTA",homeScore:135,awayScore:129,date:"2026-03-27",status:"final"},
-  {home:"POR",away:"DAL",homeScore:93,awayScore:100,date:"2026-03-27",status:"final"},
-  {home:"GSW",away:"WAS",homeScore:131,awayScore:126,date:"2026-03-27",status:"final"},
-  {home:"LAL",away:"BKN",homeScore:116,awayScore:99,date:"2026-03-27",status:"final"},
-  {home:"MIL",away:"SAS",homeScore:95,awayScore:127,date:"2026-03-28",status:"final"},
-  {home:"MIN",away:"DET",homeScore:87,awayScore:109,date:"2026-03-28",status:"final"},
-  {home:"CHA",away:"PHI",homeScore:114,awayScore:118,date:"2026-03-28",status:"final"},
-  {home:"ATL",away:"SAC",homeScore:123,awayScore:113,date:"2026-03-28",status:"final"},
-  {home:"MEM",away:"CHI",homeScore:125,awayScore:124,date:"2026-03-28",status:"final"},
-  {home:"PHX",away:"UTA",homeScore:134,awayScore:109,date:"2026-03-28",status:"final"},
-  {home:"MIL",away:"LAC",homeScore:113,awayScore:127,date:"2026-03-29",status:"final"},
-  {home:"IND",away:"MIA",homeScore:135,awayScore:118,date:"2026-03-29",status:"final"},
-  {home:"POR",away:"WAS",homeScore:123,awayScore:88,date:"2026-03-29",status:"final"},
-  {home:"CHA",away:"BOS",homeScore:99,awayScore:114,date:"2026-03-29",status:"final"},
-  {home:"BKN",away:"SAC",homeScore:116,awayScore:99,date:"2026-03-29",status:"final"},
-  {home:"TOR",away:"ORL",homeScore:139,awayScore:87,date:"2026-03-29",status:"final"},
-  {home:"NOP",away:"HOU",homeScore:102,awayScore:134,date:"2026-03-29",status:"final"},
-  {home:"OKC",away:"NYK",homeScore:111,awayScore:100,date:"2026-03-29",status:"final"},
-  {home:"DEN",away:"GSW",homeScore:116,awayScore:93,date:"2026-03-29",status:"final"},
+  { home: "ATL", away: "ORL", homeScore: 117, awayScore: 105, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "BOS", away: "CHA", homeScore: 93, awayScore: 86, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "BKN", away: "NYK", homeScore: 105, awayScore: 113, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "CLE", away: "IND", homeScore: 118, awayScore: 126, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "MIA", away: "WAS", homeScore: 118, awayScore: 119, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "PHI", away: "CHI", homeScore: 102, awayScore: 122, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "MIL", away: "DET", homeScore: 140, awayScore: 133, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "HOU", away: "DEN", homeScore: 111, awayScore: 126, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "MEM", away: "DAL", homeScore: 132, awayScore: 97, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "MIN", away: "UTA", homeScore: 116, awayScore: 105, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "NOP", away: "OKC", homeScore: 100, awayScore: 115, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "SAS", away: "TOR", homeScore: 125, awayScore: 118, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "GSW", away: "LAC", homeScore: 119, awayScore: 124, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "POR", away: "LAL", homeScore: 109, awayScore: 81, date: "2025-04-13", isFinal: true, status: "Final" },
+  { home: "SAC", away: "PHX", homeScore: 109, awayScore: 98, date: "2025-04-13", isFinal: true, status: "Final" }
 ];
 
 const UPCOMING_GAMES = [
