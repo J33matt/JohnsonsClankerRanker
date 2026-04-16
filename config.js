@@ -270,37 +270,3 @@ const SB_BLOCKED_WORDS = [
   // "badword",
 ];
 
-
-const L20_DATA = {
-  OKC: { l20w:17, l20g:20, oppSum:10.20, oppCnt:20 }, // L20=0.850, opp≈0.510
-  SAS: { l20w:18, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.900, opp≈0.490
-  DET: { l20w:14, l20g:20, oppSum: 9.60, oppCnt:20 }, // L20=0.700, opp≈0.480
-  BOS: { l20w:14, l20g:20, oppSum:10.00, oppCnt:20 }, // L20=0.700, opp≈0.500
-  NYK: { l20w:13, l20g:20, oppSum:10.40, oppCnt:20 }, // L20=0.650, opp≈0.520
-  LAL: { l20w:14, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.700, opp≈0.490
-  DEN: { l20w:15, l20g:20, oppSum: 9.60, oppCnt:20 }, // L20=0.750, opp≈0.480
-  CLE: { l20w:13, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.650, opp≈0.490
-  MIN: { l20w:11, l20g:20, oppSum: 9.60, oppCnt:20 }, // L20=0.550, opp≈0.480
-  HOU: { l20w:13, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.650, opp≈0.490
-  ATL: { l20w:12, l20g:20, oppSum:10.20, oppCnt:20 }, // L20=0.600, opp≈0.510
-  TOR: { l20w:13, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.650, opp≈0.490
-  PHI: { l20w:11, l20g:20, oppSum:10.00, oppCnt:20 }, // L20=0.550, opp≈0.500
-  PHX: { l20w:12, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.600, opp≈0.490
-  ORL: { l20w:10, l20g:20, oppSum: 9.60, oppCnt:20 }, // L20=0.500, opp≈0.480
-  MIA: { l20w:10, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.500, opp≈0.490
-  CHA: { l20w:12, l20g:20, oppSum: 9.40, oppCnt:20 }, // L20=0.600, opp≈0.470
-  LAC: { l20w:13, l20g:20, oppSum: 9.40, oppCnt:20 }, // L20=0.650, opp≈0.470
-  POR: { l20w:10, l20g:20, oppSum: 9.60, oppCnt:20 }, // L20=0.500, opp≈0.480
-  GSW: { l20w: 9, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.450, opp≈0.490
-  MIL: { l20w: 6, l20g:20, oppSum:10.20, oppCnt:20 }, // L20=0.300, opp≈0.510
-  CHI: { l20w: 7, l20g:20, oppSum: 9.60, oppCnt:20 }, // L20=0.350, opp≈0.480
-  MEM: { l20w: 6, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.300, opp≈0.490
-  NOP: { l20w: 5, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.250, opp≈0.490
-  DAL: { l20w: 6, l20g:20, oppSum: 9.60, oppCnt:20 }, // L20=0.300, opp≈0.480
-  UTA: { l20w: 4, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.200, opp≈0.490
-  IND: { l20w: 2, l20g:20, oppSum: 9.82, oppCnt:20 }, // L20=0.100, opp≈0.491
-  BKN: { l20w: 3, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.150, opp≈0.490
-  WAS: { l20w: 3, l20g:20, oppSum: 9.60, oppCnt:20 }, // L20=0.150, opp≈0.480
-  SAC: { l20w: 4, l20g:20, oppSum: 9.80, oppCnt:20 }, // L20=0.200, opp≈0.490
-};
-
