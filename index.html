@@ -981,8 +981,8 @@ let _lastScoreData = null;    // cached so GTW badges can be refreshed without r
 
 async function pollAndRefreshAll() {
   const today = localDateStr(new Date());
-  const past3  = getDateRange(3, 0).slice(0, 3);
-  const results = await Promise.all([espnFetchDate(today), ...past3.map(d => espnFetchDate(d))]);
+  const past14  = getDateRange(14, 0).slice(0, 14);
+  const results = await Promise.all([espnFetchDate(today), ...past14.map(d => espnFetchDate(d))]);
   const todayGames = results[0] || [];
   const allFinal   = [...todayGames, ...results.slice(1).flatMap(r => r || [])].filter(g => g.isFinal);
 
@@ -1258,12 +1258,12 @@ async function fetchRemainingSchedule() {
 // Main scores fetch · pulls today + 3 past days from ESPN, plus full remaining schedule
 async function fetchAllScoreData() {
   const today = localDateStr(new Date());
-  const past3 = getDateRange(3, 0).slice(0, 3); // 3 days ago through yesterday
+  const past14 = getDateRange(14, 0).slice(0, 14); // 14 days ago through yesterday
 
   // Run fetches in parallel: today + past 3 days
   const dateResults = await Promise.all([
     espnFetchDate(today),
-    ...past3.map(d => espnFetchDate(d))
+    ...past14.map(d => espnFetchDate(d))
   ]);
 
   let todayGames = dateResults[0];
