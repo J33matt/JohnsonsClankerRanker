@@ -735,16 +735,16 @@ async function fetchLiveNetRatings() {
     // triggers a CORS error in the console. ESPN is the only live source now;
     // hardcoded values in _NET_RATINGS are the fallback when ESPN fails.
 
-    if (parsed >= 20) {
-      // Recompute and re-render with fresh ratings
-      ENRICHED_DATA.forEach(function(entry, i) {
-        const s = STANDINGS_DATA[i];
-        Object.assign(entry, s, computePowerScore(s), { streak: STREAK_DATA[s.abbr] || 0 });
-      });
-      renderRankings();
-      // Refresh Clanker reasoning so it matches the updated Rankings numbers
-      if (window._clankerRefreshSection) window._clankerRefreshSection();
-    }
+    // Always sync ENRICHED_DATA and re-render — W/L records are fetched from
+    // the standings API independently of net-rating parsing, so we must update
+    // the display even when pace data is unavailable (e.g. during playoffs).
+    ENRICHED_DATA.forEach(function(entry, i) {
+      const s = STANDINGS_DATA[i];
+      Object.assign(entry, s, computePowerScore(s), { streak: STREAK_DATA[s.abbr] || 0 });
+    });
+    renderRankings();
+    // Refresh Clanker reasoning so it matches the updated Rankings numbers
+    if (window._clankerRefreshSection) window._clankerRefreshSection();
   } finally {
     _netRatingsFetching = false;
   }
