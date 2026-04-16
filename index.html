@@ -1214,7 +1214,6 @@ function renderRankings() {
 // Auto-refreshes: data fetched fresh on every page load.
 // ============================================================
 
-const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard';
 
 
 
@@ -6042,12 +6041,6 @@ function _sbNickIsBlocked(nick) {
 // Has its own bankroll, places daily picks, competes on the
 // leaderboard. Uses power scores + odds value to pick bets.
 // ============================================================
-const BOT_NAME      = "Johnson's Clanker Ranker 🤖";
-const BOT_KEY       = 'sb.bot.profile';
-const BOT_BETS_KEY  = 'sb.bot.bets';
-const BOT_RESET_VER = 11; // bump this to force a full bot reset
-const BOT_LB_KEY    = 'leaderboard.ClankerRanker_BOT';
-const BOT_START_BAL = 100;
 
 let _botProfile = null;
 let _botBetsCache = null; // in-memory cache so bets survive within same page load

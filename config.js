@@ -244,3 +244,15 @@ const SB_KEY_PARLAY   = 'sb.parlay.slip';
 const SB_NICK_MAP_KEY = 'sb:nick_map'; // shared: nick_lower → uid  (uniqueness guard)
 const SB_UID_NICK_KEY = 'sb:uid_nick'; // shared: uid → display_nick (returning-user lookup)
 
+
+// ESPN API base URL
+const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard';
+
+// Bot constants
+const BOT_NAME      = "Johnson's Clanker Ranker 🤖";
+const BOT_KEY       = 'sb.bot.profile';
+const BOT_BETS_KEY  = 'sb.bot.bets';
+const BOT_RESET_VER = 11; // bump this to force a full bot reset
+const BOT_LB_KEY    = 'leaderboard.ClankerRanker_BOT';
+const BOT_START_BAL = 100;
+
