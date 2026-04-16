@@ -600,7 +600,7 @@ async function fetchESPNRatings() {
   // Step 1: standings → avgPointsFor + avgPointsAgainst per team (single call)
   const ptsByAbbr = {};
   try {
-    const stRes = await fetch('https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings?season=2025&seasontype=2');
+    const stRes = await fetch('https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings?season=2026&seasontype=2');
     if (stRes.ok) {
       const stJson = await stRes.json();
       const allEntries = [
