@@ -256,3 +256,17 @@ const BOT_RESET_VER = 11; // bump this to force a full bot reset
 const BOT_LB_KEY    = 'leaderboard.ClankerRanker_BOT';
 const BOT_START_BAL = 100;
 
+
+// Season dates
+// 2026 NBA playoffs begin April 19
+const PLAYOFF_START  = '2026-04-19';
+const PLAYIN_START   = '2026-04-14';
+const PLAYIN_END     = '2026-04-18';
+
+// Sportsbook nickname blocklist
+const SB_BLOCKED_WORDS = [
+  // ← paste words here, one per line, e.g.:
+  // "example",
+  // "badword",
+];
+

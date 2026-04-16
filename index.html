@@ -1554,8 +1554,6 @@ let _bktPIState      = null;
 let _playoffSeries   = {};
 // Game keys already counted toward series wins (prevents double-counting)
 let _playoffGameKeys = new Set();
-// 2026 NBA playoffs begin April 19
-const PLAYOFF_START  = '2026-04-19';
 
 // ── LOCKED PLAYOFF SEEDS ─────────────────────────────────────────────────────
 // Regular season is over. Seeds are frozen here so live W/L updates from
@@ -1575,8 +1573,6 @@ function _getLockedSeeds(conf) {
 // { abbr: { wins: N, losses: N, games: [{opp, won}] } }
 let _playInResults   = {};
 let _playInGameKeys  = new Set();
-const PLAYIN_START   = '2026-04-14';
-const PLAYIN_END     = '2026-04-18';
 
 // Call after every final game fetch to record play-in game results.
 // Returns true if any new play-in game was recorded.
@@ -6025,11 +6021,6 @@ function _sbToast(type, title, msg) {
 // inside the array. Words are matched case-insensitively and
 // also as substrings (so "bad" will block "badword" too).
 // ============================================================
-const SB_BLOCKED_WORDS = [
-  // ← paste words here, one per line, e.g.:
-  // "example",
-  // "badword",
-];
 
 function _sbNickIsBlocked(nick) {
   const lower = nick.toLowerCase();
