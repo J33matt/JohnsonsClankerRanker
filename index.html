@@ -603,7 +603,11 @@ async function fetchESPNRatings() {
     const stRes = await fetch('https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings?season=2025&seasontype=2');
     if (stRes.ok) {
       const stJson = await stRes.json();
-      (stJson.entries || []).forEach(function(e) {
+      const allEntries = [
+        ...(stJson.children?.[0]?.standings?.entries || []),
+        ...(stJson.children?.[1]?.standings?.entries || []),
+      ];
+      allEntries.forEach(function(e) {
         const abbr = normAbbr(e.team?.abbreviation || '');
         if (!abbr) return;
         const stats = {};
