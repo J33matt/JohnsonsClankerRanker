@@ -169,6 +169,7 @@
 <script>
 // ── League Switcher ──────────────────────────────────────────
 function switchLeague(league, btn) {
+  localStorage.setItem('activeLeague', league);
   // Update button styles
   document.querySelectorAll('.league-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
