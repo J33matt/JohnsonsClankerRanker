@@ -5753,17 +5753,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   fetchESPNStreaks();
 
   // Restore last active tab — must run before any await so a hung promise can't block it
+  const _savedLeague = localStorage.getItem('activeLeague');
+if (_savedLeague === 'nfl') {
+  const _nflBtn = Array.from(document.querySelectorAll('.league-btn'))
+    .find(b => (b.getAttribute('onclick') || '').includes("'nfl'"));
+  if (_nflBtn) switchLeague('nfl', _nflBtn);
+} else {
   const _savedTab = localStorage.getItem('activeTab');
   const _validTabs = ['rankings','predictions','playoffs','simulations','sportsbook','cards'];
   const _tabToLoad = (_savedTab && _validTabs.includes(_savedTab)) ? _savedTab : 'rankings';
   const _tabBtn = Array.from(document.querySelectorAll('.tab-btn'))
     .find(b => (b.getAttribute('onclick') || '').includes(`'${_tabToLoad}'`));
   if (_tabBtn) showTab(_tabToLoad, _tabBtn);
-
-  // One-time spread-polarity migration — remove after 2026-04-15
-  if (localStorage.getItem('spreadFixApplied') !== 'v2') {
-    _sbFixSpreadBets().then(() => localStorage.setItem('spreadFixApplied', 'v2'));
-  }
+}
 
   // Generate today's picks first so moneylines are in localStorage before scores render
   try { await _predEnsureTodaysPicks(); } catch(e) { console.warn('[init] _predEnsureTodaysPicks failed:', e); }
