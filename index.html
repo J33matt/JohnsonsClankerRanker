@@ -55,7 +55,7 @@
 
 <div id="nfl-tabs" style="display:none;">
   <button onclick="showNflTab('big-board', this)" class="tab-btn active">Big Board</button>
-  <button onclick="showNflTab('mock-sim', this)" class="tab-btn">Mock Sim (coming soon)</button>
+  <button onclick="showNflTab('mock-sim', this)" class="tab-btn">Mock Draft (coming soon)</button>
 </div>
 
 <main>
@@ -156,6 +156,20 @@
 
       <div class="prospects-column" style="margin-left: 40px;">
         <h3 class="column-title">Best Available <span style="font-size: 0.8rem; color: var(--muted); letter-spacing: 1px;">Ranked 1–50</span></h3>
+        <div id="prospect-filters" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; margin-top:8px;">
+          <button class="pos-filter-btn active" onclick="filterProspects('ALL', this)">ALL</button>
+          <button class="pos-filter-btn" onclick="filterProspects('QB', this)">QB</button>
+          <button class="pos-filter-btn" onclick="filterProspects('RB', this)">RB</button>
+          <button class="pos-filter-btn" onclick="filterProspects('WR', this)">WR</button>
+          <button class="pos-filter-btn" onclick="filterProspects('TE', this)">TE</button>
+          <button class="pos-filter-btn" onclick="filterProspects('OT', this)">OT</button>
+          <button class="pos-filter-btn" onclick="filterProspects('OG', this)">OG</button>
+          <button class="pos-filter-btn" onclick="filterProspects('EDGE', this)">EDGE</button>
+          <button class="pos-filter-btn" onclick="filterProspects('DT', this)">DT</button>
+          <button class="pos-filter-btn" onclick="filterProspects('LB', this)">LB</button>
+          <button class="pos-filter-btn" onclick="filterProspects('CB', this)">CB</button>
+          <button class="pos-filter-btn" onclick="filterProspects('S', this)">S</button>
+        </div>
         <div id="render-prospect-list"></div>
       </div>
     </div>
@@ -167,6 +181,16 @@
 </main>
 
 <script>
+// ── Filter Prospects ─────────────────────────────────────────
+function filterProspects(pos, btn) {
+  document.querySelectorAll('.pos-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#render-prospect-list .prospect-card').forEach(card => {
+    const cardPos = card.getAttribute('data-pos');
+    card.style.display = (pos === 'ALL' || cardPos === pos) ? '' : 'none';
+  });
+}
+
 // ── League Switcher ──────────────────────────────────────────
 function switchLeague(league, btn) {
   localStorage.setItem('activeLeague', league);
@@ -268,20 +292,20 @@ async function renderNflBigBoard() {
     const headshotUrl = headshotUrls[i];
 
     return `
-      <div class="prospect-card" style="margin-bottom: 8px; border-left: 5px solid ${collegeData.color}; background: linear-gradient(90deg, ${collegeData.color}22 0%, var(--surface) 100%);">
-        <div class="p-rank">${p.rank}</div>
-        <div class="p-logo-box">
-          <img src="${logoUrl}" class="nfl-logo-small" onerror="this.style.display='none'" style="width:120px; height:120px; object-fit:cover; position:absolute; right:20px; top:50%; transform:translateY(-50%); opacity:0.40; filter: drop-shadow(0px 0px 3px rgba(255,255,255,0.4));">
-        </div>
-        ${headshotUrl ? `<img src="${headshotUrl}" style="width:45px; height:45px; object-fit:cover; border-radius:50%; margin-right:10px; flex-shrink:0;" onerror="this.style.display='none'">` : ''}
-        <div class="p-main">
-          <div class="p-name">${p.name}</div>
-          <div class="p-meta">
-            <span class="p-pos">${p.pos}</span> | ${p.school}
-          </div>
+    <div class="prospect-card" data-pos="${p.pos}" style="margin-bottom: 8px; border-left: 5px solid ${collegeData.color}; background: linear-gradient(90deg, ${collegeData.color}22 0%, var(--surface) 100%);">
+      <div class="p-rank">${p.rank}</div>
+      <div class="p-logo-box">
+        <img src="${logoUrl}" class="nfl-logo-small" onerror="this.style.display='none'" style="width:120px; height:120px; object-fit:cover; position:absolute; right:20px; top:50%; transform:translateY(-50%); opacity:0.40; filter: drop-shadow(0px 0px 3px rgba(255,255,255,0.4));">
+      </div>
+      ${headshotUrl ? `<img src="${headshotUrl}" style="height:100%; max-height:80px; width:auto; object-fit:contain; object-position:bottom; position:absolute; right:70px; bottom:0; opacity:0.95;" onerror="this.style.display='none'">` : ''}
+      <div class="p-main">
+        <div class="p-name">${p.name}</div>
+        <div class="p-meta">
+          <span class="p-pos">${p.pos}</span> | ${p.school}
         </div>
       </div>
-    `;
+    </div>
+  `;
   }).join('');
 }
 
