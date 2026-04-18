@@ -189,9 +189,9 @@ function switchLeague(league, btn) {
 
     // 2. Hide all NBA panels first
     nbaPanels.forEach(p => {
-      p.style.display = 'none';
-      p.classList.remove('active');
-    });
+    p.style.display = '';
+    p.classList.remove('active');
+  });
 
     // 3. Restore the last active NBA tab
     const _savedTab = localStorage.getItem('activeTab');
@@ -209,9 +209,9 @@ function switchLeague(league, btn) {
 
     // 2. Hide NBA panels and show the NFL Big Board
     nbaPanels.forEach(p => {
-    p.style.display = '';
-    p.classList.remove('active');
-  });
+      p.style.display = '';
+      p.classList.remove('active');
+    });
     showNflTab('big-board', document.querySelector('#nfl-tabs button'));
   }
 }
