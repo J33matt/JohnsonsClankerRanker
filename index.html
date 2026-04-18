@@ -216,6 +216,18 @@ function switchLeague(league, btn) {
   }
 }
 
+async function fetchProspectHeadshot(name) {
+  try {
+    const res = await fetch(`https://site.web.api.espn.com/apis/common/v3/search?query=${encodeURIComponent(name)}&limit=1&type=player`);
+    const data = await res.json();
+    const id = data?.items?.[0]?.id;
+    if (!id) return '';
+    return `https://a.espncdn.com/i/headshots/college-football/players/full/${id}.png`;
+  } catch {
+    return '';
+  }
+}
+
 async function renderNflBigBoard() {
   const orderContainer = document.getElementById('render-draft-order');
   const prospectContainer = document.getElementById('render-prospect-list');
