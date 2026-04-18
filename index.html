@@ -187,13 +187,19 @@ function switchLeague(league, btn) {
     if (nflTabs) nflTabs.style.display = 'none';
     if (nflPanels) nflPanels.style.display = 'none';
 
-    // 2. Show all NBA panels and hide the NFL Big Board
+    // 2. Hide all NBA panels first
     nbaPanels.forEach(p => {
-      p.style.display = 'block';
-      p.classList.add('active');
+      p.style.display = 'none';
+      p.classList.remove('active');
     });
-    const bb = document.getElementById('panel-bigboard');
-    if (bb) bb.classList.remove('active');
+
+    // 3. Restore the last active NBA tab
+    const _savedTab = localStorage.getItem('activeTab');
+    const _validTabs = ['rankings','predictions','playoffs','simulations','sportsbook','cards'];
+    const _tabToLoad = (_savedTab && _validTabs.includes(_savedTab)) ? _savedTab : 'rankings';
+    const _tabBtn = Array.from(document.querySelectorAll('.tab-btn'))
+      .find(b => (b.getAttribute('onclick') || '').includes(`'${_tabToLoad}'`));
+    if (_tabBtn) showTab(_tabToLoad, _tabBtn);
 
   } else {
     // 1. Hide NBA navigation and show NFL
