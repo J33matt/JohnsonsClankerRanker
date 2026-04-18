@@ -216,7 +216,7 @@ function switchLeague(league, btn) {
   }
 }
 
-function renderNflBigBoard() {
+async function renderNflBigBoard() {
   const orderContainer = document.getElementById('render-draft-order');
   const prospectContainer = document.getElementById('render-prospect-list');
   
@@ -247,13 +247,13 @@ function renderNflBigBoard() {
     `;
   }).join('');
 
-  // Render Right Side: Prospects
-  prospectContainer.innerHTML = NFL_PROSPECTS.map(p => {
-    // 1. Look up the college color from our new list
+// Render Right Side: Prospects
+  const headshotUrls = await Promise.all(NFL_PROSPECTS.map(p => fetchProspectHeadshot(p.name)));
+
+  prospectContainer.innerHTML = NFL_PROSPECTS.map((p, i) => {
     const collegeData = COLLEGE_TEAMS[p.school] || { color: '#222230' };
-    
-    // 2. Build the logo URL (ESPN uses lowercase, no spaces for college names)
-  const logoUrl = collegeData.logo || '';
+    const logoUrl = collegeData.logo || '';
+    const headshotUrl = headshotUrls[i];
 
     return `
       <div class="prospect-card" style="margin-bottom: 8px; border-left: 5px solid ${collegeData.color}; background: linear-gradient(90deg, ${collegeData.color}22 0%, var(--surface) 100%);">
@@ -261,6 +261,7 @@ function renderNflBigBoard() {
         <div class="p-logo-box">
           <img src="${logoUrl}" class="nfl-logo-small" onerror="this.style.display='none'" style="width:120px; height:120px; object-fit:cover; position:absolute; right:20px; top:50%; transform:translateY(-50%); opacity:0.40; filter: drop-shadow(0px 0px 3px rgba(255,255,255,0.4));">
         </div>
+        ${headshotUrl ? `<img src="${headshotUrl}" style="width:45px; height:45px; object-fit:cover; border-radius:50%; margin-right:10px; flex-shrink:0;" onerror="this.style.display='none'">` : ''}
         <div class="p-main">
           <div class="p-name">${p.name}</div>
           <div class="p-meta">
