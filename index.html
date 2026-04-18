@@ -7,6 +7,7 @@
 <link rel="icon" type="image/jpeg" href="favicon.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="config.js"></script>
+<script src="nfl-data.js"></script>
 <script src="utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
@@ -22,7 +23,17 @@
   <div class="header-inner">
     <div class="logo-block">
       <h1>Johnson's Clanker Ranker</h1>
-      <div class="tagline">Advanced NBA Power Rankings &amp; Analytics</div>
+      <div class="league-switcher">
+        <button class="league-btn active" onclick="switchLeague('nba', this)">
+          <img src="https://a.espncdn.com/i/teamlogos/leagues/500/nba.png" style="width:25px; height:25px; object-fit:contain; vertical-align:middle; margin-right:6px;">
+          NBA
+        </button>
+        <button class="league-btn" onclick="switchLeague('nfl', this)">
+          NFL
+          <img src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" style="width:25px; height:25px; object-fit:contain; vertical-align:middle; margin-left:6px;">
+        </button>
+      </div>
+      <div class="tagline">Advanced NBA/NFL Power Rankings &amp; Analytics</div>
     </div>
     <div class="live-badge">
       <div class="live-dot"></div>
@@ -40,6 +51,11 @@
     <button class="tab-btn" onclick="showTab('sportsbook', this)">🎰 Sportsbook</button>
     <button class="tab-btn" onclick="showTab('cards', this)">The Locker</button>
   </div>
+</div>
+
+<div id="nfl-tabs" style="display:none;">
+  <button onclick="showNflTab('big-board', this)" class="tab-btn active">Big Board</button>
+  <button onclick="showNflTab('mock-sim', this)" class="tab-btn">Mock Sim (coming soon)</button>
 </div>
 
 <main>
@@ -126,9 +142,150 @@
     </div>
   </div>
 
+<div id="nfl-panels" style="display: none;">
+  <div id="nfl-big-board" class="nfl-panel panel">
+    <div class="section-header">
+      <div class="section-title">NFL Big Board</div>
+      <div class="section-sub">2026 NFL Draft · Johnson's Rankings</div>
+    </div>
+    <div class="draft-hq-layout">
+      <div class="draft-order-column">
+        <h3 class="column-title">2026 Draft Order</h3>
+        <div id="render-draft-order"></div>
+      </div>
+
+      <div class="prospects-column" style="margin-left: 40px;">
+        <h3 class="column-title">Best Available <span style="font-size: 0.8rem; color: var(--muted); letter-spacing: 1px;">Ranked 1–50</span></h3>
+        <div id="render-prospect-list"></div>
+      </div>
+    </div>
+  </div>
+  <div id="nfl-mock-sim" class="nfl-panel panel" style="display:none;">Mock Sim content here</div>
+  <div id="nfl-team-needs" class="nfl-panel panel" style="display:none;">Team Needs content here</div>
+  <div id="nfl-tracker" class="nfl-panel panel" style="display:none;">Tracker content here</div>
+</div>
 </main>
 
 <script>
+// ── League Switcher ──────────────────────────────────────────
+function switchLeague(league, btn) {
+  // Update button styles
+  document.querySelectorAll('.league-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const nbaTabs = document.querySelector('.nav-tabs');
+  const nflTabs = document.getElementById('nfl-tabs');
+  const nflPanels = document.getElementById('nfl-panels');
+  
+  // This selects all your NBA sections
+  const nbaPanels = document.querySelectorAll('#panel-rankings, #panel-playoffs, #panel-simulations, #panel-predictions, #panel-sportsbook, #panel-cards');
+
+  if (league === 'nba') {
+    // 1. Show NBA navigation and hide NFL
+    if (nbaTabs) nbaTabs.style.display = 'flex';
+    if (nflTabs) nflTabs.style.display = 'none';
+    if (nflPanels) nflPanels.style.display = 'none';
+
+    // 2. Show all NBA panels and hide the NFL Big Board
+    nbaPanels.forEach(p => {
+      p.style.display = 'block';
+      p.classList.add('active');
+    });
+    const bb = document.getElementById('panel-bigboard');
+    if (bb) bb.classList.remove('active');
+
+  } else {
+    // 1. Hide NBA navigation and show NFL
+    if (nbaTabs) nbaTabs.style.display = 'none';
+    if (nflTabs) nflTabs.style.display = 'flex';
+    if (nflPanels) nflPanels.style.display = 'block';
+
+    // 2. Hide NBA panels and show the NFL Big Board
+    nbaPanels.forEach(p => {
+      p.style.display = 'none';
+      p.classList.remove('active');
+    });
+    
+    showNflTab('big-board', document.querySelector('#nfl-tabs button'));
+  }
+}
+
+function renderNflBigBoard() {
+  const orderContainer = document.getElementById('render-draft-order');
+  const prospectContainer = document.getElementById('render-prospect-list');
+  
+  if (!orderContainer || !prospectContainer) return;
+
+  // Render Left Side: Draft Order
+  orderContainer.innerHTML = NFL_DRAFT_ORDER.map(pick => {
+    // Look up full name and color
+    const teamData = NFL_TEAMS[pick.team] || { name: pick.team, color: '#222230' };
+    const needs = pick.needs || [];
+    
+    // Fetch the logo from ESPN
+    const logoUrl = `https://a.espncdn.com/i/teamlogos/nfl/500/${pick.team.toLowerCase()}.png`;
+
+    return `
+      <div class="prospect-card" style="margin-bottom: 8px; border-left: 5px solid ${teamData.color}; background: linear-gradient(90deg, ${teamData.color}22 0%, var(--surface) 100%);">
+        <div class="p-rank">#${pick.pick}</div>
+        <div class="p-logo-box">
+          <img src="${logoUrl}" style="width:120px; height:120px; object-fit:contain; position:absolute; right:20px; top:50%; transform:translateY(-50%); opacity:0.40; filter: drop-shadow(0px 0px 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'">
+        </div>
+        <div class="p-main">
+          <div class="p-name">${teamData.name}</div>
+          <div class="p-meta">
+            ${needs.map(n => `<span class="need-tag">${n}</span>`).join(' ')}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Render Right Side: Prospects
+  prospectContainer.innerHTML = NFL_PROSPECTS.map(p => {
+    // 1. Look up the college color from our new list
+    const collegeData = COLLEGE_TEAMS[p.school] || { color: '#222230' };
+    
+    // 2. Build the logo URL (ESPN uses lowercase, no spaces for college names)
+  const logoUrl = collegeData.logo || '';
+
+    return `
+      <div class="prospect-card" style="margin-bottom: 8px; border-left: 5px solid ${collegeData.color}; background: linear-gradient(90deg, ${collegeData.color}22 0%, var(--surface) 100%);">
+        <div class="p-rank">${p.rank}</div>
+        <div class="p-logo-box">
+          <img src="${logoUrl}" class="nfl-logo-small" onerror="this.style.display='none'" style="width:120px; height:120px; object-fit:cover; position:absolute; right:20px; top:50%; transform:translateY(-50%); opacity:0.40; filter: drop-shadow(0px 0px 3px rgba(255,255,255,0.4));">
+        </div>
+        <div class="p-main">
+          <div class="p-name">${p.name}</div>
+          <div class="p-meta">
+            <span class="p-pos">${p.pos}</span> | ${p.school}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function setNflView(view, btn) {
+  document.querySelectorAll('.rankings-view-bar .view-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('nfl-prospects-view').style.display = view === 'prospects' ? '' : 'none';
+  document.getElementById('nfl-draftorder-view').style.display = view === 'draftorder' ? '' : 'none';
+}
+
+function showNflTab(tabName, btn) {
+  document.querySelectorAll('.nfl-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('#nfl-tabs button').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById('nfl-' + tabName);
+    if (panel) {
+  panel.style.display = 'block';
+  panel.classList.add('active');
+}
+  btn.classList.add('active');
+  if (tabName === 'big-board') renderNflBigBoard();
+if (tabName === 'mock-sim') document.getElementById('nfl-mock-sim').innerHTML = '<div style="text-align:center; padding: 60px; color: var(--muted); font-family: Bebas Neue, sans-serif; font-size: 2rem; letter-spacing: 3px;">Coming Soon...</div>';
+}
+
 // ── Firebase cloud storage ───────────────────────────────────
 // Each user's data stored in Firestore: users/{username}/store/{key}
 (function () {
