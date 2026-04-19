@@ -151,16 +151,29 @@
     <div class="draft-hq-layout">
       <div class="draft-order-column">
         <h3 class="column-title">2026 Draft Order</h3>
-        <div id="draft-round-filters" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px; margin-bottom:12px; margin-top:8px;">
-          <button class="pos-filter-btn active" onclick="filterDraftRound(1, this)">Round 1</button>
-          <button class="pos-filter-btn" onclick="filterDraftRound(2, this)">Round 2</button>
-          <button class="pos-filter-btn" onclick="filterDraftRound(3, this)">Round 3</button>
-          <button class="pos-filter-btn" onclick="filterDraftRound(4, this)">Round 4</button>
-          <button class="pos-filter-btn" onclick="filterDraftRound(5, this)">Round 5</button>
-          <button class="pos-filter-btn" onclick="filterDraftRound(6, this)">Round 6</button>
-          <button class="pos-filter-btn" onclick="filterDraftRound(7, this)">Round 7</button>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px; margin-top:8px;">
+          <div id="draft-round-filters" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px;">
+            <button class="pos-filter-btn active" onclick="filterDraftRound(1, this)">Round 1</button>
+            <button class="pos-filter-btn" onclick="filterDraftRound(2, this)">Round 2</button>
+            <button class="pos-filter-btn" onclick="filterDraftRound(3, this)">Round 3</button>
+            <button class="pos-filter-btn" onclick="filterDraftRound(4, this)">Round 4</button>
+            <button class="pos-filter-btn" onclick="filterDraftRound(5, this)">Round 5</button>
+            <button class="pos-filter-btn" onclick="filterDraftRound(6, this)">Round 6</button>
+            <button class="pos-filter-btn" onclick="filterDraftRound(7, this)">Round 7</button>
+          </div>
         </div>
-        <div id="render-draft-order"></div>
+          <div id="draft-team-dropdown" style="position:relative; width:100%; margin-bottom:8px;">
+            <div id="draft-team-selected" onclick="toggleDraftTeamDropdown()" style="display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--muted); border-radius:8px; padding:8px 12px; cursor:pointer; user-select:none;">
+              <span style="flex:1; font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; color:var(--text);">All Teams</span>
+              <span style="color:var(--text); font-size:0.75rem;">▼</span>
+            </div>
+            <div id="draft-team-options" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--surface2); border:1px solid var(--border); border-radius:8px; margin-top:4px; z-index:100; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 2px solid var(--muted); max-height:300px; overflow-y:auto;">
+              <div class="draft-team-option" onclick="filterDraftByTeam('ALL', 'All Teams')" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--border);">
+                <span style="font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; color:var(--text);">All Teams</span>
+              </div>
+            </div>
+          </div>
+          <div id="render-draft-order"></div>
       </div>
 
       <div class="prospects-column" style="margin-left: 40px;">
@@ -190,6 +203,83 @@
 </main>
 
 <script>
+//Filter draft order by team via dropdown menu
+function toggleDraftTeamDropdown() {
+  const options = document.getElementById('draft-team-options');
+  if (options.children.length === 1) initDraftTeamDropdown();
+  options.style.display = options.style.display === 'none' ? 'block' : 'none';
+}
+
+function initDraftTeamDropdown() {
+  const optionsContainer = document.getElementById('draft-team-options');
+  if (!optionsContainer) return;
+
+  const teams = Object.entries(NFL_TEAMS)
+    .sort((a, b) => a[1].name.localeCompare(b[1].name));
+
+  teams.forEach(([abbr, team]) => {
+    const logoUrl = `https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png`;
+    const div = document.createElement('div');
+    div.className = 'draft-team-option';
+    div.style.cssText = 'display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--border);';
+    div.innerHTML = `
+      <img src="${logoUrl}" style="width:24px; height:24px; object-fit:contain;" onerror="this.style.display='none'">
+      <span style="font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; color:var(--text);">${team.name}</span>
+    `;
+    div.onclick = () => filterDraftByTeam(abbr, team.name);
+    optionsContainer.appendChild(div);
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!document.getElementById('draft-team-dropdown').contains(e.target)) {
+      document.getElementById('draft-team-options').style.display = 'none';
+    }
+  });
+}
+
+function filterDraftByTeam(abbr, teamName) {
+  document.getElementById('draft-team-options').style.display = 'none';
+  document.getElementById('draft-team-selected').innerHTML = `
+    ${abbr !== 'ALL' ? `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:24px; height:24px; object-fit:contain;" onerror="this.style.display='none'">` : ''}
+    <span style="flex:1; font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; color:var(--text);">${teamName}</span>
+    <span style="color:var(--muted); font-size:0.75rem;">▼</span>
+  `;
+
+  const roundBtns = document.querySelectorAll('#draft-round-filters .pos-filter-btn');
+  if (abbr === 'ALL') {
+    roundBtns.forEach(b => b.style.opacity = '1');
+    renderDraftRound();
+    return;
+  }
+
+  roundBtns.forEach(b => b.style.opacity = '0.3');
+  const picks = NFL_DRAFT_ORDER.filter(p => p.team === abbr);
+  const container = document.getElementById('render-draft-order');
+
+  container.innerHTML = picks.map(pick => {
+    const teamData = NFL_TEAMS[pick.team] || { name: pick.team, color: '#222230' };
+    const needs = NFL_TEAM_NEEDS[pick.team] || [];
+    const logoUrl = `https://a.espncdn.com/i/teamlogos/nfl/500/${pick.team.toLowerCase()}.png`;
+
+    return `
+      <div class="prospect-card" style="margin-bottom: 8px; border-left: 5px solid ${teamData.color}; background: linear-gradient(90deg, ${teamData.color}22 0%, var(--surface) 100%);">
+        <div class="p-rank">#${pick.pick}</div>
+        <div class="p-logo-box">
+          <img src="${logoUrl}" style="width:120px; height:120px; object-fit:contain; position:absolute; right:10px; top:50%; transform:translateY(-50%); opacity:0.40; filter: drop-shadow(0px 0px 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'">
+        </div>
+        <div class="p-main">
+          <div class="p-name">${teamData.name}</div>
+          <div class="p-meta">
+            ${needs.map(n => `<span class="need-tag">${n}</span>`).join(' | ')}
+          </div>
+          ${pick.note ? `<div style="font-size:0.72rem; color:var(--muted); margin-top:3px; font-style:italic;">${pick.note}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 let _prospectPage = 1;
 const _prospectsPerPage = 25;
 let _prospectHeadshotCache = {};

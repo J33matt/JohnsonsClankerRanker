@@ -3169,7 +3169,7 @@
 #nfl-big-board {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 24px 40px;
+  padding: 0;
 }
 
 #nfl-prospects-container,
@@ -3313,7 +3313,7 @@
   max-width: 1400px;
   margin: 0 auto;
   border-bottom: 1px solid var(--border);
-  padding: 0;
+  padding: 0 40px;
   position: relative;
   z-index: 10;
 }
@@ -3341,4 +3341,27 @@
   background: var(--accent);
   color: #000;
   border-color: var(--accent);
+}
+
+.draft-team-option:hover {
+  background: var(--surface);
+}
+
+#draft-team-options {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) var(--surface2);
+}
+
+#draft-team-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+#draft-team-options::-webkit-scrollbar-track {
+  background: var(--surface2);
+  border-radius: 8px;
+}
+
+#draft-team-options::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 8px;
 }
