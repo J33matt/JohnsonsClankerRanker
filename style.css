@@ -3252,13 +3252,13 @@
 /* Draft HQ Layout */
 .draft-hq-layout {
   display: flex;
-  gap: 280px;
+  gap: 200px;
   padding: 0px;
   align-items: flex-start;
 }
 
 .draft-order-column {
-  flex: 0.9; 
+  flex: 1; 
   background: var(--surface);
   border-radius: 12px;
   padding: 15px;
