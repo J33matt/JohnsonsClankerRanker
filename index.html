@@ -165,7 +165,7 @@
 
       <div class="prospects-column" style="margin-left: 40px;">
         <h3 class="column-title">Best Available <span style="font-size: 0.8rem; color: var(--muted); letter-spacing: 1px;">Ranked 1–50</span></h3>
-        <div id="prospect-filters" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; margin-top:8px;">
+        <div id="prospect-filters" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px; margin-bottom:12px; margin-top:8px;">
           <button class="pos-filter-btn active" onclick="filterProspects('ALL', this)">ALL</button>
           <button class="pos-filter-btn" onclick="filterProspects('QB', this)">QB</button>
           <button class="pos-filter-btn" onclick="filterProspects('RB', this)">RB</button>
@@ -221,9 +221,8 @@ function renderDraftRound() {
         <div class="p-main">
           <div class="p-name">${teamData.name}</div>
           <div class="p-meta">
-            ${needs.map(n => `<span class="need-tag">${n}</span>`).join(' ')}
+            ${needs.map(n => `<span class="need-tag">${n}</span>`).join(' | ')}
           </div>
-          ${pick.note ? `<div style="font-size:0.72rem; color:var(--muted); margin-top:3px; font-style:italic;">${pick.note}</div>` : ''}
         </div>
       </div>
     `;
@@ -239,7 +238,7 @@ function filterProspects(pos, btn) {
 }
 
 function renderProspectPage(pos) {
-  pos = pos || document.querySelector('.pos-filter-btn.active')?.textContent || 'ALL';
+  pos = pos || document.querySelector('#prospect-filters .pos-filter-btn.active')?.textContent?.trim() || 'ALL';
   const filtered = pos === 'ALL' ? NFL_PROSPECTS : NFL_PROSPECTS.filter(p => p.pos === pos);
   const totalPages = Math.ceil(filtered.length / _prospectsPerPage);
   const start = (_prospectPage - 1) * _prospectsPerPage;
@@ -3788,7 +3787,7 @@ function renderDraft() {
           <div class="needs-pick-label">Pick ${t.pick}</div>
         </div>
       </div>
-      <div class="needs-tags">${t.needs.map(n => `<span class="needs-tag">${n}</span>`).join('')}</div>
+      <div class="needs-tags">${t.needs.map(n => `<span class="needs-tag">${n}</span>`).join(' ')}</div>
       <div class="needs-prospect-target">🎯 Target: ${t.target}</div>
       <div class="needs-blurb">${t.blurb}</div>
     </div>`;
