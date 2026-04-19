@@ -3365,3 +3365,22 @@
   background: var(--accent);
   border-radius: 8px;
 }
+
+#college-team-options {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) var(--surface2);
+}
+
+#college-team-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+#college-team-options::-webkit-scrollbar-track {
+  background: var(--surface2);
+  border-radius: 8px;
+}
+
+#college-team-options::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 8px;
+}
