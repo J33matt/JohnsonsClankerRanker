@@ -151,6 +151,15 @@
     <div class="draft-hq-layout">
       <div class="draft-order-column">
         <h3 class="column-title">2026 Draft Order</h3>
+        <div id="draft-round-filters" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; margin-top:8px;">
+          <button class="pos-filter-btn active" onclick="filterDraftRound(1, this)">Round 1</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(2, this)">Round 2</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(3, this)">Round 3</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(4, this)">Round 4</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(5, this)">Round 5</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(6, this)">Round 6</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(7, this)">Round 7</button>
+        </div>
         <div id="render-draft-order"></div>
       </div>
 
@@ -184,6 +193,42 @@
 let _prospectPage = 1;
 const _prospectsPerPage = 25;
 let _prospectHeadshotCache = {};
+let _draftRound = 1;
+
+function filterDraftRound(round, btn) {
+  document.querySelectorAll('#draft-round-filters .pos-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _draftRound = round;
+  renderDraftRound();
+}
+
+// ── Filter Rounds ─────────────────────────────────────────
+function renderDraftRound() {
+  const picks = NFL_DRAFT_ORDER.filter(p => p.round === _draftRound);
+  const container = document.getElementById('render-draft-order');
+
+  container.innerHTML = picks.map(pick => {
+    const teamData = NFL_TEAMS[pick.team] || { name: pick.team, color: '#222230' };
+    const needs = NFL_TEAM_NEEDS[pick.team] || [];
+    const logoUrl = `https://a.espncdn.com/i/teamlogos/nfl/500/${pick.team.toLowerCase()}.png`;
+
+    return `
+      <div class="prospect-card" style="margin-bottom: 8px; border-left: 5px solid ${teamData.color}; background: linear-gradient(90deg, ${teamData.color}22 0%, var(--surface) 100%);">
+        <div class="p-rank">#${pick.pick}</div>
+        <div class="p-logo-box">
+          <img src="${logoUrl}" style="width:120px; height:120px; object-fit:contain; position:absolute; right:10px; top:50%; transform:translateY(-50%); opacity:0.40; filter: drop-shadow(0px 0px 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'">
+        </div>
+        <div class="p-main">
+          <div class="p-name">${teamData.name}</div>
+          <div class="p-meta">
+            ${needs.map(n => `<span class="need-tag">${n}</span>`).join(' ')}
+          </div>
+          ${pick.note ? `<div style="font-size:0.72rem; color:var(--muted); margin-top:3px; font-style:italic;">${pick.note}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
 
 // ── Filter Prospects ─────────────────────────────────────────
 function filterProspects(pos, btn) {
@@ -311,29 +356,7 @@ async function renderNflBigBoard() {
   if (!orderContainer || !prospectContainer) return;
 
   // Render Left Side: Draft Order
-  orderContainer.innerHTML = NFL_DRAFT_ORDER.map(pick => {
-    // Look up full name and color
-    const teamData = NFL_TEAMS[pick.team] || { name: pick.team, color: '#222230' };
-    const needs = pick.needs || [];
-    
-    // Fetch the logo from ESPN
-    const logoUrl = `https://a.espncdn.com/i/teamlogos/nfl/500/${pick.team.toLowerCase()}.png`;
-
-    return `
-      <div class="prospect-card" style="margin-bottom: 8px; border-left: 5px solid ${teamData.color}; background: linear-gradient(90deg, ${teamData.color}22 0%, var(--surface) 100%);">
-        <div class="p-rank">#${pick.pick}</div>
-        <div class="p-logo-box">
-          <img src="${logoUrl}" style="width:120px; height:120px; object-fit:contain; position:absolute; right:20px; top:50%; transform:translateY(-50%); opacity:0.40; filter: drop-shadow(0px 0px 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'">
-        </div>
-        <div class="p-main">
-          <div class="p-name">${teamData.name}</div>
-          <div class="p-meta">
-            ${needs.map(n => `<span class="need-tag">${n}</span>`).join(' ')}
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+  renderDraftRound();
 
 // Render Right Side: Prospects
   await preloadProspectHeadshots();
