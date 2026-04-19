@@ -3252,13 +3252,13 @@
 /* Draft HQ Layout */
 .draft-hq-layout {
   display: flex;
-  gap: 30px;
-  padding: 10px;
+  gap: 280px;
+  padding: 0px;
   align-items: flex-start;
 }
 
 .draft-order-column {
-  flex: 1; 
+  flex: 0.9; 
   background: var(--surface);
   border-radius: 12px;
   padding: 15px;
@@ -3266,7 +3266,7 @@
 }
 
 .prospects-column {
-  flex: 0.8; 
+  flex: 1; 
   background: var(--surface);
   border-radius: 12px;
   padding: 15px;

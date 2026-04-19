@@ -181,14 +181,57 @@
 </main>
 
 <script>
+let _prospectPage = 1;
+const _prospectsPerPage = 25;
+let _prospectHeadshotCache = {};
+
 // ── Filter Prospects ─────────────────────────────────────────
 function filterProspects(pos, btn) {
   document.querySelectorAll('.pos-filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.querySelectorAll('#render-prospect-list .prospect-card').forEach(card => {
-    const cardPos = card.getAttribute('data-pos');
-    card.style.display = (pos === 'ALL' || cardPos === pos) ? '' : 'none';
-  });
+  _prospectPage = 1;
+  renderProspectPage(pos);
+}
+
+function renderProspectPage(pos) {
+  pos = pos || document.querySelector('.pos-filter-btn.active')?.textContent || 'ALL';
+  const filtered = pos === 'ALL' ? NFL_PROSPECTS : NFL_PROSPECTS.filter(p => p.pos === pos);
+  const totalPages = Math.ceil(filtered.length / _prospectsPerPage);
+  const start = (_prospectPage - 1) * _prospectsPerPage;
+  const pageProspects = filtered.slice(start, start + _prospectsPerPage);
+
+  const container = document.getElementById('render-prospect-list');
+
+  // Render pagination controls
+  const paginationHtml = `
+    <div style="display:flex; align-items:center; justify-content:space-between; margin:12px 0; padding:10px 14px; background:var(--surface2); border-radius:8px; border:1px solid var(--border);">
+      <button style="padding:6px 16px; border-radius:8px; border:1px solid var(--muted); background:transparent; color:var(--muted); font-family:'Barlow',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; letter-spacing:1px;" onclick="_prospectPage = Math.max(1, _prospectPage-1); renderProspectPage()" ${_prospectPage === 1 ? 'disabled' : ''}>← Prev</button>
+      <span style="color:var(--text); font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:2px;">Page ${_prospectPage} of ${totalPages}</span>
+      <button style="padding:6px 16px; border-radius:8px; border:1px solid var(--muted); background:transparent; color:var(--muted); font-family:'Barlow',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; letter-spacing:1px;" onclick="_prospectPage = Math.min(${totalPages}, _prospectPage+1); renderProspectPage()" ${_prospectPage === totalPages ? 'disabled' : ''}>Next →</button>
+    </div>
+  `;
+
+  container.innerHTML = paginationHtml + pageProspects.map(p => {
+    const collegeData = COLLEGE_TEAMS[p.school] || { color: '#222230' };
+    const logoUrl = collegeData.logo || '';
+    const headshotUrl = _prospectHeadshotCache[p.rank] || '';
+
+    return `
+      <div class="prospect-card" data-pos="${p.pos}" style="margin-bottom: 8px; border-left: 5px solid ${collegeData.color}; background: linear-gradient(90deg, ${collegeData.color}22 0%, var(--surface) 100%);">
+        <div class="p-rank">${p.rank}</div>
+        <div class="p-logo-box">
+          <img src="${logoUrl}" class="nfl-logo-small" onerror="this.style.display='none'" style="width:120px; height:120px; object-fit:cover; position:absolute; right:20px; top:50%; transform:translateY(-50%); opacity:0.40; filter: drop-shadow(0px 0px 3px rgba(255,255,255,0.4));">
+        </div>
+        ${headshotUrl ? `<img src="${headshotUrl}" style="height:100%; max-height:80px; width:auto; object-fit:contain; object-position:bottom; position:absolute; right:70px; bottom:0; opacity:0.95;" onerror="this.style.display='none'">` : ''}
+        <div class="p-main">
+          <div class="p-name">${p.name}</div>
+          <div class="p-meta">
+            <span class="p-pos">${p.pos}</span> | ${p.school}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('') + paginationHtml;
 }
 
 // ── League Switcher ──────────────────────────────────────────
@@ -240,8 +283,17 @@ function switchLeague(league, btn) {
   }
 }
 
-async function fetchProspectHeadshot(name) {
+async function preloadProspectHeadshots() {
+  if (Object.keys(_prospectHeadshotCache).length > 0) return;
+  const results = await Promise.all(NFL_PROSPECTS.map(p => fetchProspectHeadshot(p.name, p.espnId)));
+  NFL_PROSPECTS.forEach((p, i) => {
+    _prospectHeadshotCache[p.rank] = results[i];
+  });
+}
+
+async function fetchProspectHeadshot(name, espnId) {
   try {
+    if (espnId) return `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png`;
     const res = await fetch(`https://site.web.api.espn.com/apis/common/v3/search?query=${encodeURIComponent(name)}&limit=1&type=player`);
     const data = await res.json();
     const id = data?.items?.[0]?.id;
@@ -284,29 +336,8 @@ async function renderNflBigBoard() {
   }).join('');
 
 // Render Right Side: Prospects
-  const headshotUrls = await Promise.all(NFL_PROSPECTS.map(p => fetchProspectHeadshot(p.name)));
-
-  prospectContainer.innerHTML = NFL_PROSPECTS.map((p, i) => {
-    const collegeData = COLLEGE_TEAMS[p.school] || { color: '#222230' };
-    const logoUrl = collegeData.logo || '';
-    const headshotUrl = headshotUrls[i];
-
-    return `
-    <div class="prospect-card" data-pos="${p.pos}" style="margin-bottom: 8px; border-left: 5px solid ${collegeData.color}; background: linear-gradient(90deg, ${collegeData.color}22 0%, var(--surface) 100%);">
-      <div class="p-rank">${p.rank}</div>
-      <div class="p-logo-box">
-        <img src="${logoUrl}" class="nfl-logo-small" onerror="this.style.display='none'" style="width:120px; height:120px; object-fit:cover; position:absolute; right:20px; top:50%; transform:translateY(-50%); opacity:0.40; filter: drop-shadow(0px 0px 3px rgba(255,255,255,0.4));">
-      </div>
-      ${headshotUrl ? `<img src="${headshotUrl}" style="height:100%; max-height:80px; width:auto; object-fit:contain; object-position:bottom; position:absolute; right:70px; bottom:0; opacity:0.95;" onerror="this.style.display='none'">` : ''}
-      <div class="p-main">
-        <div class="p-name">${p.name}</div>
-        <div class="p-meta">
-          <span class="p-pos">${p.pos}</span> | ${p.school}
-        </div>
-      </div>
-    </div>
-  `;
-  }).join('');
+  await preloadProspectHeadshots();
+  renderProspectPage('ALL');
 }
 
 function setNflView(view, btn) {
