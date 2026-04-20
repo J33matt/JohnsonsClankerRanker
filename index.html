@@ -2006,36 +2006,42 @@ function _trackPlayInGames(games) {
   return hasNew;
 }
 
-// Returns array of teams that are definitively eliminated from the play-in
-// (lost without a second chance). A team is eliminated if:
-//   - It lost its only game (9/10-seed loser of game 1) OR
-//   - It lost the 7/8 game AND ALSO lost the second-chance game (7/8 loser who lost decider)
+// Returns array of teams that are definitively eliminated from the play-in.
+// Three-game format:
+//   Game 1: 7 vs 8 — winner = 7 seed, loser plays Game 3
+//   Game 2: 9 vs 10 — winner plays Game 3, loser = eliminated
+//   Game 3: Game 1 loser vs Game 2 winner — winner = 8 seed, loser = eliminated
 // Returns null if play-in data not yet available (no games recorded).
 function getPlayInEliminated() {
   const abbrs = Object.keys(_playInResults);
-  if (abbrs.length === 0) return null; // no play-in data yet
+  if (abbrs.length === 0) return null;
 
-  // Seeds 9 and 10 are immediately eliminated if they lose their first game.
-  // Seeds 7 and 8 losers advance to the decider — not eliminated until they lose that too.
   const seeds910 = new Set([
     PLAYOFF_SEEDS.west[8], PLAYOFF_SEEDS.west[9],
     PLAYOFF_SEEDS.east[8], PLAYOFF_SEEDS.east[9]
+  ]);
+  const seeds78 = new Set([
+    PLAYOFF_SEEDS.west[6], PLAYOFF_SEEDS.west[7],
+    PLAYOFF_SEEDS.east[6], PLAYOFF_SEEDS.east[7]
   ]);
 
   const eliminated = [];
   abbrs.forEach(abbr => {
     const r = _playInResults[abbr];
-    // Lost 2 games: 7/8 loser who also lost the decider
-    if (r.losses >= 2) { eliminated.push(abbr); return; }
-    // 9/10 seed with 1 loss, 0 wins → immediately eliminated (no second chance)
+    // Game 2 loser: 9/10 seed with 0W-1L → immediately eliminated
     if (r.losses === 1 && r.wins === 0 && seeds910.has(abbr)) {
       eliminated.push(abbr); return;
     }
-    // 1 win, 1 loss → either seed 8 (won the decider) or 9/10 winner who lost the decider.
-    // Eliminated only if their last game was a loss.
+    // Game 3 loser: 1W-1L team that lost to a team from the other seed group.
+    // Order-independent: identified by who the loss was against, not game sequence.
+    // 7/8 seed lost game 1, then played game 3 vs a 9/10 seed → loss opp is in seeds910
+    // 9/10 seed won game 2, then played game 3 vs a 7/8 seed → loss opp is in seeds78
     if (r.losses === 1 && r.wins === 1) {
-      const lastGame = r.games[r.games.length - 1];
-      if (lastGame && !lastGame.won) eliminated.push(abbr);
+      const lossGame = r.games.find(g => !g.won);
+      if (lossGame) {
+        const lostToOtherGroup = seeds910.has(abbr) ? seeds78.has(lossGame.opp) : seeds910.has(lossGame.opp);
+        if (lostToOtherGroup) eliminated.push(abbr);
+      }
     }
   });
   return eliminated.length > 0 ? eliminated : null;
