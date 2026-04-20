@@ -3608,62 +3608,34 @@ function renderDraft() {
     { abbr: 'MIL', name: 'Milwaukee Bucks', pick: '10', needs: ['Athletic Big', 'Versatile Defender', 'Development Wing'], target: 'Koa Peat', blurb: 'After a defensive collapse that saw the unit fall to 27th in the league, the Bucks are searching for an identity. They need to find a new lead guard and implement a defensive-first mentality to return to the postseason conversation.' },
   ];
 
-  // Build full 30-pick draft order from current standings
-  const _dWest = seedConference('WEST');
-  const _dEast = seedConference('EAST');
-  const winPct = t => t.wins / (t.wins + t.losses);
+  // lottery14: built from final official lottery team order (TRADED_PICKS picks 1–14).
+  // Uses the original pick-holding team (via || abbr) so trade-display logic works correctly.
+  const lottery14 = Array.from({length: 14}, (_, i) => {
+    const p = TRADED_PICKS[i + 1];
+    const originalAbbr = p.via || p.abbr;
+    return STANDINGS_DATA.find(t => t.abbr === originalAbbr) ||
+           { abbr: originalAbbr, name: p.name, wins: 0, losses: 0, conf: '' };
+  });
 
-  // Play-in teams: seeds 7-10 each conf (8 total), sorted worst→best record
-  const _playInAll = [..._dWest.slice(6,10), ..._dEast.slice(6,10)];
-  _playInAll.sort((a,b) => winPct(a) - winPct(b)); // worst first
-
-  // Determine play-in eliminated (slots 11-14) and survivors (slots for picks 15-30)
-  // Use real game results if available, fall back to record-based ordering otherwise
-  const _realElimAbbrs = getPlayInEliminated(); // null = not yet available
-  let _playInElim, _playInSurv;
-  if (_realElimAbbrs && _realElimAbbrs.length >= 2) {
-    // Real results: eliminated teams fill slots 11-14 (sorted worst record first)
-    _playInElim = _playInAll
-      .filter(t => _realElimAbbrs.includes(t.abbr))
-      .sort((a,b) => winPct(a) - winPct(b));
-    _playInSurv = _playInAll.filter(t => !_realElimAbbrs.includes(t.abbr));
-    // Pad to 4 if play-in is still mid-way (only 2 eliminated so far)
-    if (_playInElim.length < 4) {
-      // Fill remaining elim slots from record-based ordering of not-yet-decided teams
-      const _undecided = _playInAll.filter(t =>
-        !_realElimAbbrs.includes(t.abbr) && !_playInSurv.includes(t)
-      );
-      // Already in _playInSurv means they won — keep as survivors
-      // Remaining undecided: use worst record as placeholder
-      const _extraElim = _playInAll
-        .filter(t => !_playInElim.some(e => e.abbr === t.abbr) && !_playInSurv.some(s => s.abbr === t.abbr))
-        .sort((a,b) => winPct(a) - winPct(b))
-        .slice(0, 4 - _playInElim.length);
-      _playInElim = [..._playInElim, ..._extraElim];
-      _playInSurv = _playInAll.filter(t => !_playInElim.some(e => e.abbr === t.abbr));
-    }
-  } else {
-    // No play-in data yet: use worst 4 records as placeholder eliminated
-    _playInElim = _playInAll.slice(0,4);
-    _playInSurv = _playInAll.slice(4);
-  }
-
-  // Bottom 10 non-playoff, non-play-in teams (lottery seeds 1-10)
-  const _inTop10 = new Set([..._dWest.slice(0,10), ..._dEast.slice(0,10)].map(t=>t.abbr));
-  const _bottom10 = STANDINGS_DATA
-    .filter(t => !_inTop10.has(t.abbr))
-    .sort((a,b) => winPct(a) - winPct(b))
-    .slice(0,10);
-
-  // lottery14: indices 0-9 = bottom 10, indices 10-13 = 4 worst play-in teams
-  while (_bottom10.length < 10) _bottom10.push(null);
-  const lottery14 = [..._bottom10, ..._playInElim];
-
-  // Picks 15-30: 12 direct playoff teams (seeds 1-6 each conf) + 4 play-in survivors
-  // Sorted worst→best record; pick 15 = worst record, pick 30 = best record
-  const _directPlayoff = [..._dWest.slice(0,6), ..._dEast.slice(0,6)];
-  const picks15to30 = [..._directPlayoff, ..._playInSurv]
-    .sort((a,b) => winPct(a) - winPct(b)); // worst first → pick 15
+  // Picks 15–30: hardcoded final official order (replaces dynamic standings calculation)
+  const picks15to30 = [
+    { abbr: 'CHI', name: 'Chicago Bulls',            via: 'POR', wins: 42, losses: 40 },
+    { abbr: 'MEM', name: 'Memphis Grizzlies',         via: 'PHX', wins: 45, losses: 37 },
+    { abbr: 'OKC', name: 'Oklahoma City Thunder',     via: 'PHI', wins: 45, losses: 37 },
+    { abbr: 'CHA', name: 'Charlotte Hornets',         via: 'ORL', wins: 45, losses: 37 },
+    { abbr: 'TOR', name: 'Toronto Raptors',           via: null,  wins: 46, losses: 36 },
+    { abbr: 'SAS', name: 'San Antonio Spurs',         via: 'ATL', wins: 46, losses: 36 },
+    { abbr: 'DET', name: 'Detroit Pistons',           via: 'MIN', wins: 49, losses: 33 },
+    { abbr: 'PHI', name: 'Philadelphia 76ers',        via: 'HOU', wins: 52, losses: 30 },
+    { abbr: 'ATL', name: 'Atlanta Hawks',             via: 'CLE', wins: 52, losses: 30 },
+    { abbr: 'NYK', name: 'New York Knicks',           via: null,  wins: 53, losses: 29 },
+    { abbr: 'LAL', name: 'LA Lakers',                 via: null,  wins: 53, losses: 29 },
+    { abbr: 'DEN', name: 'Denver Nuggets',            via: null,  wins: 54, losses: 28 },
+    { abbr: 'BOS', name: 'Boston Celtics',            via: null,  wins: 56, losses: 26 },
+    { abbr: 'MIN', name: 'Minnesota Timberwolves',    via: 'DET', wins: 60, losses: 22 },
+    { abbr: 'CLE', name: 'Cleveland Cavaliers',       via: 'SAS', wins: 62, losses: 20 },
+    { abbr: 'DAL', name: 'Dallas Mavericks',          via: 'OKC', wins: 64, losses: 18 },
+  ];
 
   // Lottery simulation engine (weighted random using ping-pong ball combos)
   function simulateLottery() {
@@ -4090,11 +4062,8 @@ function renderDraft() {
     h += sectionLabel('Full Draft Board · Picks 15–30 (Playoff Teams, worst record first)');
     picks15to30.forEach((team, idx) => {
       const pickNum = 15 + idx;
-      const isPlayInTeam = _playInSurv.some(p => p.abbr === team.abbr);
-      const confSeedArr = team.conf === 'WEST' ? _dWest : _dEast;
-      const confSeed = confSeedArr.findIndex(t => t.abbr === team.abbr) + 1;
-      const playoffLabel = isPlayInTeam ? `Play-in qualifier · ${team.conf} #${confSeed}` : `Playoff · ${team.conf} #${confSeed}`;
-      h += boardPickRow(pickNum, team, `${team.abbr} · ${playoffLabel} · ${team.wins}–${team.losses}`, true);
+      const viaLabel = team.via ? ` (via ${team.via})` : '';
+      h += boardPickRow(pickNum, team, `${team.abbr}${viaLabel} · ${team.wins}–${team.losses}`, true);
     });
 
     const resultsEl = document.getElementById('sim-results');
