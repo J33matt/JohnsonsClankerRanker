@@ -9354,18 +9354,18 @@ function renderMockDraftResults(results, roundFilter, teamFilter, posFilter) {
       cardsContainer.appendChild(header);
     }
 
-    const headshot = (typeof _prospectHeadshotCache !== 'undefined' && _prospectHeadshotCache[r.prospect.rank])
-      ? `<img src="${_prospectHeadshotCache[r.prospect.rank]}" style="position:absolute;right:75px;bottom:0;height:95%;object-fit:cover;object-position:top center;z-index:1;">` : '';
-    const teamLogo = `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${r.team.toLowerCase()}.png" style="position:absolute;right:25px;top:50%;transform:translateY(-50%);height:130%;opacity:0.4;pointer-events:none;z-index:0;">`;
+    const headshotUrl = (typeof _prospectHeadshotCache !== 'undefined' && _prospectHeadshotCache[r.prospect.rank])
+      ? _prospectHeadshotCache[r.prospect.rank] : '';
     const needsPct = r.needsFit ? Math.floor(70 + (r.prospect.rank % 25)) : Math.floor(20 + (r.prospect.rank % 40));
     const diff = r.pick - r.prospect.rank;
 
     const card = document.createElement('div');
-    card.style.cssText = `position:relative;overflow:hidden;background:linear-gradient(135deg,${hexToRgba(color,0.35)} 0%,${hexToRgba(color,0.12)} 50%,var(--surface) 100%);border:2px solid ${color};border-radius:10px;margin-bottom:10px;opacity:0;transition:opacity 0.2s;box-shadow:0 2px 12px ${hexToRgba(color,0.2)};`;
+    card.style.cssText = `overflow:hidden;background:linear-gradient(135deg,${hexToRgba(color,0.35)} 0%,${hexToRgba(color,0.12)} 50%,var(--surface) 100%);border:2px solid ${color};border-radius:10px;margin-bottom:10px;opacity:0;transition:opacity 0.2s;box-shadow:0 2px 12px ${hexToRgba(color,0.2)};`;
     card.innerHTML = `
-      ${teamLogo}${headshot}
-      <div style="position:relative;z-index:1;display:flex;min-height:80px;">
-        <div style="display:flex;flex-direction:column;justify-content:center;gap:5px;padding:12px 14px;min-width:160px;border-right:1px solid ${hexToRgba(color,0.3)};">
+      <div style="display:flex;min-height:100px;">
+
+        <!-- LEFT: pick, team, grade, needs -->
+        <div style="display:flex;flex-direction:column;justify-content:center;gap:5px;padding:12px 14px;min-width:150px;border-right:1px solid ${hexToRgba(color,0.3)};">
           <div style="font-family:Bebas Neue,sans-serif;font-size:2rem;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,0.8);line-height:1;">#${r.pick}</div>
           <div style="font-size:0.75rem;font-weight:600;opacity:0.8;line-height:1.2;">${NFL_TEAMS[r.team]?.name||r.team}</div>
           <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
@@ -9382,26 +9382,38 @@ function renderMockDraftResults(results, roundFilter, teamFilter, posFilter) {
             </div>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;justify-content:center;padding:12px 180px 12px 16px;flex:1;">
-          <div style="font-family:Bebas Neue,sans-serif;font-size:1.6rem;line-height:1;margin-bottom:3px;text-shadow:0 1px 4px rgba(0,0,0,0.5);">${r.prospect.name}</div>
-          <div style="font-size:0.8rem;opacity:0.6;margin-bottom:3px;">${r.prospect.pos} · ${r.prospect.school}</div>
-          <div style="font-size:0.75rem;margin-bottom:6px;">
-            <span style="opacity:0.5;">PRE-DRAFT RANK:</span>
-            <span style="opacity:0.8;margin-left:4px;">#${r.prospect.rank}</span>
-            ${diff < 0 ? `<span style="color:#22c55e;margin-left:6px;">▲ ${Math.abs(diff)} spots</span>`
-              : diff > 0 ? `<span style="color:#ef4444;margin-left:6px;">▼ ${diff} spots</span>`
-              : `<span style="opacity:0.4;margin-left:6px;">— exact</span>`}
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-            ${r.isDraftSteal?`<span style="background:var(--accent);color:#fff;font-size:0.7rem;font-family:Bebas Neue,sans-serif;padding:2px 8px;border-radius:20px;">STEAL</span>`:''}
-            ${r.isReach?`<span style="background:#ef4444;color:#fff;font-size:0.7rem;font-family:Bebas Neue,sans-serif;padding:2px 8px;border-radius:20px;">REACH</span>`:''}
-            <span style="background:rgba(255,255,255,0.08);color:var(--accent);font-size:0.7rem;font-family:Bebas Neue,sans-serif;padding:2px 8px;border-radius:20px;letter-spacing:1px;">CLANKER</span>
-          </div>
-          <div style="font-size:0.78rem;opacity:0.75;line-height:1.5;border-top:1px solid ${hexToRgba(color,0.25)};padding-top:8px;font-style:italic;">${r.reasoning}</div>
-          <div id="mock-compare-${r.pick}" style="display:none;margin-top:8px;font-size:0.75rem;padding:6px 10px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);">
-            <!-- COMPARISON HOOK: real pick data injected here when available -->
+
+        <!-- CENTER: player info + logo/headshot -->
+        <div style="position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:12px 16px;flex:1;border-right:1px solid ${hexToRgba(color,0.3)};">
+          <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${r.team.toLowerCase()}.png" style="position:absolute;right:-10px;top:50%;transform:translateY(-50%);height:120%;opacity:0.18;pointer-events:none;z-index:0;">
+          ${headshotUrl ? `<img src="${headshotUrl}" style="position:absolute;right:50px;bottom:0;height:110%;object-fit:cover;object-position:top center;z-index:1;pointer-events:none;">` : ''}
+          <div style="position:relative;z-index:2;">
+            <div style="font-family:Bebas Neue,sans-serif;font-size:1.6rem;line-height:1;margin-bottom:3px;text-shadow:0 1px 4px rgba(0,0,0,0.6);">${r.prospect.name}</div>
+            <div style="font-size:0.8rem;opacity:0.6;margin-bottom:3px;">${r.prospect.pos} · ${r.prospect.school}</div>
+            <div style="font-size:0.75rem;margin-bottom:6px;">
+              <span style="opacity:0.5;">PRE-DRAFT RANK:</span>
+              <span style="opacity:0.8;margin-left:4px;">#${r.prospect.rank}</span>
+              ${diff < 0 ? `<span style="color:#22c55e;margin-left:6px;">▲ ${Math.abs(diff)} spots</span>`
+                : diff > 0 ? `<span style="color:#ef4444;margin-left:6px;">▼ ${diff} spots</span>`
+                : `<span style="opacity:0.4;margin-left:6px;">— exact</span>`}
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              ${r.isDraftSteal?`<span style="background:var(--accent);color:#fff;font-size:0.7rem;font-family:Bebas Neue,sans-serif;padding:2px 8px;border-radius:20px;">STEAL</span>`:''}
+              ${r.isReach?`<span style="background:#ef4444;color:#fff;font-size:0.7rem;font-family:Bebas Neue,sans-serif;padding:2px 8px;border-radius:20px;">REACH</span>`:''}
+            </div>
           </div>
         </div>
+
+        <!-- RIGHT: reasoning + comparison -->
+        <div style="display:flex;flex-direction:column;justify-content:center;padding:12px 14px;width:35%;min-width:200px;">
+          <div style="font-size:0.65rem;font-family:Bebas Neue,sans-serif;letter-spacing:1px;opacity:0.5;margin-bottom:4px;">CLANKER'S ANALYSIS</div>
+          <div style="font-size:0.76rem;opacity:0.8;line-height:1.55;font-style:italic;margin-bottom:10px;">${r.reasoning}</div>
+          <div id="mock-compare-${r.pick}" style="font-size:0.72rem;padding:5px 8px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+            <span style="opacity:0.4;font-family:Bebas Neue,sans-serif;letter-spacing:1px;font-size:0.65rem;">CLANKER'S CALL</span>
+            <span style="opacity:0.3;margin-left:6px;">— result TBD</span>
+          </div>
+        </div>
+
       </div>`;
 
     cardsContainer.appendChild(card);
