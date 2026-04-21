@@ -8960,10 +8960,8 @@ function startDraftSim() {
 
 function renderDraftSimResults(results, roundFilter, teamFilter) {
   const container = document.getElementById('nfl-draft-sim');
-  const teamColors = typeof NFL_TEAM_COLORS !== 'undefined' ? NFL_TEAM_COLORS : {};
-
   function getColor(team) {
-    return (teamColors[team] && teamColors[team][0]) ? teamColors[team][0] : '#444';
+    return (NFL_TEAMS[team] && NFL_TEAMS[team].color) ? NFL_TEAMS[team].color : '#444';
   }
   function hexToRgba(hex, alpha) {
     const r = parseInt(hex.slice(1,3),16);
