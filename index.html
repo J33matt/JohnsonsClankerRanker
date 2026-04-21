@@ -8975,7 +8975,8 @@ function startDraftSim() {
   window._draftSimResults = null;
   const container = document.getElementById('nfl-draft-sim');
   container.innerHTML = '<div style="text-align:center;padding:40px;font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:2px;opacity:0.6;">SIMULATING DRAFT...</div>';
-  setTimeout(() => {
+  setTimeout(async () => {
+    await preloadProspectHeadshots();
     const results = runDraftSimulation();
     window._draftSimResults = results;
     window._draftSimTeam = savedTeam;
