@@ -8965,14 +8965,17 @@ function renderDraftSim() {
 }
 
 function startDraftSim() {
+  const savedTeam = window._draftSimTeam || '';
+  const savedRound = window._draftSimRound || 0;
   window._draftSimResults = null;
-  window._draftSimRound = 0;
   const container = document.getElementById('nfl-draft-sim');
   container.innerHTML = '<div style="text-align:center;padding:40px;font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:2px;opacity:0.6;">SIMULATING DRAFT...</div>';
   setTimeout(() => {
     const results = runDraftSimulation();
     window._draftSimResults = results;
-    renderDraftSimResults(results, 0, '');
+    window._draftSimTeam = savedTeam;
+    window._draftSimRound = savedRound;
+    renderDraftSimResults(results, savedRound, savedTeam);
   }, 50);
 }
 
