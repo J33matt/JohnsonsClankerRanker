@@ -48,11 +48,11 @@ function selectPick(teamAbbr, round, availableProspects, recentPicks) {
   const runPos = recentPositions.length === 3 && recentPositions.every(p => p === recentPositions[0]) ? recentPositions[0] : null;
 
   const scored = availableProspects.map(p => {
-    let score = (301 - p.rank);
+    let score = Math.pow(301 - p.rank, 1.8);
     if (p.tier === 1) score *= 1.4;
     else if (p.tier === 2) score *= 1.15;
     const premium = (POSITIONAL_PREMIUM[p.pos] || {})[rk] || 1.0;
-    score *= premium;
+    score *= (0.85 + (premium - 1) * 0.3);
     if (teamNeeds.includes(p.pos)) score *= 1.2;
     if (runPos && p.pos === runPos && teamNeeds.includes(p.pos)) score *= 1.4;
     if (archetype.preferredPos.includes(p.pos)) score *= 1.1;
@@ -65,10 +65,15 @@ function selectPick(teamAbbr, round, availableProspects, recentPicks) {
   });
 
   scored.sort((a, b) => b.score - a.score);
-  // Prevent non-slideRisk top prospects from falling more than 15 picks
-  const topAvailableRank = Math.min(...availableProspects.map(p => p.rank));
-  const safePick = scored.find(s => !s.prospect.slideRisk && s.prospect.rank <= topAvailableRank + 15);
-  if (safePick && scored[0].prospect.slideRisk) return safePick.prospect;
+  // Hard cap: best available prospect by rank cannot fall more than 12 picks in any run
+  const bestAvailable = availableProspects.reduce((a, b) => a.rank < b.rank ? a : b);
+  if (!bestAvailable.slideRisk) {
+    const currentPickNumber = availableProspects.length > 0 ? (257 - availableProspects.length + 1) : 1;
+    const maxAllowedFall = bestAvailable.rank + 12;
+    if (currentPickNumber <= maxAllowedFall && scored[0].prospect.rank > bestAvailable.rank + 12) {
+      return bestAvailable;
+    }
+  }
   return scored[0].prospect;
 }
 
