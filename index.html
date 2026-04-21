@@ -9043,12 +9043,12 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
     const color = getColor(r.team);
     const gradeColors = { A:'#22c55e', B:'#14b8a6', C:'#eab308', D:'#f97316', F:'#ef4444' };
     const headshot = (typeof _prospectHeadshotCache !== 'undefined' && _prospectHeadshotCache[r.prospect.rank])
-      ? `<img src="${_prospectHeadshotCache[r.prospect.rank]}" style="position:absolute;right:0;top:0;height:100%;object-fit:cover;object-position:top;">` : '';
-    const teamLogo = `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${r.team.toLowerCase()}.png" style="position:absolute;right:30px;top:50%;transform:translateY(-50%);height:80%;opacity:0.12;pointer-events:none;">`;
+      ? `<img src="${_prospectHeadshotCache[r.prospect.rank]}" style="position:absolute;right:10px;bottom:0;height:115%;object-fit:cover;object-position:top center;z-index:1;">` : '';
+    const teamLogo = `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${r.team.toLowerCase()}.png" style="position:absolute;right:-18px;top:50%;transform:translateY(-50%);height:115%;opacity:0.15;pointer-events:none;z-index:0;">`;
     const needsPct = r.needsFit ? Math.floor(70 + Math.random()*25) : Math.floor(20 + Math.random()*40);
 
     const card = document.createElement('div');
-    card.style.cssText = `position:relative;overflow:hidden;background:linear-gradient(90deg,${hexToRgba(color,0.18)},var(--surface));border-left:4px solid ${color};border-radius:10px;margin-bottom:10px;padding:14px 160px 14px 16px;min-height:90px;opacity:0;transition:opacity 0.2s;`;
+    card.style.cssText = `position:relative;overflow:hidden;background:linear-gradient(135deg,${hexToRgba(color,0.35)} 0%,${hexToRgba(color,0.12)} 50%,var(--surface) 100%);border-left:4px solid ${color};border-radius:10px;margin-bottom:10px;padding:14px 180px 14px 16px;min-height:100px;opacity:0;transition:opacity 0.2s;`;
     card.innerHTML = `${teamLogo}${headshot}
       <div style="position:relative;z-index:1;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
