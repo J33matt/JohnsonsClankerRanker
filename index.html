@@ -8967,7 +8967,6 @@ function renderDraftSim() {
 function startDraftSim() {
   window._draftSimResults = null;
   window._draftSimRound = 0;
-  window._draftSimTeam = '';
   const container = document.getElementById('nfl-draft-sim');
   container.innerHTML = '<div style="text-align:center;padding:40px;font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:2px;opacity:0.6;">SIMULATING DRAFT...</div>';
   setTimeout(() => {
@@ -8990,16 +8989,21 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
   }
 
   // Stats
-  const posCounts = {};
-  let biggestSteal = null, biggestReach = null, needsMet = 0, needsIgnored = 0;
+  let biggestSteal = null, biggestReach = null;
+  const teamScores = {};
   results.forEach(r => {
-    posCounts[r.prospect.pos] = (posCounts[r.prospect.pos] || 0) + 1;
     const diff = r.pick - r.prospect.rank;
     if (!biggestSteal || diff > (biggestSteal.pick - biggestSteal.prospect.rank)) biggestSteal = r;
     if (!biggestReach || diff < (biggestReach.pick - biggestReach.prospect.rank)) biggestReach = r;
-    if (r.needsFit) needsMet++; else needsIgnored++;
+    if (!teamScores[r.team]) teamScores[r.team] = { total: 0, count: 0 };
+    const gradeVal = { A:4, B:3, C:2, D:1, F:0 }[r.grade] || 0;
+    teamScores[r.team].total += gradeVal;
+    teamScores[r.team].count++;
   });
-  const topPos = Object.entries(posCounts).sort((a,b) => b[1]-a[1])[0];
+  const teamAvgs = Object.entries(teamScores).map(([team, s]) => ({ team, avg: s.total / s.count }));
+  teamAvgs.sort((a, b) => b.avg - a.avg);
+  const bestDraft = teamAvgs[0];
+  const worstDraft = teamAvgs[teamAvgs.length - 1];
 
   // Team list for dropdown
   const teams = [...new Set(results.map(r => r.team))].sort();
@@ -9007,13 +9011,20 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
   let html = `<div style="padding:16px">
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
       <button onclick="startDraftSim()" style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;letter-spacing:2px;background:var(--accent);color:#fff;border:none;padding:10px 28px;border-radius:8px;cursor:pointer;">RUN AGAIN</button>
+      <button onclick="window._draftSimRound=0;window._draftSimTeam='';renderDraftSimResults(window._draftSimResults,0,'')" style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;letter-spacing:2px;background:var(--surface);color:inherit;border:1px solid rgba(255,255,255,0.1);padding:10px 20px;border-radius:8px;cursor:pointer;">CLEAR FILTERS</button>
     </div>
 
     <div style="background:var(--surface);border-radius:10px;padding:14px 18px;margin-bottom:18px;display:flex;gap:24px;flex-wrap:wrap;">
-      <div><div style="font-size:0.7rem;opacity:0.5;font-family:Bebas Neue,sans-serif;letter-spacing:1px;">MOST DRAFTED</div><div style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;">${topPos[0]} <span style="opacity:0.5">(${topPos[1]})</span></div></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${bestDraft.team.toLowerCase()}.png" style="width:32px;height:32px;object-fit:contain;filter:drop-shadow(0 0 4px rgba(255,255,255,0.2));">
+        <div><div style="font-size:0.7rem;opacity:0.5;font-family:Bebas Neue,sans-serif;letter-spacing:1px;">BEST DRAFT</div><div style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;">${NFL_TEAMS[bestDraft.team]?.name || bestDraft.team}</div></div>
+      </div>
       <div><div style="font-size:0.7rem;opacity:0.5;font-family:Bebas Neue,sans-serif;letter-spacing:1px;">BIGGEST STEAL</div><div style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;">${biggestSteal ? biggestSteal.prospect.name : '—'}</div></div>
       <div><div style="font-size:0.7rem;opacity:0.5;font-family:Bebas Neue,sans-serif;letter-spacing:1px;">BIGGEST REACH</div><div style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;">${biggestReach ? biggestReach.prospect.name : '—'}</div></div>
-      <div><div style="font-size:0.7rem;opacity:0.5;font-family:Bebas Neue,sans-serif;letter-spacing:1px;">NEEDS MET</div><div style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;">${needsMet} <span style="opacity:0.4">/ ${needsMet+needsIgnored}</span></div></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${worstDraft.team.toLowerCase()}.png" style="width:32px;height:32px;object-fit:contain;filter:drop-shadow(0 0 4px rgba(255,255,255,0.2));">
+        <div><div style="font-size:0.7rem;opacity:0.5;font-family:Bebas Neue,sans-serif;letter-spacing:1px;">WORST DRAFT</div><div style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;">${NFL_TEAMS[worstDraft.team]?.name || worstDraft.team}</div></div>
+      </div>
     </div>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
@@ -9104,7 +9115,7 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
     card.innerHTML = `${teamLogo}${headshot}
       <div style="position:relative;z-index:1;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <span style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;color:${color};">#${r.pick}</span>
+          <span style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.7);">#${r.pick}</span>
           <span style="font-family:Bebas Neue,sans-serif;font-size:1.2rem;opacity:0.6;">${r.team}</span>
           <span style="background:${gradeColors[r.grade]};color:#fff;font-family:Bebas Neue,sans-serif;font-size:0.85rem;padding:2px 8px;border-radius:20px;">${r.grade}</span>
           ${r.isDraftSteal ? '<span style="background:var(--accent);color:#fff;font-size:0.75rem;font-family:Bebas Neue,sans-serif;padding:2px 8px;border-radius:20px;">STEAL</span>' : ''}
