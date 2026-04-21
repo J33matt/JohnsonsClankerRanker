@@ -13,6 +13,8 @@ const POSITIONAL_PREMIUM = {
   IOL:  { r1:0.8, r2:1.0, r3:1.1, r4:1.1, r5:1.0, r6:0.9, r7:0.8 },
 };
 
+const ONE_AND_DONE_POSITIONS = ['QB', 'K', 'P', 'LS'];
+
 function assignTiers(prospects) {
   return prospects.map(p => ({
     ...p,
@@ -33,9 +35,12 @@ function getRoundKey(round) {
   return `r${Math.min(round, 7)}`;
 }
 
-function selectPick(teamAbbr, round, availableProspects, recentPicks) {
+function selectPick(teamAbbr, round, availableProspects, recentPicks, alreadyDrafted = []) {
   const archetype = NFL_TEAM_ARCHETYPES[teamAbbr] || { style:'bpa', scheme:'4-3', preferredPos:[] };
-  const teamNeeds = NFL_TEAM_NEEDS[teamAbbr] || [];
+  const rawNeeds = NFL_TEAM_NEEDS[teamAbbr] || [];
+  const teamNeeds = rawNeeds.filter(pos =>
+    !ONE_AND_DONE_POSITIONS.includes(pos) || !alreadyDrafted.includes(pos)
+  );
   const rk = getRoundKey(round);
 
   const lock = NFL_DRAFT_LOCKS.find(l => l.team === teamAbbr);
@@ -102,9 +107,12 @@ function runDraftSimulation() {
   pool = assignVolatility(pool);
   const results = [];
   const recentPicks = [];
+  const teamDraftedPositions = {};
 
   NFL_DRAFT_ORDER.forEach(({ pick, team, round }) => {
-    const prospect = selectPick(team, round, pool, recentPicks);
+    if (!teamDraftedPositions[team]) teamDraftedPositions[team] = [];
+    const prospect = selectPick(team, round, pool, recentPicks, teamDraftedPositions[team]);
+    teamDraftedPositions[team].push(prospect.pos);
     pool = pool.filter(p => p.rank !== prospect.rank);
     const diff = pick - prospect.rank;
     const result = {
