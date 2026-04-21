@@ -64,6 +64,7 @@ function selectPick(teamAbbr, round, availableProspects, recentPicks, alreadyDra
     if (archetype.style === 'traits' && p.rank % 7 < 3) score *= 1.2;
     if (archetype.style === 'safe' && p.rank <= 100) score *= 1.2;
     if (archetype.style === 'needs' && teamNeeds.includes(p.pos)) score *= 1.3;
+    if (ONE_AND_DONE_POSITIONS.includes(p.pos) && alreadyDrafted.includes(p.pos)) score *= 0.02;
     if (p.slideRisk) score *= 0.3;
     score *= (0.92 + Math.random() * 0.16);
     return { prospect: p, score };
