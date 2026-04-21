@@ -8993,8 +8993,11 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
   const teamScores = {};
   results.forEach(r => {
     const diff = r.pick - r.prospect.rank;
-    if (!biggestSteal || diff > (biggestSteal.pick - biggestSteal.prospect.rank)) biggestSteal = r;
-    if (!biggestReach || diff < (biggestReach.pick - biggestReach.prospect.rank)) biggestReach = r;
+    const round = NFL_DRAFT_ORDER.find(d => d.pick === r.pick)?.round || Math.ceil(r.pick / 32);
+    if (round <= 2) {
+      if (!biggestSteal || diff > (biggestSteal.pick - biggestSteal.prospect.rank)) biggestSteal = r;
+      if (!biggestReach || diff < (biggestReach.pick - biggestReach.prospect.rank)) biggestReach = r;
+    }
     if (!teamScores[r.team]) teamScores[r.team] = { total: 0, count: 0 };
     const gradeVal = { A:4, B:3, C:2, D:1, F:0 }[r.grade] || 0;
     teamScores[r.team].total += gradeVal;
@@ -9122,7 +9125,7 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
           ${r.isReach ? '<span style="background:#ef4444;color:#fff;font-size:0.75rem;font-family:Bebas Neue,sans-serif;padding:2px 8px;border-radius:20px;">REACH</span>' : ''}
         </div>
         <div style="font-family:Bebas Neue,sans-serif;font-size:1.3rem;margin:2px 0;">${r.prospect.name}</div>
-        <div style="font-size:0.8rem;opacity:0.6;margin-bottom:6px;">${r.prospect.pos} &nbsp;|&nbsp; ${r.prospect.school}</div>
+        <div style="font-size:0.8rem;opacity:0.6;margin-bottom:6px;">${r.prospect.pos} &nbsp;|&nbsp; ${r.prospect.school} &nbsp;|&nbsp; <span style="opacity:0.8;">Board #${r.prospect.rank}</span></div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:0.7rem;opacity:0.5;">NEEDS FIT</span>
           <div style="background:rgba(255,255,255,0.1);border-radius:4px;width:80px;height:5px;overflow:hidden;">
