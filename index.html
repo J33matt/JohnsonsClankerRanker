@@ -9161,8 +9161,17 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
   renderNextCard();
 }
 
+window.addEventListener('scroll', () => {
+  const fab = document.getElementById('draft-sim-fab');
+  if (!fab) return;
+  const panel = document.getElementById('nfl-draft-sim');
+  const isVisible = panel && panel.style.display !== 'none' && window._draftSimResults;
+  fab.style.display = isVisible && window.scrollY > 200 ? 'block' : 'none';
+});
+
 </script>
 <script src="cards-data.js"></script>
 <script src="cards-logic.js"></script>
+<button id="draft-sim-fab" onclick="startDraftSim()" style="display:none;position:fixed;top:16px;left:16px;z-index:9999;font-family:Bebas Neue,sans-serif;font-size:1rem;letter-spacing:2px;background:var(--accent);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.4);transition:opacity 0.2s;">↺ RUN AGAIN</button>
 </body>
 </html>
