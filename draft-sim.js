@@ -49,22 +49,26 @@ function selectPick(teamAbbr, round, availableProspects, recentPicks) {
 
   const scored = availableProspects.map(p => {
     let score = (301 - p.rank);
-    if (p.tier === 1) score *= 3;
-    else if (p.tier === 2) score *= 1.5;
+    if (p.tier === 1) score *= 1.4;
+    else if (p.tier === 2) score *= 1.15;
     const premium = (POSITIONAL_PREMIUM[p.pos] || {})[rk] || 1.0;
     score *= premium;
-    if (teamNeeds.includes(p.pos)) score *= 1.5;
+    if (teamNeeds.includes(p.pos)) score *= 1.2;
     if (runPos && p.pos === runPos && teamNeeds.includes(p.pos)) score *= 1.4;
-    if (archetype.preferredPos.includes(p.pos)) score *= 1.3;
+    if (archetype.preferredPos.includes(p.pos)) score *= 1.1;
     if (archetype.style === 'traits' && p.rank % 7 < 3) score *= 1.2;
     if (archetype.style === 'safe' && p.rank <= 100) score *= 1.2;
     if (archetype.style === 'needs' && teamNeeds.includes(p.pos)) score *= 1.3;
     if (p.slideRisk) score *= 0.3;
-    score *= (0.7 + Math.random() * 0.6);
+    score *= (0.92 + Math.random() * 0.16);
     return { prospect: p, score };
   });
 
   scored.sort((a, b) => b.score - a.score);
+  // Prevent non-slideRisk top prospects from falling more than 15 picks
+  const topAvailableRank = Math.min(...availableProspects.map(p => p.rank));
+  const safePick = scored.find(s => !s.prospect.slideRisk && s.prospect.rank <= topAvailableRank + 15);
+  if (safePick && scored[0].prospect.slideRisk) return safePick.prospect;
   return scored[0].prospect;
 }
 
