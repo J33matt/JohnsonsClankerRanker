@@ -117,8 +117,10 @@ function generateMockReasoning(prospect, teamAbbr, round, pickNum, alreadyDrafte
   }
 
   // Team context sentence
-  if (context.storyline) {
-    sentences.push(context.storyline + (context.storyline.endsWith('.') ? '' : '.'));
+  if (context.storyline && isNeed) {
+    sentences.push(`This selection aligns with ${teamData.name}'s draft-day mandate — ${context.urgency ? `prioritizing ${context.urgency}` : 'addressing key roster needs'} as the primary focus heading into the weekend.`);
+  } else if (context.storyline && !isNeed && tier <= 2) {
+    sentences.push(`Despite pressing needs elsewhere, the value of ${prospect.name} at this spot was too significant for ${teamData.name} to pass up.`);
   }
 
   // Round-specific insight
