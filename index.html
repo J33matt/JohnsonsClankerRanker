@@ -200,8 +200,6 @@
   </div>
   <div id="nfl-mock-sim" class="nfl-panel panel" style="display:none;">Mock Sim content here</div>
   <div id="nfl-draft-sim" class="nfl-panel panel" style="display:none;"></div>
-  <div id="nfl-team-needs" class="nfl-panel panel" style="display:none;">Team Needs content here</div>
-  <div id="nfl-tracker" class="nfl-panel panel" style="display:none;">Tracker content here</div>
 </div>
 </main>
 
@@ -301,6 +299,23 @@ function initDraftTeamDropdown() {
       document.getElementById('draft-team-options').style.display = 'none';
     }
   });
+}
+
+function toggleSimTeamDropdown() {
+  const options = document.getElementById('sim-team-options');
+  if (options) options.style.display = options.style.display === 'none' ? 'block' : 'none';
+}
+
+function filterSimByTeam(abbr, teamName) {
+  const options = document.getElementById('sim-team-options');
+  if (options) options.style.display = 'none';
+  const selected = document.getElementById('sim-team-selected');
+  if (selected) selected.innerHTML = `
+    ${abbr ? `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;">` : ''}
+    <span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">${teamName}</span>
+    <span style="color:var(--muted);font-size:0.75rem;">▼</span>`;
+  window._draftSimTeam = abbr;
+  renderDraftSimResults(window._draftSimResults, window._draftSimRound || 0, abbr);
 }
 
 function filterDraftByTeam(abbr, teamName) {
@@ -9002,10 +9017,20 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
     </div>
 
     <div style="margin-bottom:18px;">
-      <select onchange="window._draftSimTeam=this.value;renderDraftSimResults(window._draftSimResults,window._draftSimRound,this.value)" style="font-family:Bebas Neue,sans-serif;font-size:0.95rem;background:var(--surface);color:inherit;border:1px solid rgba(255,255,255,0.1);padding:8px 14px;border-radius:8px;cursor:pointer;">
-        <option value="">ALL TEAMS</option>
-        ${teams.map(t => `<option value="${t}" ${teamFilter===t?'selected':''}>${t}</option>`).join('')}
-      </select>
+    <div style="margin-bottom:18px;position:relative;display:inline-block;" id="sim-team-dropdown">
+      <div id="sim-team-selected" onclick="toggleSimTeamDropdown()" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface);border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;min-width:180px;">
+        ${teamFilter && NFL_TEAMS[teamFilter]
+          ? `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${teamFilter.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;">
+             <span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">${NFL_TEAMS[teamFilter].name}</span>`
+          : `<span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">All Teams</span>`}
+        <span style="color:var(--muted);font-size:0.75rem;">▼</span>
+      </div>
+      <div id="sim-team-options" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:var(--surface);border:1px solid rgba(255,255,255,0.1);border-radius:8px;max-height:300px;overflow-y:auto;min-width:220px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+        <div class="draft-team-option" onclick="filterSimByTeam('','All Teams')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);">
+          <span style="font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">All Teams</span>
+        </div>
+      </div>
+    </div>
     </div>
 
     <div id="draft-sim-cards"></div>
@@ -9019,6 +9044,31 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
     if (teamFilter && r.team !== teamFilter) return false;
     return true;
   });
+
+  // Init sim team dropdown
+  setTimeout(() => {
+    const optContainer = document.getElementById('sim-team-options');
+    if (optContainer && optContainer.children.length === 1) {
+      Object.entries(NFL_TEAMS)
+        .sort((a,b) => a[1].name.localeCompare(b[1].name))
+        .forEach(([abbr, team]) => {
+          const div = document.createElement('div');
+          div.className = 'draft-team-option';
+          div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);';
+          div.innerHTML = `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;filter:drop-shadow(0px 0px 4px rgba(255,255,255,0.3));" onerror="this.style.display='none'">
+            <span style="font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;color:var(--text);">${team.name}</span>`;
+          div.onclick = () => filterSimByTeam(abbr, team.name);
+          optContainer.appendChild(div);
+        });
+    }
+    document.addEventListener('click', function simDropdownClose(e) {
+      const dd = document.getElementById('sim-team-dropdown');
+      if (dd && !dd.contains(e.target)) {
+        const opts = document.getElementById('sim-team-options');
+        if (opts) opts.style.display = 'none';
+      }
+    });
+  }, 100);
 
   const cardsContainer = document.getElementById('draft-sim-cards');
   let currentRound = 0;
