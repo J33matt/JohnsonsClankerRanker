@@ -170,7 +170,15 @@ function runMockDraft() {
         score: getMockPickScore(p, team, round, teamDraftedPositions[team], pool)
       }));
       scored.sort((a, b) => b.score - a.score);
-      selected = scored[0].prospect;
+      // Hard cap: best available prospect by rank cannot fall more than 12 picks
+      const bestAvailable = pool.reduce((a, b) => a.rank < b.rank ? a : b);
+      const currentPickNumber = 257 - pool.length + 1;
+      const maxAllowedFall = bestAvailable.rank + 12;
+      if (currentPickNumber <= maxAllowedFall && scored[0].prospect.rank > bestAvailable.rank + 12) {
+        selected = bestAvailable;
+      } else {
+        selected = scored[0].prospect;
+      }
     }
 
     const reasoning = generateMockReasoning(selected, team, round, pick, teamDraftedPositions[team], pool, results);
