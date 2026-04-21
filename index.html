@@ -9208,13 +9208,7 @@ function renderMockDraft() {
     renderMockDraftResults(window._mockDraftResults, window._mockRound||0, window._mockTeam||'', window._mockPos||'');
     return;
   }
-  const container = document.getElementById('nfl-mock-draft');
-  container.innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:16px;">
-      <div style="font-family:Bebas Neue,sans-serif;font-size:2rem;letter-spacing:3px;opacity:0.7;">CLANKER'S MOCK DRAFT</div>
-      <div style="font-size:0.9rem;opacity:0.4;margin-bottom:8px;">All 7 rounds · 257 picks · AI-reasoned selections</div>
-      <button onclick="startMockDraft()" style="font-family:Bebas Neue,sans-serif;font-size:1.2rem;letter-spacing:2px;background:var(--accent);color:#fff;border:none;padding:14px 40px;border-radius:10px;cursor:pointer;">RUN CLANKER'S MOCK</button>
-    </div>`;
+  startMockDraft();
 }
 
 function startMockDraft() {
