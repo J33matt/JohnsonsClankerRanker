@@ -9355,8 +9355,8 @@ function renderMockDraftResults(results, roundFilter, teamFilter, posFilter) {
     }
 
     const headshot = (typeof _prospectHeadshotCache !== 'undefined' && _prospectHeadshotCache[r.prospect.rank])
-      ? `<img src="${_prospectHeadshotCache[r.prospect.rank]}" style="position:absolute;right:10px;bottom:0;height:105%;object-fit:cover;object-position:top center;z-index:1;">` : '';
-    const teamLogo = `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${r.team.toLowerCase()}.png" style="position:absolute;right:-18px;top:50%;transform:translateY(-50%);height:105%;opacity:0.15;pointer-events:none;z-index:0;">`;
+      ? `<img src="${_prospectHeadshotCache[r.prospect.rank]}" style="position:absolute;right:75px;bottom:0;height:95%;object-fit:cover;object-position:top center;z-index:1;">` : '';
+    const teamLogo = `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${r.team.toLowerCase()}.png" style="position:absolute;right:25px;top:50%;transform:translateY(-50%);height:130%;opacity:0.4;pointer-events:none;z-index:0;">`;
     const needsPct = r.needsFit ? Math.floor(70 + (r.prospect.rank % 25)) : Math.floor(20 + (r.prospect.rank % 40));
     const diff = r.pick - r.prospect.rank;
 
