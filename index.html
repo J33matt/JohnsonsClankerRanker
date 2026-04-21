@@ -494,6 +494,7 @@ function switchLeague(league, btn) {
       p.classList.remove('active');
     });
     const _savedNflTab = localStorage.getItem('activeNflTab');
+    window._draftSimPos = localStorage.getItem('draftSimPos') || '';
     const _validNflTabs = ['big-board', 'draft-sim', 'mock-draft', 'draft-order'];
     const _nflTabToLoad = (_savedNflTab && _validNflTabs.includes(_savedNflTab)) ? _savedNflTab : 'big-board';
     const _nflBtnToLoad = document.querySelector(`#nfl-tabs button[onclick*="${_nflTabToLoad}"]`);
@@ -8972,6 +8973,7 @@ function renderDraftSim() {
 function startDraftSim() {
   const savedTeam = window._draftSimTeam || '';
   const savedRound = window._draftSimRound || 0;
+  const savedPos = window._draftSimPos || '';
   const savedScroll = window.scrollY;
   window._draftSimResults = null;
   const container = document.getElementById('nfl-draft-sim');
@@ -8982,12 +8984,16 @@ function startDraftSim() {
     window._draftSimResults = results;
     window._draftSimTeam = savedTeam;
     window._draftSimRound = savedRound;
-    renderDraftSimResults(results, savedRound, savedTeam);
+    window._draftSimPos = savedPos;
+    renderDraftSimResults(results, savedRound, savedTeam, savedPos);
     requestAnimationFrame(() => window.scrollTo({ top: savedScroll, behavior: 'instant' }));
   }, 50);
 }
 
-function renderDraftSimResults(results, roundFilter, teamFilter) {
+function renderDraftSimResults(results, roundFilter, teamFilter, posFilter) {
+  posFilter = posFilter || '';
+  window._draftSimPos = posFilter;
+  try { localStorage.setItem('draftSimPos', posFilter); } catch(e) {}
   const container = document.getElementById('nfl-draft-sim');
   function getColor(team) {
     return (NFL_TEAMS[team] && NFL_TEAMS[team].color) ? NFL_TEAMS[team].color : '#444';
@@ -9025,7 +9031,7 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
   let html = `<div style="padding:16px">
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
       <button onclick="startDraftSim()" style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;letter-spacing:2px;background:var(--accent);color:#fff;border:none;padding:10px 28px;border-radius:8px;cursor:pointer;">RUN AGAIN</button>
-      <button onclick="window._draftSimRound=0;window._draftSimTeam='';renderDraftSimResults(window._draftSimResults,0,'')" style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;letter-spacing:2px;background:var(--surface);color:inherit;border:1px solid rgba(255,255,255,0.1);padding:10px 20px;border-radius:8px;cursor:pointer;">CLEAR FILTERS</button>
+      <button onclick="window._draftSimRound=0;window._draftSimTeam='';window._draftSimPos='';renderDraftSimResults(window._draftSimResults,0,'','')" style="font-family:Bebas Neue,sans-serif;font-size:1.1rem;letter-spacing:2px;background:var(--surface);color:inherit;border:1px solid rgba(255,255,255,0.1);padding:10px 20px;border-radius:8px;cursor:pointer;">CLEAR FILTERS</button>
     </div>
 
     <div style="background:var(--surface);border-radius:10px;padding:14px 18px;margin-bottom:18px;display:flex;gap:24px;flex-wrap:wrap;">
@@ -9042,7 +9048,10 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
     </div>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-      ${[0,1,2,3,4,5,6,7].map(r => `<button onclick="window._draftSimRound=${r};renderDraftSimResults(window._draftSimResults,${r},window._draftSimTeam)" style="font-family:Bebas Neue,sans-serif;font-size:0.9rem;letter-spacing:1px;padding:6px 14px;border-radius:6px;border:none;cursor:pointer;background:${roundFilter===r?'var(--accent)':'var(--surface)'};color:${roundFilter===r?'#fff':'inherit'}">${r===0?'ALL':'RD '+r}</button>`).join('')}
+      ${[0,1,2,3,4,5,6,7].map(r => `<button onclick="window._draftSimRound=${r};renderDraftSimResults(window._draftSimResults,${r},window._draftSimTeam,window._draftSimPos)" style="font-family:Bebas Neue,sans-serif;font-size:0.9rem;letter-spacing:1px;padding:6px 14px;border-radius:6px;border:none;cursor:pointer;background:${roundFilter===r?'var(--accent)':'var(--surface)'};color:${roundFilter===r?'#fff':'inherit'}">${r===0?'ALL':'RD '+r}</button>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      ${['', 'QB', 'OT', 'OG', 'IOL', 'TE', 'WR', 'RB', 'EDGE', 'DT', 'LB', 'CB', 'S'].map(p => `<button onclick="window._draftSimPos='${p}';renderDraftSimResults(window._draftSimResults,window._draftSimRound,window._draftSimTeam,'${p}')" style="font-family:Bebas Neue,sans-serif;font-size:0.9rem;letter-spacing:1px;padding:6px 14px;border-radius:6px;border:none;cursor:pointer;background:${posFilter===p?'var(--accent)':'var(--surface)'};color:${posFilter===p?'#fff':'inherit'}">${p===''?'ALL POS':p}</button>`).join('')}
     </div>
 
     <div style="margin-bottom:18px;">
@@ -9071,6 +9080,7 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
     const round = NFL_DRAFT_ORDER.find(d => d.pick === r.pick)?.round || Math.ceil(r.pick / 32);
     if (roundFilter > 0 && round !== roundFilter) return false;
     if (teamFilter && r.team !== teamFilter) return false;
+    if (posFilter && r.prospect.pos !== posFilter) return false;
     return true;
   });
 
