@@ -9152,7 +9152,16 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
         <!-- CENTER COLUMN -->
         <div style="display:flex;flex-direction:column;justify-content:center;padding:14px 20px;flex:1;">
           <div style="font-family:Bebas Neue,sans-serif;font-size:1.8rem;line-height:1;margin-bottom:4px;text-shadow:0 1px 4px rgba(0,0,0,0.5);">${r.prospect.name}</div>
-          <div style="font-size:0.82rem;opacity:0.6;margin-bottom:6px;">${r.prospect.pos} &nbsp;·&nbsp; ${r.prospect.school} &nbsp;·&nbsp; Board #${r.prospect.rank}</div>
+          <div style="font-size:0.82rem;opacity:0.6;margin-bottom:4px;">${r.prospect.pos} &nbsp;·&nbsp; ${r.prospect.school}</div>
+          <div style="font-size:0.75rem;margin-bottom:6px;">
+            <span style="opacity:0.5;">PRE-DRAFT RANK:</span>
+            <span style="opacity:0.8;margin-left:4px;">#${r.prospect.rank}</span>
+            ${r.pick < r.prospect.rank
+              ? `<span style="color:#22c55e;margin-left:6px;">▲ ${r.prospect.rank - r.pick} spots</span>`
+              : r.pick > r.prospect.rank
+              ? `<span style="color:#ef4444;margin-left:6px;">▼ ${r.pick - r.prospect.rank} spots</span>`
+              : `<span style="opacity:0.4;margin-left:6px;">— exact</span>`}
+          </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             ${r.isDraftSteal ? `<span style="background:var(--accent);color:#fff;font-size:0.7rem;font-family:Bebas Neue,sans-serif;padding:2px 8px;border-radius:20px;">STEAL</span>` : ''}
             ${r.isReach ? `<span style="background:#ef4444;color:#fff;font-size:0.7rem;font-family:Bebas Neue,sans-serif;padding:2px 8px;border-radius:20px;">REACH</span>` : ''}
