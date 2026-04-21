@@ -9037,9 +9037,9 @@ function renderDraftSimResults(results, roundFilter, teamFilter) {
     <div style="margin-bottom:18px;">
     <div style="margin-bottom:18px;position:relative;display:inline-block;" id="sim-team-dropdown">
       <div id="sim-team-selected" onclick="toggleSimTeamDropdown()" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface);border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;min-width:180px;">
-        ${teamFilter && NFL_TEAMS[teamFilter]
-          ? `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${teamFilter.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;">
-             <span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">${NFL_TEAMS[teamFilter].name}</span>`
+        ${window._draftSimTeam && NFL_TEAMS[window._draftSimTeam]
+          ? `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${window._draftSimTeam.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;">
+             <span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">${NFL_TEAMS[window._draftSimTeam].name}</span>`
           : `<span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">All Teams</span>`}
         <span style="color:var(--muted);font-size:0.75rem;">▼</span>
       </div>
