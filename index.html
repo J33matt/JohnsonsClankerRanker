@@ -493,7 +493,11 @@ function switchLeague(league, btn) {
       p.style.display = '';
       p.classList.remove('active');
     });
-    showNflTab('big-board', document.querySelector('#nfl-tabs button'));
+    const _savedNflTab = localStorage.getItem('activeNflTab');
+    const _validNflTabs = ['big-board', 'draft-sim', 'mock-draft', 'draft-order'];
+    const _nflTabToLoad = (_savedNflTab && _validNflTabs.includes(_savedNflTab)) ? _savedNflTab : 'big-board';
+    const _nflBtnToLoad = document.querySelector(`#nfl-tabs button[onclick*="${_nflTabToLoad}"]`);
+    showNflTab(_nflTabToLoad, _nflBtnToLoad || document.querySelector('#nfl-tabs button'));
   }
 }
 
@@ -540,6 +544,7 @@ function setNflView(view, btn) {
 }
 
 function showNflTab(tabName, btn) {
+  localStorage.setItem('activeNflTab', tabName);
   document.querySelectorAll('.nfl-panel').forEach(p => p.style.display = 'none');
   document.querySelectorAll('#nfl-tabs button').forEach(b => b.classList.remove('active'));
   const panel = document.getElementById('nfl-' + tabName);
