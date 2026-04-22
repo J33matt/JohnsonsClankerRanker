@@ -32,7 +32,7 @@ const OFFENSE_LAYOUT = {
   c:    [2, 3],
   rg:   [2, 4],
   rt:   [2, 5],
-  te:   [1, 6],
+  te:   [0, 5],
   qb:   [3, 3],
   fb:   [4, 3],
   rb:   [4, 3],
