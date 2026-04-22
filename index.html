@@ -10,6 +10,7 @@
 <script src="nfl-data.js"></script>
 <script src="draft-sim.js"></script>
 <script src="mock-draft.js"></script>
+<script src="lineups.js"></script>
 <script src="utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
@@ -86,6 +87,7 @@
   <button onclick="showNflTab('big-board', this)" class="tab-btn active">Big Board</button>
   <button class="tab-btn" onclick="showNflTab('draft-sim', this)">Draft Sim</button>
   <button onclick="showNflTab('mock-draft', this)" class="tab-btn">Clanker's Mock Draft</button>
+  <button class="tab-btn" onclick="showNflTab('lineups', this)">Lineups</button>
 </div>
 
 <main>
@@ -229,6 +231,7 @@
   <div id="nfl-mock-sim" class="nfl-panel panel" style="display:none;">Mock Sim content here</div>
   <div id="nfl-draft-sim" class="nfl-panel panel" style="display:none;"></div>
   <div id="nfl-mock-draft" class="nfl-panel panel" style="display:none;"></div>
+  <div id="nfl-lineups" class="nfl-panel panel" style="display:none;"></div>
 </div>
 </main>
 
@@ -526,7 +529,7 @@ function switchLeague(league, btn) {
     });
     const _savedNflTab = localStorage.getItem('activeNflTab');
     window._draftSimPos = localStorage.getItem('draftSimPos') || '';
-    const _validNflTabs = ['big-board', 'draft-sim', 'mock-draft', 'draft-order'];
+    const _validNflTabs = ['big-board', 'draft-sim', 'mock-draft', 'draft-order', 'lineups'];
     const _nflTabToLoad = (_savedNflTab && _validNflTabs.includes(_savedNflTab)) ? _savedNflTab : 'big-board';
     const _nflBtnToLoad = document.querySelector(`#nfl-tabs button[onclick*="${_nflTabToLoad}"]`);
     showNflTab(_nflTabToLoad, _nflBtnToLoad || document.querySelector('#nfl-tabs button'));
@@ -589,6 +592,7 @@ function showNflTab(tabName, btn) {
 if (tabName === 'mock-sim') document.getElementById('nfl-mock-sim').innerHTML = '<div style="text-align:center; padding: 60px; color: var(--muted); font-family: Bebas Neue, sans-serif; font-size: 2rem; letter-spacing: 3px;">Coming Soon...</div>';
 if (tabName === 'draft-sim') renderDraftSim();
 if (tabName === 'mock-draft') renderMockDraft();
+if (tabName === 'lineups') renderLineups();
 }
 
 // ── Firebase cloud storage ───────────────────────────────────
@@ -6292,6 +6296,10 @@ if (_savedLeague === 'nfl') {
 #mock-team-options::-webkit-scrollbar { width: 6px; }
 #mock-team-options::-webkit-scrollbar-track { background: var(--surface2); border-radius: 8px; }
 #mock-team-options::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 8px; }
+#lineups-team-options { scrollbar-width: thin; scrollbar-color: var(--accent) var(--surface2); }
+#lineups-team-options::-webkit-scrollbar { width: 6px; }
+#lineups-team-options::-webkit-scrollbar-track { background: var(--surface2); border-radius: 8px; }
+#lineups-team-options::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 8px; }
   .sb-slip {
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; flex-shrink: 0;
   }
@@ -9462,6 +9470,148 @@ function filterMockByTeam(abbr, teamName) {
     <span style="color:var(--muted);font-size:0.75rem;">▼</span>`;
   window._mockTeam = abbr;
   renderMockDraftResults(window._mockDraftResults, window._mockRound||0, abbr, window._mockPos||'');
+}
+
+function renderLineups() {
+  const container = document.getElementById('nfl-lineups');
+  const savedTeam = localStorage.getItem('lineupsTeam') || 'LV';
+  const savedView = localStorage.getItem('lineupsView') || 'offense';
+  container.innerHTML = `
+    <div style="padding:16px;">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px;">
+        <div style="position:relative;display:inline-block;" id="lineups-team-dropdown">
+          <div id="lineups-team-selected" onclick="toggleLineupsTeamDropdown()" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface);border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;min-width:200px;">
+            ${NFL_TEAMS[savedTeam] ? `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${savedTeam.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;">
+            <span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">${NFL_TEAMS[savedTeam].name}</span>` : `<span>Select Team</span>`}
+            <span style="color:var(--muted);font-size:0.75rem;">▼</span>
+          </div>
+          <div id="lineups-team-options" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:var(--surface);border:1px solid rgba(255,255,255,0.1);border-radius:8px;max-height:300px;overflow-y:auto;min-width:220px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+            ${Object.entries(NFL_TEAMS).sort((a,b) => a[1].name.localeCompare(b[1].name)).map(([abbr,team]) => `
+              <div class="draft-team-option" onclick="selectLineupsTeam('${abbr}')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);">
+                <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;">
+                <span style="font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">${team.name}</span>
+              </div>`).join('')}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          ${['offense','defense','both'].map(v => `
+            <button id="lineup-view-${v}" onclick="setLineupsView('${v}')" style="font-family:Bebas Neue,sans-serif;font-size:0.9rem;letter-spacing:1px;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;background:${savedView===v?'var(--accent)':'var(--surface)'};color:${savedView===v?'#fff':'inherit'}">${v.toUpperCase()}</button>
+          `).join('')}
+        </div>
+      </div>
+      <div id="lineups-formation" style="margin-top:8px;"></div>
+    </div>`;
+
+  document.addEventListener('click', function lineupsDropClose(e) {
+    const dd = document.getElementById('lineups-team-dropdown');
+    if (dd && !dd.contains(e.target)) { const o = document.getElementById('lineups-team-options'); if(o) o.style.display='none'; }
+  });
+
+  loadAndRenderLineup(savedTeam, savedView);
+}
+
+function toggleLineupsTeamDropdown() {
+  const o = document.getElementById('lineups-team-options');
+  if (o) o.style.display = o.style.display === 'none' ? 'block' : 'none';
+}
+
+function selectLineupsTeam(abbr) {
+  localStorage.setItem('lineupsTeam', abbr);
+  const o = document.getElementById('lineups-team-options');
+  if (o) o.style.display = 'none';
+  const s = document.getElementById('lineups-team-selected');
+  if (s) s.innerHTML = `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;">
+    <span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">${NFL_TEAMS[abbr]?.name||abbr}</span>
+    <span style="color:var(--muted);font-size:0.75rem;">▼</span>`;
+  loadAndRenderLineup(abbr, localStorage.getItem('lineupsView') || 'offense');
+}
+
+function setLineupsView(view) {
+  localStorage.setItem('lineupsView', view);
+  ['offense','defense','both'].forEach(v => {
+    const btn = document.getElementById(`lineup-view-${v}`);
+    if (btn) { btn.style.background = v===view ? 'var(--accent)' : 'var(--surface)'; btn.style.color = v===view ? '#fff' : 'inherit'; }
+  });
+  const team = localStorage.getItem('lineupsTeam') || 'LV';
+  loadAndRenderLineup(team, view);
+}
+
+async function loadAndRenderLineup(abbr, view) {
+  const container = document.getElementById('lineups-formation');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;padding:40px;font-family:Bebas Neue,sans-serif;font-size:1.2rem;opacity:0.5;letter-spacing:2px;">LOADING LINEUP...</div>';
+
+  const lineup = await fetchTeamLineup(abbr);
+  if (!lineup) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;opacity:0.4;">Failed to load lineup.</div>';
+    return;
+  }
+
+  const color = NFL_TEAMS[abbr]?.color || '#444';
+  const scheme = (NFL_TEAM_CONTEXT[abbr] || {}).scheme || '4-3';
+  let html = '';
+
+  if (view === 'offense' || view === 'both') {
+    html += `<div style="margin-bottom:32px;">
+      <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px;padding-bottom:6px;border-bottom:2px solid ${color};">OFFENSE — 3WR 1TE</div>
+      ${renderFormationGrid(lineup.offense, OFFENSE_LAYOUT, color, abbr)}
+    </div>`;
+  }
+
+  if (view === 'defense' || view === 'both') {
+    const defLayout = getDefenseLayout(abbr);
+    html += `<div>
+      <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px;padding-bottom:6px;border-bottom:2px solid ${color};">DEFENSE — BASE ${scheme}</div>
+      ${renderFormationGrid(lineup.defense, defLayout, color, abbr)}
+    </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function renderFormationGrid(positions, layout, color, abbr) {
+  const rows = 3, cols = 7;
+  const grid = Array.from({length: rows}, () => Array(cols).fill(null));
+
+  Object.entries(layout).forEach(([pos, [row, col]]) => {
+    const athletes = positions[pos] || [];
+    if (athletes.length > 0) {
+      grid[row][col] = { pos, athletes };
+    }
+  });
+
+  let html = `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:8px;max-width:900px;margin:0 auto;">`;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = grid[r][c];
+      if (!cell) {
+        html += `<div></div>`;
+        continue;
+      }
+      const starter = cell.athletes[0];
+      const depth = cell.athletes.slice(1, 3);
+      html += `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div style="position:relative;width:80px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${color};border-radius:10px;overflow:hidden;text-align:center;padding:6px 4px 8px;">
+            <img src="${getHeadshotUrl(starter.id)}" style="width:64px;height:64px;object-fit:cover;object-position:top;border-radius:6px;" onerror="this.style.display='none'">
+            <div style="font-family:Bebas Neue,sans-serif;font-size:0.75rem;color:${color};letter-spacing:1px;">${cell.pos.toUpperCase()}</div>
+            <div style="font-size:0.65rem;font-weight:600;line-height:1.2;opacity:0.9;">${starter.shortName || starter.displayName}</div>
+          </div>
+          ${depth.map(p => `<div style="font-size:0.6rem;opacity:0.5;text-align:center;width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.shortName||p.displayName}</div>`).join('')}
+        </div>`;
+    }
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function hexToRgbaLineups(hex, alpha) {
+  hex = hex.replace('#','');
+  if (hex.length === 3) hex = hex.split('').map(x=>x+x).join('');
+  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 </script>
