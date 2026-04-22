@@ -9409,7 +9409,7 @@ function renderMockDraftResults(results, roundFilter, teamFilter, posFilter) {
         <!-- CENTER: player info + logo/headshot -->
         <div style="position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:12px 16px;flex:1;border-right:1px solid ${hexToRgba(color,0.3)};">
           <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${r.team.toLowerCase()}.png" style="position:absolute;right:30px;top:50%;transform:translateY(-50%);height:120%;opacity:0.4;pointer-events:none;z-index:0;">
-          ${headshotUrl ? `<img src="${headshotUrl}" style="position:absolute;right:90px;top:50%;transform:translateY(-50%);height:140px;width:auto;object-fit:cover;object-position:top center;z-index:1;pointer-events:none;">` : ''}
+          ${headshotUrl ? `<img src="${headshotUrl}" style="position:absolute;right:90px;bottom:0;height:140px;width:auto;object-fit:cover;object-position:top center;z-index:1;pointer-events:none;">` : ''}
           <div style="position:relative;z-index:2;">
             <div style="font-family:Bebas Neue,sans-serif;font-size:1.6rem;line-height:1;margin-bottom:3px;text-shadow:0 1px 4px rgba(0,0,0,0.6);">${r.prospect.name}</div>
             <div style="font-size:0.8rem;opacity:0.6;margin-bottom:3px;">${r.prospect.pos} · ${r.prospect.school}</div>
