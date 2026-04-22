@@ -9554,15 +9554,9 @@ async function loadAndRenderLineup(abbr, view) {
   if (view === 'both') {
     const defLayout = getDefenseLayout(abbr);
     html += `
-      <div style="margin-bottom:8px;">
-        <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px;padding-bottom:6px;border-bottom:2px solid ${color};">DEFENSE — BASE ${scheme}</div>
-        ${renderFormationGrid(lineup.defense, defLayout, color, abbr, true)}
-      </div>
+      ${renderFormationGrid(lineup.defense, defLayout, color, abbr, true)}
       <div style="text-align:center;font-family:Bebas Neue,sans-serif;letter-spacing:4px;font-size:0.85rem;opacity:0.4;padding:10px 0;border-top:2px dashed rgba(255,255,255,0.15);border-bottom:2px dashed rgba(255,255,255,0.15);margin:8px 0;">— LINE OF SCRIMMAGE —</div>
-      <div style="margin-top:8px;">
-        <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px;padding-bottom:6px;border-bottom:2px solid ${color};">OFFENSE — 3WR 1TE</div>
-        ${renderFormationGrid(lineup.offense, OFFENSE_LAYOUT, color, abbr)}
-      </div>`;
+      ${renderFormationGrid(lineup.offense, OFFENSE_LAYOUT, color, abbr)}`;
   } else if (view === 'offense') {
     html += `<div>
       <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px;padding-bottom:6px;border-bottom:2px solid ${color};">OFFENSE — 3WR 1TE</div>
@@ -9580,7 +9574,7 @@ async function loadAndRenderLineup(abbr, view) {
 }
 
 function renderFormationGrid(positions, layout, color, abbr, flip = false) {
-  let html = `<div style="position:relative;width:100%;height:400px;max-width:900px;margin:0 auto;">`;
+  let html = `<div style="position:relative;width:100%;height:600px;max-width:900px;margin:0 auto;transform:scale(1.3);transform-origin:top center;"><style>.formation-card{transform:translate(-50%,-50%)}</style>`;
 
   Object.entries(layout).forEach(([pos, coords]) => {
     const athletes = positions[pos] || [];
@@ -9588,7 +9582,7 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
     const starter = athletes[0];
     const depth = athletes.slice(1, 3);
     const left = flip ? (100 - coords.left) : coords.left;
-    const top = flip ? (100 - coords.top) : coords.top;
+    const top = flip ? (75 - coords.top) : coords.top;
     html += `
       <div style="position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;">
         <div style="position:relative;width:80px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${color};border-radius:8px;overflow:hidden;text-align:center;padding:4px 3px 6px;">
@@ -9596,7 +9590,6 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
           <div style="font-family:Bebas Neue,sans-serif;font-size:0.75rem;color:${color};letter-spacing:1px;">${pos.toUpperCase()}</div>
           <div style="font-size:0.65rem;font-weight:600;line-height:1.2;opacity:0.9;">${starter.shortName || starter.displayName}</div>
         </div>
-        ${depth.map(p => `<div style="font-size:0.6rem;opacity:0.5;text-align:center;width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.shortName||p.displayName}</div>`).join('')}
       </div>`;
   });
 
