@@ -9488,16 +9488,16 @@ function renderLineups() {
       </div>`).join('');
   }
 
-  const panelStyle = `width:170px;flex-shrink:0;margin:12px 0;border-radius:10px;border:1px solid var(--border);background:var(--surface);align-self:flex-start;`;
+  const panelStyle = (side) => `position:absolute;${side}:16px;top:0;width:175px;border-radius:10px;border:1px solid var(--border);background:var(--surface);`;
 
   container.innerHTML = `
-    <div style="display:flex;gap:16px;align-items:flex-start;padding:12px 20px;">
-      <div style="${panelStyle}">
+    <div style="position:relative;padding:12px 208px;">
+      <div style="${panelStyle('left')}">
         <div style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;">OFFENSE</div>
         <div id="lineups-offense-list">${teamListHTML('offense')}</div>
       </div>
-      <div id="lineups-formation" style="flex:1;padding:12px 0;"></div>
-      <div style="${panelStyle}text-align:right;">
+      <div id="lineups-formation"></div>
+      <div style="${panelStyle('right')}text-align:right;">
         <div style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;">DEFENSE</div>
         <div id="lineups-defense-list">${teamListHTML('defense')}</div>
       </div>
