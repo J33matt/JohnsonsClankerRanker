@@ -21,50 +21,51 @@ const OFFENSE_POSITIONS = ['qb','rb','fb','wr1','wr2','wr3','te','lt','lg','c','
 const DEFENSE_34_POSITIONS = ['lde','nt','rde','wlb','lilb','rilb','slb','lcb','rcb','ss','fs','nb'];
 const DEFENSE_43_POSITIONS = ['lde','ldt','rdt','rde','wlb','mlb','slb','lcb','rcb','ss','fs','nb'];
 
-// Formation grid layouts — [row, col] for each position key
-// Offense (7 cols, 5 rows) — view from above, offense at bottom
+// Formation layouts — { left, top } as percentages for absolute positioning
+// Behind-the-QB perspective: top = line of scrimmage / deep field, bottom = behind QB
 const OFFENSE_LAYOUT = {
-  wr1:  [1, 0],
-  wr2:  [1, 1],
-  lt:   [1, 2],
-  lg:   [1, 3],
-  c:    [1, 4],
-  rg:   [1, 5],
-  rt:   [1, 6],
-  te:   [1, 7],
-  wr3:  [1, 8],
-  rb:   [0, 3],
-  qb:   [0, 4],
+  wr1:  { left: 5,  top: 20 },
+  wr2:  { left: 22, top: 20 },
+  lt:   { left: 30, top: 38 },
+  lg:   { left: 38, top: 38 },
+  c:    { left: 46, top: 38 },
+  rg:   { left: 54, top: 38 },
+  rt:   { left: 62, top: 38 },
+  te:   { left: 72, top: 38 },
+  wr3:  { left: 88, top: 20 },
+  qb:   { left: 46, top: 60 },
+  rb:   { left: 46, top: 82 },
+  fb:   { left: 38, top: 72 },
 };
 
 const DEFENSE_34_LAYOUT = {
-  fs:   [1, 1],
-  wlb:  [1, 3],
-  lilb: [1, 4],
-  rilb: [1, 5],
-  ss:   [1, 7],
-  lcb:  [0, 0],
-  rcb:  [0, 8],
-  nb:   [0, 6],
-  rde:  [0, 2],
-  nt:   [0, 4],
-  lde:  [0, 6],
-  slb:  [1, 6],
+  lcb:  { left: 5,  top: 18 },
+  fs:   { left: 30, top: 10 },
+  ss:   { left: 62, top: 10 },
+  rcb:  { left: 88, top: 18 },
+  nb:   { left: 75, top: 30 },
+  wlb:  { left: 22, top: 45 },
+  lilb: { left: 38, top: 50 },
+  rilb: { left: 54, top: 50 },
+  slb:  { left: 72, top: 45 },
+  rde:  { left: 30, top: 75 },
+  nt:   { left: 46, top: 75 },
+  lde:  { left: 62, top: 75 },
 };
 
 const DEFENSE_43_LAYOUT = {
-  fs:   [1, 1],
-  wlb:  [1, 3],
-  mlb:  [1, 4],
-  slb:  [1, 5],
-  ss:   [1, 7],
-  lcb:  [0, 0],
-  rcb:  [0, 8],
-  nb:   [0, 6],
-  lde:  [0, 2],
-  ldt:  [0, 3],
-  rdt:  [0, 5],
-  rde:  [0, 6],
+  lcb:  { left: 5,  top: 18 },
+  fs:   { left: 30, top: 10 },
+  ss:   { left: 62, top: 10 },
+  rcb:  { left: 88, top: 18 },
+  nb:   { left: 75, top: 30 },
+  wlb:  { left: 26, top: 50 },
+  mlb:  { left: 46, top: 50 },
+  slb:  { left: 66, top: 50 },
+  lde:  { left: 30, top: 75 },
+  ldt:  { left: 40, top: 75 },
+  rdt:  { left: 54, top: 75 },
+  rde:  { left: 64, top: 75 },
 };
 
 async function fetchTeamLineup(abbr) {

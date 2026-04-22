@@ -9580,39 +9580,25 @@ async function loadAndRenderLineup(abbr, view) {
 }
 
 function renderFormationGrid(positions, layout, color, abbr, flip = false) {
-  const rows = 2, cols = 9;
-  const grid = Array.from({length: rows}, () => Array(cols).fill(null));
+  let html = `<div style="position:relative;width:100%;height:320px;max-width:900px;margin:0 auto;">`;
 
-  Object.entries(layout).forEach(([pos, [row, col]]) => {
+  Object.entries(layout).forEach(([pos, coords]) => {
     const athletes = positions[pos] || [];
-    if (athletes.length > 0) {
-      grid[row][col] = { pos, athletes };
-    }
+    if (!athletes.length) return;
+    const starter = athletes[0];
+    const depth = athletes.slice(1, 3);
+    const left = flip ? (100 - coords.left) : coords.left;
+    const top = flip ? (100 - coords.top) : coords.top;
+    html += `
+      <div style="position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div style="position:relative;width:110px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${color};border-radius:10px;overflow:hidden;text-align:center;padding:6px 4px 8px;">
+          <img src="${getHeadshotUrl(starter.id)}" style="width:90px;height:90px;object-fit:cover;object-position:top;border-radius:6px;" onerror="this.style.display='none'">
+          <div style="font-family:Bebas Neue,sans-serif;font-size:0.9rem;color:${color};letter-spacing:1px;">${pos.toUpperCase()}</div>
+          <div style="font-size:0.78rem;font-weight:600;line-height:1.2;opacity:0.9;">${starter.shortName || starter.displayName}</div>
+        </div>
+        ${depth.map(p => `<div style="font-size:0.72rem;opacity:0.5;text-align:center;width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.shortName||p.displayName}</div>`).join('')}
+      </div>`;
   });
-
-  let html = `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:8px;max-width:900px;margin:0 auto;">`;
-
-  const rowOrder = flip ? Array.from({length: rows}, (_, i) => rows - 1 - i) : Array.from({length: rows}, (_, i) => i);
-  for (const r of rowOrder) {
-    for (let c = 0; c < cols; c++) {
-      const cell = grid[r][c];
-      if (!cell) {
-        html += `<div></div>`;
-        continue;
-      }
-      const starter = cell.athletes[0];
-      const depth = cell.athletes.slice(1, 3);
-      html += `
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-          <div style="position:relative;width:110px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${color};border-radius:10px;overflow:hidden;text-align:center;padding:6px 4px 8px;">
-            <img src="${getHeadshotUrl(starter.id)}" style="width:90px;height:90px;object-fit:cover;object-position:top;border-radius:6px;" onerror="this.style.display='none'">
-            <div style="font-family:Bebas Neue,sans-serif;font-size:0.9rem;color:${color};letter-spacing:1px;">${cell.pos.toUpperCase()}</div>
-            <div style="font-size:0.78rem;font-weight:600;line-height:1.2;opacity:0.9;">${starter.shortName || starter.displayName}</div>
-          </div>
-          ${depth.map(p => `<div style="font-size:0.72rem;opacity:0.5;text-align:center;width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.shortName||p.displayName}</div>`).join('')}
-        </div>`;
-    }
-  }
 
   html += '</div>';
   return html;
