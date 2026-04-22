@@ -9551,14 +9551,24 @@ async function loadAndRenderLineup(abbr, view) {
   const scheme = (NFL_TEAM_CONTEXT[abbr] || {}).scheme || '4-3';
   let html = '';
 
-  if (view === 'offense' || view === 'both') {
-    html += `<div style="margin-bottom:32px;">
+  if (view === 'both') {
+    const defLayout = getDefenseLayout(abbr);
+    html += `
+      <div style="margin-bottom:8px;">
+        <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px;padding-bottom:6px;border-bottom:2px solid ${color};">DEFENSE — BASE ${scheme}</div>
+        ${renderFormationGrid(lineup.defense, defLayout, color, abbr, true)}
+      </div>
+      <div style="text-align:center;font-family:Bebas Neue,sans-serif;letter-spacing:4px;font-size:0.85rem;opacity:0.4;padding:10px 0;border-top:2px dashed rgba(255,255,255,0.15);border-bottom:2px dashed rgba(255,255,255,0.15);margin:8px 0;">— LINE OF SCRIMMAGE —</div>
+      <div style="margin-top:8px;">
+        <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px;padding-bottom:6px;border-bottom:2px solid ${color};">OFFENSE — 3WR 1TE</div>
+        ${renderFormationGrid(lineup.offense, OFFENSE_LAYOUT, color, abbr)}
+      </div>`;
+  } else if (view === 'offense') {
+    html += `<div>
       <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px;padding-bottom:6px;border-bottom:2px solid ${color};">OFFENSE — 3WR 1TE</div>
       ${renderFormationGrid(lineup.offense, OFFENSE_LAYOUT, color, abbr)}
     </div>`;
-  }
-
-  if (view === 'defense' || view === 'both') {
+  } else if (view === 'defense') {
     const defLayout = getDefenseLayout(abbr);
     html += `<div>
       <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px;padding-bottom:6px;border-bottom:2px solid ${color};">DEFENSE — BASE ${scheme}</div>
@@ -9569,8 +9579,8 @@ async function loadAndRenderLineup(abbr, view) {
   container.innerHTML = html;
 }
 
-function renderFormationGrid(positions, layout, color, abbr) {
-  const rows = 5, cols = 7;
+function renderFormationGrid(positions, layout, color, abbr, flip = false) {
+  const rows = 4, cols = 7;
   const grid = Array.from({length: rows}, () => Array(cols).fill(null));
 
   Object.entries(layout).forEach(([pos, [row, col]]) => {
@@ -9582,7 +9592,8 @@ function renderFormationGrid(positions, layout, color, abbr) {
 
   let html = `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:8px;max-width:900px;margin:0 auto;">`;
 
-  for (let r = 0; r < rows; r++) {
+  const rowOrder = flip ? Array.from({length: rows}, (_, i) => rows - 1 - i) : Array.from({length: rows}, (_, i) => i);
+  for (const r of rowOrder) {
     for (let c = 0; c < cols; c++) {
       const cell = grid[r][c];
       if (!cell) {
