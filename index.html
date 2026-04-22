@@ -9474,101 +9474,67 @@ function filterMockByTeam(abbr, teamName) {
 
 function renderLineups() {
   const container = document.getElementById('nfl-lineups');
-  const savedTeam = localStorage.getItem('lineupsTeam') || 'LV';
-  const savedView = localStorage.getItem('lineupsView') || 'offense';
+  const savedOff = localStorage.getItem('lineupsOffTeam') || 'LV';
+  const savedDef = localStorage.getItem('lineupsDefTeam') || 'KC';
+  const sortedTeams = Object.entries(NFL_TEAMS).sort((a,b) => a[1].name.localeCompare(b[1].name));
+
+  function teamListHTML(side) {
+    const saved = side === 'offense' ? savedOff : savedDef;
+    return sortedTeams.map(([abbr, team]) => `
+      <div id="lineups-${side}-row-${abbr}" onclick="selectMatchupTeam('${side}','${abbr}')"
+        style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border);background:${abbr===saved?'rgba(255,255,255,0.07)':'transparent'};">
+        <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:22px;height:22px;object-fit:contain;">
+        <span style="font-family:'Barlow',sans-serif;font-weight:600;font-size:0.8rem;">${team.name}</span>
+      </div>`).join('');
+  }
+
   container.innerHTML = `
-    <div style="padding:16px;">
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px;">
-        <div style="position:relative;display:inline-block;" id="lineups-team-dropdown">
-          <div id="lineups-team-selected" onclick="toggleLineupsTeamDropdown()" style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--surface);border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;min-width:200px;">
-            ${NFL_TEAMS[savedTeam] ? `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${savedTeam.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;">
-            <span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">${NFL_TEAMS[savedTeam].name}</span>` : `<span>Select Team</span>`}
-            <span style="color:var(--muted);font-size:0.75rem;">▼</span>
-          </div>
-          <div id="lineups-team-options" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:var(--surface);border:1px solid rgba(255,255,255,0.1);border-radius:8px;max-height:300px;overflow-y:auto;min-width:220px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-            ${Object.entries(NFL_TEAMS).sort((a,b) => a[1].name.localeCompare(b[1].name)).map(([abbr,team]) => `
-              <div class="draft-team-option" onclick="selectLineupsTeam('${abbr}')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);">
-                <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;">
-                <span style="font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">${team.name}</span>
-              </div>`).join('')}
-          </div>
-        </div>
-        <div style="display:flex;gap:6px;">
-          ${['offense','defense','both'].map(v => `
-            <button id="lineup-view-${v}" onclick="setLineupsView('${v}')" style="font-family:Bebas Neue,sans-serif;font-size:0.9rem;letter-spacing:1px;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;background:${savedView===v?'var(--accent)':'var(--surface)'};color:${savedView===v?'#fff':'inherit'}">${v.toUpperCase()}</button>
-          `).join('')}
-        </div>
+    <div style="display:flex;gap:0;height:calc(100vh - 60px);overflow:hidden;">
+      <div style="width:180px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;">
+        <div style="font-family:Bebas Neue,sans-serif;font-size:1rem;letter-spacing:3px;padding:10px 12px;border-bottom:2px solid var(--accent);background:var(--surface);">OFFENSE</div>
+        <div id="lineups-offense-list" style="overflow-y:auto;flex:1;">${teamListHTML('offense')}</div>
       </div>
-      <div id="lineups-formation" style="margin-top:8px;"></div>
+      <div style="flex:1;overflow-y:auto;padding:12px 16px;" id="lineups-formation"></div>
+      <div style="width:180px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;">
+        <div style="font-family:Bebas Neue,sans-serif;font-size:1rem;letter-spacing:3px;padding:10px 12px;border-bottom:2px solid var(--accent);background:var(--surface);text-align:right;">DEFENSE</div>
+        <div id="lineups-defense-list" style="overflow-y:auto;flex:1;">${teamListHTML('defense')}</div>
+      </div>
     </div>`;
 
-  document.addEventListener('click', function lineupsDropClose(e) {
-    const dd = document.getElementById('lineups-team-dropdown');
-    if (dd && !dd.contains(e.target)) { const o = document.getElementById('lineups-team-options'); if(o) o.style.display='none'; }
-  });
-
-  loadAndRenderLineup(savedTeam, savedView);
+  loadMatchupView(savedOff, savedDef);
 }
 
-function toggleLineupsTeamDropdown() {
-  const o = document.getElementById('lineups-team-options');
-  if (o) o.style.display = o.style.display === 'none' ? 'block' : 'none';
+function selectMatchupTeam(side, abbr) {
+  const key = side === 'offense' ? 'lineupsOffTeam' : 'lineupsDefTeam';
+  const prev = localStorage.getItem(key);
+  localStorage.setItem(key, abbr);
+
+  const list = document.getElementById(`lineups-${side}-list`);
+  if (list) {
+    if (prev) { const r = document.getElementById(`lineups-${side}-row-${prev}`); if (r) r.style.background = 'transparent'; }
+    const r = document.getElementById(`lineups-${side}-row-${abbr}`); if (r) r.style.background = 'rgba(255,255,255,0.07)';
+  }
+
+  const off = localStorage.getItem('lineupsOffTeam') || 'LV';
+  const def = localStorage.getItem('lineupsDefTeam') || 'KC';
+  loadMatchupView(off, def);
 }
 
-function selectLineupsTeam(abbr) {
-  localStorage.setItem('lineupsTeam', abbr);
-  const o = document.getElementById('lineups-team-options');
-  if (o) o.style.display = 'none';
-  const s = document.getElementById('lineups-team-selected');
-  if (s) s.innerHTML = `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;">
-    <span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;">${NFL_TEAMS[abbr]?.name||abbr}</span>
-    <span style="color:var(--muted);font-size:0.75rem;">▼</span>`;
-  loadAndRenderLineup(abbr, localStorage.getItem('lineupsView') || 'offense');
-}
-
-function setLineupsView(view) {
-  localStorage.setItem('lineupsView', view);
-  ['offense','defense','both'].forEach(v => {
-    const btn = document.getElementById(`lineup-view-${v}`);
-    if (btn) { btn.style.background = v===view ? 'var(--accent)' : 'var(--surface)'; btn.style.color = v===view ? '#fff' : 'inherit'; }
-  });
-  const team = localStorage.getItem('lineupsTeam') || 'LV';
-  loadAndRenderLineup(team, view);
-}
-
-async function loadAndRenderLineup(abbr, view) {
+async function loadMatchupView(offAbbr, defAbbr) {
   const container = document.getElementById('lineups-formation');
   if (!container) return;
-  container.innerHTML = '<div style="text-align:center;padding:40px;font-family:Bebas Neue,sans-serif;font-size:1.2rem;opacity:0.5;letter-spacing:2px;">LOADING LINEUP...</div>';
+  container.innerHTML = '<div style="text-align:center;padding:40px;font-family:Bebas Neue,sans-serif;font-size:1.2rem;opacity:0.5;letter-spacing:2px;">LOADING...</div>';
 
-  const lineup = await fetchTeamLineup(abbr);
-  if (!lineup) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;opacity:0.4;">Failed to load lineup.</div>';
-    return;
-  }
+  const [offLineup, defLineup] = await Promise.all([fetchTeamLineup(offAbbr), fetchTeamLineup(defAbbr)]);
 
-  const color = NFL_TEAMS[abbr]?.color || '#444';
-  const scheme = (NFL_TEAM_CONTEXT[abbr] || {}).scheme || '4-3';
+  const offColor = NFL_TEAMS[offAbbr]?.color || '#444';
+  const defColor = NFL_TEAMS[defAbbr]?.color || '#444';
+  const defLayout = getDefenseLayout(defAbbr);
+
   let html = '';
-
-  if (view === 'both') {
-    const defLayout = getDefenseLayout(abbr);
-    html += `
-      ${renderFormationGrid(lineup.defense, defLayout, color, abbr, true)}
-      <div style="text-align:center;font-family:Bebas Neue,sans-serif;letter-spacing:4px;font-size:0.85rem;opacity:0.4;padding:10px 0;border-top:2px dashed rgba(255,255,255,0.15);border-bottom:2px dashed rgba(255,255,255,0.15);margin:8px 0;">— LINE OF SCRIMMAGE —</div>
-      ${renderFormationGrid(lineup.offense, OFFENSE_LAYOUT, color, abbr)}`;
-  } else if (view === 'offense') {
-    html += `<div>
-      <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px;padding-bottom:6px;border-bottom:2px solid ${color};">OFFENSE — 3WR 1TE</div>
-      ${renderFormationGrid(lineup.offense, OFFENSE_LAYOUT, color, abbr)}
-    </div>`;
-  } else if (view === 'defense') {
-    const defLayout = getDefenseLayout(abbr);
-    html += `<div>
-      <div style="font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:3px;margin-bottom:16px;padding-bottom:6px;border-bottom:2px solid ${color};">DEFENSE — BASE ${scheme}</div>
-      ${renderFormationGrid(lineup.defense, defLayout, color, abbr)}
-    </div>`;
-  }
+  if (defLineup) html += renderFormationGrid(defLineup.defense, defLayout, defColor, defAbbr, true);
+  html += `<div style="text-align:center;font-family:Bebas Neue,sans-serif;letter-spacing:4px;font-size:0.85rem;opacity:0.4;padding:10px 0;border-top:2px dashed rgba(255,255,255,0.15);border-bottom:2px dashed rgba(255,255,255,0.15);margin:8px 0;">— LINE OF SCRIMMAGE —</div>`;
+  if (offLineup) html += renderFormationGrid(offLineup.offense, OFFENSE_LAYOUT, offColor, offAbbr);
 
   container.innerHTML = html;
 }
