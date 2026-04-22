@@ -9580,7 +9580,7 @@ async function loadAndRenderLineup(abbr, view) {
 }
 
 function renderFormationGrid(positions, layout, color, abbr, flip = false) {
-  const rows = 2, cols = 7;
+  const rows = 2, cols = 9;
   const grid = Array.from({length: rows}, () => Array(cols).fill(null));
 
   Object.entries(layout).forEach(([pos, [row, col]]) => {
