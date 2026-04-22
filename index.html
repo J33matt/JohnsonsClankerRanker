@@ -55,6 +55,33 @@
   </div>
 </div>
 
+<div id="nfl-draft-countdown" style="display:none;font-family:Bebas Neue,sans-serif;letter-spacing:2px;padding:10px 16px;margin-bottom:10px;background:var(--surface);border-radius:10px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+  <span style="opacity:0.5;font-size:0.85rem;">2026 NFL DRAFT BEGINS IN</span>
+  <span id="nfl-countdown-display" style="font-size:1.4rem;color:var(--accent);"></span>
+</div>
+<script>
+(function() {
+  const draftTime = new Date('2026-04-24T00:00:00Z'); // April 23 8PM EST = April 24 00:00 UTC
+  function updateCountdown() {
+    const el = document.getElementById('nfl-countdown-display');
+    const container = document.getElementById('nfl-draft-countdown');
+    if (!el || !container) return;
+    const now = new Date();
+    const diff = draftTime - now;
+    if (diff <= 0) {
+      container.innerHTML = '<span style="font-family:Bebas Neue,sans-serif;font-size:1.6rem;letter-spacing:3px;color:var(--accent);">🏈 THE DRAFT IS LIVE</span>';
+      return;
+    }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = `${d}D ${String(h).padStart(2,'0')}H ${String(m).padStart(2,'0')}M ${String(s).padStart(2,'0')}S`;
+    setTimeout(updateCountdown, 1000);
+  }
+  updateCountdown();
+})();
+</script>
 <div id="nfl-tabs" style="display:none;">
   <button onclick="showNflTab('big-board', this)" class="tab-btn active">Big Board</button>
   <button class="tab-btn" onclick="showNflTab('draft-sim', this)">Draft Sim</button>
@@ -469,6 +496,7 @@ function switchLeague(league, btn) {
     if (nbaTabs) nbaTabs.style.display = 'flex';
     if (nflTabs) nflTabs.style.display = 'none';
     if (nflPanels) nflPanels.style.display = 'none';
+    const _cd = document.getElementById('nfl-draft-countdown'); if (_cd) _cd.style.display = 'none';
 
     // 2. Hide all NBA panels first
     nbaPanels.forEach(p => {
@@ -489,6 +517,7 @@ function switchLeague(league, btn) {
     if (nbaTabs) nbaTabs.style.display = 'none';
     if (nflTabs) nflTabs.style.display = 'flex';
     if (nflPanels) nflPanels.style.display = 'block';
+    const _cd = document.getElementById('nfl-draft-countdown'); if (_cd) _cd.style.display = 'flex';
 
     // 2. Hide NBA panels and show the NFL Big Board
     nbaPanels.forEach(p => {
