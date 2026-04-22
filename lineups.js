@@ -17,55 +17,57 @@ const NFL_ESPN_IDS = {
   SEA:26,TB:27,TEN:10,WAS:28
 };
 
-const OFFENSE_POSITIONS = ['qb','rb','fb','wr1','wr2','wr3','te','lt','lg','c','rg','rt'];
-const DEFENSE_34_POSITIONS = ['lde','nt','rde','wlb','lilb','rilb','slb','lcb','rcb','ss','fs','nb'];
-const DEFENSE_43_POSITIONS = ['lde','ldt','rdt','rde','wlb','mlb','slb','lcb','rcb','ss','fs','nb'];
+const OFFENSE_POSITIONS = ['qb','rb','wr1','wr2','wr3','te','lt','lg','c','rg','rt'];
+const DEFENSE_34_POSITIONS = ['lde','nt','rde','wlb','lilb','rilb','slb','lcb','rcb','ss','fs'];
+const DEFENSE_43_POSITIONS = ['lde','ldt','rdt','rde','wlb','mlb','slb','lcb','rcb','ss','fs'];
 
 // Formation layouts — { left, top } as percentages for absolute positioning
 // Behind-the-QB perspective: top = line of scrimmage / deep field, bottom = behind QB
 const OFFENSE_LAYOUT = {
-  wr1:  { left: 5,  top: 58 },
-  wr2:  { left: 22, top: 58 },
-  lt:   { left: 30, top: 65 },
-  lg:   { left: 38, top: 65 },
-  c:    { left: 46, top: 65 },
-  rg:   { left: 54, top: 65 },
-  rt:   { left: 62, top: 65 },
-  te:   { left: 72, top: 62 },
-  wr3:  { left: 88, top: 58 },
-  qb:   { left: 46, top: 78 },
-  rb:   { left: 54, top: 90 },
-  fb:   { left: 38, top: 85 },
+  wr1:  { left: 3,  top: 10 },
+  wr3:  { left: 13, top: 14 },
+  lt:   { left: 30, top: 10 },
+  lg:   { left: 40, top: 10 },
+  c:    { left: 50, top: 10 },
+  rg:   { left: 60, top: 10 },
+  rt:   { left: 70, top: 10 },
+  te:   { left: 80, top: 14 },
+  wr2:  { left: 97, top: 10 },
+
+  rb:   { left: 40, top: 39 },
+  qb:   { left: 50, top: 35 },
 };
 
 const DEFENSE_34_LAYOUT = {
-  lcb:  { left: 5,  top: 42 },
-  fs:   { left: 30, top: 42 },
-  ss:   { left: 62, top: 42 },
-  rcb:  { left: 88, top: 42 },
-  nb:   { left: 75, top: 42 },
-  wlb:  { left: 22, top: 25 },
-  lilb: { left: 38, top: 25 },
-  rilb: { left: 54, top: 25 },
-  slb:  { left: 72, top: 25 },
-  rde:  { left: 30, top: 10 },
-  nt:   { left: 46, top: 10 },
-  lde:  { left: 62, top: 10 },
+  fs:   { left: 65, top: 65 },
+  ss:   { left: 35, top: 65 },
+
+  slb:  { left: 74, top: 35 },
+  rilb: { left: 58, top: 38 },
+  lilb: { left: 42, top: 38 },
+  wlb:  { left: 26, top: 35 },
+
+  rcb:  { left: 88, top: 14 },
+  rde:  { left: 65, top: 10 },
+  nt:   { left: 50, top: 10 },
+  lde:  { left: 35, top: 10 },
+  lcb:  { left: 5,  top: 14 },
 };
 
 const DEFENSE_43_LAYOUT = {
-  lcb:  { left: 5,  top: 42 },
-  fs:   { left: 30, top: 42 },
-  ss:   { left: 62, top: 42 },
-  rcb:  { left: 88, top: 42 },
-  nb:   { left: 75, top: 42 },
-  wlb:  { left: 26, top: 25 },
-  mlb:  { left: 46, top: 25 },
-  slb:  { left: 66, top: 25 },
-  lde:  { left: 30, top: 10 },
-  ldt:  { left: 40, top: 10 },
-  rdt:  { left: 54, top: 10 },
-  rde:  { left: 64, top: 10 },
+  fs:   { left: 80, top: 65 },
+  ss:   { left: 20, top: 60 },
+
+  slb:  { left: 70, top: 35 },
+  mlb:  { left: 50, top: 35 },
+  wlb:  { left: 30, top: 35 },
+
+  rcb:  { left: 97, top: 14 },
+  rde:  { left: 65, top: 10 },
+  rdt:  { left: 55, top: 10 },
+  ldt:  { left: 45, top: 10 },
+  lde:  { left: 35, top: 10 },
+  lcb:  { left: 3,  top: 14 },
 };
 
 async function fetchTeamLineup(abbr) {
