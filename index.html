@@ -580,7 +580,7 @@ function setNflView(view, btn) {
 
 function showNflTab(tabName, btn) {
   localStorage.setItem('activeNflTab', tabName);
-  document.querySelectorAll('.nfl-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.nfl-panel').forEach(p => { p.style.display = 'none'; p.style.marginLeft = ''; p.style.marginRight = ''; p.style.width = ''; });
   document.querySelectorAll('#nfl-tabs button').forEach(b => b.classList.remove('active'));
   const panel = document.getElementById('nfl-' + tabName);
     if (panel) {
@@ -9474,6 +9474,9 @@ function filterMockByTeam(abbr, teamName) {
 
 function renderLineups() {
   const container = document.getElementById('nfl-lineups');
+  container.style.marginLeft = 'calc(-5vw)';
+  container.style.marginRight = 'calc(-5vw)';
+  container.style.width = 'calc(100% + 10vw)';
   const savedOff = localStorage.getItem('lineupsOffTeam') || 'LV';
   const savedDef = localStorage.getItem('lineupsDefTeam') || 'KC';
   const sortedTeams = Object.entries(NFL_TEAMS).sort((a,b) => a[1].name.localeCompare(b[1].name));
