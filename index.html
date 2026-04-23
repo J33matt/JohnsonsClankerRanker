@@ -9522,7 +9522,9 @@ function renderLineups() {
         <div style="font-family:Bebas Neue,sans-serif;font-size:2rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;text-align:center;">DEFENSE</div>
         <div id="lineups-defense-list">${teamListHTML('defense')}</div>
       </div>
-      <div id="lineups-formation" style="max-width:900px;margin:0 auto;overflow:visible;padding-top:70px;position:relative;z-index:1;"></div>
+      <div id="lineups-formation-def" style="max-width:900px;margin:0 auto;overflow:visible;padding-top:70px;position:relative;z-index:1;"></div>
+      <div id="lineups-los" style="width:100%;padding:20px 0;position:relative;z-index:0;display:none;"><div style="height:3px;background:rgba(60,100,255,0.45);box-shadow:0 0 6px rgba(60,100,255,0.3);"></div></div>
+      <div id="lineups-formation" style="max-width:900px;margin:0 auto;overflow:visible;position:relative;z-index:1;"></div>
     </div>`;
 
   loadMatchupView(savedOff, savedDef);
@@ -9534,9 +9536,12 @@ function selectMatchupTeam(side, abbr) {
 }
 
 async function loadMatchupView(offAbbr, defAbbr) {
-  const container = document.getElementById('lineups-formation');
-  if (!container) return;
-  container.innerHTML = '<div style="text-align:center;padding:40px;font-family:Bebas Neue,sans-serif;font-size:1.2rem;opacity:0.5;letter-spacing:2px;">LOADING...</div>';
+  const defContainer = document.getElementById('lineups-formation-def');
+  const offContainer = document.getElementById('lineups-formation');
+  if (!offContainer) return;
+  const loading = '<div style="text-align:center;padding:40px;font-family:Bebas Neue,sans-serif;font-size:1.2rem;opacity:0.5;letter-spacing:2px;">LOADING...</div>';
+  if (defContainer) defContainer.innerHTML = loading;
+  offContainer.innerHTML = '';
 
   const [offLineup, defLineup] = await Promise.all([fetchTeamLineup(offAbbr), fetchTeamLineup(defAbbr)]);
 
@@ -9544,12 +9549,10 @@ async function loadMatchupView(offAbbr, defAbbr) {
   const defColor = NFL_TEAMS[defAbbr]?.color || '#444';
   const defLayout = getDefenseLayout(defAbbr);
 
-  let html = '';
-  if (defLineup) html += renderFormationGrid(defLineup.defense, defLayout, defColor, defAbbr, true);
-  html += `<div style="padding:24px 0;"><div style="height:3px;background:rgba(60,100,255,0.45);box-shadow:0 0 6px rgba(60,100,255,0.3);"></div></div>`;
-  if (offLineup) html += renderFormationGrid(offLineup.offense, OFFENSE_LAYOUT, offColor, offAbbr);
-
-  container.innerHTML = html;
+  if (defContainer) defContainer.innerHTML = defLineup ? renderFormationGrid(defLineup.defense, defLayout, defColor, defAbbr, true) : '';
+  offContainer.innerHTML = offLineup ? renderFormationGrid(offLineup.offense, OFFENSE_LAYOUT, offColor, offAbbr) : '';
+  const los = document.getElementById('lineups-los');
+  if (los) los.style.display = 'block';
 }
 
 function renderFormationGrid(positions, layout, color, abbr, flip = false) {
