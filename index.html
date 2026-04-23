@@ -9491,7 +9491,7 @@ function renderLineups() {
       </div>`).join('');
   }
 
-  const panelStyle = (side) => `position:absolute;${side}:16px;top:0;width:180px;border-radius:10px;border:1px solid var(--border);background:var(--surface);`;
+  const panelStyle = (side) => `position:absolute;${side}:90px;top:0;width:180px;border-radius:10px;border:1px solid var(--border);background:var(--surface);`;
 
   container.innerHTML = `
     <div style="position:relative;width:100%;min-height:1100px;padding:12px 0;">
@@ -9499,16 +9499,7 @@ function renderLineups() {
         <div style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;">OFFENSE</div>
         <div id="lineups-offense-list">${teamListHTML('offense')}</div>
       </div>
-      <div style="text-align:center;padding:10px 0 4px;">
-        <label style="font-family:Bebas Neue,sans-serif;font-size:0.85rem;letter-spacing:2px;opacity:0.5;margin-right:10px;">CARD SIZE</label>
-        <input type="range" min="0.5" max="2" step="0.05" value="${parseFloat(localStorage.getItem('lineupsScale')||'1')}"
-          oninput="localStorage.setItem('lineupsScale',this.value);document.getElementById('lineups-scale-val').textContent=parseFloat(this.value).toFixed(2)+'x';document.getElementById('lineups-formation-inner').style.transform='scale('+this.value+')';document.getElementById('lineups-formation-inner').style.transformOrigin='top center';"
-          style="width:160px;vertical-align:middle;accent-color:var(--accent);">
-        <span id="lineups-scale-val" style="font-family:Bebas Neue,sans-serif;font-size:0.85rem;opacity:0.6;margin-left:8px;">${parseFloat(localStorage.getItem('lineupsScale')||'1').toFixed(2)}x</span>
-      </div>
-      <div id="lineups-formation" style="max-width:900px;margin:0 auto;overflow:visible;">
-        <div id="lineups-formation-inner" style="transform-origin:top center;transform:scale(${parseFloat(localStorage.getItem('lineupsScale')||'1')});"></div>
-      </div>
+      <div id="lineups-formation" style="max-width:900px;margin:0 auto;overflow:visible;"></div>
       <div style="${panelStyle('right')}text-align:right;">
         <div style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;">DEFENSE</div>
         <div id="lineups-defense-list">${teamListHTML('defense')}</div>
@@ -9535,7 +9526,7 @@ function selectMatchupTeam(side, abbr) {
 }
 
 async function loadMatchupView(offAbbr, defAbbr) {
-  const container = document.getElementById('lineups-formation-inner');
+  const container = document.getElementById('lineups-formation');
   if (!container) return;
   container.innerHTML = '<div style="text-align:center;padding:40px;font-family:Bebas Neue,sans-serif;font-size:1.2rem;opacity:0.5;letter-spacing:2px;">LOADING...</div>';
 
