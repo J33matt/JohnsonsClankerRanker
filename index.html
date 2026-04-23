@@ -9477,8 +9477,8 @@ function renderLineups() {
   container.style.marginLeft = 'calc(-5vw)';
   container.style.marginRight = 'calc(-5vw)';
   container.style.width = 'calc(100% + 10vw)';
-  const savedOff = localStorage.getItem('lineupsOffTeam') || 'LV';
-  const savedDef = localStorage.getItem('lineupsDefTeam') || 'KC';
+  const savedOff = localStorage.getItem('lineupsOffTeam') || 'CIN';
+  const savedDef = localStorage.getItem('lineupsDefTeam') || 'PIT';
   const sortedTeams = Object.entries(NFL_TEAMS).sort((a,b) => a[1].name.localeCompare(b[1].name));
 
   function teamListHTML(side) {
