@@ -697,6 +697,7 @@ function renderOnTheClock() {
 
   const predProspect = pred?.prospect;
   const headshotUrl = predProspect ? (_prospectHeadshotCache[predProspect.rank] || '') : '';
+  const collegeLogoUrl = predProspect ? (COLLEGE_TEAMS[predProspect.school]?.logo || '') : '';
 
   banner.style.display = 'block';
   banner.innerHTML = `
@@ -723,6 +724,7 @@ function renderOnTheClock() {
         </div>
       </div>` : ''}
       <!-- Headshot anchored to right/bottom edge -->
+      ${collegeLogoUrl ? `<img src="${collegeLogoUrl}" style="position:absolute;right:30px;top:50%;transform:translateY(-50%);width:160px;height:160px;object-fit:cover;opacity:0.4;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));pointer-events:none;" onerror="this.style.display='none'">` : ''}
       ${headshotUrl ? `<img src="${headshotUrl}" style="position:absolute;right:50px;bottom:0;height:90%;width:auto;object-fit:contain;object-position:bottom right;opacity:1;pointer-events:none;" onerror="this.style.display='none'">` : ''}
     </div>
   `;
