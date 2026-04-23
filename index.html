@@ -176,7 +176,8 @@
 
 <div id="nfl-panels" style="display: none;">
   <div id="nfl-big-board" class="nfl-panel panel">
-    <div id="live-otc-banner" style="display:none; margin-bottom:18px;"></div>
+    <div id="live-otc-banner" style="display:none; margin-bottom:14px;"></div>
+    <div id="live-prediction-scorecard" style="display:none;"></div>
     <div class="draft-hq-layout">
       <div class="draft-order-column">
         <h3 class="column-title">2026 Draft Order</h3>
@@ -376,13 +377,19 @@ function filterDraftByTeam(abbr, teamName) {
     const logoUrl = `https://a.espncdn.com/i/teamlogos/nfl/500/${slot.team.toLowerCase()}.png`;
 
     if (live) {
+      const hs = _liveHeadshotUrl(live);
+      const logEntry = window._predictionLog.find(e => e.pick === slot.pick);
+      const wasRight = logEntry?.correct === true;
+      const wasWrong = logEntry?.correct === false;
       return `
-        <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
+        <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${wasRight?'#00c864':wasWrong?'#ff4444':color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
           <div class="p-rank" style="color:${color};">#${slot.pick}</div>
-          <div class="p-logo-box"><img src="${logoUrl}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.35;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
+          <div class="p-logo-box"><img src="${logoUrl}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.3;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
+          ${hs ? `<img src="${hs}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:0.95;" onerror="this.style.display='none'">` : ''}
           <div class="p-main">
             <div class="p-name">${live.name}</div>
             <div class="p-meta"><span class="p-pos">${live.pos}</span> | Rnd ${slot.round}</div>
+            ${logEntry?.actual ? `<div style="font-size:0.68rem;color:var(--muted);margin-top:2px;">Predicted: <span style="color:${wasRight?'#00c864':'#ff6b6b'};font-weight:600;">${logEntry.predicted.name}</span> ${wasRight?'✓':'✗'}</div>` : ''}
           </div>
           <div style="position:absolute;top:8px;right:10px;font-family:'Bebas Neue',sans-serif;font-size:0.62rem;letter-spacing:2px;color:${color};opacity:0.9;">OFFICIAL</div>
         </div>`;
@@ -390,16 +397,23 @@ function filterDraftByTeam(abbr, teamName) {
 
     const pred = isNext ? _livePredict(slot) : null;
     const needs = NFL_TEAM_NEEDS[slot.team] || [];
+    const predHS = pred ? (_prospectHeadshotCache[pred.prospect.rank] || '') : '';
     return `
-      <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${isNext ? color : '#444'};background:linear-gradient(90deg,${isNext ? color+'22' : '#ffffff06'} 0%,var(--surface) 100%);${!isNext ? 'opacity:0.5;' : ''}">
-        <div class="p-rank" style="color:${isNext ? color : 'var(--muted)'};">#${slot.pick}</div>
-        <div class="p-logo-box"><img src="${logoUrl}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:${isNext?'0.4':'0.2'};filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
+      <div class="prospect-card" style="margin-bottom:8px;border-left:5px dashed ${isNext ? '#f5a623' : '#333'};background:linear-gradient(90deg,${isNext ? 'rgba(245,166,35,0.08)' : '#ffffff04'} 0%,var(--surface) 100%);${!isNext ? 'opacity:0.45;' : ''}">
+        <div class="p-rank" style="color:${isNext ? '#f5a623' : 'var(--muted)'};">#${slot.pick}</div>
+        <div class="p-logo-box"><img src="${logoUrl}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:${isNext?'0.35':'0.15'};filter:drop-shadow(0 0 3px rgba(255,255,255,0.3));" onerror="this.style.display='none'"></div>
+        ${isNext && predHS ? `<img src="${predHS}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:0.7;filter:grayscale(30%);" onerror="this.style.display='none'">` : ''}
         <div class="p-main">
-          <div class="p-name">Rnd ${slot.round} · Pick ${slot.pick}</div>
-          ${pred
-            ? `<div class="p-meta" style="font-style:italic;color:var(--muted);">Pred: ${pred.prospect.name} · <span class="p-pos">${pred.prospect.pos}</span></div>`
-            : `<div class="p-meta">${needs.slice(0,3).map(n=>`<span class="need-tag">${n}</span>`).join(' ')}</div>`}
+          <div class="p-name" style="color:${isNext?'var(--text)':'var(--muted)'};">Rnd ${slot.round} · Pick ${slot.pick}</div>
+          ${pred ? `
+            <div style="display:flex;align-items:center;gap:5px;margin-top:3px;">
+              <span style="font-size:0.7rem;">🤖</span>
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:600;color:#f5a623;font-style:italic;">${pred.prospect.name}</span>
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:0.7rem;color:var(--muted);">${pred.prospect.pos}</span>
+            </div>` :
+            `<div class="p-meta">${needs.slice(0,3).map(n=>`<span class="need-tag">${n}</span>`).join(' ')}</div>`}
         </div>
+        ${isNext ? `<div style="position:absolute;top:8px;right:10px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;letter-spacing:2px;color:#f5a623;border:1px dashed rgba(245,166,35,0.5);border-radius:3px;padding:1px 5px;">PREDICTION</div>` : ''}
       </div>`;
   }).join('');
 }
@@ -572,6 +586,12 @@ async function fetchProspectHeadshot(name, espnId) {
 // ── Live Draft Tracker ───────────────────────────────────────
 window._livePicks = [];
 window._liveTrackerTimeout = null;
+// predictionLog: [{pick, team, predicted:{name,pos,school,rank}, actual:{name,pos}|null, correct:bool|null}]
+window._predictionLog = JSON.parse(sessionStorage.getItem('_predictionLog') || '[]');
+
+function _savePredictionLog() {
+  try { sessionStorage.setItem('_predictionLog', JSON.stringify(window._predictionLog)); } catch(e) {}
+}
 
 function isDraftActive() {
   const now = new Date();
@@ -603,9 +623,24 @@ async function fetchEspnDraftPicks() {
         team: _espnToLocalAbbr(p.team?.abbreviation || ''),
         name: p.athlete?.displayName || '',
         pos: p.athlete?.position?.abbreviation || '',
+        espnAthleteId: p.athlete?.id || '',
       }))
       .filter(p => p.name);
+
+    // Grade any outstanding predictions against newly completed picks
+    const prevCount = window._livePicks.length;
     window._livePicks = picks;
+    if (picks.length > prevCount) {
+      const newPicks = picks.slice(prevCount);
+      newPicks.forEach(actual => {
+        const entry = window._predictionLog.find(e => e.pick === actual.pick && e.actual === null);
+        if (entry) {
+          entry.actual = { name: actual.name, pos: actual.pos };
+          entry.correct = actual.name.toLowerCase() === entry.predicted.name.toLowerCase();
+          _savePredictionLog();
+        }
+      });
+    }
     return picks;
   } catch(e) {
     console.warn('[draft] ESPN fetch failed:', e);
@@ -633,6 +668,22 @@ function _livePredict(slot) {
   return { prospect: best, reasoning };
 }
 
+// Record prediction for a slot if not already logged
+function _recordPrediction(slot, pred) {
+  if (!slot || !pred) return;
+  const already = window._predictionLog.find(e => e.pick === slot.pick);
+  if (already) return;
+  window._predictionLog.push({
+    pick: slot.pick,
+    round: slot.round,
+    team: slot.team,
+    predicted: { name: pred.prospect.name, pos: pred.prospect.pos, school: pred.prospect.school, rank: pred.prospect.rank },
+    actual: null,
+    correct: null,
+  });
+  _savePredictionLog();
+}
+
 function renderOnTheClock() {
   const banner = document.getElementById('live-otc-banner');
   if (!banner) return;
@@ -642,24 +693,121 @@ function renderOnTheClock() {
   const color = teamData.color;
   const logo = `https://a.espncdn.com/i/teamlogos/nfl/500/${slot.team.toLowerCase()}.png`;
   const pred = _livePredict(slot);
+  if (pred) _recordPrediction(slot, pred);
+
+  const predProspect = pred?.prospect;
+  const headshotUrl = predProspect ? (_prospectHeadshotCache[predProspect.rank] || '') : '';
+
   banner.style.display = 'block';
   banner.innerHTML = `
-    <div style="background:linear-gradient(135deg,${color}33 0%,${color}11 100%);border:2px solid ${color};border-radius:14px;padding:18px 24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
-      <div style="flex-shrink:0;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:4px;color:${color};margin-bottom:6px;">ON THE CLOCK &nbsp;·&nbsp; PICK ${slot.pick} &nbsp;·&nbsp; ROUND ${slot.round}</div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <img src="${logo}" style="width:54px;height:54px;object-fit:contain;filter:drop-shadow(0 0 8px ${color}88);" onerror="this.style.display='none'">
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:2px;color:var(--text);">${teamData.name}</span>
+    <div style="background:linear-gradient(135deg,${color}33 0%,${color}11 100%);border:2px solid ${color};border-radius:14px;padding:20px 24px;display:flex;align-items:stretch;gap:0;flex-wrap:wrap;overflow:hidden;">
+      <!-- On the clock section -->
+      <div style="flex-shrink:0;padding-right:24px;border-right:2px solid ${color}33;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:4px;color:${color};margin-bottom:8px;">ON THE CLOCK &nbsp;·&nbsp; PICK ${slot.pick} &nbsp;·&nbsp; ROUND ${slot.round}</div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <img src="${logo}" style="width:60px;height:60px;object-fit:contain;filter:drop-shadow(0 0 10px ${color}99);" onerror="this.style.display='none'">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:2px;color:var(--text);">${teamData.name}</span>
         </div>
       </div>
       ${pred ? `
-      <div style="flex:1;min-width:220px;border-left:2px solid ${color}44;padding-left:22px;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.68rem;letter-spacing:3px;color:var(--muted);margin-bottom:4px;">CLANKER'S PREDICTION</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.45rem;letter-spacing:1px;color:var(--text);">${pred.prospect.name} <span style="color:${color};font-size:1rem;">${pred.prospect.pos}</span></div>
-        <div style="font-family:'Barlow',sans-serif;font-size:0.78rem;color:var(--muted);margin-top:4px;line-height:1.5;max-width:640px;">${pred.reasoning}</div>
+      <!-- Prediction section -->
+      <div style="flex:1;min-width:240px;padding-left:24px;position:relative;overflow:hidden;">
+        <!-- Prediction label with robot icon -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:1rem;">🤖</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:3px;color:#f5a623;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.35);border-radius:4px;padding:2px 8px;">CLANKER'S PREDICTION</span>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:16px;">
+          <div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:1px;color:var(--text);line-height:1;">${pred.prospect.name}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:2px;background:${color}33;color:${color};border:1px solid ${color}66;border-radius:4px;padding:2px 8px;">${pred.prospect.pos}</span>
+              <span style="font-family:'Barlow',sans-serif;font-size:0.8rem;color:var(--muted);">${pred.prospect.school} · #${pred.prospect.rank} overall</span>
+            </div>
+            <div style="font-family:'Barlow',sans-serif;font-size:0.78rem;color:var(--muted);margin-top:6px;line-height:1.5;max-width:580px;">${pred.reasoning}</div>
+          </div>
+          ${headshotUrl ? `<img src="${headshotUrl}" style="height:90px;width:auto;object-fit:contain;object-position:bottom;opacity:0.9;flex-shrink:0;margin-left:auto;" onerror="this.style.display='none'">` : ''}
+        </div>
+        <!-- Dashed border overlay to signal "this is a prediction" -->
+        <div style="position:absolute;inset:0;border:2px dashed rgba(245,166,35,0.25);border-radius:8px;pointer-events:none;"></div>
       </div>` : ''}
     </div>
   `;
+}
+
+function renderPredictionScorecard() {
+  const el = document.getElementById('live-prediction-scorecard');
+  if (!el) return;
+  const log = window._predictionLog;
+  if (!log.length) { el.style.display = 'none'; return; }
+
+  const graded = log.filter(e => e.actual !== null);
+  const correct = graded.filter(e => e.correct).length;
+  const pct = graded.length ? Math.round((correct / graded.length) * 100) : 0;
+  const scoreColor = pct >= 60 ? '#00c864' : pct >= 40 ? '#f5a623' : '#ff4444';
+
+  const rows = [...log].reverse().map(e => {
+    const teamData = NFL_TEAMS[e.team] || { name: e.team, color: '#555' };
+    const tLogo = `https://a.espncdn.com/i/teamlogos/nfl/500/${e.team.toLowerCase()}.png`;
+    const predHS = e.predicted.rank ? (_prospectHeadshotCache[e.predicted.rank] || '') : '';
+    let resultBadge = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);border:1px solid var(--muted);border-radius:3px;padding:1px 6px;">PENDING</span>`;
+    if (e.actual !== null) {
+      resultBadge = e.correct
+        ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:#00c864;border:1px solid #00c86466;border-radius:3px;padding:1px 6px;background:rgba(0,200,100,0.1);">✓ CORRECT</span>`
+        : `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:#ff4444;border:1px solid #ff444466;border-radius:3px;padding:1px 6px;background:rgba(255,68,68,0.1);">✗ WRONG</span>`;
+    }
+
+    const actualBlock = e.actual ? `
+      <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
+        <span style="font-size:0.7rem;color:var(--muted);">Actual:</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:${e.correct?'#00c864':'#ff6b6b'};">${e.actual.name}</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:0.72rem;color:var(--muted);">${e.actual.pos}</span>
+      </div>` : '';
+
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);background:${e.correct===true?'rgba(0,200,100,0.04)':e.correct===false?'rgba(255,68,68,0.04)':'transparent'};">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;color:var(--muted);min-width:28px;">#${e.pick}</div>
+        <img src="${tLogo}" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" onerror="this.style.display='none'">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${predHS ? `<img src="${predHS}" style="height:28px;width:auto;object-fit:contain;object-position:bottom;border-radius:2px;flex-shrink:0;" onerror="this.style.display='none'">` : ''}
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;font-weight:600;color:var(--text);">${e.predicted.name}</span>
+                <span style="font-family:'Bebas Neue',sans-serif;font-size:0.72rem;color:var(--muted);">${e.predicted.pos}</span>
+                ${resultBadge}
+              </div>
+              ${actualBlock}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:rgba(245,166,35,0.06);">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.1rem;">🤖</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:3px;color:var(--text);">CLANKER'S SCORECARD</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          ${graded.length ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1px;color:${scoreColor};">${correct}/${graded.length} <span style="font-size:0.9rem;opacity:0.7;">(${pct}%)</span></span>` : '<span style="font-family:\'Barlow\',sans-serif;font-size:0.8rem;color:var(--muted);">No picks graded yet</span>'}
+          <button onclick="document.getElementById('live-scorecard-rows').style.display=document.getElementById('live-scorecard-rows').style.display==='none'?'block':'none'" style="padding:4px 10px;border-radius:6px;border:1px solid var(--muted);background:transparent;color:var(--muted);font-family:'Barlow',sans-serif;font-size:0.75rem;cursor:pointer;">Toggle</button>
+        </div>
+      </div>
+      <div id="live-scorecard-rows">${rows}</div>
+    </div>`;
+}
+
+function _liveHeadshotUrl(livePick) {
+  // Try to find in our board by name for cached headshot
+  const boardMatch = NFL_PROSPECTS.find(p => p.name.toLowerCase() === livePick.name.toLowerCase());
+  if (boardMatch && _prospectHeadshotCache[boardMatch.rank]) return _prospectHeadshotCache[boardMatch.rank];
+  // Fall back to ESPN athlete headshot directly
+  if (livePick.espnAthleteId) return `https://a.espncdn.com/i/headshots/nfl/players/full/${livePick.espnAthleteId}.png`;
+  return '';
 }
 
 function renderLiveDraftOrder() {
@@ -677,13 +825,25 @@ function renderLiveDraftOrder() {
     const logo = `https://a.espncdn.com/i/teamlogos/nfl/500/${slot.team.toLowerCase()}.png`;
 
     if (live) {
+      const hs = _liveHeadshotUrl(live);
+      // Find prediction log for this pick
+      const logEntry = window._predictionLog.find(e => e.pick === slot.pick);
+      const wasRight = logEntry?.correct === true;
+      const wasWrong = logEntry?.correct === false;
+      const resultBorderColor = wasRight ? '#00c864' : wasWrong ? '#ff4444' : color;
       return `
-        <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
+        <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${resultBorderColor};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
           <div class="p-rank" style="color:${color};">#${slot.pick}</div>
-          <div class="p-logo-box"><img src="${logo}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.35;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
+          <div class="p-logo-box"><img src="${logo}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.3;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
+          ${hs ? `<img src="${hs}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:0.95;" onerror="this.style.display='none'">` : ''}
           <div class="p-main">
             <div class="p-name">${live.name}</div>
             <div class="p-meta"><span class="p-pos">${live.pos}</span> | ${teamData.name}</div>
+            ${logEntry && logEntry.actual !== null ? `
+              <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;font-family:'Barlow',sans-serif;">
+                Predicted: <span style="color:${wasRight?'#00c864':'#ff6b6b'};font-weight:600;">${logEntry.predicted.name}</span>
+                ${wasRight ? '✓' : '✗'}
+              </div>` : ''}
           </div>
           <div style="position:absolute;top:8px;right:10px;font-family:'Bebas Neue',sans-serif;font-size:0.62rem;letter-spacing:2px;color:${color};opacity:0.9;">OFFICIAL</div>
         </div>`;
@@ -691,16 +851,23 @@ function renderLiveDraftOrder() {
 
     const pred = isNext ? _livePredict(slot) : null;
     const needs = NFL_TEAM_NEEDS[slot.team] || [];
+    const predHS = pred ? (_prospectHeadshotCache[pred.prospect.rank] || '') : '';
     return `
-      <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${isNext ? color : '#444'};background:linear-gradient(90deg,${isNext ? color+'22' : '#ffffff06'} 0%,var(--surface) 100%);${!isNext ? 'opacity:0.5;' : ''}">
-        <div class="p-rank" style="color:${isNext ? color : 'var(--muted)'};">#${slot.pick}</div>
-        <div class="p-logo-box"><img src="${logo}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:${isNext ? '0.4' : '0.2'};filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
+      <div class="prospect-card" style="margin-bottom:8px;border-left:5px dashed ${isNext ? '#f5a623' : '#333'};background:linear-gradient(90deg,${isNext ? 'rgba(245,166,35,0.08)' : '#ffffff04'} 0%,var(--surface) 100%);${!isNext ? 'opacity:0.45;' : ''}">
+        <div class="p-rank" style="color:${isNext ? '#f5a623' : 'var(--muted)'};">#${slot.pick}</div>
+        <div class="p-logo-box"><img src="${logo}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:${isNext ? '0.35' : '0.15'};filter:drop-shadow(0 0 3px rgba(255,255,255,0.3));" onerror="this.style.display='none'"></div>
+        ${isNext && predHS ? `<img src="${predHS}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:0.7;filter:grayscale(30%);" onerror="this.style.display='none'">` : ''}
         <div class="p-main">
-          <div class="p-name">${teamData.name}</div>
-          ${pred
-            ? `<div class="p-meta" style="font-style:italic;color:var(--muted);">Pred: ${pred.prospect.name} · <span class="p-pos">${pred.prospect.pos}</span></div>`
-            : `<div class="p-meta">${needs.slice(0,3).map(n=>`<span class="need-tag">${n}</span>`).join(' ')}</div>`}
+          <div class="p-name" style="color:${isNext ? 'var(--text)' : 'var(--muted)'};">${teamData.name}</div>
+          ${pred ? `
+            <div style="display:flex;align-items:center;gap:5px;margin-top:3px;">
+              <span style="font-size:0.7rem;">🤖</span>
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:600;color:#f5a623;font-style:italic;">${pred.prospect.name}</span>
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:0.7rem;color:var(--muted);">${pred.prospect.pos}</span>
+            </div>` :
+            `<div class="p-meta">${needs.slice(0,3).map(n=>`<span class="need-tag">${n}</span>`).join(' ')}</div>`}
         </div>
+        ${isNext ? `<div style="position:absolute;top:8px;right:10px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;letter-spacing:2px;color:#f5a623;border:1px dashed rgba(245,166,35,0.5);border-radius:3px;padding:1px 5px;">PREDICTION</div>` : ''}
       </div>`;
   }).join('');
 }
@@ -717,14 +884,14 @@ function renderLiveProspectBoard() {
   const start = (_prospectPage - 1) * _prospectsPerPage;
   const page = filtered.slice(start, start + _prospectsPerPage);
 
-  const pagCtrl = (top) => `
+  const pagCtrl = () => `
     <div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
       <button style="padding:6px 16px;border-radius:8px;border:1px solid var(--muted);background:transparent;color:var(--muted);font-family:'Barlow',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;letter-spacing:1px;" onclick="_prospectPage=Math.max(1,_prospectPage-1);renderLiveProspectBoard()" ${_prospectPage===1?'disabled':''}>← Prev</button>
       <span style="color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;">Page ${_prospectPage} of ${totalPages}</span>
       <button style="padding:6px 16px;border-radius:8px;border:1px solid var(--muted);background:transparent;color:var(--muted);font-family:'Barlow',sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;letter-spacing:1px;" onclick="_prospectPage=Math.min(${totalPages},_prospectPage+1);renderLiveProspectBoard()" ${_prospectPage===totalPages?'disabled':''}>Next →</button>
     </div>`;
 
-  container.innerHTML = pagCtrl(true) + page.map(p => {
+  container.innerHTML = pagCtrl() + page.map(p => {
     const taken = takenMap.get(p.name.toLowerCase());
     const collegeData = COLLEGE_TEAMS[p.school] || { color: '#222230' };
     const color = taken ? (NFL_TEAMS[taken.team]?.color || '#555') : collegeData.color;
@@ -742,11 +909,12 @@ function renderLiveProspectBoard() {
           <div class="p-meta"><span class="p-pos">${p.pos}</span> | ${taken?`<span style="color:${color};font-weight:600;">${NFL_TEAMS[taken.team]?.name||taken.team} (#${taken.pick})</span>`:p.school}</div>
         </div>
       </div>`;
-  }).join('') + pagCtrl(false);
+  }).join('') + pagCtrl();
 }
 
 async function renderNflBigBoard() {
   renderOnTheClock();
+  renderPredictionScorecard();
   renderLiveDraftOrder();
   await preloadProspectHeadshots();
   renderLiveProspectBoard();
@@ -759,6 +927,7 @@ function startDraftPolling() {
     const visible = bb && getComputedStyle(bb).display !== 'none';
     if (visible) {
       renderOnTheClock();
+      renderPredictionScorecard();
       renderLiveDraftOrder();
       renderLiveProspectBoard();
     }
