@@ -42,10 +42,10 @@ const DEFENSE_34_LAYOUT = {
   fs:   { left: 65, top: 65 },
   ss:   { left: 35, top: 65 },
 
-  slb:  { left: 74, top: 35 },
+  slb:  { left: 26, top: 35 },
   rilb: { left: 58, top: 38 },
   lilb: { left: 42, top: 38 },
-  wlb:  { left: 26, top: 35 },
+  wlb:  { left: 74, top: 35 },
 
   rcb:  { left: 88, top: 14 },
   rde:  { left: 65, top: 10 },
@@ -55,7 +55,7 @@ const DEFENSE_34_LAYOUT = {
 };
 
 const DEFENSE_43_LAYOUT = {
-  fs:   { left: 80, top: 65 },
+  fs:   { left: 80, top: 60 },
   ss:   { left: 20, top: 60 },
 
   slb:  { left: 70, top: 35 },
