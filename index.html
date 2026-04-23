@@ -9523,8 +9523,8 @@ function renderLineups() {
         <div id="lineups-defense-list">${teamListHTML('defense')}</div>
       </div>
       <div id="lineups-formation-def" style="max-width:900px;margin:0 auto;overflow:visible;padding-top:70px;position:relative;z-index:1;"></div>
-      <div id="lineups-los" style="position:absolute;padding:40px 0;z-index:0;display:none;pointer-events:none;"><div style="height:3px;background:rgba(60,100,255,0.45);box-shadow:0 0 6px rgba(60,100,255,0.3);"></div></div>
-      <div id="lineups-formation" style="max-width:900px;margin:0 auto;overflow:visible;position:relative;z-index:1;"></div>
+      <div id="lineups-los" style="position:absolute;z-index:0;display:none;pointer-events:none;height:3px;"><div style="height:3px;background:rgba(60,100,255,0.45);box-shadow:0 0 6px rgba(60,100,255,0.3);"></div></div>
+      <div id="lineups-formation" style="max-width:900px;margin:0 auto;overflow:visible;position:relative;z-index:1;margin-top:80px;"></div>
     </div>`;
 
   loadMatchupView(savedOff, savedDef);
@@ -9561,7 +9561,7 @@ async function loadMatchupView(offAbbr, defAbbr) {
     const wrapperLeft = wrapper.getBoundingClientRect().left;
     const offRight = offPanel.getBoundingClientRect().right - wrapperLeft;
     const defLeft = defPanel.getBoundingClientRect().left - wrapperLeft;
-    const losTop = defContainer ? defContainer.offsetTop + defContainer.offsetHeight : 0;
+    const losTop = defContainer ? defContainer.offsetTop + defContainer.offsetHeight + 40 : 0;
     los.style.left = offRight + 'px';
     los.style.width = (defLeft - offRight) + 'px';
     los.style.top = losTop + 'px';
