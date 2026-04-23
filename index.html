@@ -9523,7 +9523,7 @@ function renderLineups() {
         <div id="lineups-defense-list">${teamListHTML('defense')}</div>
       </div>
       <div id="lineups-formation-def" style="max-width:900px;margin:0 auto;overflow:visible;padding-top:70px;position:relative;z-index:1;"></div>
-      <div id="lineups-los" style="width:100%;padding:20px 0;position:relative;z-index:0;display:none;"><div style="height:3px;background:rgba(60,100,255,0.45);box-shadow:0 0 6px rgba(60,100,255,0.3);"></div></div>
+      <div id="lineups-los" style="position:absolute;padding:0;z-index:0;display:none;pointer-events:none;"><div style="height:3px;background:rgba(60,100,255,0.45);box-shadow:0 0 6px rgba(60,100,255,0.3);"></div></div>
       <div id="lineups-formation" style="max-width:900px;margin:0 auto;overflow:visible;position:relative;z-index:1;"></div>
     </div>`;
 
@@ -9551,8 +9551,22 @@ async function loadMatchupView(offAbbr, defAbbr) {
 
   if (defContainer) defContainer.innerHTML = defLineup ? renderFormationGrid(defLineup.defense, defLayout, defColor, defAbbr, true) : '';
   offContainer.innerHTML = offLineup ? renderFormationGrid(offLineup.offense, OFFENSE_LAYOUT, offColor, offAbbr) : '';
-  const los = document.getElementById('lineups-los');
-  if (los) los.style.display = 'block';
+
+  requestAnimationFrame(() => {
+    const los = document.getElementById('lineups-los');
+    const offPanel = document.getElementById('lineups-off-panel');
+    const defPanel = document.getElementById('lineups-def-panel');
+    const wrapper = offPanel?.parentElement;
+    if (!los || !offPanel || !defPanel || !wrapper) return;
+    const wrapperLeft = wrapper.getBoundingClientRect().left;
+    const offRight = offPanel.getBoundingClientRect().right - wrapperLeft;
+    const defLeft = defPanel.getBoundingClientRect().left - wrapperLeft;
+    const losTop = defContainer ? defContainer.offsetTop + defContainer.offsetHeight : 0;
+    los.style.left = offRight + 'px';
+    los.style.width = (defLeft - offRight) + 'px';
+    los.style.top = losTop + 'px';
+    los.style.display = 'block';
+  });
 }
 
 function renderFormationGrid(positions, layout, color, abbr, flip = false) {
