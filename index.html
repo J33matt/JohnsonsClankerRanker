@@ -9552,6 +9552,19 @@ async function loadMatchupView(offAbbr, defAbbr) {
   if (defContainer) defContainer.innerHTML = defLineup ? renderFormationGrid(defLineup.defense, defLayout, defColor, defAbbr, true) : '';
   offContainer.innerHTML = offLineup ? renderFormationGrid(offLineup.offense, OFFENSE_LAYOUT, offColor, offAbbr) : '';
 
+  const badge = (abbr, color, label, corner) => {
+    const isTopRight = corner === 'tr';
+    const align = isTopRight ? 'align-items:flex-end;right:0;top:0;' : 'align-items:flex-start;left:0;bottom:0;';
+    const textAlign = isTopRight ? 'text-align:right;' : 'text-align:left;';
+    return `<div style="position:absolute;${align}display:flex;flex-direction:column;gap:6px;padding:12px;pointer-events:none;z-index:2;">
+      <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));">
+      <div style="font-family:Bebas Neue,sans-serif;font-size:0.8rem;letter-spacing:2px;color:${color};${textAlign}opacity:0.9;text-shadow:0 1px 4px rgba(0,0,0,0.8);">${NFL_TEAMS[abbr]?.name || abbr}<br>${label}</div>
+    </div>`;
+  };
+
+  if (defContainer) defContainer.insertAdjacentHTML('beforeend', badge(defAbbr, defColor, 'DEFENSE', 'tr'));
+  offContainer.insertAdjacentHTML('beforeend', badge(offAbbr, offColor, 'OFFENSE', 'bl'));
+
   requestAnimationFrame(() => {
     const los = document.getElementById('lineups-los');
     const offPanel = document.getElementById('lineups-off-panel');
