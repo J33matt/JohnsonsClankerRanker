@@ -47,7 +47,7 @@ const DEFENSE_34_LAYOUT = {
   lilb: { left: 42, top: 44 },
   wlb:  { left: 74, top: 40 },
 
-  rcb:  { left: 88, top: 14 },
+  rcb:  { left: 95, top: 14 },
   rde:  { left: 65, top: 10 },
   nt:   { left: 50, top: 10 },
   lde:  { left: 35, top: 10 },
@@ -62,12 +62,12 @@ const DEFENSE_43_LAYOUT = {
   mlb:  { left: 50, top: 44 },
   wlb:  { left: 70, top: 40 },
 
-  rcb:  { left: 97, top: 14 },
+  rcb:  { left: 95, top: 14 },
   rde:  { left: 65, top: 10 },
   rdt:  { left: 55, top: 10 },
   ldt:  { left: 45, top: 10 },
   lde:  { left: 35, top: 10 },
-  lcb:  { left: 3,  top: 14 },
+  lcb:  { left: 5,  top: 14 },
 };
 
 async function fetchTeamLineup(abbr) {
