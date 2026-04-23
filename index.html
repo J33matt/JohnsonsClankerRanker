@@ -9565,7 +9565,7 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
     const top = flip ? (75 - coords.top) : coords.top;
     html += `
       <div style="position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;">
-        <div style="position:relative;width:80px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${color};border-radius:8px;overflow:hidden;text-align:center;padding:4px 3px 6px;box-shadow:0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35);">`
+        <div style="position:relative;width:80px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${color};border-radius:8px;overflow:hidden;text-align:center;padding:4px 3px 6px;box-shadow:0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35);">
           <img src="${getHeadshotUrl(starter.id)}" style="width:60px;height:60px;object-fit:cover;object-position:top;border-radius:5px;" onerror="this.style.display='none'">
           <div style="font-family:Bebas Neue,sans-serif;font-size:0.75rem;color:${color};letter-spacing:1px;">${pos.toUpperCase()}</div>
           <div style="font-size:0.65rem;font-weight:600;line-height:1.2;opacity:0.9;">${starter.shortName || starter.displayName}</div>
