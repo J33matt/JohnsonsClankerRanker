@@ -9491,7 +9491,8 @@ function renderLineups() {
       </div>`).join('');
   }
 
-  const panelStyle = (side) => `position:absolute;${side}:-80px;top:0;width:max-content;min-width:160px;border-radius:10px;border:1px solid var(--border);background:var(--surface);`;
+  const innerBorder = (side) => `border-${side === 'left' ? 'right' : 'left'}:6px dashed rgba(255,255,255,0.85);`;
+  const panelStyle = (side) => `position:absolute;${side}:-80px;top:0;width:max-content;min-width:160px;border-radius:10px;border:1px solid var(--border);background:var(--surface);${innerBorder(side)}`;
 
   container.innerHTML = `
     <div style="position:relative;width:100%;min-height:1100px;padding:12px 0;">
