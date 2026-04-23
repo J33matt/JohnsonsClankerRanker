@@ -714,7 +714,7 @@ function renderOnTheClock() {
       <div style="flex:1;min-width:0;padding-left:28px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
           <span style="font-size:1.1rem;">🤖</span>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:0.7rem;letter-spacing:3px;color:#f5a623;background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.4);border-radius:4px;padding:3px 10px;">CLANKER'S PREDICTION</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:0.7rem;letter-spacing:3px;color:#f5a623;background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.4);border-radius:4px;padding:3px 10px;">CLANKER'S LIVE PREDICTION</span>
         </div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:1px;color:var(--text);line-height:1;">${pred.prospect.name}</div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
@@ -723,7 +723,7 @@ function renderOnTheClock() {
         </div>
       </div>` : ''}
       <!-- Headshot anchored to right/bottom edge -->
-      ${headshotUrl ? `<img src="${headshotUrl}" style="position:absolute;right:0;bottom:0;height:130%;width:auto;object-fit:contain;object-position:bottom right;opacity:1;pointer-events:none;" onerror="this.style.display='none'">` : ''}
+      ${headshotUrl ? `<img src="${headshotUrl}" style="position:absolute;right:0;bottom:0;height:90%;width:auto;object-fit:contain;object-position:bottom right;opacity:1;pointer-events:none;" onerror="this.style.display='none'">` : ''}
     </div>
   `;
 }
