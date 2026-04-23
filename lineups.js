@@ -26,26 +26,26 @@ const DEFENSE_43_POSITIONS = ['lde','ldt','rdt','rde','wlb','mlb','slb','lcb','r
 const OFFENSE_LAYOUT = {
   wr1:  { left: 3,  top: 10 },
   wr3:  { left: 13, top: 14 },
-  lt:   { left: 30, top: 10 },
+  lt:   { left: 30, top: 11 },
   lg:   { left: 40, top: 10 },
   c:    { left: 50, top: 10 },
   rg:   { left: 60, top: 10 },
-  rt:   { left: 70, top: 10 },
+  rt:   { left: 70, top: 11 },
   te:   { left: 80, top: 14 },
   wr2:  { left: 97, top: 10 },
 
-  rb:   { left: 40, top: 39 },
-  qb:   { left: 50, top: 35 },
+  rb:   { left: 40, top: 50 },
+  qb:   { left: 50, top: 45 },
 };
 
 const DEFENSE_34_LAYOUT = {
-  fs:   { left: 65, top: 65 },
-  ss:   { left: 35, top: 65 },
+  fs:   { left: 65, top: 74 },
+  ss:   { left: 35, top: 74 },
 
-  slb:  { left: 26, top: 35 },
-  rilb: { left: 58, top: 38 },
-  lilb: { left: 42, top: 38 },
-  wlb:  { left: 74, top: 35 },
+  slb:  { left: 26, top: 40 },
+  rilb: { left: 58, top: 44 },
+  lilb: { left: 42, top: 44 },
+  wlb:  { left: 74, top: 40 },
 
   rcb:  { left: 88, top: 14 },
   rde:  { left: 65, top: 10 },
@@ -55,12 +55,12 @@ const DEFENSE_34_LAYOUT = {
 };
 
 const DEFENSE_43_LAYOUT = {
-  fs:   { left: 80, top: 60 },
-  ss:   { left: 20, top: 60 },
+  fs:   { left: 80, top: 74 },
+  ss:   { left: 20, top: 74 },
 
-  slb:  { left: 70, top: 35 },
-  mlb:  { left: 50, top: 35 },
-  wlb:  { left: 30, top: 35 },
+  slb:  { left: 30, top: 40 },
+  mlb:  { left: 50, top: 44 },
+  wlb:  { left: 70, top: 40 },
 
   rcb:  { left: 97, top: 14 },
   rde:  { left: 65, top: 10 },
