@@ -9491,17 +9491,26 @@ function renderLineups() {
       </div>`).join('');
   }
 
-  const innerBorder = (side) => `border-${side === 'left' ? 'right' : 'left'}:6px dashed rgba(255,255,255,0.85);`;
-  const panelStyle = (side) => `position:absolute;${side}:-80px;top:0;width:max-content;min-width:160px;border-radius:10px;border:1px solid var(--border);background:var(--surface);${innerBorder(side)}`;
+  const panelStyle = (side) => `position:absolute;${side}:-80px;top:0;width:max-content;min-width:160px;border-radius:10px;border:1px solid var(--border);background:var(--surface);overflow:visible;`;
+  const hashmarks = (side) => {
+    const edge = side === 'left' ? 'right' : 'left';
+    const offset = side === 'left' ? 'right:-64px' : 'left:-64px';
+    return `<div style="position:absolute;${offset};top:0;width:60px;height:100%;pointer-events:none;
+      border-${edge}:5px solid rgba(255,255,255,0.9);
+      background:repeating-linear-gradient(to bottom,transparent 0,transparent 22px,rgba(255,255,255,0.85) 22px,rgba(255,255,255,0.85) 26px);
+      background-size:55px 26px;"></div>`;
+  };
 
   container.innerHTML = `
     <div style="position:relative;width:100%;min-height:1100px;padding:12px 0;">
       <div style="${panelStyle('left')}">
+        ${hashmarks('left')}
         <div style="font-family:Bebas Neue,sans-serif;font-size:2rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;text-align:center;">OFFENSE</div>
         <div id="lineups-offense-list">${teamListHTML('offense')}</div>
       </div>
       <div id="lineups-formation" style="max-width:900px;margin:0 auto;overflow:visible;padding-top:70px;"></div>
       <div style="${panelStyle('right')}">
+        ${hashmarks('right')}
         <div style="font-family:Bebas Neue,sans-serif;font-size:2rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;text-align:center;">DEFENSE</div>
         <div id="lineups-defense-list">${teamListHTML('defense')}</div>
       </div>
