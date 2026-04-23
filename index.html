@@ -9553,8 +9553,8 @@ async function loadMatchupView(offAbbr, defAbbr) {
   offContainer.innerHTML = offLineup ? renderFormationGrid(offLineup.offense, OFFENSE_LAYOUT, offColor, offAbbr) : '';
 
   // Badge position offsets — adjust freely (negative values move outside container)
-  const DEF_BADGE  = { top: 0,    right: 0,   logoSize: 100, fontSize: '0.8rem' };
-  const OFF_BADGE  = { bottom: 0, left: 0,    logoSize: 100, fontSize: '0.8rem' };
+  const DEF_BADGE  = { top: 0,    right: -100,   logoSize: 100, fontSize: '0.8rem' };
+  const OFF_BADGE  = { bottom: 70, left: -100,    logoSize: 100, fontSize: '0.8rem' };
 
   const badge = (abbr, color, label, corner) => {
     const isTopRight = corner === 'tr';
