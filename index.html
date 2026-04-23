@@ -700,35 +700,30 @@ function renderOnTheClock() {
 
   banner.style.display = 'block';
   banner.innerHTML = `
-    <div style="background:linear-gradient(135deg,${color}33 0%,${color}11 100%);border:2px solid ${color};border-radius:14px;padding:20px 24px;display:flex;align-items:stretch;gap:0;flex-wrap:wrap;overflow:hidden;">
-      <!-- On the clock section -->
-      <div style="flex-shrink:0;padding-right:24px;border-right:2px solid ${color}33;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:4px;color:${color};margin-bottom:8px;">ON THE CLOCK &nbsp;·&nbsp; PICK ${slot.pick} &nbsp;·&nbsp; ROUND ${slot.round}</div>
+    <div style="position:relative;overflow:hidden;background:linear-gradient(135deg,${color}33 0%,${color}11 100%);border:2px solid ${color};border-radius:14px;padding:20px 24px;display:flex;align-items:center;gap:0;min-height:110px;${headshotUrl ? 'padding-right:180px;' : ''}">
+      <!-- On the clock: team logo + name -->
+      <div style="flex-shrink:0;padding-right:28px;border-right:2px solid ${color}33;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.68rem;letter-spacing:4px;color:${color};opacity:0.85;margin-bottom:8px;">ON THE CLOCK &nbsp;·&nbsp; PICK ${slot.pick} &nbsp;·&nbsp; ROUND ${slot.round}</div>
         <div style="display:flex;align-items:center;gap:14px;">
-          <img src="${logo}" style="width:60px;height:60px;object-fit:contain;filter:drop-shadow(0 0 10px ${color}99);" onerror="this.style.display='none'">
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:2px;color:var(--text);">${teamData.name}</span>
+          <img src="${logo}" style="width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 0 12px ${color}aa);" onerror="this.style.display='none'">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:2.4rem;letter-spacing:2px;color:var(--text);line-height:1;">${teamData.name}</span>
         </div>
       </div>
       ${pred ? `
-      <!-- Prediction section -->
-      <div style="flex:1;min-width:240px;padding-left:24px;position:relative;overflow:hidden;">
-        <!-- Prediction label with robot icon -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <span style="font-size:1rem;">🤖</span>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:3px;color:#f5a623;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.35);border-radius:4px;padding:2px 8px;">CLANKER'S PREDICTION</span>
+      <!-- Prediction -->
+      <div style="flex:1;min-width:0;padding-left:28px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:1.1rem;">🤖</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:0.7rem;letter-spacing:3px;color:#f5a623;background:rgba(245,166,35,0.15);border:1px solid rgba(245,166,35,0.4);border-radius:4px;padding:3px 10px;">CLANKER'S PREDICTION</span>
         </div>
-        <div style="display:flex;align-items:flex-end;gap:16px;">
-          <div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:1px;color:var(--text);line-height:1;">${pred.prospect.name}</div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-              <span style="font-family:'Bebas Neue',sans-serif;font-size:0.9rem;letter-spacing:2px;background:${color}33;color:${color};border:1px solid ${color}66;border-radius:4px;padding:2px 8px;">${pred.prospect.pos}</span>
-              <span style="font-family:'Barlow',sans-serif;font-size:0.8rem;color:var(--muted);">${pred.prospect.school} · #${pred.prospect.rank} overall</span>
-            </div>
-            <div style="font-family:'Barlow',sans-serif;font-size:0.78rem;color:var(--muted);margin-top:6px;line-height:1.5;max-width:580px;">${pred.reasoning}</div>
-          </div>
-          ${headshotUrl ? `<img src="${headshotUrl}" style="height:90px;width:auto;object-fit:contain;object-position:bottom;opacity:0.9;flex-shrink:0;margin-left:auto;" onerror="this.style.display='none'">` : ''}
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;letter-spacing:1px;color:var(--text);line-height:1;">${pred.prospect.name}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;background:${color}44;color:${color};border:1px solid ${color}88;border-radius:5px;padding:3px 12px;">${pred.prospect.pos}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:1rem;color:var(--muted);font-weight:500;">${pred.prospect.school} &nbsp;·&nbsp; #${pred.prospect.rank} overall</span>
         </div>
       </div>` : ''}
+      <!-- Headshot anchored to right/bottom edge -->
+      ${headshotUrl ? `<img src="${headshotUrl}" style="position:absolute;right:0;bottom:0;height:130%;width:auto;object-fit:contain;object-position:bottom right;opacity:1;pointer-events:none;" onerror="this.style.display='none'">` : ''}
     </div>
   `;
 }
