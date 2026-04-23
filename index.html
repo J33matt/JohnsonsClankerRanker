@@ -9491,17 +9491,17 @@ function renderLineups() {
       </div>`).join('');
   }
 
-  const panelStyle = (side) => `position:absolute;${side}:8px;top:0;width:max-content;min-width:160px;border-radius:10px;border:1px solid var(--border);background:var(--surface);`;
+  const panelStyle = (side) => `position:absolute;${side}:-80px;top:0;width:max-content;min-width:160px;border-radius:10px;border:1px solid var(--border);background:var(--surface);`;
 
   container.innerHTML = `
     <div style="position:relative;width:100%;min-height:1100px;padding:12px 0;">
       <div style="${panelStyle('left')}">
-        <div style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;text-align:center;">OFFENSE</div>
+        <div style="font-family:Bebas Neue,sans-serif;font-size:2rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;text-align:center;">OFFENSE</div>
         <div id="lineups-offense-list">${teamListHTML('offense')}</div>
       </div>
       <div id="lineups-formation" style="max-width:900px;margin:0 auto;overflow:visible;"></div>
       <div style="${panelStyle('right')}">
-        <div style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;text-align:center;">DEFENSE</div>
+        <div style="font-family:Bebas Neue,sans-serif;font-size:2rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;text-align:center;">DEFENSE</div>
         <div id="lineups-defense-list">${teamListHTML('defense')}</div>
       </div>
     </div>`;
@@ -9545,7 +9545,8 @@ async function loadMatchupView(offAbbr, defAbbr) {
 }
 
 function renderFormationGrid(positions, layout, color, abbr, flip = false) {
-  let html = `<div style="position:relative;width:100%;height:400px;max-width:900px;margin:0 auto;">`;
+  const CARD_SCALE = 1.3; // adjust to resize cards
+  let html = `<div style="position:relative;width:100%;height:400px;max-width:900px;margin:0 auto;transform:scale(${CARD_SCALE});transform-origin:top center;">`;
 
   Object.entries(layout).forEach(([pos, coords]) => {
     const athletes = positions[pos] || [];
