@@ -9511,8 +9511,8 @@ function renderLineups() {
         <div style="font-family:Bebas Neue,sans-serif;font-size:2rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;text-align:center;">DEFENSE</div>
         <div id="lineups-defense-list">${teamListHTML('defense')}</div>
       </div>
-      <div id="lineups-hashmarks-left" style="position:absolute;top:0;width:60px;height:100%;pointer-events:none;z-index:0;border-left:4px solid rgba(255,255,255,0.25);background:repeating-linear-gradient(to bottom,transparent 0,transparent 22px,rgba(255,255,255,0.2) 22px,rgba(255,255,255,0.2) 26px);"></div>
-      <div id="lineups-hashmarks-right" style="position:absolute;top:0;width:60px;height:100%;pointer-events:none;z-index:0;border-right:4px solid rgba(255,255,255,0.25);background:repeating-linear-gradient(to bottom,transparent 0,transparent 22px,rgba(255,255,255,0.2) 22px,rgba(255,255,255,0.2) 26px);"></div>
+      <div id="lineups-hashmarks-left" style="position:absolute;top:0;width:36px;height:100%;pointer-events:none;z-index:0;background:linear-gradient(to right,rgba(255,255,255,0.25) 0,rgba(255,255,255,0.25) 3px,transparent 3px),repeating-linear-gradient(to bottom,transparent 0,transparent 22px,rgba(255,255,255,0.2) 22px,rgba(255,255,255,0.2) 26px);background-size:100% 100%,calc(100% - 3px) 26px;background-position:0 0,3px 0;background-repeat:no-repeat,repeat-y;"></div>
+      <div id="lineups-hashmarks-right" style="position:absolute;top:0;width:36px;height:100%;pointer-events:none;z-index:0;background:linear-gradient(to left,rgba(255,255,255,0.25) 0,rgba(255,255,255,0.25) 3px,transparent 3px),repeating-linear-gradient(to bottom,transparent 0,transparent 22px,rgba(255,255,255,0.2) 22px,rgba(255,255,255,0.2) 26px);background-size:100% 100%,calc(100% - 3px) 26px;background-position:0 0,0 0;background-repeat:no-repeat,repeat-y;"></div>
       <div id="lineups-formation" style="max-width:900px;margin:0 auto;overflow:visible;padding-top:70px;position:relative;z-index:1;"></div>
     </div>`;
 
