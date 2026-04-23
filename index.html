@@ -9491,17 +9491,17 @@ function renderLineups() {
       </div>`).join('');
   }
 
-  const panelStyle = (side) => `position:absolute;${side}:90px;top:0;width:180px;border-radius:10px;border:1px solid var(--border);background:var(--surface);`;
+  const panelStyle = (side) => `position:absolute;${side}:8px;top:0;width:max-content;min-width:160px;border-radius:10px;border:1px solid var(--border);background:var(--surface);`;
 
   container.innerHTML = `
     <div style="position:relative;width:100%;min-height:1100px;padding:12px 0;">
       <div style="${panelStyle('left')}">
-        <div style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;">OFFENSE</div>
+        <div style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;text-align:center;">OFFENSE</div>
         <div id="lineups-offense-list">${teamListHTML('offense')}</div>
       </div>
       <div id="lineups-formation" style="max-width:900px;margin:0 auto;overflow:visible;"></div>
-      <div style="${panelStyle('right')}text-align:right;">
-        <div style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;">DEFENSE</div>
+      <div style="${panelStyle('right')}">
+        <div style="font-family:Bebas Neue,sans-serif;font-size:1.5rem;letter-spacing:4px;padding:14px 12px 12px;border-bottom:3px solid var(--accent);border-radius:10px 10px 0 0;text-align:center;">DEFENSE</div>
         <div id="lineups-defense-list">${teamListHTML('defense')}</div>
       </div>
     </div>`;
