@@ -9483,12 +9483,19 @@ function renderLineups() {
 
   function teamListHTML(side) {
     const saved = side === 'offense' ? savedOff : savedDef;
-    return sortedTeams.map(([abbr, team]) => `
-      <div id="lineups-${side}-row-${abbr}" onclick="selectMatchupTeam('${side}','${abbr}')"
-        style="display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;border-bottom:1px solid var(--border);background:${abbr===saved?'rgba(255,255,255,0.08)':'transparent'};">
-        <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:22px;height:22px;object-fit:contain;">
-        <span style="font-family:'Barlow',sans-serif;font-weight:600;font-size:0.8rem;">${team.name}</span>
-      </div>`).join('');
+    return sortedTeams.map(([abbr, team]) => {
+      const isActive = abbr === saved;
+      const color = NFL_TEAMS[abbr]?.color || '#888';
+      const rowStyle = isActive
+        ? `background:${hexToRgbaLineups(color,0.18)};box-shadow:inset 0 0 12px ${hexToRgbaLineups(color,0.25)};animation:lineups-pulse-${abbr.toLowerCase()} 2s ease-in-out infinite;`
+        : `background:transparent;`;
+      const pulse = isActive ? `<style>@keyframes lineups-pulse-${abbr.toLowerCase()}{0%,100%{box-shadow:inset 0 0 10px ${hexToRgbaLineups(color,0.2)};}50%{box-shadow:inset 0 0 22px ${hexToRgbaLineups(color,0.45)};}}</style>` : '';
+      return `${pulse}<div id="lineups-${side}-row-${abbr}" onclick="selectMatchupTeam('${side}','${abbr}')"
+        style="display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;border-bottom:1px solid var(--border);${rowStyle}">
+        <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:${isActive?'28px':'20px'};height:${isActive?'28px':'20px'};object-fit:contain;transition:width 0.2s,height 0.2s;">
+        <span style="font-family:'Barlow',sans-serif;font-weight:${isActive?'700':'500'};font-size:0.8rem;opacity:${isActive?'1':'0.45'};transition:opacity 0.2s;">${team.name}</span>
+      </div>`;
+    }).join('');
   }
 
   const panelStyle = (side) => `position:absolute;${side}:-80px;top:0;width:max-content;min-width:160px;border-radius:10px;border:1px solid var(--border);background:var(--surface);overflow:visible;`;
@@ -9498,7 +9505,7 @@ function renderLineups() {
       ? `linear-gradient(to right,rgba(255,255,255,0.25) 0,rgba(255,255,255,0.25) 3px,transparent 3px)`
       : `linear-gradient(to left,rgba(255,255,255,0.25) 0,rgba(255,255,255,0.25) 3px,transparent 3px)`;
     const dashPos = side === 'left' ? '3px 0' : '0 0';
-    return `<div style="position:absolute;${inset};top:0;width:36px;height:100%;pointer-events:none;
+    return `<div style="position:absolute;${inset};top:0;width:25px;height:100%;pointer-events:none;
       background:${lineGrad},repeating-linear-gradient(to bottom,transparent 0,transparent 22px,rgba(255,255,255,0.2) 22px,rgba(255,255,255,0.2) 26px);
       background-size:100% 100%,calc(100% - 3px) 26px;background-position:0 0,${dashPos};background-repeat:no-repeat,repeat-y;"></div>`;
   };
@@ -9522,19 +9529,8 @@ function renderLineups() {
 }
 
 function selectMatchupTeam(side, abbr) {
-  const key = side === 'offense' ? 'lineupsOffTeam' : 'lineupsDefTeam';
-  const prev = localStorage.getItem(key);
-  localStorage.setItem(key, abbr);
-
-  const list = document.getElementById(`lineups-${side}-list`);
-  if (list) {
-    if (prev) { const r = document.getElementById(`lineups-${side}-row-${prev}`); if (r) r.style.background = 'transparent'; }
-    const r = document.getElementById(`lineups-${side}-row-${abbr}`); if (r) r.style.background = 'rgba(255,255,255,0.07)';
-  }
-
-  const off = localStorage.getItem('lineupsOffTeam') || 'LV';
-  const def = localStorage.getItem('lineupsDefTeam') || 'KC';
-  loadMatchupView(off, def);
+  localStorage.setItem(side === 'offense' ? 'lineupsOffTeam' : 'lineupsDefTeam', abbr);
+  renderLineups();
 }
 
 async function loadMatchupView(offAbbr, defAbbr) {
@@ -9569,7 +9565,7 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
     const top = flip ? (75 - coords.top) : coords.top;
     html += `
       <div style="position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;">
-        <div style="position:relative;width:80px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${color};border-radius:8px;overflow:hidden;text-align:center;padding:4px 3px 6px;">
+        <div style="position:relative;width:80px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${color};border-radius:8px;overflow:hidden;text-align:center;padding:4px 3px 6px;box-shadow:0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35);">`
           <img src="${getHeadshotUrl(starter.id)}" style="width:60px;height:60px;object-fit:cover;object-position:top;border-radius:5px;" onerror="this.style.display='none'">
           <div style="font-family:Bebas Neue,sans-serif;font-size:0.75rem;color:${color};letter-spacing:1px;">${pos.toUpperCase()}</div>
           <div style="font-size:0.65rem;font-weight:600;line-height:1.2;opacity:0.9;">${starter.shortName || starter.displayName}</div>
