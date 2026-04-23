@@ -385,7 +385,7 @@ function filterDraftByTeam(abbr, teamName) {
         <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${wasRight?'#00c864':wasWrong?'#ff4444':color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
           <div class="p-rank" style="color:${color};">#${slot.pick}</div>
           <div class="p-logo-box"><img src="${logoUrl}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.3;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
-          ${hs ? `<img src="${hs}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:0.95;" onerror="this.style.display='none'">` : ''}
+          ${hs ? `<img src="${hs}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:1;" onerror="this.style.display='none'">` : ''}
           <div class="p-main">
             <div class="p-name">${live.name}</div>
             <div class="p-meta"><span class="p-pos">${live.pos}</span> | Rnd ${slot.round}</div>
@@ -728,8 +728,6 @@ function renderOnTheClock() {
           </div>
           ${headshotUrl ? `<img src="${headshotUrl}" style="height:90px;width:auto;object-fit:contain;object-position:bottom;opacity:0.9;flex-shrink:0;margin-left:auto;" onerror="this.style.display='none'">` : ''}
         </div>
-        <!-- Dashed border overlay to signal "this is a prediction" -->
-        <div style="position:absolute;inset:0;border:2px dashed rgba(245,166,35,0.25);border-radius:8px;pointer-events:none;"></div>
       </div>` : ''}
     </div>
   `;
@@ -835,7 +833,7 @@ function renderLiveDraftOrder() {
         <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${resultBorderColor};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
           <div class="p-rank" style="color:${color};">#${slot.pick}</div>
           <div class="p-logo-box"><img src="${logo}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.3;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
-          ${hs ? `<img src="${hs}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:0.95;" onerror="this.style.display='none'">` : ''}
+          ${hs ? `<img src="${hs}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:1;" onerror="this.style.display='none'">` : ''}
           <div class="p-main">
             <div class="p-name">${live.name}</div>
             <div class="p-meta"><span class="p-pos">${live.pos}</span> | ${teamData.name}</div>
@@ -913,10 +911,10 @@ function renderLiveProspectBoard() {
 }
 
 async function renderNflBigBoard() {
+  await preloadProspectHeadshots();
   renderOnTheClock();
   renderPredictionScorecard();
   renderLiveDraftOrder();
-  await preloadProspectHeadshots();
   renderLiveProspectBoard();
 }
 
