@@ -44,12 +44,15 @@ function getMockPickScore(prospect, teamAbbr, round, alreadyDrafted, boardState)
   if (tier === 1) score *= 1.4;
   else if (tier === 2) score *= 1.15;
 
-  // Positional premium — compressed so rank stays dominant
-  score *= (0.85 + (premium - 1) * 0.3);
-
   // Needs — scaled by priority order (index 0 = top need gets 1.6×, each step down loses 0.1×)
   const needIdx = teamNeeds.indexOf(prospect.pos);
-  if (needIdx !== -1) score *= Math.max(1.6 - needIdx * 0.1, 1.2);
+  if (needIdx !== -1) {
+    score *= Math.max(1.6 - needIdx * 0.1, 1.2);
+    // Suppress positional premium for needs — need multiplier already captures positional value for this team
+  } else {
+    // Positional premium only applies for non-need BPA picks
+    score *= (0.85 + (premium - 1) * 0.3);
+  }
 
   // Urgency match from NFL_TEAM_CONTEXT
   const context = NFL_TEAM_CONTEXT[teamAbbr] || {};
