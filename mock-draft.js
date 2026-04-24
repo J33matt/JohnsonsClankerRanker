@@ -29,11 +29,27 @@ function getMockTier(rank) {
   return 4;
 }
 
+// Positions a team will only ever draft once (starter-level, no depth value)
+const _ONCE_AND_DONE = new Set(['QB', 'K', 'P', 'C']);
+// Positions where a second pick still makes sense (depth/rotation)
+// Everything else (WR, CB, EDGE, DT, LB, S, RB, OT, OG, TE, IOL) can be doubled up
+
 function getMockPickScore(prospect, teamAbbr, round, alreadyDrafted, boardState) {
   const archetype = NFL_TEAM_ARCHETYPES[teamAbbr] || { style:'bpa', preferredPos:[] };
   const rawNeeds = NFL_TEAM_NEEDS[teamAbbr] || [];
-  const filledNeeds = alreadyDrafted.filter(p => ['QB','K','P'].includes(p));
-  const teamNeeds = rawNeeds.filter(pos => !['QB','K','P'].includes(pos) || !filledNeeds.includes(pos));
+
+  // Count how many of each position this team has already drafted
+  const draftedCount = {};
+  alreadyDrafted.forEach(pos => { draftedCount[pos] = (draftedCount[pos] || 0) + 1; });
+
+  // Build adjusted needs — remove once-and-done positions already filled
+  // Depth positions stay on the board but get demoted per pick already made
+  const teamNeeds = rawNeeds.filter(pos => {
+    if (!draftedCount[pos]) return true;           // not drafted yet — keep
+    if (_ONCE_AND_DONE.has(pos)) return false;     // filled and won't draft again — drop
+    return true;                                    // depth position — keep but demote below
+  });
+
   const tier = getMockTier(prospect.rank);
   const premium = getMockPositionalPremium(prospect.pos, round);
 
@@ -44,10 +60,13 @@ function getMockPickScore(prospect, teamAbbr, round, alreadyDrafted, boardState)
   if (tier === 1) score *= 1.4;
   else if (tier === 2) score *= 1.15;
 
-  // Needs — scaled by priority order (index 0 = top need gets 1.6×, each step down loses 0.1×)
+  // Needs — scaled by priority order, then demoted for each prior pick at that position
+  // e.g. WR at index 0, already drafted 1 WR → effective index 2 → 1.4× instead of 1.6×
   const needIdx = teamNeeds.indexOf(prospect.pos);
   if (needIdx !== -1) {
-    score *= Math.max(1.6 - needIdx * 0.1, 1.2);
+    const priorPicks = draftedCount[prospect.pos] || 0;
+    const effectiveIdx = needIdx + priorPicks * 2; // demote 2 slots per pick already made
+    score *= Math.max(1.6 - effectiveIdx * 0.1, 1.0);
     // Suppress positional premium for needs — need multiplier already captures positional value for this team
   } else {
     // Positional premium only applies for non-need BPA picks — kept small so rank stays dominant
@@ -65,8 +84,8 @@ function getMockPickScore(prospect, teamAbbr, round, alreadyDrafted, boardState)
   if (archetype.style === 'needs' && needIdx === -1) score *= 1.2;
   if (archetype.style === 'bpa') score *= 1.1;
 
-  // Hard suppress filled one-and-done positions
-  if (['QB','K','P'].includes(prospect.pos) && alreadyDrafted.includes(prospect.pos)) score *= 0.02;
+  // Hard suppress once-and-done positions already filled
+  if (_ONCE_AND_DONE.has(prospect.pos) && draftedCount[prospect.pos]) score *= 0.02;
 
   // Positional scarcity — boost if few left at this position
   const remaining = boardState.filter(p => p.pos === prospect.pos).length;
