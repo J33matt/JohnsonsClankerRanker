@@ -614,8 +614,18 @@ function _espnToLocalAbbr(abbr) {
 
 async function fetchEspnDraftPicks() {
   try {
-    const res = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/draft/2026', { cache: 'no-store' });
-    const data = await res.json();
+    const urls = [
+      'https://site.api.espn.com/apis/site/v2/sports/football/nfl/draft/2026',
+      'https://site.api.espn.com/apis/site/v2/sports/football/nfl/draft/picks?season=2026&limit=500',
+    ];
+    let data = null;
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (res.ok) { data = await res.json(); break; }
+      } catch(e) {}
+    }
+    if (!data) throw new Error('all endpoints failed');
     const picks = (data.picks || [])
       .map(p => ({
         pick: p.pickNumber,
@@ -658,11 +668,12 @@ function _livePredict(slot) {
   const takenNames = new Set(window._livePicks.map(p => p.name.toLowerCase()));
   const pool = NFL_PROSPECTS.filter(p => !takenNames.has(p.name.toLowerCase()));
   const teamDrafted = window._livePicks.filter(p => p.team === slot.team).map(p => p.pos);
-  let best = null, bestScore = -Infinity;
-  for (const p of pool) {
-    const s = getMockPickScore(p, slot.team, slot.round, teamDrafted, pool);
-    if (s > bestScore) { bestScore = s; best = p; }
-  }
+  const scores = pool.map(p => ({ p, s: getMockPickScore(p, slot.team, slot.round, teamDrafted, pool) }));
+  scores.sort((a, b) => b.s - a.s);
+  const top = scores.slice(0, 5);
+  console.log(`[Clanker] Pick ${slot.pick} · ${NFL_TEAMS[slot.team]?.name || slot.team} · Needs: ${(NFL_TEAM_NEEDS[slot.team]||[]).join(', ')}`);
+  console.table(top.map(({p, s}) => ({ name: p.name, pos: p.pos, rank: p.rank, school: p.school, score: Math.round(s) })));
+  const best = top[0]?.p;
   if (!best) return null;
   const reasoning = generateMockReasoning(best, slot.team, slot.round, slot.pick, teamDrafted, pool, []);
   return { prospect: best, reasoning };
