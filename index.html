@@ -612,6 +612,18 @@ function _espnToLocalAbbr(abbr) {
   return map[abbr] || abbr;
 }
 
+const _ESPN_TEAM_IDS = {
+  '1':'ATL','2':'BUF','3':'CHI','4':'CIN','5':'CLE','6':'DAL','7':'DEN','8':'DET',
+  '9':'GB','10':'TEN','11':'IND','12':'KC','13':'LV','14':'LAR','15':'MIA','16':'MIN',
+  '17':'NE','18':'NO','19':'NYG','20':'NYJ','21':'PHI','22':'ARI','23':'PIT','24':'LAC',
+  '25':'SF','26':'SEA','27':'TB','28':'WAS','29':'CAR','30':'JAX','33':'BAL','34':'HOU'
+};
+const _ESPN_POS_IDS = {
+  '1':'QB','2':'RB','3':'WR','4':'TE','5':'K','6':'P','7':'DT','8':'QB',
+  '9':'OT','10':'OG','11':'C','12':'DE','13':'LB','14':'CB','15':'S',
+  '16':'EDGE','17':'DT','18':'LB','19':'CB','20':'S','23':'OT','24':'IOL'
+};
+
 async function fetchEspnDraftPicks() {
   try {
     let data = null;
@@ -621,14 +633,13 @@ async function fetchEspnDraftPicks() {
     } catch(e) {}
     if (!data) throw new Error('worker fetch failed');
     const picks = (data.picks || [])
-      .map(p => ({
-        pick: p.pickNumber,
-        round: p.round,
-        team: _espnToLocalAbbr(p.team?.abbreviation || ''),
-        name: p.athlete?.displayName || '',
-        pos: p.athlete?.position?.abbreviation || '',
-        espnAthleteId: p.athlete?.id || '',
-      }))
+      .map(p => {
+        const team = _ESPN_TEAM_IDS[String(p.teamId)] || '';
+        // Look up position from our board by name first (most reliable), fall back to posId map
+        const boardMatch = NFL_PROSPECTS.find(b => b.name.toLowerCase() === (p.name||'').toLowerCase());
+        const pos = boardMatch?.pos || _ESPN_POS_IDS[String(p.posId)] || '';
+        return { pick: p.pick, round: p.round, team, name: p.name || '', pos, espnAthleteId: p.espnAthleteId || '' };
+      })
       .filter(p => p.name);
 
     // Grade any outstanding predictions against newly completed picks
