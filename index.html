@@ -614,16 +614,27 @@ function _espnToLocalAbbr(abbr) {
 
 async function fetchEspnDraftPicks() {
   try {
-    const urls = [
+    const espnUrls = [
       'https://site.api.espn.com/apis/site/v2/sports/football/nfl/draft/2026',
       'https://site.api.espn.com/apis/site/v2/sports/football/nfl/draft/picks?season=2026&limit=500',
     ];
     let data = null;
-    for (const url of urls) {
+    // Try direct fetch first (works if ESPN adds CORS headers)
+    for (const url of espnUrls) {
       try {
         const res = await fetch(url, { cache: 'no-store' });
         if (res.ok) { data = await res.json(); break; }
       } catch(e) {}
+    }
+    // Fall back to allorigins CORS proxy
+    if (!data) {
+      for (const url of espnUrls) {
+        try {
+          const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+          const res = await fetch(proxy, { cache: 'no-store' });
+          if (res.ok) { const j = await res.json(); data = JSON.parse(j.contents); break; }
+        } catch(e) {}
+      }
     }
     if (!data) throw new Error('all endpoints failed');
     const picks = (data.picks || [])
