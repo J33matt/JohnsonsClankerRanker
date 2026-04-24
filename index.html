@@ -614,29 +614,12 @@ function _espnToLocalAbbr(abbr) {
 
 async function fetchEspnDraftPicks() {
   try {
-    const espnUrls = [
-      'https://site.api.espn.com/apis/site/v2/sports/football/nfl/draft/2026',
-      'https://site.api.espn.com/apis/site/v2/sports/football/nfl/draft/picks?season=2026&limit=500',
-    ];
     let data = null;
-    // Try direct fetch first (works if ESPN adds CORS headers)
-    for (const url of espnUrls) {
-      try {
-        const res = await fetch(url, { cache: 'no-store' });
-        if (res.ok) { data = await res.json(); break; }
-      } catch(e) {}
-    }
-    // Fall back to allorigins CORS proxy
-    if (!data) {
-      for (const url of espnUrls) {
-        try {
-          const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
-          const res = await fetch(proxy, { cache: 'no-store' });
-          if (res.ok) { const j = await res.json(); data = JSON.parse(j.contents); break; }
-        } catch(e) {}
-      }
-    }
-    if (!data) throw new Error('all endpoints failed');
+    try {
+      const res = await fetch('https://nfl-draft-proxy.j33matt.workers.dev/', { cache: 'no-store' });
+      if (res.ok) data = await res.json();
+    } catch(e) {}
+    if (!data) throw new Error('worker fetch failed');
     const picks = (data.picks || [])
       .map(p => ({
         pick: p.pickNumber,
