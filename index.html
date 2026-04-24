@@ -651,6 +651,7 @@ async function fetchEspnDraftPicks() {
     // Grade any outstanding predictions against newly completed picks
     const prevCount = window._livePicks.length;
     window._livePicks = picks;
+    if (picks.length > prevCount) window._predCache = {}; // invalidate on new picks
     if (picks.length > prevCount) {
       const newPicks = picks.slice(prevCount);
       newPicks.forEach(actual => {
@@ -674,8 +675,11 @@ function _liveNextSlot() {
   return NFL_DRAFT_ORDER.find(s => !made.has(s.pick)) || null;
 }
 
+// Cache prediction per pick number so we don't recompute/log on every render
+window._predCache = {};
 function _livePredict(slot) {
   if (!slot) return null;
+  if (window._predCache[slot.pick]) return window._predCache[slot.pick];
   const takenNames = new Set(window._livePicks.map(p => p.name.toLowerCase()));
   const pool = NFL_PROSPECTS.filter(p => !takenNames.has(p.name.toLowerCase()));
   const teamDrafted = window._livePicks.filter(p => p.team === slot.team).map(p => p.pos);
@@ -687,7 +691,9 @@ function _livePredict(slot) {
   const best = top[0]?.p;
   if (!best) return null;
   const reasoning = generateMockReasoning(best, slot.team, slot.round, slot.pick, teamDrafted, pool, []);
-  return { prospect: best, reasoning };
+  const result = { prospect: best, reasoning };
+  window._predCache[slot.pick] = result;
+  return result;
 }
 
 // Record prediction for a slot if not already logged
