@@ -719,11 +719,15 @@ function _livePredict(slot) {
         best = bestAvailable;
       }
     }
+
+    const result = { prospect: best, reasoning: generateMockReasoning(best, slot.team, slot.round, slot.pick, teamDrafted, pool, []), runners: top.slice(1).map(({p}) => p) };
+    window._predCache[slot.pick] = result;
+    return result;
   }
 
   if (!best) return null;
   const reasoning = generateMockReasoning(best, slot.team, slot.round, slot.pick, teamDrafted, pool, []);
-  const result = { prospect: best, reasoning };
+  const result = { prospect: best, reasoning, runners: [] };
   window._predCache[slot.pick] = result;
   return result;
 }
@@ -787,6 +791,16 @@ function renderOnTheClock() {
       ${collegeLogoUrl ? `<img src="${collegeLogoUrl}" style="position:absolute;right:30px;top:50%;transform:translateY(-50%);width:200px;height:200px;object-fit:cover;opacity:0.4;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));pointer-events:none;" onerror="this.style.display='none'">` : ''}
       ${headshotUrl ? `<img src="${headshotUrl}" style="position:absolute;right:100px;bottom:0;height:90%;width:auto;object-fit:contain;object-position:bottom right;opacity:1;pointer-events:none;" onerror="this.style.display='none'">` : ''}
     </div>
+    ${pred?.runners?.length ? `
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:0 4px;flex-wrap:wrap;">
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:0.6rem;letter-spacing:2px;color:var(--muted);white-space:nowrap;">ALSO CONSIDERED</span>
+      ${pred.runners.map(r => `
+        <div style="display:flex;align-items:center;gap:5px;background:var(--card-bg);border:1px solid var(--border);border-radius:5px;padding:3px 9px;">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:1px;color:${color};background:${color}22;border-radius:3px;padding:1px 5px;">${r.pos}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:var(--text);">${r.name}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);">#${r.rank}</span>
+        </div>`).join('')}
+    </div>` : ''}
   `;
 }
 
