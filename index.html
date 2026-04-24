@@ -696,10 +696,10 @@ function _livePredict(slot) {
     console.table(top.map(({p, s}) => ({ name: p.name, pos: p.pos, rank: p.rank, school: p.school, score: Math.round(s) })));
     best = top[0]?.p;
 
-    // 3. Hard cap: best available by rank cannot fall more than 12 picks (same as runMockDraft)
+    // 3. Hard cap: best available by rank cannot fall more than 7 picks (tighter than runMockDraft to prevent need multipliers overriding elite talent)
     if (best && pool.length) {
       const bestAvailable = pool.reduce((a, b) => a.rank < b.rank ? a : b);
-      if (slot.pick <= bestAvailable.rank + 12 && best.rank > bestAvailable.rank + 12) {
+      if (slot.pick <= bestAvailable.rank + 7 && best.rank > bestAvailable.rank + 7) {
         best = bestAvailable;
       }
     }

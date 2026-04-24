@@ -47,8 +47,9 @@ function getMockPickScore(prospect, teamAbbr, round, alreadyDrafted, boardState)
   // Positional premium — compressed so rank stays dominant
   score *= (0.85 + (premium - 1) * 0.3);
 
-  // Needs — stronger weight since this is deterministic
-  if (teamNeeds.includes(prospect.pos)) score *= 1.6;
+  // Needs — scaled by priority order (index 0 = top need gets 1.6×, each step down loses 0.1×)
+  const needIdx = teamNeeds.indexOf(prospect.pos);
+  if (needIdx !== -1) score *= Math.max(1.6 - needIdx * 0.1, 1.2);
 
   // Urgency match from NFL_TEAM_CONTEXT
   const context = NFL_TEAM_CONTEXT[teamAbbr] || {};
