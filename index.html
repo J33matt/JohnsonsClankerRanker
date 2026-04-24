@@ -612,7 +612,7 @@ function _espnToLocalAbbr(abbr) {
   return map[abbr] || abbr;
 }
 
-const _ESPN_TEAM_IDS = {
+const _NFL_ESPN_TEAM_IDS = {
   '1':'ATL','2':'BUF','3':'CHI','4':'CIN','5':'CLE','6':'DAL','7':'DEN','8':'DET',
   '9':'GB','10':'TEN','11':'IND','12':'KC','13':'LV','14':'LAR','15':'MIA','16':'MIN',
   '17':'NE','18':'NO','19':'NYG','20':'NYJ','21':'PHI','22':'ARI','23':'PIT','24':'LAC',
@@ -634,7 +634,7 @@ async function fetchEspnDraftPicks() {
     if (!data) throw new Error('worker fetch failed');
     const picks = (data.picks || [])
       .map(p => {
-        const team = _ESPN_TEAM_IDS[String(p.teamId)] || '';
+        const team = _NFL_ESPN_TEAM_IDS[String(p.teamId)] || '';
         // Look up position from our board by name first (most reliable), fall back to posId map
         const boardMatch = NFL_PROSPECTS.find(b => b.name.toLowerCase() === (p.name||'').toLowerCase());
         const pos = boardMatch?.pos || _ESPN_POS_IDS[String(p.posId)] || '';
