@@ -54,14 +54,15 @@ function getMockPickScore(prospect, teamAbbr, round, alreadyDrafted, boardState)
     score *= (0.85 + (premium - 1) * 0.1);
   }
 
-  // Urgency match from NFL_TEAM_CONTEXT
+  // Urgency and archetype only apply when position is NOT already a listed need
+  // (needs array already encodes priority — stacking these causes conflicts)
   const context = NFL_TEAM_CONTEXT[teamAbbr] || {};
-  const urgency = context.urgency || '';
-  if (urgency.includes(prospect.pos)) score *= 1.3;
-
-  // Archetype
-  if (archetype.preferredPos && archetype.preferredPos.includes(prospect.pos)) score *= 1.2;
-  if (archetype.style === 'needs' && teamNeeds.includes(prospect.pos)) score *= 1.2;
+  if (needIdx === -1) {
+    const urgency = context.urgency || '';
+    if (urgency.includes(prospect.pos)) score *= 1.3;
+    if (archetype.preferredPos && archetype.preferredPos.includes(prospect.pos)) score *= 1.2;
+  }
+  if (archetype.style === 'needs' && needIdx === -1) score *= 1.2;
   if (archetype.style === 'bpa') score *= 1.1;
 
   // Hard suppress filled one-and-done positions
