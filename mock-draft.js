@@ -50,8 +50,8 @@ function getMockPickScore(prospect, teamAbbr, round, alreadyDrafted, boardState)
     score *= Math.max(1.6 - needIdx * 0.1, 1.2);
     // Suppress positional premium for needs — need multiplier already captures positional value for this team
   } else {
-    // Positional premium only applies for non-need BPA picks
-    score *= (0.85 + (premium - 1) * 0.3);
+    // Positional premium only applies for non-need BPA picks — kept small so rank stays dominant
+    score *= (0.85 + (premium - 1) * 0.1);
   }
 
   // Urgency match from NFL_TEAM_CONTEXT
