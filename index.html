@@ -666,12 +666,34 @@ function _livePredict(slot) {
   const takenNames = new Set(window._livePicks.map(p => p.name.toLowerCase()));
   const pool = NFL_PROSPECTS.filter(p => !takenNames.has(p.name.toLowerCase()));
   const teamDrafted = window._livePicks.filter(p => p.team === slot.team).map(p => p.pos);
-  const scores = pool.map(p => ({ p, s: getMockPickScore(p, slot.team, slot.round, teamDrafted, pool) }));
-  scores.sort((a, b) => b.s - a.s);
-  const top = scores.slice(0, 5);
-  console.log(`[Clanker] Pick ${slot.pick} · ${NFL_TEAMS[slot.team]?.name || slot.team} · Needs: ${(NFL_TEAM_NEEDS[slot.team]||[]).join(', ')}`);
-  console.table(top.map(({p, s}) => ({ name: p.name, pos: p.pos, rank: p.rank, school: p.school, score: Math.round(s) })));
-  const best = top[0]?.p;
+
+  let best = null;
+
+  // 1. Check lock picks first (same logic as runMockDraft)
+  const lock = NFL_DRAFT_LOCKS.find(l => l.team === slot.team && l.probability >= 0.85);
+  if (lock) {
+    const lockProspect = pool.find(p => p.name === lock.prospectName);
+    if (lockProspect) best = lockProspect;
+  }
+
+  if (!best) {
+    // 2. Score all available prospects
+    const scores = pool.map(p => ({ p, s: getMockPickScore(p, slot.team, slot.round, teamDrafted, pool) }));
+    scores.sort((a, b) => b.s - a.s);
+    const top = scores.slice(0, 5);
+    console.log(`[Clanker] Pick ${slot.pick} · ${NFL_TEAMS[slot.team]?.name || slot.team} · Needs: ${(NFL_TEAM_NEEDS[slot.team]||[]).join(', ')}`);
+    console.table(top.map(({p, s}) => ({ name: p.name, pos: p.pos, rank: p.rank, school: p.school, score: Math.round(s) })));
+    best = top[0]?.p;
+
+    // 3. Hard cap: best available by rank cannot fall more than 12 picks (same as runMockDraft)
+    if (best && pool.length) {
+      const bestAvailable = pool.reduce((a, b) => a.rank < b.rank ? a : b);
+      if (slot.pick <= bestAvailable.rank + 12 && best.rank > bestAvailable.rank + 12) {
+        best = bestAvailable;
+      }
+    }
+  }
+
   if (!best) return null;
   const reasoning = generateMockReasoning(best, slot.team, slot.round, slot.pick, teamDrafted, pool, []);
   const result = { prospect: best, reasoning };
