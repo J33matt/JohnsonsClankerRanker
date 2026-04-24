@@ -584,7 +584,8 @@ async function fetchProspectHeadshot(name, espnId) {
 }
 
 // ── Live Draft Tracker ───────────────────────────────────────
-window._livePicks = [];
+window._livePicks = JSON.parse(sessionStorage.getItem('_livePicks') || '[]');
+window._liveOrder = JSON.parse(sessionStorage.getItem('_liveOrder') || '[]');
 window._liveTrackerTimeout = null;
 // predictionLog: [{pick, team, predicted:{name,pos,school,rank}, actual:{name,pos}|null, correct:bool|null}]
 window._predictionLog = JSON.parse(sessionStorage.getItem('_predictionLog') || '[]');
@@ -652,6 +653,8 @@ async function fetchEspnDraftPicks() {
     // Grade any outstanding predictions against newly completed picks
     const prevCount = window._livePicks.length;
     window._livePicks = picks;
+    try { sessionStorage.setItem('_livePicks', JSON.stringify(picks)); } catch(e) {}
+    try { sessionStorage.setItem('_liveOrder', JSON.stringify(window._liveOrder)); } catch(e) {}
     if (picks.length > prevCount) window._predCache = {}; // invalidate on new picks
     if (picks.length > prevCount) {
       const newPicks = picks.slice(prevCount);
