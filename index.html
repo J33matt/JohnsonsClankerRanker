@@ -364,7 +364,7 @@ function filterDraftByTeam(abbr, teamName) {
   }
 
   roundBtns.forEach(b => b.style.opacity = '0.3');
-  const picks = NFL_DRAFT_ORDER.filter(p => p.team === abbr);
+  const picks = _effectiveDraftOrder().filter(p => p.team === abbr);
   const liveMap = new Map(window._livePicks.map(p => [p.pick, p]));
   const nextSlot = _liveNextSlot();
   const container = document.getElementById('render-draft-order');
@@ -642,6 +642,13 @@ async function fetchEspnDraftPicks() {
       })
       .filter(p => p.name);
 
+    // Update live draft order (includes traded picks)
+    if (data.order && data.order.length > 0) {
+      window._liveOrder = data.order
+        .map(s => ({ pick: s.pick, round: s.round, team: _NFL_ESPN_TEAM_IDS[String(s.teamId)] || '' }))
+        .filter(s => s.team);
+    }
+
     // Grade any outstanding predictions against newly completed picks
     const prevCount = window._livePicks.length;
     window._livePicks = picks;
@@ -664,9 +671,15 @@ async function fetchEspnDraftPicks() {
   }
 }
 
+// Returns the effective draft order — ESPN live order (with trades) when available, hardcoded fallback
+function _effectiveDraftOrder() {
+  if (window._liveOrder && window._liveOrder.length > 0) return window._liveOrder;
+  return NFL_DRAFT_ORDER;
+}
+
 function _liveNextSlot() {
   const made = new Set(window._livePicks.map(p => p.pick));
-  return NFL_DRAFT_ORDER.find(s => !made.has(s.pick)) || null;
+  return _effectiveDraftOrder().find(s => !made.has(s.pick)) || null;
 }
 
 // Cache prediction per pick number so we don't recompute/log on every render
@@ -852,7 +865,7 @@ function _liveHeadshotUrl(livePick) {
 function renderLiveDraftOrder() {
   const container = document.getElementById('render-draft-order');
   if (!container) return;
-  const picks = NFL_DRAFT_ORDER.filter(p => p.round === _draftRound);
+  const picks = _effectiveDraftOrder().filter(p => p.round === _draftRound);
   const liveMap = new Map(window._livePicks.map(p => [p.pick, p]));
   const nextSlot = _liveNextSlot();
 
