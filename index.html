@@ -10516,8 +10516,9 @@ function _parseFaTransaction(tx) {
 async function loadFreeAgencyData() {
   if (_faLoading) return;
   _faLoading = true;
-  const container = document.getElementById('nfl-free-agency');
-  container.innerHTML = `<div style="text-align:center;padding:60px 20px;font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:2px;opacity:0.6;">LOADING FREE AGENCY DATA...</div>`;
+  // Show loading inside fa-results — don't wipe the shell (filters/dropdowns live there)
+  const resultsEl = document.getElementById('fa-results');
+  if (resultsEl) resultsEl.innerHTML = `<div style="text-align:center;padding:60px 20px;font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:2px;opacity:0.6;">LOADING FREE AGENCY DATA...</div>`;
   try {
     // Fetch transactions from late 2025 season end through today
     const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/transactions?limit=1000&dates=20260101-20260425`;
