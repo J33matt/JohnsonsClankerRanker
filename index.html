@@ -10280,62 +10280,30 @@ function _lineupsHsError(img) {
   img.style.display = 'none';
 }
 
-function _lineupsShortName(fullName) {
-  const parts = fullName.trim().split(/\s+/);
-  return parts.length < 2 ? fullName : parts[0][0].toUpperCase() + '. ' + parts.slice(1).join(' ');
+
+// Build a Set of ESPN athlete IDs for all 2026 draft picks — updated lazily
+function _getRookieAthleteIds() {
+  if (!window._rookieAthleteIdSet || window._rookieAthleteIdSet._pickCount !== (window._livePicks||[]).length) {
+    const ids = new Set();
+    (window._livePicks || []).forEach(p => { if (p.espnAthleteId) ids.add(String(p.espnAthleteId)); });
+    ids._pickCount = (window._livePicks||[]).length;
+    window._rookieAthleteIdSet = ids;
+  }
+  return window._rookieAthleteIdSet;
 }
 
-// Strip punctuation for fuzzy name comparison (handles "D.J." vs "DJ", apostrophes, etc.)
-function _normName(s) { return (s || '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim(); }
-
-function _isRookie2026(displayName, shortName) {
-  const picks = window._livePicks || [];
-  if (!picks.length) return false;
-  // 1. Exact full display name match (most reliable — "Jordan Love" only matches another "Jordan Love")
-  if (displayName) {
-    const norm = _normName(displayName);
-    if (picks.some(p => _normName(p.name) === norm)) return true;
-  }
-  // 2. Short-name fallback — but require the LAST NAME to match word-for-word to avoid
-  //    first-initial collisions (e.g. "D. Moore" veteran vs "Dontayvion Moore" rookie)
-  const raw = (shortName || _lineupsShortName(displayName || '')).toLowerCase();
-  const dotIdx = raw.indexOf('. ');
-  if (dotIdx < 0) return false; // can't safely match without "X. Lastname" format
-  const initial = raw[0];
-  const lastName = raw.slice(dotIdx + 2); // everything after "X. "
-  return picks.some(p => {
-    const pNorm = _normName(p.name);
-    const pParts = pNorm.split(' ');
-    if (pParts.length < 2) return false;
-    const pInitial = pParts[0][0];
-    const pLast = pParts.slice(1).join(' ');
-    return pInitial === initial && pLast === lastName;
-  });
+function _isRookie2026(athleteId) {
+  // Match exclusively on ESPN athlete ID — immune to name collisions (veteran Jordan Love ≠ any 2026 Jordan Love)
+  if (!athleteId) return false;
+  return _getRookieAthleteIds().has(String(athleteId));
 }
 
-function _rookieProspectEspnId(displayName, shortName) {
-  const picks = window._livePicks || [];
-  // Find matching live pick using same logic as _isRookie2026
-  let lp = null;
-  if (displayName) {
-    const norm = _normName(displayName);
-    lp = picks.find(p => _normName(p.name) === norm);
-  }
-  if (!lp && shortName) {
-    const raw = shortName.toLowerCase();
-    const dotIdx = raw.indexOf('. ');
-    if (dotIdx >= 0) {
-      const initial = raw[0];
-      const lastName = raw.slice(dotIdx + 2);
-      lp = picks.find(p => {
-        const pNorm = _normName(p.name).split(' ');
-        return pNorm.length >= 2 && pNorm[0][0] === initial && pNorm.slice(1).join(' ') === lastName;
-      });
-    }
-  }
+function _rookieProspectEspnId(athleteId) {
+  // Find the live pick by athlete ID, then look up their college ESPN ID from NFL_PROSPECTS
+  const lp = (window._livePicks || []).find(p => p.espnAthleteId && String(p.espnAthleteId) === String(athleteId));
   if (!lp) return null;
   const prospect = (typeof NFL_PROSPECTS !== 'undefined' ? NFL_PROSPECTS : [])
-    .find(p => _normName(p.name) === _normName(lp.name));
+    .find(p => p.name.toLowerCase() === lp.name.toLowerCase());
   return prospect?.espnId || null;
 }
 
@@ -10350,7 +10318,7 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
     const left = flip ? (100 - coords.left) : coords.left;
     const top = flip ? (75 - coords.top) : coords.top;
 
-    const isRookie = _isRookie2026(starter.displayName, starter.shortName);
+    const isRookie = _isRookie2026(starter.id);
     const nflUrl  = getHeadshotUrl(starter.id);
     // Same athlete ID, college-football endpoint — ESPN often has the photo here before NFL side updates
     const cfbUrl  = `https://a.espncdn.com/i/headshots/college-football/players/full/${starter.id}.png`;
@@ -10358,7 +10326,7 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
     let primaryHs, fallbackHs;
     if (isRookie) {
       // For rookies: check if we have the known college espnId from NFL_PROSPECTS
-      const espnId = _rookieProspectEspnId(starter.displayName, starter.shortName);
+      const espnId = _rookieProspectEspnId(starter.id);
       if (espnId) {
         primaryHs  = `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png`;
         fallbackHs = cfbUrl !== primaryHs ? cfbUrl : nflUrl; // try same-id cfb, then nfl
