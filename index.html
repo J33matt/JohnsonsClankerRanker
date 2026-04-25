@@ -208,7 +208,10 @@
       <div class="prospects-column" style="margin-left: 40px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
           <h3 class="column-title" style="margin:0;">Best Available <span style="font-size: 0.8rem; color: var(--muted); letter-spacing: 1px;">Ranked 1–200</span></h3>
-          <button id="availability-toggle-btn" onclick="toggleAvailabilityFilter()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--muted);background:transparent;color:var(--muted);font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;letter-spacing:0.5px;">On the Board</button>
+          <div id="availability-toggle" onclick="toggleAvailabilityFilter()" style="display:flex;border-radius:999px;border:1px solid var(--border);overflow:hidden;cursor:pointer;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.5px;flex-shrink:0;">
+            <span id="avail-opt-all" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">All</span>
+            <span id="avail-opt-board" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">On Board</span>
+          </div>
         </div>
         <div id="prospect-filters" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px; margin-bottom:12px; margin-top:8px;">
           <button class="pos-filter-btn active" onclick="filterProspects('ALL', this)">ALL</button>
@@ -244,12 +247,16 @@ let _showOnlyAvailable = false;
 function toggleAvailabilityFilter() {
   _showOnlyAvailable = !_showOnlyAvailable;
   _prospectPage = 1;
-  const btn = document.getElementById('availability-toggle-btn');
-  if (btn) {
-    btn.textContent = _showOnlyAvailable ? 'All Players' : 'On the Board';
-    btn.style.borderColor = _showOnlyAvailable ? '#f5a623' : '';
-    btn.style.color = _showOnlyAvailable ? '#f5a623' : '';
-    btn.style.background = _showOnlyAvailable ? 'rgba(245,166,35,0.1)' : '';
+  const optAll   = document.getElementById('avail-opt-all');
+  const optBoard = document.getElementById('avail-opt-board');
+  if (optAll && optBoard) {
+    if (_showOnlyAvailable) {
+      optAll.style.background   = 'var(--surface2)'; optAll.style.color   = 'var(--muted)';
+      optBoard.style.background = '#f5a623';          optBoard.style.color = '#000';
+    } else {
+      optAll.style.background   = '#f5a623';          optAll.style.color   = '#000';
+      optBoard.style.background = 'var(--surface2)'; optBoard.style.color = 'var(--muted)';
+    }
   }
   renderLiveProspectBoard();
 }
@@ -1035,7 +1042,8 @@ function renderLiveProspectBoard() {
   const takenMap = new Map(window._livePicks.map(p => [p.name.toLowerCase(), p]));
   const filtered = NFL_PROSPECTS
     .filter(p => pos === 'ALL' || p.pos === pos)
-    .filter(p => !_activeCollegeFilter || p.school === _activeCollegeFilter);
+    .filter(p => !_activeCollegeFilter || p.school === _activeCollegeFilter)
+    .filter(p => !_showOnlyAvailable || !takenMap.has(p.name.toLowerCase()));
   const totalPages = Math.ceil(filtered.length / _prospectsPerPage);
   const start = (_prospectPage - 1) * _prospectsPerPage;
   const page = filtered.slice(start, start + _prospectsPerPage);
