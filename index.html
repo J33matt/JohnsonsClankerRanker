@@ -773,11 +773,19 @@ function _livePredict(slot) {
 
   if (!best) {
     // 2. Score all available prospects
-    const scores = pool.map(p => ({ p, s: getMockPickScore(p, slot.team, slot.round, teamDrafted, pool) }));
+    const picksAlreadyMade = window._livePicks.length;
+    const scores = pool.map(p => {
+      let s = getMockPickScore(p, slot.team, slot.round, teamDrafted, pool);
+      // Slide penalty: every pick a player slips past their rank beyond 20 is a market signal
+      // (injury, off-field, scheme fit) — compound 8% reduction per pick of extra sliding
+      const slide = picksAlreadyMade - p.rank;
+      if (slide > 20) s *= Math.pow(0.92, slide - 20);
+      return { p, s };
+    });
     scores.sort((a, b) => b.s - a.s);
     const top = scores.slice(0, 5);
     console.log(`[Clanker] Pick ${slot.pick} · ${NFL_TEAMS[slot.team]?.name || slot.team} · Needs: ${(NFL_TEAM_NEEDS[slot.team]||[]).join(', ')}`);
-    console.table(top.map(({p, s}) => ({ name: p.name, pos: p.pos, rank: p.rank, school: p.school, score: Math.round(s) })));
+    console.table(top.map(({p, s}) => ({ name: p.name, pos: p.pos, rank: p.rank, school: p.school, score: Math.round(s), slide: Math.max(0, picksAlreadyMade - p.rank) })));
     best = top[0]?.p;
 
     // 3. Hard cap: best available by rank cannot fall more than 7 picks (tighter than runMockDraft to prevent need multipliers overriding elite talent)
@@ -838,7 +846,13 @@ async function _replayAllPredictions() {
     const lock = NFL_DRAFT_LOCKS.find(l => l.team === slot.team && l.probability >= 0.85);
     if (lock) { const lp = pool.find(p => p.name === lock.prospectName); if (lp) best = lp; }
     if (!best) {
-      const scores = pool.map(p => ({ p, s: getMockPickScore(p, slot.team, slot.round, teamDrafted, pool) }));
+      const picksAlreadyMade = picksBeforeThis.length;
+      const scores = pool.map(p => {
+        let s = getMockPickScore(p, slot.team, slot.round, teamDrafted, pool);
+        const slide = picksAlreadyMade - p.rank;
+        if (slide > 20) s *= Math.pow(0.92, slide - 20);
+        return { p, s };
+      });
       scores.sort((a, b) => b.s - a.s);
       best = scores[0]?.p;
       if (best && pool.length) {
