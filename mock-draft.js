@@ -34,9 +34,9 @@ const _ONCE_AND_DONE = new Set(['QB', 'K', 'P', 'C']);
 // Positions where a second pick still makes sense (depth/rotation)
 // Everything else (WR, CB, EDGE, DT, LB, S, RB, OT, OG, TE, IOL) can be doubled up
 
-function getMockPickScore(prospect, teamAbbr, round, alreadyDrafted, boardState) {
+function getMockPickScore(prospect, teamAbbr, round, alreadyDrafted, boardState, rawNeedsOverride) {
   const archetype = NFL_TEAM_ARCHETYPES[teamAbbr] || { style:'bpa', preferredPos:[] };
-  const rawNeeds = NFL_TEAM_NEEDS[teamAbbr] || [];
+  const rawNeeds = rawNeedsOverride || NFL_TEAM_NEEDS[teamAbbr] || [];
 
   // Count how many of each position this team has already drafted
   const draftedCount = {};
