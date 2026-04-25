@@ -754,16 +754,26 @@ function _liveNextSlot() {
   return _effectiveDraftOrder().find(s => !made.has(s.pick)) || null;
 }
 
-// Compute effective team needs based on what the team has actually drafted so far.
-// Returns null if no prior picks yet (round 1 pick 1, etc.) → caller falls back to preseason needs.
-// Logic: take positions already drafted (in order) as revealed priorities,
-//        then append any preseason needs not yet addressed.
-// Works for all rounds — for round 2 the signal is just round 1, for round 3 it's rounds 1-2, etc.
+// Compute effective team needs based on what the team has actually drafted.
+// Always seeds with the team's actual round 1 pick from window._livePicks (known after round 1),
+// then layers in any additional prior picks from completedPicks.
+// Returns null only if no live picks exist at all yet (pre-draft).
 function _computeEffectiveNeeds(teamAbbr, completedPicks) {
+  const allLive = window._livePicks || [];
+
+  // Seed: actual round 1 pick — available even when replaying the round 1 slot itself
+  // (picksBeforeThis for a team's R1 pick is empty, so we pull directly from the full live log)
+  const r1 = allLive.find(p => p.team === teamAbbr && p.round === 1);
+
+  // Prior picks for this team up to the moment being predicted
   const teamPrior = (completedPicks || []).filter(p => p.team === teamAbbr);
-  if (!teamPrior.length) return null;
+
+  if (!r1 && !teamPrior.length) return null; // no live data at all yet
+
   const revealed = [];
+  if (r1) revealed.push(r1.pos);
   teamPrior.forEach(p => { if (!revealed.includes(p.pos)) revealed.push(p.pos); });
+
   const preseason = NFL_TEAM_NEEDS[teamAbbr] || [];
   const remaining = preseason.filter(n => !revealed.includes(n));
   return [...revealed, ...remaining];
