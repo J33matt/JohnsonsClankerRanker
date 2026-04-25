@@ -104,24 +104,66 @@ function gradePickResult(prospect, teamAbbr, round) {
 }
 
 function runDraftSimulation() {
-  let pool = assignTiers([...NFL_PROSPECTS]);
+  // Seed from live picks already made
+  const livePicks = ((window._livePicks || []).slice()).sort((a, b) => a.pick - b.pick);
+  const livePickNums = new Set(livePicks.map(p => p.pick));
+  const liveTaken = new Set(livePicks.map(p => p.name.toLowerCase()));
+
+  // Pool starts without already-drafted players
+  let pool = assignTiers([...NFL_PROSPECTS].filter(p => !liveTaken.has(p.name.toLowerCase())));
   pool = assignVolatility(pool);
+
   const results = [];
   const recentPicks = [];
   const teamDraftedPositions = {};
 
-  NFL_DRAFT_ORDER.forEach(({ pick, team, round }) => {
+  // Pre-populate team positions from live picks
+  livePicks.forEach(lp => {
+    if (!teamDraftedPositions[lp.team]) teamDraftedPositions[lp.team] = [];
+    teamDraftedPositions[lp.team].push(lp.pos);
+  });
+
+  const draftOrder = (window._liveOrder && window._liveOrder.length > 0)
+    ? window._liveOrder
+    : NFL_DRAFT_ORDER;
+
+  draftOrder.forEach(({ pick, team, round }) => {
     if (!teamDraftedPositions[team]) teamDraftedPositions[team] = [];
+
+    // Lock in real picks exactly as they happened
+    if (livePickNums.has(pick)) {
+      const lp = livePicks.find(p => p.pick === pick);
+      if (!lp) return;
+      const boardProspect = NFL_PROSPECTS.find(p => p.name.toLowerCase() === lp.name.toLowerCase());
+      const prospect = boardProspect
+        ? assignTiers([{ ...boardProspect }])[0]
+        : { name: lp.name, pos: lp.pos, rank: 999, tier: 4, school: '' };
+      const result = {
+        pick, team: lp.team, round, prospect,
+        grade: boardProspect ? gradePickResult(prospect, lp.team, round) : '—',
+        isDraftSteal: false, isReach: false,
+        needsFit: (NFL_TEAM_NEEDS[lp.team] || []).includes(lp.pos),
+        isLocked: true,
+      };
+      results.push(result);
+      recentPicks.push(result);
+      if (recentPicks.length > 8) recentPicks.shift();
+      return;
+    }
+
+    // Simulate remaining picks
+    if (!pool.length) return;
     const prospect = selectPick(team, round, pool, recentPicks, teamDraftedPositions[team]);
     teamDraftedPositions[team].push(prospect.pos);
     pool = pool.filter(p => p.rank !== prospect.rank);
     const diff = pick - prospect.rank;
     const result = {
-      pick, team, prospect,
+      pick, team, round, prospect,
       grade: gradePickResult(prospect, team, round),
       isDraftSteal: diff >= 20,
       isReach: diff <= -20,
-      needsFit: (NFL_TEAM_NEEDS[team] || []).includes(prospect.pos)
+      needsFit: (NFL_TEAM_NEEDS[team] || []).includes(prospect.pos),
+      isLocked: false,
     };
     results.push(result);
     recentPicks.push(result);

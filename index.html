@@ -9619,7 +9619,7 @@ function renderDraftSimResults(results, roundFilter, teamFilter, posFilter) {
   const teamScores = {};
   results.forEach(r => {
     const diff = r.pick - r.prospect.rank;
-    const round = NFL_DRAFT_ORDER.find(d => d.pick === r.pick)?.round || Math.ceil(r.pick / 32);
+    const round = r.round || NFL_DRAFT_ORDER.find(d => d.pick === r.pick)?.round || Math.ceil(r.pick / 32);
     if (round <= 2) {
       if (!biggestSteal || diff > (biggestSteal.pick - biggestSteal.prospect.rank)) biggestSteal = r;
       if (!biggestReach || diff < (biggestReach.pick - biggestReach.prospect.rank)) biggestReach = r;
@@ -9726,7 +9726,7 @@ function renderDraftSimResults(results, roundFilter, teamFilter, posFilter) {
     if (i >= filtered.length) return;
     const r = filtered[i++];
     if (r.prospect.tier === undefined) r.prospect.tier = r.prospect.rank <= 32 ? 1 : r.prospect.rank <= 64 ? 2 : r.prospect.rank <= 105 ? 3 : 4;
-    const round = NFL_DRAFT_ORDER.find(d => d.pick === r.pick)?.round || Math.ceil(r.pick / 32);
+    const round = r.round || NFL_DRAFT_ORDER.find(d => d.pick === r.pick)?.round || Math.ceil(r.pick / 32);
 
     if (round !== currentRound) {
       currentRound = round;
@@ -9744,14 +9744,17 @@ function renderDraftSimResults(results, roundFilter, teamFilter, posFilter) {
     const needsPct = r.needsFit ? Math.floor(70 + Math.random()*25) : Math.floor(20 + Math.random()*40);
 
     const card = document.createElement('div');
-    card.style.cssText = `position:relative;overflow:hidden;background:linear-gradient(135deg,${hexToRgba(color,0.35)} 0%,${hexToRgba(color,0.12)} 50%,var(--surface) 100%);border:2px solid ${color};border-radius:10px;margin-bottom:10px;min-height:100px;opacity:0;transition:opacity 0.2s;box-shadow:0 2px 12px ${hexToRgba(color,0.2)};`;
+    card.style.cssText = `position:relative;overflow:hidden;background:linear-gradient(135deg,${hexToRgba(color,0.35)} 0%,${hexToRgba(color,0.12)} 50%,var(--surface) 100%);border:2px solid ${r.isLocked ? color : hexToRgba(color,0.5)};border-radius:10px;margin-bottom:10px;min-height:100px;opacity:0;transition:opacity 0.2s;box-shadow:0 2px 12px ${hexToRgba(color,0.2)};`;
     card.innerHTML = `
       ${teamLogo}${headshot}
       <div style="position:relative;z-index:1;display:flex;min-height:100px;">
 
         <!-- LEFT COLUMN -->
         <div style="display:flex;flex-direction:column;justify-content:center;gap:6px;padding:14px 16px;min-width:160px;border-right:1px solid ${hexToRgba(color,0.3)};">
-          <div style="font-family:Bebas Neue,sans-serif;font-size:2rem;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,0.8);line-height:1;">#${r.pick}</div>
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <div style="font-family:Bebas Neue,sans-serif;font-size:2rem;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,0.8);line-height:1;">#${r.pick}</div>
+            ${r.isLocked ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.55rem;letter-spacing:1.5px;color:#00c864;border:1px solid #00c86466;border-radius:3px;padding:1px 5px;background:rgba(0,200,100,0.1);">✓ OFFICIAL</span>` : ''}
+          </div>
           <div style="font-size:0.75rem;font-weight:600;opacity:0.8;line-height:1.2;">${NFL_TEAMS[r.team]?.name || r.team}</div>
           <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
             <span style="font-size:0.65rem;opacity:0.5;font-family:Bebas Neue,sans-serif;letter-spacing:1px;">GRADE</span>
