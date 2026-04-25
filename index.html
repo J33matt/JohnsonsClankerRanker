@@ -10253,34 +10253,37 @@ async function loadMatchupView(offAbbr, defAbbr) {
   });
 }
 
-function _isRookie2026(displayName, shortName) {
-  // Build short-name index from live picks (e.g. "Cam Williams" → "C. Williams")
-  const picks = window._livePicks || [];
-  if (!picks.length) return false;
-  const toShort = name => {
-    const parts = name.trim().split(/\s+/);
-    return parts.length < 2 ? name : parts[0][0].toUpperCase() + '. ' + parts.slice(1).join(' ');
-  };
-  const short = (shortName || toShort(displayName || '')).toLowerCase();
-  return picks.some(p => toShort(p.name).toLowerCase() === short);
+// Named fallback handler — avoids inline quote-escaping bugs in onerror attributes
+function _lineupsHsError(img) {
+  const fb = img.getAttribute('data-fb');
+  if (fb) {
+    img.removeAttribute('data-fb');
+    img.src = fb;
+  } else {
+    img.style.display = 'none';
+  }
 }
 
-function _rookieHeadshotUrl(shortName, displayName, nflAthleteId) {
-  // If the player was just drafted, look up their college ESPN ID from NFL_PROSPECTS
+function _lineupsShortName(fullName) {
+  const parts = fullName.trim().split(/\s+/);
+  return parts.length < 2 ? fullName : parts[0][0].toUpperCase() + '. ' + parts.slice(1).join(' ');
+}
+
+function _isRookie2026(displayName, shortName) {
   const picks = window._livePicks || [];
-  const toShort = name => {
-    const parts = name.trim().split(/\s+/);
-    return parts.length < 2 ? name : parts[0][0].toUpperCase() + '. ' + parts.slice(1).join(' ');
-  };
-  const short = (shortName || toShort(displayName || '')).toLowerCase();
-  const lp = picks.find(p => toShort(p.name).toLowerCase() === short);
+  if (!picks.length) return false;
+  const short = (shortName || _lineupsShortName(displayName || '')).toLowerCase();
+  return picks.some(p => _lineupsShortName(p.name).toLowerCase() === short);
+}
+
+function _rookieProspectEspnId(shortName, displayName) {
+  const picks = window._livePicks || [];
+  const short = (shortName || _lineupsShortName(displayName || '')).toLowerCase();
+  const lp = picks.find(p => _lineupsShortName(p.name).toLowerCase() === short);
   if (!lp) return null;
   const prospect = (typeof NFL_PROSPECTS !== 'undefined' ? NFL_PROSPECTS : [])
     .find(p => p.name.toLowerCase() === lp.name.toLowerCase());
-  if (prospect?.espnId) {
-    return `https://a.espncdn.com/i/headshots/college-football/players/full/${prospect.espnId}.png`;
-  }
-  return null;
+  return prospect?.espnId || null;
 }
 
 function renderFormationGrid(positions, layout, color, abbr, flip = false) {
@@ -10291,18 +10294,31 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
     const athletes = positions[pos] || [];
     if (!athletes.length) return;
     const starter = athletes[0];
-    const depth = athletes.slice(1, 3);
     const left = flip ? (100 - coords.left) : coords.left;
     const top = flip ? (75 - coords.top) : coords.top;
 
     const isRookie = _isRookie2026(starter.displayName, starter.shortName);
-    // Rookies: prefer college headshot URL (they may not have NFL photo yet)
-    const rookieUrl = isRookie ? _rookieHeadshotUrl(starter.shortName, starter.displayName, starter.id) : null;
-    const primaryHs = rookieUrl || getHeadshotUrl(starter.id);
-    const fallbackHs = rookieUrl ? getHeadshotUrl(starter.id) : '';
-    const onerrorAttr = fallbackHs
-      ? `onerror="if(this.src!=='${fallbackHs}'){this.src='${fallbackHs}';}else{this.style.display='none';}"`
-      : `onerror="this.style.display='none'"`;
+    const nflUrl  = getHeadshotUrl(starter.id);
+    // Same athlete ID, college-football endpoint — ESPN often has the photo here before NFL side updates
+    const cfbUrl  = `https://a.espncdn.com/i/headshots/college-football/players/full/${starter.id}.png`;
+
+    let primaryHs, fallbackHs;
+    if (isRookie) {
+      // For rookies: check if we have the known college espnId from NFL_PROSPECTS
+      const espnId = _rookieProspectEspnId(starter.shortName, starter.displayName);
+      if (espnId) {
+        primaryHs  = `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png`;
+        fallbackHs = cfbUrl !== primaryHs ? cfbUrl : nflUrl; // try same-id cfb, then nfl
+      } else {
+        // No known espnId — try college endpoint with depth-chart id, then nfl
+        primaryHs  = cfbUrl;
+        fallbackHs = nflUrl;
+      }
+    } else {
+      // Non-rookies: NFL url first; if missing try college endpoint with same id
+      primaryHs  = nflUrl;
+      fallbackHs = cfbUrl;
+    }
 
     const rookieBadge = isRookie
       ? `<div style="position:absolute;top:3px;right:3px;font-family:'Bebas Neue',sans-serif;font-size:0.55rem;letter-spacing:1px;background:#f5a623;color:#000;border-radius:3px;padding:1px 4px;line-height:1.3;z-index:2;">R</div>`
@@ -10312,7 +10328,7 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
       <div style="position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;">
         <div style="position:relative;width:80px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${isRookie ? '#f5a623' : color};border-radius:8px;overflow:hidden;text-align:center;padding:4px 3px 6px;box-shadow:0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35);">
           ${rookieBadge}
-          <img src="${primaryHs}" style="width:60px;height:60px;object-fit:contain;object-position:bottom center;border-radius:5px;" ${onerrorAttr}>
+          <img src="${primaryHs}" data-fb="${fallbackHs}" style="width:60px;height:60px;object-fit:cover;object-position:top center;border-radius:5px;" onerror="_lineupsHsError(this)">
           <div style="font-family:Bebas Neue,sans-serif;font-size:0.75rem;color:${isRookie ? '#f5a623' : color};letter-spacing:1px;">${pos.toUpperCase()}</div>
           <div style="font-size:0.65rem;font-weight:600;line-height:1.2;opacity:0.9;">${starter.shortName || starter.displayName}</div>
         </div>
