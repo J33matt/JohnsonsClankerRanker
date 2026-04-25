@@ -635,7 +635,7 @@ async function fetchProspectHeadshot(name, espnId) {
 
 // ── Live Draft Tracker ───────────────────────────────────────
 // Bump this number to force all users to recalculate predictions with the current formula
-const _PREDICTION_FORMULA_VERSION = 1;
+const _PREDICTION_FORMULA_VERSION = 2; // bumped: slide penalty for prospects falling past rank
 window._livePicks = JSON.parse(sessionStorage.getItem('_livePicks') || '[]');
 window._liveOrder = JSON.parse(sessionStorage.getItem('_liveOrder') || '[]');
 window._liveTrackerTimeout = null;
