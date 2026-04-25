@@ -589,16 +589,22 @@ window._liveOrder = JSON.parse(sessionStorage.getItem('_liveOrder') || '[]');
 window._liveTrackerTimeout = null;
 // predictionLog: [{pick, team, predicted:{name,pos,school,rank}, actual:{name,pos}|null, correct:bool|null}]
 // Stored in Cloudflare KV via the worker — persists across devices and refreshes
-window._predictionLog = JSON.parse(localStorage.getItem('_predictionLog') || '[]');
-window._predLogLoaded = true;
+window._predictionLog = [];
+window._predLogLoaded = false;
 
 async function _loadPredictionLog() {
-  window._predictionLog = JSON.parse(localStorage.getItem('_predictionLog') || '[]');
+  try {
+    const result = await window.storage.get('draftPredictions2026', true);
+    window._predictionLog = result.value || [];
+  } catch(e) {
+    window._predictionLog = []; // key doesn't exist yet — first run
+  }
   window._predLogLoaded = true;
 }
 
 function _savePredictionLog() {
-  try { localStorage.setItem('_predictionLog', JSON.stringify(window._predictionLog)); } catch(e) {}
+  // Save to shared Firestore — visible to all users instantly
+  window.storage.set('draftPredictions2026', window._predictionLog, true).catch(e => {});
 }
 
 function isDraftActive() {
