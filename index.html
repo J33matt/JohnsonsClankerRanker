@@ -754,16 +754,16 @@ function _liveNextSlot() {
   return _effectiveDraftOrder().find(s => !made.has(s.pick)) || null;
 }
 
-// Compute effective team needs for rounds 4+ based on what the team actually did in rounds 1-3.
-// Returns null for rounds 1-3 (keep preseason list so scorecard replay is unaffected).
-// Logic: take positions drafted in rounds 1-3 (in order) as revealed priorities,
-//        then append any preseason needs they didn't address yet.
-function _computeEffectiveNeeds(teamAbbr, currentRound, completedPicks) {
-  if (currentRound <= 3) return null;
-  const teamEarly = (completedPicks || []).filter(p => p.team === teamAbbr && p.round <= 3);
-  if (!teamEarly.length) return null;
+// Compute effective team needs based on what the team has actually drafted so far.
+// Returns null if no prior picks yet (round 1 pick 1, etc.) → caller falls back to preseason needs.
+// Logic: take positions already drafted (in order) as revealed priorities,
+//        then append any preseason needs not yet addressed.
+// Works for all rounds — for round 2 the signal is just round 1, for round 3 it's rounds 1-2, etc.
+function _computeEffectiveNeeds(teamAbbr, completedPicks) {
+  const teamPrior = (completedPicks || []).filter(p => p.team === teamAbbr);
+  if (!teamPrior.length) return null;
   const revealed = [];
-  teamEarly.forEach(p => { if (!revealed.includes(p.pos)) revealed.push(p.pos); });
+  teamPrior.forEach(p => { if (!revealed.includes(p.pos)) revealed.push(p.pos); });
   const preseason = NFL_TEAM_NEEDS[teamAbbr] || [];
   const remaining = preseason.filter(n => !revealed.includes(n));
   return [...revealed, ...remaining];
@@ -790,7 +790,7 @@ function _livePredict(slot) {
   if (!best) {
     // 2. Score all available prospects
     const picksAlreadyMade = window._livePicks.length;
-    const effectiveNeeds = _computeEffectiveNeeds(slot.team, slot.round, window._livePicks);
+    const effectiveNeeds = _computeEffectiveNeeds(slot.team, window._livePicks);
     const scores = pool.map(p => {
       let s = getMockPickScore(p, slot.team, slot.round, teamDrafted, pool, effectiveNeeds);
 
@@ -803,7 +803,7 @@ function _livePredict(slot) {
     });
     scores.sort((a, b) => b.s - a.s);
     const top = scores.slice(0, 5);
-    const needsLabel = effectiveNeeds ? `[R4+ revealed] ${effectiveNeeds.join(', ')}` : (NFL_TEAM_NEEDS[slot.team]||[]).join(', ');
+    const needsLabel = effectiveNeeds ? `[revealed] ${effectiveNeeds.join(', ')}` : (NFL_TEAM_NEEDS[slot.team]||[]).join(', ');
     console.log(`[Clanker] Pick ${slot.pick} · ${NFL_TEAMS[slot.team]?.name || slot.team} · Needs: ${needsLabel}`);
     console.table(top.map(({p, s}) => ({ name: p.name, pos: p.pos, rank: p.rank, school: p.school, score: Math.round(s), slide: Math.max(0, picksAlreadyMade - p.rank) })));
     best = top[0]?.p;
@@ -871,8 +871,8 @@ async function _replayAllPredictions() {
     if (lock) { const lp = pool.find(p => p.name === lock.prospectName); if (lp) best = lp; }
     if (!best) {
       const picksAlreadyMade = picksBeforeThis.length;
-      // For round 4+ replays, use revealed needs from that team's actual rounds 1-3 picks
-      const effectiveNeeds = _computeEffectiveNeeds(slot.team, slot.round, picksBeforeThis);
+      // Use revealed needs from all prior actual picks for this team
+      const effectiveNeeds = _computeEffectiveNeeds(slot.team, picksBeforeThis);
       const scores = pool.map(p => {
         let s = getMockPickScore(p, slot.team, slot.round, teamDrafted, pool, effectiveNeeds);
 
