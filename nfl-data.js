@@ -767,7 +767,6 @@ const NFL_TEAM_ARCHETYPES = {
 
 const NFL_DRAFT_LOCKS = [
   { pick: 1, team: 'LV', prospectName: 'Fernando Mendoza', probability: 1.0 },
-  { pick: 2, team: 'NYJ', prospectName: 'Arvell Reese', probability: 0.90 },
   // add any others you're confident about
 ];
 
