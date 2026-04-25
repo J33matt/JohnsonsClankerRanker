@@ -10465,7 +10465,8 @@ function _parseFaTransaction(tx) {
     're-signed','re-sign','exclusive rights','futures','future','practice squad',
     'placed on','activated from','waived','released','terminated',
     'signed to the active roster from','designated for return',
-    'reserve/','non-football','eligible',
+    'reserve/','non-football','eligible','rookie contract',
+    'right of first refusal','tender','contract extension',
   ];
   const descLower = desc.toLowerCase();
   if (skipPhrases.some(p => descLower.includes(p))) return null;
@@ -10489,6 +10490,13 @@ function _parseFaTransaction(tx) {
   if (signMatch) {
     const pos = _FA_POS_MAP[signMatch[1]] || signMatch[1];
     return { type:'signing', player:signMatch[2].trim(), pos, toTeam:teamAbbr, toTeamName:teamName, fromTeam:'', date };
+  }
+
+  // "Agreed to terms with POS Name on a ..." (alternate signing language ESPN uses)
+  const agreedMatch = desc.match(/^Agreed to terms with\s+([A-Z]+)\s+(.+?)\s+on\s+a\s+/i);
+  if (agreedMatch) {
+    const pos = _FA_POS_MAP[agreedMatch[1]] || agreedMatch[1];
+    return { type:'signing', player:agreedMatch[2].trim(), pos, toTeam:teamAbbr, toTeamName:teamName, fromTeam:'', date };
   }
 
   // Generic acquired
@@ -10529,6 +10537,42 @@ function _faIsStarter(playerName, teamAbbr) {
   return names.has(playerName.toLowerCase());
 }
 
+// 2025 season roster cache — used to detect same-team re-signs.
+// { teamAbbr: Set<name.toLowerCase()> }
+const _fa2025Rosters = {};
+
+async function _faFetch2025Roster(abbr) {
+  if (_fa2025Rosters[abbr]) return _fa2025Rosters[abbr];
+  const espnId = NFL_ESPN_IDS[abbr];
+  if (!espnId) { _fa2025Rosters[abbr] = new Set(); return _fa2025Rosters[abbr]; }
+  try {
+    const resp = await fetch(
+      `https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${espnId}/roster?season=2025`
+    );
+    const data = await resp.json();
+    const names = new Set();
+    // ESPN roster: data.athletes is an array of position-group objects, each with an items[] array
+    (data.athletes || []).forEach(group => {
+      (group.items || []).forEach(p => {
+        if (p.displayName) names.add(p.displayName.toLowerCase());
+        if (p.fullName)    names.add(p.fullName.toLowerCase());
+        if (p.shortName)   names.add(p.shortName.toLowerCase());
+      });
+    });
+    _fa2025Rosters[abbr] = names;
+  } catch(e) {
+    _fa2025Rosters[abbr] = new Set();
+  }
+  return _fa2025Rosters[abbr];
+}
+
+// Returns true if the player was on this team's 2025 roster (i.e. it's a re-sign, not a new arrival).
+function _faWasAlreadyHere(playerName, teamAbbr) {
+  const prev = _fa2025Rosters[teamAbbr];
+  if (!prev || prev.size === 0) return false; // roster not loaded or empty → don't suppress
+  return prev.has(playerName.toLowerCase());
+}
+
 async function loadFreeAgencyData() {
   if (_faLoading) return;
   _faLoading = true;
@@ -10552,11 +10596,18 @@ async function loadFreeAgencyData() {
       return true;
     });
 
-    // Prefetch depth charts for all receiving teams in parallel
+    // Fetch 2025 rosters for all receiving teams in parallel —
+    // used to detect same-team re-signs (e.g. player was already on this roster last year)
     const toTeams = [...new Set(moves.map(m => m.toTeam).filter(Boolean))];
-    await Promise.all(toTeams.map(abbr => fetchTeamLineup(abbr).catch(() => {})));
+    await Promise.all([
+      ...toTeams.map(abbr => _faFetch2025Roster(abbr).catch(() => {})),
+      ...toTeams.map(abbr => fetchTeamLineup(abbr).catch(() => {})),  // current depth charts
+    ]);
 
-    // Keep only players who are starters on their new team
+    // Remove same-team re-signs: player was on that team's 2025 roster
+    moves = moves.filter(m => !_faWasAlreadyHere(m.player, m.toTeam));
+
+    // Keep only players who are starters on their new team (current depth chart)
     _faData = moves.filter(m => _faIsStarter(m.player, m.toTeam));
 
   } catch(e) {
@@ -10613,8 +10664,11 @@ function renderFreeAgency() {
       .fa-team-option:hover { background: var(--surface) !important; }
     </style>
     <div style="padding:0 0 24px;">
-      <div class="fa-header">Free Agency Tracker</div>
-      <div class="fa-sub">2026 OFFSEASON · STARTERS ONLY · POST-SUPER BOWL</div>
+      <div style="display:flex;align-items:baseline;gap:14px;">
+        <div class="fa-header">Free Agency Tracker</div>
+        <button onclick="_faReload()" style="font-family:Barlow Condensed,sans-serif;font-size:0.75rem;font-weight:600;letter-spacing:1px;padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;text-transform:uppercase;">↺ Reload</button>
+      </div>
+      <div class="fa-sub">2026 OFFSEASON · STARTERS WHO CHANGED TEAMS · POST-SUPER BOWL</div>
       <div class="fa-filters">
         <button class="fa-pill active" onclick="_faSetFilter('all',this)">All Moves</button>
         <button class="fa-pill" onclick="_faSetFilter('skill',this)">Skill Positions</button>
@@ -10685,6 +10739,13 @@ function _faPickTeam(abbr, label) {
     <span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;color:var(--text);">${label}</span>
     <span style="color:var(--text);font-size:0.75rem;">▼</span>`;
   renderFreeAgencyResults();
+}
+
+function _faReload() {
+  _faData = null;
+  // Clear caches so fresh data is fetched
+  Object.keys(_fa2025Rosters).forEach(k => delete _fa2025Rosters[k]);
+  loadFreeAgencyData();
 }
 
 function _faSetFilter(filter, btn) {
