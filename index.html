@@ -88,6 +88,7 @@
   <button class="tab-btn" onclick="showNflTab('draft-sim', this)">Draft Sim</button>
   <button onclick="showNflTab('mock-draft', this)" class="tab-btn">Clanker's Mock Draft</button>
   <button class="tab-btn" onclick="showNflTab('lineups', this)">Lineups</button>
+  <button class="tab-btn" onclick="showNflTab('free-agency', this)">Free Agency</button>
 </div>
 
 <main>
@@ -242,6 +243,7 @@
   <div id="nfl-draft-sim" class="nfl-panel panel" style="display:none;"></div>
   <div id="nfl-mock-draft" class="nfl-panel panel" style="display:none;"></div>
   <div id="nfl-lineups" class="nfl-panel panel" style="display:none;"></div>
+  <div id="nfl-free-agency" class="nfl-panel panel" style="display:none;"></div>
 </div>
 </main>
 
@@ -605,7 +607,7 @@ function switchLeague(league, btn) {
     });
     const _savedNflTab = localStorage.getItem('activeNflTab');
     window._draftSimPos = localStorage.getItem('draftSimPos') || '';
-    const _validNflTabs = ['big-board', 'draft-sim', 'mock-draft', 'draft-order', 'lineups'];
+    const _validNflTabs = ['big-board', 'draft-sim', 'mock-draft', 'draft-order', 'lineups', 'free-agency'];
     const _nflTabToLoad = (_savedNflTab && _validNflTabs.includes(_savedNflTab)) ? _savedNflTab : 'big-board';
     const _nflBtnToLoad = document.querySelector(`#nfl-tabs button[onclick*="${_nflTabToLoad}"]`);
     showNflTab(_nflTabToLoad, _nflBtnToLoad || document.querySelector('#nfl-tabs button'));
@@ -1295,6 +1297,7 @@ if (tabName === 'mock-sim') document.getElementById('nfl-mock-sim').innerHTML = 
 if (tabName === 'draft-sim') renderDraftSim();
 if (tabName === 'mock-draft') renderMockDraft();
 if (tabName === 'lineups') renderLineups();
+if (tabName === 'free-agency') renderFreeAgency();
 }
 
 // ── Firebase cloud storage ───────────────────────────────────
@@ -10415,6 +10418,329 @@ function hexToRgbaLineups(hex, alpha) {
   const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
   return `rgba(${r},${g},${b},${alpha})`;
 }
+
+// ── FREE AGENCY TRACKER ─────────────────────────────────────────────────────
+
+const _FA_POS_MAP = {
+  'QB':'QB','RB':'RB','FB':'RB','WR':'WR','TE':'TE',
+  'OT':'OT','LT':'OT','RT':'OT','OG':'OG','LG':'OG','RG':'OG',
+  'C':'C','OL':'IOL',
+  'DE':'EDGE','OLB':'EDGE','EDGE':'EDGE',
+  'DT':'DT','NT':'DT','DL':'DT',
+  'ILB':'LB','MLB':'LB','LB':'LB',
+  'CB':'CB','S':'S','SS':'S','FS':'S','DB':'CB',
+  'K':'K','P':'P','LS':'LS',
+};
+
+const _FA_OFF_POS  = new Set(['QB','RB','WR','TE','OT','OG','C','IOL']);
+const _FA_DEF_POS  = new Set(['EDGE','DT','LB','CB','S']);
+const _FA_SKILL_POS = new Set(['QB','RB','WR','TE']);
+
+// ESPN team abbr → our abbr lookup (ESPN uses full or different forms sometimes)
+const _ESPN_ABBR_MAP = {
+  'WSH':'WAS','JAC':'JAX','LAR':'LAR','LAC':'LAC','LV':'LV',
+  'NO':'NO','TB':'TB','KC':'KC','SF':'SF','GB':'GB','NE':'NE',
+  'NYG':'NYG','NYJ':'NYJ','PHI':'PHI','DAL':'DAL','CHI':'CHI',
+  'DET':'DET','MIN':'MIN','GB':'GB','ATL':'ATL','CAR':'CAR',
+  'ARI':'ARI','SEA':'SEA','LAR':'LAR','SFO':'SF','DEN':'DEN',
+  'LVR':'LV','HOU':'HOU','IND':'IND','TEN':'TEN','JAX':'JAX',
+  'BUF':'BUF','MIA':'MIA','NE':'NE','NYJ':'NYJ','BAL':'BAL',
+  'CIN':'CIN','CLE':'CLE','PIT':'PIT','OAK':'LV',
+};
+
+function _normEspnAbbr(abbr) {
+  return _ESPN_ABBR_MAP[abbr] || abbr;
+}
+
+let _faData = null;      // parsed transactions array
+let _faLoading = false;
+let _faFilter = 'all';   // 'all' | 'skill' | 'off' | 'def'
+let _faTeam = '';        // '' means no team filter
+
+// Parse a single ESPN transaction description.
+// Returns null if we don't care about this move (practice squad, futures, IR, re-sign, release, waiver)
+function _parseFaTransaction(tx) {
+  const desc = tx.description || '';
+  const teamAbbr = tx.team ? _normEspnAbbr(tx.team.abbreviation) : '';
+  const teamName = tx.team ? tx.team.displayName : '';
+  const date = tx.date ? tx.date.substring(0, 10) : '';
+
+  // Skip noise
+  const skipPhrases = ['re-signed','re-sign','exclusive rights','futures','future','practice squad',
+    'placed on','activated from','waived','released','terminated','signed to the active roster from',
+    'designated for return','reserve/','non-football','eligible','agreed to terms on a one-year'];
+  const descLower = desc.toLowerCase();
+  if (skipPhrases.some(p => descLower.includes(p))) return null;
+
+  // ── TRADE: "Acquired POS Name from Team in exchange for..."
+  const tradeMatch = desc.match(/^Acquired\s+([A-Z]+)\s+(.+?)\s+(?:from\s+.+?\s+)?in exchange for/i);
+  if (tradeMatch) {
+    const rawPos = tradeMatch[1];
+    const playerName = tradeMatch[2].trim();
+    const pos = _FA_POS_MAP[rawPos] || rawPos;
+    // The receiving team is tx.team (they acquired the player)
+    return { type: 'trade', player: playerName, pos, toTeam: teamAbbr, toTeamName: teamName, fromTeam: '', date };
+  }
+
+  // Alternate trade pattern: "Traded POS Name to Team for..."
+  const tradeMatch2 = desc.match(/^Traded\s+([A-Z]+)\s+(.+?)\s+to\s+(.+?)\s+(?:for|in exchange)/i);
+  if (tradeMatch2) {
+    const rawPos = tradeMatch2[1];
+    const playerName = tradeMatch2[2].trim();
+    const toTeamName = tradeMatch2[3].trim();
+    const pos = _FA_POS_MAP[rawPos] || rawPos;
+    return { type: 'trade', player: playerName, pos, toTeam: '', toTeamName, fromTeam: teamAbbr, fromTeamName: teamName, date };
+  }
+
+  // ── FREE AGENT SIGNING: "Signed POS Name to a ..."
+  const signMatch = desc.match(/^Signed\s+([A-Z]+)\s+(.+?)\s+to\s+a\s+/i);
+  if (signMatch) {
+    const rawPos = signMatch[1];
+    const playerName = signMatch[2].trim();
+    const pos = _FA_POS_MAP[rawPos] || rawPos;
+    return { type: 'signing', player: playerName, pos, toTeam: teamAbbr, toTeamName: teamName, fromTeam: '', date };
+  }
+
+  // ── ACQUIRED (general): "Acquired POS Name" without exchange — likely claim/trade
+  const acqMatch = desc.match(/^Acquired\s+([A-Z]+)\s+(.+?)(?:\.|$)/i);
+  if (acqMatch) {
+    const rawPos = acqMatch[1];
+    const playerName = acqMatch[2].trim();
+    const pos = _FA_POS_MAP[rawPos] || rawPos;
+    return { type: 'acquisition', player: playerName, pos, toTeam: teamAbbr, toTeamName: teamName, fromTeam: '', date };
+  }
+
+  return null;
+}
+
+async function loadFreeAgencyData() {
+  if (_faLoading) return;
+  _faLoading = true;
+  const container = document.getElementById('nfl-free-agency');
+  container.innerHTML = `<div style="text-align:center;padding:60px 20px;font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:2px;opacity:0.6;">LOADING FREE AGENCY DATA...</div>`;
+  try {
+    // Fetch transactions from late 2025 season end through today
+    const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/transactions?limit=1000&dates=20260101-20260425`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const json = await resp.json();
+    const raw = json.transactions || json.items || [];
+    _faData = raw.map(tx => _parseFaTransaction(tx)).filter(Boolean);
+    // Deduplicate by player+type+toTeam
+    const seen = new Set();
+    _faData = _faData.filter(m => {
+      const key = `${m.player}|${m.type}|${m.toTeam}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  } catch(e) {
+    _faData = [];
+    console.warn('FA load error:', e);
+  }
+  _faLoading = false;
+  renderFreeAgencyResults();
+}
+
+function renderFreeAgency() {
+  const container = document.getElementById('nfl-free-agency');
+  // Build UI shell immediately, then load data
+  const sortedTeams = Object.entries(NFL_TEAMS).sort((a,b) => a[1].name.localeCompare(b[1].name));
+  const teamOpts = `<option value="">All Teams</option>` +
+    sortedTeams.map(([abbr, t]) => `<option value="${abbr}">${t.name}</option>`).join('');
+
+  container.innerHTML = `
+    <style>
+      .fa-header { font-family: Bebas Neue, sans-serif; font-size: 2rem; letter-spacing: 3px; margin-bottom: 4px; }
+      .fa-sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 20px; letter-spacing: 1px; }
+      .fa-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px; }
+      .fa-pill { font-family: Barlow Condensed, sans-serif; font-size: 0.85rem; font-weight: 600; letter-spacing: 1px;
+        padding: 6px 16px; border-radius: 20px; border: 1.5px solid var(--border); background: transparent;
+        color: var(--text); cursor: pointer; text-transform: uppercase; transition: all 0.15s; }
+      .fa-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .fa-team-select { font-family: Barlow Condensed, sans-serif; font-size: 0.85rem; padding: 6px 12px;
+        border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+      .fa-count { font-family: Barlow Condensed, sans-serif; font-size: 0.85rem; color: var(--muted); margin-left: auto; }
+      .fa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
+      .fa-card { background: var(--surface); border-radius: 12px; padding: 14px 16px;
+        border: 1px solid var(--border); transition: border-color 0.2s; }
+      .fa-card:hover { border-color: var(--accent); }
+      .fa-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+      .fa-pos-badge { font-family: Bebas Neue, sans-serif; font-size: 0.75rem; letter-spacing: 1px;
+        padding: 2px 8px; border-radius: 6px; color: #fff; flex-shrink: 0; }
+      .fa-player-name { font-family: Barlow Condensed, sans-serif; font-size: 1.1rem; font-weight: 700; flex: 1; }
+      .fa-type-badge { font-size: 0.68rem; font-family: Barlow Condensed, sans-serif; font-weight: 700;
+        letter-spacing: 1px; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; }
+      .fa-type-signing { background: rgba(0,200,100,0.15); color: #00c864; border: 1px solid rgba(0,200,100,0.3); }
+      .fa-type-trade    { background: rgba(255,160,0,0.15); color: #ffa000; border: 1px solid rgba(255,160,0,0.3); }
+      .fa-type-acquisition { background: rgba(100,160,255,0.15); color: #64a0ff; border: 1px solid rgba(100,160,255,0.3); }
+      .fa-teams-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); font-family: Barlow Condensed, sans-serif; }
+      .fa-team-logo { width: 22px; height: 22px; object-fit: contain; }
+      .fa-team-name { color: var(--text); font-weight: 600; }
+      .fa-arrow { opacity: 0.5; }
+      .fa-date { font-size: 0.72rem; color: var(--muted); margin-top: 6px; font-family: Barlow, sans-serif; }
+      .fa-section-header { font-family: Bebas Neue, sans-serif; font-size: 1.3rem; letter-spacing: 2px;
+        padding: 10px 0 6px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+      .fa-section-arrivals { color: #00c864; }
+      .fa-section-departures { color: #ff4d4d; }
+      .fa-team-view { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+      @media (max-width: 700px) { .fa-team-view { grid-template-columns: 1fr; } }
+      .fa-empty { text-align: center; padding: 40px; color: var(--muted); font-family: Barlow Condensed, sans-serif; font-size: 1.1rem; letter-spacing: 1px; }
+    </style>
+    <div style="padding:0 0 24px;">
+      <div class="fa-header">Free Agency Tracker</div>
+      <div class="fa-sub">2026 OFFSEASON · ALL SIGNINGS AND TRADES</div>
+      <div class="fa-filters">
+        <button class="fa-pill active" onclick="_faSetFilter('all',this)">All Moves</button>
+        <button class="fa-pill" onclick="_faSetFilter('skill',this)">Skill Positions</button>
+        <button class="fa-pill" onclick="_faSetFilter('off',this)">Offense</button>
+        <button class="fa-pill" onclick="_faSetFilter('def',this)">Defense</button>
+        <select class="fa-team-select" onchange="_faSetTeam(this.value)">${teamOpts}</select>
+        <span class="fa-count" id="fa-count"></span>
+      </div>
+      <div id="fa-results"></div>
+    </div>
+  `;
+
+  if (_faData === null) {
+    loadFreeAgencyData();
+  } else {
+    renderFreeAgencyResults();
+  }
+}
+
+function _faSetFilter(filter, btn) {
+  _faFilter = filter;
+  document.querySelectorAll('.fa-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFreeAgencyResults();
+}
+
+function _faSetTeam(abbr) {
+  _faTeam = abbr;
+  renderFreeAgencyResults();
+}
+
+function _faPosColor(pos) {
+  const colors = {
+    QB:'#e74c3c', RB:'#27ae60', WR:'#2980b9', TE:'#8e44ad',
+    OT:'#16a085', OG:'#16a085', C:'#16a085', IOL:'#16a085',
+    EDGE:'#e67e22', DT:'#c0392b', LB:'#d35400', CB:'#2471a3', S:'#1a5276',
+    K:'#7f8c8d', P:'#7f8c8d', LS:'#7f8c8d',
+  };
+  return colors[pos] || '#555';
+}
+
+function _faTeamLogoUrl(abbr) {
+  return `https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png`;
+}
+
+function _faFilterMoves(moves) {
+  return moves.filter(m => {
+    if (_faFilter === 'skill' && !_FA_SKILL_POS.has(m.pos)) return false;
+    if (_faFilter === 'off'   && !_FA_OFF_POS.has(m.pos))   return false;
+    if (_faFilter === 'def'   && !_FA_DEF_POS.has(m.pos))   return false;
+    return true;
+  });
+}
+
+function _faBuildCard(m) {
+  const typeClass = m.type === 'trade' ? 'fa-type-trade' : m.type === 'signing' ? 'fa-type-signing' : 'fa-type-acquisition';
+  const typeLabel = m.type === 'trade' ? 'Trade' : m.type === 'signing' ? 'Signing' : 'Acquired';
+  const toAbbr = m.toTeam || '';
+  const fromAbbr = m.fromTeam || '';
+  const toName = m.toTeamName || (NFL_TEAMS[toAbbr] ? NFL_TEAMS[toAbbr].name : toAbbr);
+  const fromName = m.fromTeamName || (NFL_TEAMS[fromAbbr] ? NFL_TEAMS[fromAbbr].name : fromAbbr);
+
+  let teamsHtml = '';
+  if (m.type === 'signing' && toAbbr) {
+    teamsHtml = `
+      <img class="fa-team-logo" src="${_faTeamLogoUrl(toAbbr)}" onerror="this.style.display='none'">
+      <span class="fa-team-name">${toName}</span>`;
+  } else if (m.type === 'trade' || m.type === 'acquisition') {
+    if (fromAbbr) {
+      teamsHtml += `<img class="fa-team-logo" src="${_faTeamLogoUrl(fromAbbr)}" onerror="this.style.display='none'">
+        <span class="fa-team-name">${fromName}</span>
+        <span class="fa-arrow">→</span>`;
+    }
+    if (toAbbr) {
+      teamsHtml += `<img class="fa-team-logo" src="${_faTeamLogoUrl(toAbbr)}" onerror="this.style.display='none'">
+        <span class="fa-team-name">${toName}</span>`;
+    } else if (toName) {
+      teamsHtml += `<span class="fa-team-name">${toName}</span>`;
+    }
+  }
+
+  const dateStr = m.date ? new Date(m.date + 'T12:00:00').toLocaleDateString('en-US', {month:'short',day:'numeric'}) : '';
+
+  return `
+    <div class="fa-card">
+      <div class="fa-card-top">
+        <span class="fa-pos-badge" style="background:${_faPosColor(m.pos)}">${m.pos}</span>
+        <span class="fa-player-name">${m.player}</span>
+        <span class="fa-type-badge ${typeClass}">${typeLabel}</span>
+      </div>
+      <div class="fa-teams-row">${teamsHtml}</div>
+      ${dateStr ? `<div class="fa-date">${dateStr}</div>` : ''}
+    </div>`;
+}
+
+function renderFreeAgencyResults() {
+  const resultsEl = document.getElementById('fa-results');
+  const countEl   = document.getElementById('fa-count');
+  if (!resultsEl) return;
+
+  if (!_faData || _faData.length === 0) {
+    resultsEl.innerHTML = `<div class="fa-empty">No moves found.</div>`;
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+
+  const filtered = _faFilterMoves(_faData);
+
+  // Team view — split into arrivals and departures
+  if (_faTeam) {
+    const arrivals   = filtered.filter(m => m.toTeam === _faTeam);
+    const departures = filtered.filter(m => m.fromTeam === _faTeam);
+    if (countEl) countEl.textContent = `${arrivals.length} arrivals · ${departures.length} departures`;
+
+    const teamInfo = NFL_TEAMS[_faTeam] || {};
+    const teamColor = teamInfo.color || '#888';
+
+    resultsEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+        <img src="${_faTeamLogoUrl(_faTeam)}" style="width:48px;height:48px;object-fit:contain;" onerror="this.style.display='none'">
+        <div>
+          <div style="font-family:Bebas Neue,sans-serif;font-size:1.6rem;letter-spacing:2px;">${teamInfo.name || _faTeam}</div>
+          <div style="font-size:0.75rem;color:var(--muted);font-family:Barlow Condensed,sans-serif;letter-spacing:1px;">2026 OFFSEASON MOVES</div>
+        </div>
+      </div>
+      <div class="fa-team-view">
+        <div>
+          <div class="fa-section-header fa-section-arrivals">▲ Arrivals (${arrivals.length})</div>
+          ${arrivals.length ? arrivals.map(_faBuildCard).join('') : '<div class="fa-empty">No arrivals</div>'}
+        </div>
+        <div>
+          <div class="fa-section-header fa-section-departures">▼ Departures (${departures.length})</div>
+          ${departures.length ? departures.map(_faBuildCard).join('') : '<div class="fa-empty">No departures</div>'}
+        </div>
+      </div>`;
+    return;
+  }
+
+  // All-moves grid, sorted by date descending
+  const sorted = [...filtered].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  if (countEl) countEl.textContent = `${sorted.length} move${sorted.length !== 1 ? 's' : ''}`;
+
+  if (sorted.length === 0) {
+    resultsEl.innerHTML = `<div class="fa-empty">No moves match the current filter.</div>`;
+    return;
+  }
+
+  resultsEl.innerHTML = `<div class="fa-grid">${sorted.map(_faBuildCard).join('')}</div>`;
+}
+
+// ── END FREE AGENCY TRACKER ──────────────────────────────────────────────────
 
 </script>
 <script src="cards-data.js"></script>
