@@ -635,7 +635,7 @@ async function fetchProspectHeadshot(name, espnId) {
 
 // ── Live Draft Tracker ───────────────────────────────────────
 // Bump this number to force all users to recalculate predictions with the current formula
-const _PREDICTION_FORMULA_VERSION = 3; // bumped: slide penalty for prospects falling past rank
+const _PREDICTION_FORMULA_VERSION = 4; // bumped: passed-over penalty + tier-relative slide threshold
 window._livePicks = JSON.parse(sessionStorage.getItem('_livePicks') || '[]');
 window._liveOrder = JSON.parse(sessionStorage.getItem('_liveOrder') || '[]');
 window._liveTrackerTimeout = null;
@@ -776,16 +776,26 @@ function _livePredict(slot) {
     const picksAlreadyMade = window._livePicks.length;
     const scores = pool.map(p => {
       let s = getMockPickScore(p, slot.team, slot.round, teamDrafted, pool);
-      // Slide penalty: every pick a player slips past their rank beyond 20 is a market signal
-      // (injury, off-field, scheme fit) — compound 8% reduction per pick of extra sliding
+
+      // Passed-over penalty: each time this player was the top prediction but someone
+      // else was actually taken, the market has signaled something we don't know
+      // (injury, character, scheme, intel) — 18% reduction per wrong prediction
+      const timesPassedOver = (window._predictionLog || []).filter(
+        e => e.predicted.name === p.name && e.actual !== null && e.correct === false
+      ).length;
+      if (timesPassedOver > 0) s *= Math.pow(0.82, timesPassedOver);
+
+      // Slide penalty: tier-relative threshold — elite players sliding far is more suspicious
+      const slideThreshold = p.rank <= 32 ? 15 : p.rank <= 64 ? 22 : 30;
       const slide = picksAlreadyMade - p.rank;
-      if (slide > 30) s *= Math.pow(0.97, slide - 30);
+      if (slide > slideThreshold) s *= Math.pow(0.97, slide - slideThreshold);
+
       return { p, s };
     });
     scores.sort((a, b) => b.s - a.s);
     const top = scores.slice(0, 5);
     console.log(`[Clanker] Pick ${slot.pick} · ${NFL_TEAMS[slot.team]?.name || slot.team} · Needs: ${(NFL_TEAM_NEEDS[slot.team]||[]).join(', ')}`);
-    console.table(top.map(({p, s}) => ({ name: p.name, pos: p.pos, rank: p.rank, school: p.school, score: Math.round(s), slide: Math.max(0, picksAlreadyMade - p.rank) })));
+    console.table(top.map(({p, s}) => ({ name: p.name, pos: p.pos, rank: p.rank, school: p.school, score: Math.round(s), passedOver: (window._predictionLog||[]).filter(e=>e.predicted.name===p.name&&e.correct===false).length, slide: Math.max(0, picksAlreadyMade - p.rank) })));
     best = top[0]?.p;
 
     // 3. Hard cap: best available by rank cannot fall more than 7 picks (tighter than runMockDraft to prevent need multipliers overriding elite talent)
@@ -849,8 +859,18 @@ async function _replayAllPredictions() {
       const picksAlreadyMade = picksBeforeThis.length;
       const scores = pool.map(p => {
         let s = getMockPickScore(p, slot.team, slot.round, teamDrafted, pool);
+
+        // Passed-over penalty using incrementally built log (same logic as live prediction)
+        const timesPassedOver = newLog.filter(
+          e => e.predicted.name === p.name && e.actual !== null && e.correct === false
+        ).length;
+        if (timesPassedOver > 0) s *= Math.pow(0.82, timesPassedOver);
+
+        // Tier-relative slide threshold
+        const slideThreshold = p.rank <= 32 ? 15 : p.rank <= 64 ? 22 : 30;
         const slide = picksAlreadyMade - p.rank;
-        if (slide > 20) s *= Math.pow(0.92, slide - 20);
+        if (slide > slideThreshold) s *= Math.pow(0.97, slide - slideThreshold);
+
         return { p, s };
       });
       scores.sort((a, b) => b.s - a.s);
