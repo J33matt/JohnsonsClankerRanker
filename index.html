@@ -588,10 +588,27 @@ window._livePicks = JSON.parse(sessionStorage.getItem('_livePicks') || '[]');
 window._liveOrder = JSON.parse(sessionStorage.getItem('_liveOrder') || '[]');
 window._liveTrackerTimeout = null;
 // predictionLog: [{pick, team, predicted:{name,pos,school,rank}, actual:{name,pos}|null, correct:bool|null}]
-window._predictionLog = JSON.parse(sessionStorage.getItem('_predictionLog') || '[]');
+// Stored in Cloudflare KV via the worker — persists across devices and refreshes
+window._predictionLog = [];
+window._predLogLoaded = false;
+
+async function _loadPredictionLog() {
+  try {
+    const res = await fetch('https://nfl-draft-proxy.j33matt.workers.dev/predictions', { cache: 'no-store' });
+    if (res.ok) window._predictionLog = await res.json();
+  } catch(e) {
+    console.warn('[predictions] load failed:', e);
+  }
+  window._predLogLoaded = true;
+}
 
 function _savePredictionLog() {
-  try { sessionStorage.setItem('_predictionLog', JSON.stringify(window._predictionLog)); } catch(e) {}
+  // Fire-and-forget POST to Cloudflare KV — no await needed
+  fetch('https://nfl-draft-proxy.j33matt.workers.dev/predictions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(window._predictionLog),
+  }).catch(e => console.warn('[predictions] save failed:', e));
 }
 
 function isDraftActive() {
@@ -984,6 +1001,7 @@ function renderLiveProspectBoard() {
 
 async function renderNflBigBoard() {
   await preloadProspectHeadshots();
+  if (!window._predLogLoaded) await _loadPredictionLog();
   renderOnTheClock();
   renderPredictionScorecard();
   renderLiveDraftOrder();
