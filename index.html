@@ -635,7 +635,7 @@ async function fetchProspectHeadshot(name, espnId) {
 
 // ── Live Draft Tracker ───────────────────────────────────────
 // Bump this number to force all users to recalculate predictions with the current formula
-const _PREDICTION_FORMULA_VERSION = 5; // bumped: removed passed-over penalty, tier-relative slide only
+const _PREDICTION_FORMULA_VERSION = 6; // bumped: top-3 grading (EXACT / TOP 3 / MISS)
 window._livePicks = JSON.parse(sessionStorage.getItem('_livePicks') || '[]');
 window._liveOrder = JSON.parse(sessionStorage.getItem('_liveOrder') || '[]');
 window._liveTrackerTimeout = null;
@@ -731,6 +731,7 @@ async function fetchEspnDraftPicks() {
         if (entry) {
           entry.actual = { name: actual.name, pos: actual.pos };
           entry.correct = actual.name.toLowerCase() === entry.predicted.name.toLowerCase();
+          entry.top3Hit = (entry.top3 || []).some(p => p.name.toLowerCase() === actual.name.toLowerCase());
           _savePredictionLog();
         }
       });
@@ -798,14 +799,16 @@ function _livePredict(slot) {
       }
     }
 
-    const result = { prospect: best, reasoning: generateMockReasoning(best, slot.team, slot.round, slot.pick, teamDrafted, pool, []), runners: top.slice(1).map(({p}) => p) };
+    const top3 = top.slice(0, 3).map(({p}) => ({ name: p.name, pos: p.pos, rank: p.rank, school: p.school }));
+    const result = { prospect: best, reasoning: generateMockReasoning(best, slot.team, slot.round, slot.pick, teamDrafted, pool, []), runners: top.slice(1, 3).map(({p}) => p), top3 };
     window._predCache[slot.pick] = result;
     return result;
   }
 
   if (!best) return null;
   const reasoning = generateMockReasoning(best, slot.team, slot.round, slot.pick, teamDrafted, pool, []);
-  const result = { prospect: best, reasoning, runners: [] };
+  const top3 = [{ name: best.name, pos: best.pos, rank: best.rank, school: best.school }];
+  const result = { prospect: best, reasoning, runners: [], top3 };
   window._predCache[slot.pick] = result;
   return result;
 }
@@ -820,8 +823,10 @@ function _recordPrediction(slot, pred) {
     round: slot.round,
     team: slot.team,
     predicted: { name: pred.prospect.name, pos: pred.prospect.pos, school: pred.prospect.school, rank: pred.prospect.rank },
+    top3: pred.top3 || [],
     actual: null,
     correct: null,
+    top3Hit: null,
   });
   _savePredictionLog();
 }
@@ -860,21 +865,30 @@ async function _replayAllPredictions() {
         return { p, s };
       });
       scores.sort((a, b) => b.s - a.s);
+      const top3candidates = scores.slice(0, 3).map(({p}) => ({ name: p.name, pos: p.pos, rank: p.rank, school: p.school }));
       best = scores[0]?.p;
       if (best && pool.length) {
         const bestAvailable = pool.reduce((a, b) => a.rank < b.rank ? a : b);
-        if (slot.pick <= bestAvailable.rank + 7 && best.rank > bestAvailable.rank + 7) best = bestAvailable;
+        if (slot.pick <= bestAvailable.rank + 7 && best.rank > bestAvailable.rank + 7) {
+          best = bestAvailable;
+          // If hard-cap overrides, rebuild top3 with the overridden pick first
+          top3candidates[0] = { name: best.name, pos: best.pos, rank: best.rank, school: best.school };
+        }
       }
+      var replayTop3 = top3candidates;
     }
     if (!best) continue;
 
+    const top3 = replayTop3 || [{ name: best.name, pos: best.pos, rank: best.rank, school: best.school }];
     newLog.push({
       pick: actual.pick,
       round: slot.round,
       team: slot.team,
       predicted: { name: best.name, pos: best.pos, school: best.school, rank: best.rank },
+      top3,
       actual: { name: actual.name, pos: actual.pos },
       correct: actual.name.toLowerCase() === best.name.toLowerCase(),
+      top3Hit: top3.some(p => p.name.toLowerCase() === actual.name.toLowerCase()),
     });
   }
 
@@ -949,30 +963,50 @@ function renderPredictionScorecard() {
   if (!log.length) { el.style.display = 'none'; return; }
 
   const graded = log.filter(e => e.actual !== null);
-  const correct = graded.filter(e => e.correct).length;
-  const pct = graded.length ? Math.round((correct / graded.length) * 100) : 0;
-  const scoreColor = pct >= 60 ? '#00c864' : pct >= 40 ? '#f5a623' : '#ff4444';
+  const exact = graded.filter(e => e.correct).length;
+  const top3hits = graded.filter(e => !e.correct && e.top3Hit).length;
+  const misses = graded.length - exact - top3hits;
+  const pct = graded.length ? Math.round((exact / graded.length) * 100) : 0;
+  const scoreColor = exact >= graded.length * 0.15 ? '#00c864' : top3hits + exact >= graded.length * 0.25 ? '#f5a623' : '#ff4444';
 
   const rows = [...log].reverse().map(e => {
     const teamData = NFL_TEAMS[e.team] || { name: e.team, color: '#555' };
     const tLogo = `https://a.espncdn.com/i/teamlogos/nfl/500/${e.team.toLowerCase()}.png`;
     const predHS = e.predicted.rank ? (_prospectHeadshotCache[e.predicted.rank] || '') : '';
-    let resultBadge = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);border:1px solid var(--muted);border-radius:3px;padding:1px 6px;">PENDING</span>`;
-    if (e.actual !== null) {
-      resultBadge = e.correct
-        ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:#00c864;border:1px solid #00c86466;border-radius:3px;padding:1px 6px;background:rgba(0,200,100,0.1);">✓ CORRECT</span>`
-        : `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:#ff4444;border:1px solid #ff444466;border-radius:3px;padding:1px 6px;background:rgba(255,68,68,0.1);">✗ WRONG</span>`;
+
+    // Determine grade tier
+    let resultBadge, rowBg;
+    if (e.actual === null) {
+      resultBadge = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);border:1px solid var(--muted);border-radius:3px;padding:1px 6px;">PENDING</span>`;
+      rowBg = 'transparent';
+    } else if (e.correct) {
+      resultBadge = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:#00c864;border:1px solid #00c86466;border-radius:3px;padding:1px 6px;background:rgba(0,200,100,0.1);">✓ EXACT</span>`;
+      rowBg = 'rgba(0,200,100,0.04)';
+    } else if (e.top3Hit) {
+      resultBadge = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:#f5a623;border:1px solid #f5a62366;border-radius:3px;padding:1px 6px;background:rgba(245,166,35,0.1);">● TOP 3</span>`;
+      rowBg = 'rgba(245,166,35,0.04)';
+    } else {
+      resultBadge = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:#ff4444;border:1px solid #ff444466;border-radius:3px;padding:1px 6px;background:rgba(255,68,68,0.1);">✗ MISS</span>`;
+      rowBg = 'rgba(255,68,68,0.04)';
     }
+
+    // Top 3 runners (indices 1-2) shown on non-exact graded rows
+    const runners = (e.top3 || []).slice(1);
+    const runnersHtml = (e.actual && !e.correct && runners.length) ? `
+      <div style="display:flex;align-items:center;gap:4px;margin-top:2px;flex-wrap:wrap;">
+        <span style="font-size:0.65rem;color:var(--muted);">Also had:</span>
+        ${runners.map(r => `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:${e.top3Hit && r.name.toLowerCase()===(e.actual?.name||'').toLowerCase() ? '#f5a623' : 'var(--muted)'};">${r.name} (${r.pos})</span>`).join('<span style="color:var(--muted);font-size:0.65rem;">·</span>')}
+      </div>` : '';
 
     const actualBlock = e.actual ? `
       <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
         <span style="font-size:0.7rem;color:var(--muted);">Actual:</span>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:${e.correct?'#00c864':'#ff6b6b'};">${e.actual.name}</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:${e.correct ? '#00c864' : e.top3Hit ? '#f5a623' : '#ff6b6b'};">${e.actual.name}</span>
         <span style="font-family:'Bebas Neue',sans-serif;font-size:0.72rem;color:var(--muted);">${e.actual.pos}</span>
-      </div>` : '';
+      </div>${runnersHtml}` : '';
 
     return `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);background:${e.correct===true?'rgba(0,200,100,0.04)':e.correct===false?'rgba(255,68,68,0.04)':'transparent'};">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);background:${rowBg};">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;color:var(--muted);min-width:28px;">#${e.pick}</div>
         <img src="${tLogo}" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" onerror="this.style.display='none'">
         <div style="flex:1;min-width:0;">
@@ -1000,7 +1034,15 @@ function renderPredictionScorecard() {
           <span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:3px;color:var(--text);">CLANKER'S SCORECARD</span>
         </div>
         <div style="display:flex;align-items:center;gap:16px;">
-          ${graded.length ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1px;color:${scoreColor};">${correct}/${graded.length} <span style="font-size:0.9rem;opacity:0.7;">(${pct}%)</span></span>` : '<span style="font-family:\'Barlow\',sans-serif;font-size:0.8rem;color:var(--muted);">No picks graded yet</span>'}
+          ${graded.length ? `
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:1px;color:#00c864;">${exact} EXACT</span>
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;color:var(--muted);">·</span>
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:1px;color:#f5a623;">${top3hits} TOP&nbsp;3</span>
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;color:var(--muted);">·</span>
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:1px;color:#ff4444;">${misses} MISS</span>
+              <span style="font-family:'Bebas Neue',sans-serif;font-size:0.75rem;color:var(--muted);opacity:0.7;">/${graded.length}</span>
+            </div>` : '<span style="font-family:\'Barlow\',sans-serif;font-size:0.8rem;color:var(--muted);">No picks graded yet</span>'}
           <button onclick="document.getElementById('live-scorecard-rows').style.display=document.getElementById('live-scorecard-rows').style.display==='none'?'block':'none'" style="padding:4px 10px;border-radius:6px;border:1px solid var(--muted);background:transparent;color:var(--muted);font-family:'Barlow',sans-serif;font-size:0.75rem;cursor:pointer;">Toggle</button>
         </div>
       </div>
