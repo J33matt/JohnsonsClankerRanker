@@ -635,7 +635,7 @@ async function fetchProspectHeadshot(name, espnId) {
 
 // ── Live Draft Tracker ───────────────────────────────────────
 // Bump this number to force all users to recalculate predictions with the current formula
-const _PREDICTION_FORMULA_VERSION = 7; // bumped: dynamic needs from rounds 1-3 actual picks
+const _PREDICTION_FORMULA_VERSION = 8; // bumped: revealed needs all rounds + R1 actual pick seed
 window._livePicks = JSON.parse(sessionStorage.getItem('_livePicks') || '[]');
 window._liveOrder = JSON.parse(sessionStorage.getItem('_liveOrder') || '[]');
 window._liveTrackerTimeout = null;
