@@ -779,7 +779,7 @@ function _livePredict(slot) {
       // Slide penalty: every pick a player slips past their rank beyond 20 is a market signal
       // (injury, off-field, scheme fit) — compound 8% reduction per pick of extra sliding
       const slide = picksAlreadyMade - p.rank;
-      if (slide > 20) s *= Math.pow(0.92, slide - 20);
+      if (slide > 30) s *= Math.pow(0.97, slide - 30);
       return { p, s };
     });
     scores.sort((a, b) => b.s - a.s);
