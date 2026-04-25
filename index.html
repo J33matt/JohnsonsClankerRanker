@@ -206,11 +206,17 @@
       </div>
 
       <div class="prospects-column" style="margin-left: 40px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-          <h3 class="column-title" style="margin:0;">Best Available <span style="font-size: 0.8rem; color: var(--muted); letter-spacing: 1px;">Ranked 1–200</span></h3>
-          <div id="availability-toggle" onclick="toggleAvailabilityFilter()" style="display:flex;border-radius:999px;border:1px solid var(--border);overflow:hidden;cursor:pointer;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.5px;flex-shrink:0;">
-            <span id="avail-opt-all" style="padding:4px 12px;background:#f5a623;color:#000;transition:all 0.15s;">All</span>
-            <span id="avail-opt-board" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">Remaining</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:8px;">
+          <h3 class="column-title" style="margin:0;flex-shrink:0;">Best Available <span style="font-size: 0.8rem; color: var(--muted); letter-spacing: 1px;">Ranked 1–200</span></h3>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <div id="posgroup-toggle" style="display:flex;border-radius:999px;border:1px solid var(--border);overflow:hidden;cursor:pointer;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.5px;">
+              <span id="posgroup-opt-off" onclick="togglePosGroup('OFF')" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">OFF</span>
+              <span id="posgroup-opt-def" onclick="togglePosGroup('DEF')" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">DEF</span>
+            </div>
+            <div id="availability-toggle" onclick="toggleAvailabilityFilter()" style="display:flex;border-radius:999px;border:1px solid var(--border);overflow:hidden;cursor:pointer;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.5px;">
+              <span id="avail-opt-all" style="padding:4px 12px;background:#f5a623;color:#000;transition:all 0.15s;">All</span>
+              <span id="avail-opt-board" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">Remaining</span>
+            </div>
           </div>
         </div>
         <div id="prospect-filters" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px; margin-bottom:12px; margin-top:8px;">
@@ -243,6 +249,24 @@
 let _prospectPage = 1;
 const _prospectsPerPage = 25;
 let _showOnlyAvailable = false;
+let _posGroupFilter = null; // null = all, 'OFF' = offense, 'DEF' = defense
+const _OFF_POSITIONS = new Set(['QB','RB','WR','TE','OT','OG','IOL','C']);
+const _DEF_POSITIONS = new Set(['EDGE','DT','LB','CB','S']);
+
+function togglePosGroup(group) {
+  // Clicking the active group deactivates it (back to all)
+  _posGroupFilter = _posGroupFilter === group ? null : group;
+  _prospectPage = 1;
+  const optOff = document.getElementById('posgroup-opt-off');
+  const optDef = document.getElementById('posgroup-opt-def');
+  if (optOff && optDef) {
+    optOff.style.background = _posGroupFilter === 'OFF' ? '#f5a623' : 'var(--surface2)';
+    optOff.style.color      = _posGroupFilter === 'OFF' ? '#000'    : 'var(--muted)';
+    optDef.style.background = _posGroupFilter === 'DEF' ? '#f5a623' : 'var(--surface2)';
+    optDef.style.color      = _posGroupFilter === 'DEF' ? '#000'    : 'var(--muted)';
+  }
+  renderLiveProspectBoard();
+}
 
 function toggleAvailabilityFilter() {
   _showOnlyAvailable = !_showOnlyAvailable;
@@ -1043,7 +1067,8 @@ function renderLiveProspectBoard() {
   const filtered = NFL_PROSPECTS
     .filter(p => pos === 'ALL' || p.pos === pos)
     .filter(p => !_activeCollegeFilter || p.school === _activeCollegeFilter)
-    .filter(p => !_showOnlyAvailable || !takenMap.has(p.name.toLowerCase()));
+    .filter(p => !_showOnlyAvailable || !takenMap.has(p.name.toLowerCase()))
+    .filter(p => !_posGroupFilter || (_posGroupFilter === 'OFF' ? _OFF_POSITIONS.has(p.pos) : _DEF_POSITIONS.has(p.pos)));
   const totalPages = Math.ceil(filtered.length / _prospectsPerPage);
   const start = (_prospectPage - 1) * _prospectsPerPage;
   const page = filtered.slice(start, start + _prospectsPerPage);
