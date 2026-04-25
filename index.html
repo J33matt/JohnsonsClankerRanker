@@ -206,7 +206,10 @@
       </div>
 
       <div class="prospects-column" style="margin-left: 40px;">
-        <h3 class="column-title">Best Available <span style="font-size: 0.8rem; color: var(--muted); letter-spacing: 1px;">Ranked 1–200</span></h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <h3 class="column-title" style="margin:0;">Best Available <span style="font-size: 0.8rem; color: var(--muted); letter-spacing: 1px;">Ranked 1–200</span></h3>
+          <button id="availability-toggle-btn" onclick="toggleAvailabilityFilter()" style="padding:4px 12px;border-radius:6px;border:1px solid var(--muted);background:transparent;color:var(--muted);font-family:'Barlow',sans-serif;font-size:0.75rem;font-weight:600;cursor:pointer;white-space:nowrap;letter-spacing:0.5px;">On the Board</button>
+        </div>
         <div id="prospect-filters" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px; margin-bottom:12px; margin-top:8px;">
           <button class="pos-filter-btn active" onclick="filterProspects('ALL', this)">ALL</button>
           <button class="pos-filter-btn" onclick="filterProspects('QB', this)">QB</button>
@@ -236,6 +239,20 @@
 <script>
 let _prospectPage = 1;
 const _prospectsPerPage = 25;
+let _showOnlyAvailable = false;
+
+function toggleAvailabilityFilter() {
+  _showOnlyAvailable = !_showOnlyAvailable;
+  _prospectPage = 1;
+  const btn = document.getElementById('availability-toggle-btn');
+  if (btn) {
+    btn.textContent = _showOnlyAvailable ? 'All Players' : 'On the Board';
+    btn.style.borderColor = _showOnlyAvailable ? '#f5a623' : '';
+    btn.style.color = _showOnlyAvailable ? '#f5a623' : '';
+    btn.style.background = _showOnlyAvailable ? 'rgba(245,166,35,0.1)' : '';
+  }
+  renderLiveProspectBoard();
+}
 let _prospectHeadshotCache = {};
 let _draftRound = 1;
 let _activeCollegeFilter = null;
@@ -464,9 +481,11 @@ function filterProspects(pos, btn) {
 
 function renderProspectPage(pos) {
   pos = pos || document.querySelector('#prospect-filters .pos-filter-btn.active')?.textContent?.trim() || 'ALL';
+  const takenNames = new Set(window._livePicks.map(p => p.name.toLowerCase()));
   const filtered = NFL_PROSPECTS
     .filter(p => pos === 'ALL' || p.pos === pos)
-    .filter(p => !_activeCollegeFilter || p.school === _activeCollegeFilter);
+    .filter(p => !_activeCollegeFilter || p.school === _activeCollegeFilter)
+    .filter(p => !_showOnlyAvailable || !takenNames.has(p.name.toLowerCase()));
   const totalPages = Math.ceil(filtered.length / _prospectsPerPage);
   const start = (_prospectPage - 1) * _prospectsPerPage;
   const pageProspects = filtered.slice(start, start + _prospectsPerPage);
