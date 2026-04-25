@@ -391,39 +391,40 @@ const NFL_DRAFT_ORDER = [
   { pick: 257, team: 'DEN', round: 7, note: '' },
 ];
 
+// Updated after rounds 1-3 of 2026 draft — ordered by actual pick sequence, then remaining needs
 const NFL_TEAM_NEEDS = {
-  LV:  ['QB', 'WR', 'OT', 'DL'],
-  NYJ: ['LB', 'WR', 'EDGE', 'CB'],
-  ARI: ['OT', 'EDGE', 'QB', 'LB'],
-  TEN: ['RB', 'EDGE', 'LB', 'WR'],
-  NYG: ['LB', 'S', 'WR', 'RB'],
-  CLE: ['WR', 'OT', 'CB', 'EDGE'],
-  WAS: ['EDGE', 'S', 'WR', 'RB'],
-  NO:  ['WR', 'EDGE', 'CB', 'LB'],
-  KC:  ['CB', 'EDGE', 'WR', 'OT'],
-  CIN: ['CB', 'S', 'EDGE', 'LB'],
-  MIA: ['CB', 'WR', 'OT', 'EDGE'],
-  DAL: ['CB', 'EDGE', 'LB', 'S'],
-  LAR: ['WR', 'OT', 'LB', 'CB'],
-  BAL: ['IOL', 'WR', 'TE', 'OT'],
-  TB:  ['EDGE', 'TE', 'LB', 'CB'],
-  DET: ['OT', 'EDGE', 'DL', 'CB'],
-  MIN: ['S', 'DL', 'CB', 'RB'],
-  CAR: ['TE', 'WR', 'OT', 'CB'],
-  PIT: ['WR', 'OT', 'IOL', 'QB'],
-  LAC: ['EDGE', 'IOL', 'DL', 'OT'],
-  PHI: ['OT', 'EDGE', 'WR', 'TE'],
-  CHI: ['DL', 'EDGE', 'S', 'IOL'],
-  BUF: ['EDGE', 'WR', 'LB', 'DL'],
-  SF:  ['OT', 'EDGE', 'WR', 'DL'],
-  HOU: ['DL', 'OT', 'IOL', 'LB'],
-  NE:  ['EDGE', 'OT', 'WR', 'LB'],
-  SEA: ['CB', 'RB', 'EDGE', 'IOL'],
-  IND: ['QB', 'OT', 'WR', 'LB'],
-  JAX: ['QB', 'EDGE', 'WR', 'CB'],
-  GB:  ['WR', 'CB', 'EDGE', 'S'],
-  DEN: ['CB', 'WR', 'OT', 'EDGE'],
-  ATL: ['QB', 'WR', 'OT', 'CB'],
+  LV:  ['QB', 'S', 'EDGE', 'C', 'WR', 'OT', 'DT'],        // R1 QB, R2 S, R3 EDGE R3 C
+  NYJ: ['EDGE', 'TE', 'WR', 'CB', 'LB', 'DT', 'S'],        // R1 EDGE/TE/WR, R2 CB
+  ARI: ['RB', 'OG', 'QB', 'OT', 'EDGE', 'LB', 'CB'],       // R1 RB, R2 OG, R3 QB
+  TEN: ['WR', 'EDGE', 'LB', 'RB', 'OT', 'CB', 'DT'],       // R1 WR/EDGE, R2 LB
+  NYG: ['LB', 'OT', 'CB', 'WR', 'S', 'EDGE', 'DT'],        // R1 LB/OT, R2 CB, R3 WR
+  CLE: ['OT', 'WR', 'S', 'CB', 'EDGE', 'LB', 'TE'],        // R1 OT/WR, R2 WR/S, R3 OT
+  WAS: ['LB', 'WR', 'EDGE', 'S', 'CB', 'DT', 'OT'],        // R1 LB, R3 WR
+  NO:  ['WR', 'DT', 'TE', 'EDGE', 'CB', 'LB', 'OT'],       // R1 WR, R2 DT, R3 TE
+  KC:  ['CB', 'DT', 'EDGE', 'WR', 'OT', 'LB', 'S'],        // R1 CB/DT, R2 EDGE
+  CIN: ['EDGE', 'CB', 'S', 'LB', 'WR', 'OT'],              // R2 EDGE, R3 CB
+  MIA: ['OT', 'CB', 'LB', 'WR', 'TE', 'EDGE', 'DT'],       // R1 OT/CB, R2 LB, R3 WR/TE
+  DAL: ['S', 'EDGE', 'CB', 'LB', 'WR', 'OT'],              // R1 S/EDGE, R3 EDGE
+  LAR: ['QB', 'TE', 'OT', 'WR', 'LB', 'CB', 'EDGE'],       // R1 QB, R2 TE, R3 OT
+  BAL: ['OG', 'EDGE', 'WR', 'OT', 'CB', 'LB', 'S'],        // R1 OG, R2 EDGE, R3 WR
+  TB:  ['EDGE', 'LB', 'WR', 'TE', 'CB', 'DT', 'S'],        // R1 EDGE, R2 LB, R3 WR
+  DET: ['OT', 'EDGE', 'DT', 'CB', 'WR', 'LB'],             // R1 OT, R2 EDGE
+  MIN: ['DT', 'LB', 'OT', 'S', 'CB', 'WR', 'RB'],          // R1 DT, R2 LB, R3 DT/OT/S
+  CAR: ['OT', 'DT', 'WR', 'TE', 'CB', 'EDGE', 'LB'],       // R1 OT, R2 DT, R3 WR
+  PIT: ['OT', 'WR', 'QB', 'CB', 'IOL', 'LB', 'DT'],        // R1 OT, R2 WR, R3 QB/CB/OT
+  LAC: ['EDGE', 'C', 'DT', 'OT', 'WR', 'LB'],              // R1 EDGE, R2 C
+  PHI: ['WR', 'TE', 'OT', 'EDGE', 'CB', 'LB', 'DT'],       // R1 WR, R2 TE, R3 OT
+  CHI: ['S', 'C', 'TE', 'WR', 'EDGE', 'DT', 'LB'],         // R1 S, R2 C, R3 TE/WR
+  BUF: ['EDGE', 'CB', 'WR', 'LB', 'DT', 'OT'],             // R2 EDGE/CB
+  SF:  ['WR', 'EDGE', 'RB', 'OT', 'DT', 'LB', 'CB'],       // R2 WR, R3 EDGE/RB
+  HOU: ['OG', 'DT', 'TE', 'OT', 'LB', 'CB', 'WR'],         // R1 OG, R2 DT/TE
+  NE:  ['OT', 'EDGE', 'TE', 'WR', 'LB', 'CB', 'DT'],       // R1 OT, R2 EDGE, R3 TE
+  SEA: ['RB', 'S', 'CB', 'EDGE', 'WR', 'LB', 'IOL'],       // R1 RB, R2 S, R3 CB
+  IND: ['LB', 'S', 'QB', 'OT', 'WR', 'EDGE', 'CB'],        // R2 LB, R3 S
+  JAX: ['TE', 'DT', 'OG', 'CB', 'QB', 'EDGE', 'WR'],       // R2 TE, R3 DT/OG/CB
+  GB:  ['CB', 'DT', 'WR', 'EDGE', 'S', 'LB'],              // R2 CB, R3 DT
+  DEN: ['DT', 'CB', 'WR', 'OT', 'EDGE', 'LB'],             // R3 DT (traded R1/R2)
+  ATL: ['CB', 'WR', 'QB', 'OT', 'EDGE', 'LB'],             // R2 CB, R3 WR (traded R1)
 };
 
 const NFL_PROSPECTS = [
