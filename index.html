@@ -209,8 +209,8 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
           <h3 class="column-title" style="margin:0;">Best Available <span style="font-size: 0.8rem; color: var(--muted); letter-spacing: 1px;">Ranked 1–200</span></h3>
           <div id="availability-toggle" onclick="toggleAvailabilityFilter()" style="display:flex;border-radius:999px;border:1px solid var(--border);overflow:hidden;cursor:pointer;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.5px;flex-shrink:0;">
-            <span id="avail-opt-all" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">All</span>
-            <span id="avail-opt-board" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">On Board</span>
+            <span id="avail-opt-all" style="padding:4px 12px;background:#f5a623;color:#000;transition:all 0.15s;">All</span>
+            <span id="avail-opt-board" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">Remaining</span>
           </div>
         </div>
         <div id="prospect-filters" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px; margin-bottom:12px; margin-top:8px;">
@@ -252,10 +252,10 @@ function toggleAvailabilityFilter() {
   if (optAll && optBoard) {
     if (_showOnlyAvailable) {
       optAll.style.background   = 'var(--surface2)'; optAll.style.color   = 'var(--muted)';
-      optBoard.style.background = '#f5a623';          optBoard.style.color = '#000';
+      optBoard.style.background = '#f5a623';           optBoard.style.color = '#000';
     } else {
-      optAll.style.background   = '#f5a623';          optAll.style.color   = '#000';
-      optBoard.style.background = 'var(--surface2)'; optBoard.style.color = 'var(--muted)';
+      optAll.style.background   = '#f5a623';           optAll.style.color   = '#000';
+      optBoard.style.background = 'var(--surface2)';  optBoard.style.color = 'var(--muted)';
     }
   }
   renderLiveProspectBoard();
