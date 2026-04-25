@@ -10537,77 +10537,48 @@ function _faIsStarter(playerName, teamAbbr) {
   return names.has(playerName.toLowerCase());
 }
 
-// 2025 season roster cache — used to detect same-team re-signs.
-// { teamAbbr: Set<name.toLowerCase()> }
-const _fa2025Rosters = {};
-
-async function _faFetch2025Roster(abbr) {
-  if (_fa2025Rosters[abbr]) return _fa2025Rosters[abbr];
-  const espnId = NFL_ESPN_IDS[abbr];
-  if (!espnId) { _fa2025Rosters[abbr] = new Set(); return _fa2025Rosters[abbr]; }
-  try {
-    const resp = await fetch(
-      `https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${espnId}/roster?season=2025`
-    );
-    const data = await resp.json();
-    const names = new Set();
-    // ESPN roster: data.athletes is an array of position-group objects, each with an items[] array
-    (data.athletes || []).forEach(group => {
-      (group.items || []).forEach(p => {
-        if (p.displayName) names.add(p.displayName.toLowerCase());
-        if (p.fullName)    names.add(p.fullName.toLowerCase());
-        if (p.shortName)   names.add(p.shortName.toLowerCase());
-      });
-    });
-    _fa2025Rosters[abbr] = names;
-  } catch(e) {
-    _fa2025Rosters[abbr] = new Set();
-  }
-  return _fa2025Rosters[abbr];
-}
-
-// Returns true if the player was on this team's 2025 roster (i.e. it's a re-sign, not a new arrival).
-function _faWasAlreadyHere(playerName, teamAbbr) {
-  const prev = _fa2025Rosters[teamAbbr];
-  if (!prev || prev.size === 0) return false; // roster not loaded or empty → don't suppress
-  return prev.has(playerName.toLowerCase());
-}
-
 async function loadFreeAgencyData() {
   if (_faLoading) return;
   _faLoading = true;
   const resultsEl = document.getElementById('fa-results');
   if (resultsEl) resultsEl.innerHTML = `<div style="text-align:center;padding:60px 20px;font-family:Bebas Neue,sans-serif;font-size:1.4rem;letter-spacing:2px;opacity:0.6;">LOADING FREE AGENCY DATA...</div>`;
   try {
-    // Post-Super Bowl 2026 moves only (Feb 9 → today)
-    const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/transactions?limit=1000&dates=20260209-20260425`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    // Fetch via Cloudflare worker — tries Pro Football Reference first (richer "from team" data),
+    // falls back to ESPN transactions API.
+    const resp = await fetch('https://nfl-draft-proxy.j33matt.workers.dev/fa', { cache: 'no-store' });
+    if (!resp.ok) throw new Error('Worker HTTP ' + resp.status);
     const json = await resp.json();
-    const raw = json.transactions || json.items || [];
-    let moves = raw.map(_parseFaTransaction).filter(Boolean);
 
-    // Deduplicate by player+type+toTeam
+    let moves = [];
+
+    if (json.source === 'pfr' && Array.isArray(json.moves)) {
+      // PFR data: already structured with fromTeamName/toTeam
+      // Drop any move where from and to are the same team (explicit re-sign caught by PFR "from" text)
+      moves = json.moves.filter(m => {
+        if (!m.toTeam) return false;
+        if (m.fromTeamName && NFL_TEAMS[m.toTeam] &&
+            m.fromTeamName.toLowerCase() === NFL_TEAMS[m.toTeam].name.toLowerCase()) return false;
+        return true;
+      });
+    } else if (Array.isArray(json.transactions)) {
+      // ESPN API fallback: parse descriptions ourselves
+      moves = json.transactions.map(_parseFaTransaction).filter(Boolean);
+    }
+
+    // Deduplicate by player + toTeam
     const seen = new Set();
     moves = moves.filter(m => {
-      const key = `${m.player}|${m.type}|${m.toTeam}`;
+      const key = `${m.player.toLowerCase()}|${m.toTeam}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
-    // Fetch 2025 rosters for all receiving teams in parallel —
-    // used to detect same-team re-signs (e.g. player was already on this roster last year)
+    // Prefetch current depth charts for all receiving teams
     const toTeams = [...new Set(moves.map(m => m.toTeam).filter(Boolean))];
-    await Promise.all([
-      ...toTeams.map(abbr => _faFetch2025Roster(abbr).catch(() => {})),
-      ...toTeams.map(abbr => fetchTeamLineup(abbr).catch(() => {})),  // current depth charts
-    ]);
+    await Promise.all(toTeams.map(a => fetchTeamLineup(a).catch(() => {})));
 
-    // Remove same-team re-signs: player was on that team's 2025 roster
-    moves = moves.filter(m => !_faWasAlreadyHere(m.player, m.toTeam));
-
-    // Keep only players who are starters on their new team (current depth chart)
+    // Keep only players who are starters on their new team
     _faData = moves.filter(m => _faIsStarter(m.player, m.toTeam));
 
   } catch(e) {
@@ -10743,8 +10714,6 @@ function _faPickTeam(abbr, label) {
 
 function _faReload() {
   _faData = null;
-  // Clear caches so fresh data is fetched
-  Object.keys(_fa2025Rosters).forEach(k => delete _fa2025Rosters[k]);
   loadFreeAgencyData();
 }
 
