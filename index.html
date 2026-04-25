@@ -971,57 +971,86 @@ function renderPredictionScorecard() {
 
   const rows = [...log].reverse().map(e => {
     const teamData = NFL_TEAMS[e.team] || { name: e.team, color: '#555' };
+    const color = teamData.color || '#555';
     const tLogo = `https://a.espncdn.com/i/teamlogos/nfl/500/${e.team.toLowerCase()}.png`;
-    const predHS = e.predicted.rank ? (_prospectHeadshotCache[e.predicted.rank] || '') : '';
 
-    // Determine grade tier
-    let resultBadge, rowBg;
+    // Grade colors + row background
+    let gradeColor, gradeBadgeHtml, rowBg;
     if (e.actual === null) {
-      resultBadge = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:var(--muted);border:1px solid var(--muted);border-radius:3px;padding:1px 6px;">PENDING</span>`;
+      gradeColor = 'var(--muted)';
+      gradeBadgeHtml = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.62rem;letter-spacing:2px;color:var(--muted);border:1px solid var(--muted);border-radius:3px;padding:1px 7px;">PENDING</span>`;
       rowBg = 'transparent';
     } else if (e.correct) {
-      resultBadge = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:#00c864;border:1px solid #00c86466;border-radius:3px;padding:1px 6px;background:rgba(0,200,100,0.1);">✓ EXACT</span>`;
-      rowBg = 'rgba(0,200,100,0.04)';
+      gradeColor = '#00c864';
+      gradeBadgeHtml = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.62rem;letter-spacing:2px;color:#00c864;border:1px solid #00c86466;border-radius:3px;padding:1px 7px;background:rgba(0,200,100,0.12);">✓ EXACT</span>`;
+      rowBg = 'rgba(0,200,100,0.03)';
     } else if (e.top3Hit) {
-      resultBadge = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:#f5a623;border:1px solid #f5a62366;border-radius:3px;padding:1px 6px;background:rgba(245,166,35,0.1);">● TOP 3</span>`;
-      rowBg = 'rgba(245,166,35,0.04)';
+      gradeColor = '#f5a623';
+      gradeBadgeHtml = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.62rem;letter-spacing:2px;color:#f5a623;border:1px solid #f5a62366;border-radius:3px;padding:1px 7px;background:rgba(245,166,35,0.12);">● TOP 3</span>`;
+      rowBg = 'rgba(245,166,35,0.03)';
     } else {
-      resultBadge = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2px;color:#ff4444;border:1px solid #ff444466;border-radius:3px;padding:1px 6px;background:rgba(255,68,68,0.1);">✗ MISS</span>`;
-      rowBg = 'rgba(255,68,68,0.04)';
+      gradeColor = '#ff4444';
+      gradeBadgeHtml = `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.62rem;letter-spacing:2px;color:#ff4444;border:1px solid #ff444466;border-radius:3px;padding:1px 7px;background:rgba(255,68,68,0.12);">✗ MISS</span>`;
+      rowBg = 'rgba(255,68,68,0.03)';
     }
 
-    // Top 3 runners (indices 1-2) shown on non-exact graded rows
-    const runners = (e.top3 || []).slice(1);
-    const runnersHtml = (e.actual && !e.correct && runners.length) ? `
-      <div style="display:flex;align-items:center;gap:4px;margin-top:2px;flex-wrap:wrap;">
-        <span style="font-size:0.65rem;color:var(--muted);">Also had:</span>
-        ${runners.map(r => `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:${e.top3Hit && r.name.toLowerCase()===(e.actual?.name||'').toLowerCase() ? '#f5a623' : 'var(--muted)'};">${r.name} (${r.pos})</span>`).join('<span style="color:var(--muted);font-size:0.65rem;">·</span>')}
-      </div>` : '';
+    // Build top-3 candidate cards
+    const top3 = e.top3 || [{ name: e.predicted.name, pos: e.predicted.pos, rank: e.predicted.rank }];
+    const actualName = (e.actual?.name || '').toLowerCase();
+    const candidateCards = top3.map((c, idx) => {
+      const isActualMatch = e.actual && c.name.toLowerCase() === actualName;
+      const isMainPick = idx === 0;
+      let cardBorder, cardBg, nameColor, labelHtml;
+      if (isActualMatch && e.correct) {
+        cardBorder = '#00c864'; cardBg = 'rgba(0,200,100,0.12)'; nameColor = '#00c864';
+      } else if (isActualMatch && e.top3Hit) {
+        cardBorder = '#f5a623'; cardBg = 'rgba(245,166,35,0.12)'; nameColor = '#f5a623';
+      } else if (isMainPick) {
+        cardBorder = color + '66'; cardBg = color + '11'; nameColor = 'var(--text)';
+      } else {
+        cardBorder = 'var(--border)'; cardBg = 'var(--surface)'; nameColor = 'var(--muted)';
+      }
+      labelHtml = isMainPick
+        ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.55rem;letter-spacing:1.5px;color:${color};opacity:0.9;">PREDICTED</span>`
+        : `<span style="font-family:'Bebas Neue',sans-serif;font-size:0.55rem;letter-spacing:1.5px;color:var(--muted);">#${idx+1}</span>`;
+      return `
+        <div style="flex:1;min-width:0;border:1px solid ${cardBorder};border-radius:7px;padding:6px 10px;background:${cardBg};display:flex;flex-direction:column;gap:2px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            ${labelHtml}
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:0.6rem;color:var(--muted);">#${c.rank}</span>
+          </div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;font-weight:700;color:${nameColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:1px;color:${isMainPick ? color : 'var(--muted)'};">${c.pos}</div>
+        </div>`;
+    }).join('');
 
-    const actualBlock = e.actual ? `
-      <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
-        <span style="font-size:0.7rem;color:var(--muted);">Actual:</span>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:${e.correct ? '#00c864' : e.top3Hit ? '#f5a623' : '#ff6b6b'};">${e.actual.name}</span>
-        <span style="font-family:'Bebas Neue',sans-serif;font-size:0.72rem;color:var(--muted);">${e.actual.pos}</span>
-      </div>${runnersHtml}` : '';
+    // Actual pick column (right)
+    const actualCol = e.actual ? `
+      <div style="min-width:130px;max-width:160px;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        ${gradeBadgeHtml}
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:700;color:${gradeColor};text-align:right;line-height:1.1;">${e.actual.name}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.7rem;letter-spacing:1px;color:var(--muted);">${e.actual.pos} · ACTUAL</div>
+      </div>` : `
+      <div style="min-width:80px;display:flex;align-items:center;justify-content:flex-end;">
+        ${gradeBadgeHtml}
+      </div>`;
 
     return `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);background:${rowBg};">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:0.8rem;color:var(--muted);min-width:28px;">#${e.pick}</div>
-        <img src="${tLogo}" style="width:22px;height:22px;object-fit:contain;flex-shrink:0;" onerror="this.style.display='none'">
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:6px;">
-            ${predHS ? `<img src="${predHS}" style="height:28px;width:auto;object-fit:contain;object-position:bottom;border-radius:2px;flex-shrink:0;" onerror="this.style.display='none'">` : ''}
-            <div>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;font-weight:600;color:var(--text);">${e.predicted.name}</span>
-                <span style="font-family:'Bebas Neue',sans-serif;font-size:0.72rem;color:var(--muted);">${e.predicted.pos}</span>
-                ${resultBadge}
-              </div>
-              ${actualBlock}
-            </div>
+      <div style="display:grid;grid-template-columns:120px 1fr auto;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--border);background:${rowBg};">
+        <!-- Pick + Team -->
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:0.7rem;letter-spacing:2px;color:var(--muted);">PICK ${e.pick} · R${e.round}</div>
+          <div style="display:flex;align-items:center;gap:7px;">
+            <img src="${tLogo}" style="width:26px;height:26px;object-fit:contain;flex-shrink:0;" onerror="this.style.display='none'">
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:0.88rem;color:var(--text);line-height:1;">${teamData.name}</span>
           </div>
         </div>
+        <!-- Top 3 candidate cards -->
+        <div style="display:flex;gap:8px;align-items:stretch;">
+          ${candidateCards}
+        </div>
+        <!-- Actual pick -->
+        ${actualCol}
       </div>`;
   }).join('');
 
