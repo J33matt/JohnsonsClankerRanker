@@ -761,6 +761,55 @@ function _recordPrediction(slot, pred) {
   _savePredictionLog();
 }
 
+// Replay all completed picks through the current formula and overwrite prediction log
+async function _replayAllPredictions() {
+  const allPicks = [...window._livePicks].sort((a, b) => a.pick - b.pick);
+  if (!allPicks.length) return;
+
+  const newLog = [];
+  for (let i = 0; i < allPicks.length; i++) {
+    const actual = allPicks[i];
+    const slot = _effectiveDraftOrder().find(s => s.pick === actual.pick);
+    if (!slot) continue;
+
+    // Reconstruct pool and team state at the moment of this pick
+    const picksBeforeThis = allPicks.slice(0, i);
+    const takenNames = new Set(picksBeforeThis.map(p => p.name.toLowerCase()));
+    const pool = NFL_PROSPECTS.filter(p => !takenNames.has(p.name.toLowerCase()));
+    const teamDrafted = picksBeforeThis.filter(p => p.team === slot.team).map(p => p.pos);
+
+    // Run current prediction logic (no cache — fresh calculation)
+    let best = null;
+    const lock = NFL_DRAFT_LOCKS.find(l => l.team === slot.team && l.probability >= 0.85);
+    if (lock) { const lp = pool.find(p => p.name === lock.prospectName); if (lp) best = lp; }
+    if (!best) {
+      const scores = pool.map(p => ({ p, s: getMockPickScore(p, slot.team, slot.round, teamDrafted, pool) }));
+      scores.sort((a, b) => b.s - a.s);
+      best = scores[0]?.p;
+      if (best && pool.length) {
+        const bestAvailable = pool.reduce((a, b) => a.rank < b.rank ? a : b);
+        if (slot.pick <= bestAvailable.rank + 7 && best.rank > bestAvailable.rank + 7) best = bestAvailable;
+      }
+    }
+    if (!best) continue;
+
+    newLog.push({
+      pick: actual.pick,
+      round: slot.round,
+      team: slot.team,
+      predicted: { name: best.name, pos: best.pos, school: best.school, rank: best.rank },
+      actual: { name: actual.name, pos: actual.pos },
+      correct: actual.name.toLowerCase() === best.name.toLowerCase(),
+    });
+  }
+
+  window._predictionLog = newLog;
+  window._predCache = {};
+  _savePredictionLog();
+  renderPredictionScorecard();
+  console.log(`[Clanker] Replayed ${newLog.length} predictions with current formula.`);
+}
+
 function renderOnTheClock() {
   const banner = document.getElementById('live-otc-banner');
   if (!banner) return;
@@ -877,6 +926,7 @@ function renderPredictionScorecard() {
         </div>
         <div style="display:flex;align-items:center;gap:16px;">
           ${graded.length ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1px;color:${scoreColor};">${correct}/${graded.length} <span style="font-size:0.9rem;opacity:0.7;">(${pct}%)</span></span>` : '<span style="font-family:\'Barlow\',sans-serif;font-size:0.8rem;color:var(--muted);">No picks graded yet</span>'}
+          <button onclick="_replayAllPredictions()" title="Recalculate all predictions using the current formula" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(245,166,35,0.4);background:rgba(245,166,35,0.08);color:#f5a623;font-family:'Barlow',sans-serif;font-size:0.75rem;cursor:pointer;">↺ Recalculate</button>
           <button onclick="document.getElementById('live-scorecard-rows').style.display=document.getElementById('live-scorecard-rows').style.display==='none'?'block':'none'" style="padding:4px 10px;border-radius:6px;border:1px solid var(--muted);background:transparent;color:var(--muted);font-family:'Barlow',sans-serif;font-size:0.75rem;cursor:pointer;">Toggle</button>
         </div>
       </div>
@@ -998,6 +1048,10 @@ function renderLiveProspectBoard() {
 async function renderNflBigBoard() {
   await preloadProspectHeadshots();
   if (!window._predLogLoaded) await _loadPredictionLog();
+  // If picks exist but log is stale (fewer entries than completed picks), replay with current formula
+  if (window._livePicks.length > 0 && window._predictionLog.length < window._livePicks.length) {
+    await _replayAllPredictions();
+  }
   renderOnTheClock();
   renderPredictionScorecard();
   renderLiveDraftOrder();
