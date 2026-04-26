@@ -89,6 +89,7 @@
   <button onclick="showNflTab('mock-draft', this)" class="tab-btn">Clanker's Mock Draft</button>
   <button class="tab-btn" onclick="showNflTab('lineups', this)">Lineups</button>
   <button class="tab-btn" onclick="showNflTab('free-agency', this)">Free Agency</button>
+  <button class="tab-btn" onclick="showNflTab('fantasy', this)">Fantasy</button>
 </div>
 
 <main>
@@ -244,6 +245,7 @@
   <div id="nfl-mock-draft" class="nfl-panel panel" style="display:none;"></div>
   <div id="nfl-lineups" class="nfl-panel panel" style="display:none;"></div>
   <div id="nfl-free-agency" class="nfl-panel panel" style="display:none;"></div>
+  <div id="nfl-fantasy" class="nfl-panel panel" style="display:none;"></div>
 </div>
 </main>
 
@@ -1298,6 +1300,7 @@ if (tabName === 'draft-sim') renderDraftSim();
 if (tabName === 'mock-draft') renderMockDraft();
 if (tabName === 'lineups') renderLineups();
 if (tabName === 'free-agency') renderFreeAgency();
+if (tabName === 'fantasy') renderFantasyRankings();
 }
 
 // ── Firebase cloud storage ───────────────────────────────────
@@ -10821,6 +10824,98 @@ function renderFreeAgencyResults() {
 
 // ── END FREE AGENCY TRACKER ──────────────────────────────────────────────────
 
+
+// ── Fantasy Rankings ─────────────────────────────────────────────
+let _fantasyPosFilter = 'ALL';
+
+function renderFantasyRankings() {
+  const container = document.getElementById('nfl-fantasy');
+
+  container.innerHTML = `
+    <style>
+      .ff-header { font-family: Bebas Neue, sans-serif; font-size: 2rem; letter-spacing: 3px; margin-bottom: 4px; }
+      .ff-sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 20px; letter-spacing: 1px; }
+      .ff-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+      .ff-pill { font-family: Barlow Condensed, sans-serif; font-size: 0.85rem; font-weight: 600; letter-spacing: 1px;
+        padding: 6px 16px; border-radius: 20px; border: 1.5px solid var(--border); background: transparent;
+        color: var(--text); cursor: pointer; text-transform: uppercase; transition: all 0.15s; }
+      .ff-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .ff-table { width: 100%; border-collapse: collapse; }
+      .ff-table th { font-family: Barlow Condensed, sans-serif; font-size: 0.75rem; font-weight: 700;
+        letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 6px 12px;
+        border-bottom: 1px solid var(--border); text-align: left; }
+      .ff-table th.rank-col { width: 52px; text-align: center; }
+      .ff-table th.pos-col  { width: 60px; }
+      .ff-row { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+      .ff-row:hover { background: var(--surface2); }
+      .ff-row td { padding: 9px 12px; font-family: Barlow Condensed, sans-serif; font-size: 0.95rem; }
+      .ff-rank { text-align: center; font-weight: 700; color: var(--muted); font-size: 0.85rem; }
+      .ff-name { font-weight: 700; color: var(--text); font-size: 1rem; }
+      .ff-badge { font-family: Bebas Neue, sans-serif; font-size: 0.72rem; letter-spacing: 1px;
+        padding: 2px 8px; border-radius: 6px; color: #fff; display: inline-block; }
+    </style>
+    <div style="padding: 0 0 24px;">
+      <div class="ff-header">Fantasy Football Rankings</div>
+      <div class="ff-sub">2026 SEASON · AVERAGED ACROSS 3 SOURCES · PRE-DRAFT</div>
+      <div class="ff-filters">
+        <button class="ff-pill ${_fantasyPosFilter==='ALL'?'active':''}"  onclick="_ffSetFilter('ALL',this)">All</button>
+        <button class="ff-pill ${_fantasyPosFilter==='QB' ?'active':''}"  onclick="_ffSetFilter('QB',this)">QB</button>
+        <button class="ff-pill ${_fantasyPosFilter==='RB' ?'active':''}"  onclick="_ffSetFilter('RB',this)">RB</button>
+        <button class="ff-pill ${_fantasyPosFilter==='WR' ?'active':''}"  onclick="_ffSetFilter('WR',this)">WR</button>
+        <button class="ff-pill ${_fantasyPosFilter==='TE' ?'active':''}"  onclick="_ffSetFilter('TE',this)">TE</button>
+        <button class="ff-pill ${_fantasyPosFilter==='K'  ?'active':''}"  onclick="_ffSetFilter('K',this)">K</button>
+        <button class="ff-pill ${_fantasyPosFilter==='DST'?'active':''}"  onclick="_ffSetFilter('DST',this)">DST</button>
+      </div>
+      <div id="ff-table-wrap"></div>
+    </div>`;
+
+  _ffRenderTable();
+}
+
+function _ffSetFilter(pos, btn) {
+  _fantasyPosFilter = pos;
+  document.querySelectorAll('.ff-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _ffRenderTable();
+}
+
+function _ffPosColor(pos) {
+  const c = { QB:'#e74c3c', RB:'#27ae60', WR:'#2980b9', TE:'#8e44ad', K:'#7f8c8d', DST:'#e67e22' };
+  return c[pos] || '#555';
+}
+
+function _ffRenderTable() {
+  const wrap = document.getElementById('ff-table-wrap');
+  if (!wrap) return;
+  const data = (typeof FANTASY_RANKINGS !== 'undefined') ? FANTASY_RANKINGS : [];
+  const filtered = _fantasyPosFilter === 'ALL' ? data : data.filter(p => p.pos === _fantasyPosFilter);
+
+  if (!filtered.length) {
+    wrap.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-family:Barlow Condensed,sans-serif;font-size:1.1rem;letter-spacing:1px;">No players found.</div>`;
+    return;
+  }
+
+  let posRank = 0;
+  let lastPos = null;
+  const rows = filtered.map(p => {
+    if (p.pos !== lastPos) { posRank = 1; lastPos = p.pos; } else { posRank++; }
+    const posLabel = _fantasyPosFilter === 'ALL' ? `${p.pos}${posRank}` : `${p.pos}${posRank}`;
+    return `<tr class="ff-row">
+      <td class="ff-rank">${p.rank}</td>
+      <td class="ff-name">${p.name}</td>
+      <td><span class="ff-badge" style="background:${_ffPosColor(p.pos)}">${posLabel}</span></td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table class="ff-table">
+    <thead><tr>
+      <th class="rank-col">Rank</th>
+      <th>Player</th>
+      <th class="pos-col">Pos</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
 </script>
 <script src="cards-data.js"></script>
 <script src="cards-logic.js"></script>
