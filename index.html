@@ -82,7 +82,7 @@
 })();
 </script>
 <div id="nfl-tabs" style="display:none;">
-  <button onclick="showNflTab('big-board', this)" class="tab-btn active">Big Board</button>
+  <button onclick="showNflTab('big-board', this)" class="tab-btn active">Draft</button>
   <button class="tab-btn" onclick="showNflTab('lineups', this)">Lineups</button>
   <button class="tab-btn" onclick="showNflTab('free-agency', this)">Free Agency</button>
   <button class="tab-btn" onclick="showNflTab('fantasy', this)">Fantasy</button>
@@ -174,67 +174,59 @@
 
 <div id="nfl-panels" style="display: none;">
   <div id="nfl-big-board" class="nfl-panel panel">
-    <div id="live-otc-banner" style="display:none; margin-bottom:14px;"></div>
-    <div class="draft-hq-layout">
-      <div class="draft-order-column">
-        <h3 class="column-title">2026 Draft Order</h3>
-        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px; margin-top:8px;">
-          <div id="draft-round-filters" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px;">
-            <button class="pos-filter-btn active" onclick="filterDraftRound(1, this)">Round 1</button>
-            <button class="pos-filter-btn" onclick="filterDraftRound(2, this)">Round 2</button>
-            <button class="pos-filter-btn" onclick="filterDraftRound(3, this)">Round 3</button>
-            <button class="pos-filter-btn" onclick="filterDraftRound(4, this)">Round 4</button>
-            <button class="pos-filter-btn" onclick="filterDraftRound(5, this)">Round 5</button>
-            <button class="pos-filter-btn" onclick="filterDraftRound(6, this)">Round 6</button>
-            <button class="pos-filter-btn" onclick="filterDraftRound(7, this)">Round 7</button>
-          </div>
+    <div style="max-width:900px;">
+      <h3 class="column-title">2026 NFL Draft Results</h3>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px; margin-top:8px;">
+        <div id="draft-round-filters" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px;">
+          <button class="pos-filter-btn active" onclick="filterDraftRound(1, this)">Round 1</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(2, this)">Round 2</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(3, this)">Round 3</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(4, this)">Round 4</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(5, this)">Round 5</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(6, this)">Round 6</button>
+          <button class="pos-filter-btn" onclick="filterDraftRound(7, this)">Round 7</button>
         </div>
-          <div id="draft-team-dropdown" style="position:relative; width:100%; margin-bottom:8px;">
-            <div id="draft-team-selected" onclick="toggleDraftTeamDropdown()" style="display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--muted); border-radius:8px; padding:8px 12px; cursor:pointer; user-select:none;">
-              <span style="flex:1; font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; color:var(--text);">All Teams</span>
-              <span style="color:var(--text); font-size:0.75rem;">▼</span>
-            </div>
-            <div id="draft-team-options" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--surface2); border:1px solid var(--border); border-radius:8px; margin-top:4px; z-index:100; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 2px solid var(--muted); max-height:300px; overflow-y:auto;">
-              <div class="draft-team-option" onclick="filterDraftByTeam('ALL', 'All Teams')" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--border);">
-                <span style="font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; color:var(--text);">All Teams</span>
-              </div>
-            </div>
-          </div>
-          <div id="render-draft-order"></div>
+        <div id="draft-pos-filters" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px;">
+          <button class="pos-filter-btn active" onclick="filterDraftPos('ALL', this)">ALL</button>
+          <button class="pos-filter-btn" onclick="filterDraftPos('QB', this)">QB</button>
+          <button class="pos-filter-btn" onclick="filterDraftPos('RB', this)">RB</button>
+          <button class="pos-filter-btn" onclick="filterDraftPos('WR', this)">WR</button>
+          <button class="pos-filter-btn" onclick="filterDraftPos('TE', this)">TE</button>
+          <button class="pos-filter-btn" onclick="filterDraftPos('OT', this)">OT</button>
+          <button class="pos-filter-btn" onclick="filterDraftPos('OG', this)">OG</button>
+          <button class="pos-filter-btn" onclick="filterDraftPos('EDGE', this)">EDGE</button>
+          <button class="pos-filter-btn" onclick="filterDraftPos('DT', this)">DT</button>
+          <button class="pos-filter-btn" onclick="filterDraftPos('LB', this)">LB</button>
+          <button class="pos-filter-btn" onclick="filterDraftPos('CB', this)">CB</button>
+          <button class="pos-filter-btn" onclick="filterDraftPos('S', this)">S</button>
+        </div>
       </div>
-
-      <div class="prospects-column" style="margin-left: 40px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:8px;">
-          <h3 class="column-title" style="margin:0;flex-shrink:0;">Best Available <span style="font-size: 0.8rem; color: var(--muted); letter-spacing: 1px;">Ranked 1–200</span></h3>
-          <div style="display:flex;gap:6px;flex-shrink:0;">
-            <div id="posgroup-toggle" style="display:flex;border-radius:999px;border:1px solid var(--border);overflow:hidden;cursor:pointer;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.5px;">
-              <span id="posgroup-opt-off" onclick="togglePosGroup('OFF')" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">OFF</span>
-              <span id="posgroup-opt-def" onclick="togglePosGroup('DEF')" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">DEF</span>
-            </div>
-            <div id="availability-toggle" onclick="toggleAvailabilityFilter()" style="display:flex;border-radius:999px;border:1px solid var(--border);overflow:hidden;cursor:pointer;font-family:'Barlow',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.5px;">
-              <span id="avail-opt-all" style="padding:4px 12px;background:#f5a623;color:#000;transition:all 0.15s;">All</span>
-              <span id="avail-opt-board" style="padding:4px 12px;background:var(--surface2);color:var(--muted);transition:all 0.15s;">Remaining</span>
+      <div style="display:flex; gap:12px; margin-bottom:12px;">
+        <div id="draft-team-dropdown" style="position:relative; flex:1;">
+          <div id="draft-team-selected" onclick="toggleDraftTeamDropdown()" style="display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--muted); border-radius:8px; padding:8px 12px; cursor:pointer; user-select:none;">
+            <span style="flex:1; font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; color:var(--text);">All Teams</span>
+            <span style="color:var(--text); font-size:0.75rem;">▼</span>
+          </div>
+          <div id="draft-team-options" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--surface2); border:1px solid var(--border); border-radius:8px; margin-top:4px; z-index:100; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 2px solid var(--muted); max-height:300px; overflow-y:auto;">
+            <div class="draft-team-option" onclick="filterDraftByTeam('ALL', 'All Teams')" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--border);">
+              <span style="font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; color:var(--text);">All Teams</span>
             </div>
           </div>
         </div>
-        <div id="prospect-filters" style="display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px; margin-bottom:12px; margin-top:8px;">
-          <button class="pos-filter-btn active" onclick="filterProspects('ALL', this)">ALL</button>
-          <button class="pos-filter-btn" onclick="filterProspects('QB', this)">QB</button>
-          <button class="pos-filter-btn" onclick="filterProspects('RB', this)">RB</button>
-          <button class="pos-filter-btn" onclick="filterProspects('WR', this)">WR</button>
-          <button class="pos-filter-btn" onclick="filterProspects('TE', this)">TE</button>
-          <button class="pos-filter-btn" onclick="filterProspects('OT', this)">OT</button>
-          <button class="pos-filter-btn" onclick="filterProspects('OG', this)">OG</button>
-          <button class="pos-filter-btn" onclick="filterProspects('EDGE', this)">EDGE</button>
-          <button class="pos-filter-btn" onclick="filterProspects('DT', this)">DT</button>
-          <button class="pos-filter-btn" onclick="filterProspects('LB', this)">LB</button>
-          <button class="pos-filter-btn" onclick="filterProspects('CB', this)">CB</button>
-          <button class="pos-filter-btn" onclick="filterProspects('S', this)">S</button>
+        <div id="draft-school-dropdown" style="position:relative; flex:1;">
+          <div id="draft-school-selected" onclick="toggleDraftSchoolDropdown()" style="display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--muted); border-radius:8px; padding:8px 12px; cursor:pointer; user-select:none;">
+            <span style="flex:1; font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; color:var(--text);">All Schools</span>
+            <span style="color:var(--text); font-size:0.75rem;">▼</span>
+          </div>
+          <div id="draft-school-options" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--surface2); border:1px solid var(--border); border-radius:8px; margin-top:4px; z-index:100; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 2px solid var(--muted); max-height:300px; overflow-y:auto;">
+            <div class="draft-team-option" onclick="filterDraftBySchool('ALL', 'All Schools')" style="display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--border);">
+              <span style="font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; color:var(--text);">All Schools</span>
+            </div>
+          </div>
         </div>
-        <div id="render-prospect-list"></div>
       </div>
+      <div id="render-draft-order"></div>
     </div>
-    <div id="live-prediction-scorecard" style="display:none; margin-top:32px;"></div>
   </div>
   <div id="nfl-lineups" class="nfl-panel panel" style="display:none;"></div>
   <div id="nfl-free-agency" class="nfl-panel panel" style="display:none;"></div>
@@ -286,6 +278,65 @@ let _draftRound = 1;
 let _activeCollegeFilter = null;
 let _selectedCollegeLabel = 'All Schools';
 let _selectedCollegeLogo = '';
+let _draftPosFilter = 'ALL';
+let _draftSchoolFilter = null;
+
+function filterDraftPos(pos, btn) {
+  document.querySelectorAll('#draft-pos-filters .pos-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _draftPosFilter = pos;
+  renderLiveDraftOrder();
+}
+
+function toggleDraftSchoolDropdown() {
+  const options = document.getElementById('draft-school-options');
+  if (!options) return;
+  if (options.children.length === 1) initDraftSchoolDropdown();
+  options.style.display = options.style.display === 'none' ? 'block' : 'none';
+}
+
+function initDraftSchoolDropdown() {
+  const optionsContainer = document.getElementById('draft-school-options');
+  if (!optionsContainer) return;
+  const schoolMap = new Map(NFL_PROSPECTS.map(p => [p.name.toLowerCase(), p.school]));
+  const schoolCounts = {};
+  window._livePicks.forEach(p => {
+    const school = schoolMap.get(p.name.toLowerCase());
+    if (school) schoolCounts[school] = (schoolCounts[school] || 0) + 1;
+  });
+  const schools = Object.entries(schoolCounts).sort((a, b) => a[0].localeCompare(b[0]));
+  schools.forEach(([school, count]) => {
+    const collegeData = COLLEGE_TEAMS[school] || { logo: '' };
+    const div = document.createElement('div');
+    div.className = 'draft-team-option';
+    div.style.cssText = 'display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--border);';
+    div.innerHTML = `
+      ${collegeData.logo ? `<img src="${collegeData.logo}" style="width:24px;height:24px;object-fit:contain;filter:drop-shadow(0 0 4px rgba(255,255,255,0.3));" onerror="this.style.display='none'">` : ''}
+      <span style="font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;color:var(--text);">${school} <span style="color:var(--muted);font-weight:400;">(${count})</span></span>
+    `;
+    div.onclick = () => filterDraftBySchool(school, school);
+    optionsContainer.appendChild(div);
+  });
+  document.addEventListener('click', function(e) {
+    const dd = document.getElementById('draft-school-dropdown');
+    if (dd && !dd.contains(e.target)) {
+      const opts = document.getElementById('draft-school-options');
+      if (opts) opts.style.display = 'none';
+    }
+  });
+}
+
+function filterDraftBySchool(school, label) {
+  const opts = document.getElementById('draft-school-options');
+  if (opts) opts.style.display = 'none';
+  const sel = document.getElementById('draft-school-selected');
+  if (sel) sel.innerHTML = `
+    <span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;color:var(--text);">${label}</span>
+    <span style="color:var(--text);font-size:0.75rem;">▼</span>
+  `;
+  _draftSchoolFilter = school === 'ALL' ? null : school;
+  renderLiveDraftOrder();
+}
 
 //Filter prospects by college via dropdown menu
 function toggleCollegeDropdown() {
@@ -380,71 +431,13 @@ function initDraftTeamDropdown() {
 function filterDraftByTeam(abbr, teamName) {
   document.getElementById('draft-team-options').style.display = 'none';
   document.getElementById('draft-team-selected').innerHTML = `
-    ${abbr !== 'ALL' ? `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:24px; height:24px; object-fit:contain;" onerror="this.style.display='none'">` : ''}
-    <span style="flex:1; font-family:'Barlow',sans-serif; font-weight:600; font-size:0.85rem; color:var(--text);">${teamName}</span>
-    <span style="color:var(--muted); font-size:0.75rem;">▼</span>
+    ${abbr !== 'ALL' ? `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;" onerror="this.style.display='none'">` : ''}
+    <span style="flex:1;font-family:'Barlow',sans-serif;font-weight:600;font-size:0.85rem;color:var(--text);">${teamName}</span>
+    <span style="color:var(--muted);font-size:0.75rem;">▼</span>
   `;
-
-  const roundBtns = document.querySelectorAll('#draft-round-filters .pos-filter-btn');
-  if (abbr === 'ALL') {
-    roundBtns.forEach(b => b.style.opacity = '1');
-    renderLiveDraftOrder();
-    return;
-  }
-
-  roundBtns.forEach(b => b.style.opacity = '0.3');
-  const picks = _effectiveDraftOrder().filter(p => p.team === abbr);
-  const liveMap = new Map(window._livePicks.map(p => [p.pick, p]));
-  const nextSlot = _liveNextSlot();
-  const container = document.getElementById('render-draft-order');
-
-  container.innerHTML = picks.map(slot => {
-    const live = liveMap.get(slot.pick);
-    const isNext = nextSlot && slot.pick === nextSlot.pick;
-    const teamData = NFL_TEAMS[slot.team] || { name: slot.team, color: '#222230' };
-    const color = teamData.color;
-    const logoUrl = `https://a.espncdn.com/i/teamlogos/nfl/500/${slot.team.toLowerCase()}.png`;
-
-    if (live) {
-      const hs = _liveHeadshotUrl(live);
-      const logEntry = window._predictionLog.find(e => e.pick === slot.pick);
-      const wasRight = logEntry?.correct === true;
-      const wasWrong = logEntry?.correct === false;
-      return `
-        <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${wasRight?'#00c864':wasWrong?'#ff4444':color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
-          <div class="p-rank" style="color:${color};">#${slot.pick}</div>
-          <div class="p-logo-box"><img src="${logoUrl}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.3;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
-          ${hs ? `<img src="${hs}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:1;" onerror="this.style.display='none'">` : ''}
-          <div class="p-main">
-            <div class="p-name">${live.name}</div>
-            <div class="p-meta"><span class="p-pos">${live.pos}</span> | Rnd ${slot.round}</div>
-            ${logEntry?.actual ? `<div style="font-size:0.68rem;color:var(--muted);margin-top:2px;">Predicted: <span style="color:${wasRight?'#00c864':'#ff6b6b'};font-weight:600;">${logEntry.predicted.name}</span> ${wasRight?'✓':'✗'}</div>` : ''}
-          </div>
-          <div style="position:absolute;top:8px;right:10px;font-family:'Bebas Neue',sans-serif;font-size:0.62rem;letter-spacing:2px;color:${color};opacity:0.9;">OFFICIAL</div>
-        </div>`;
-    }
-
-    const pred = isNext ? _livePredict(slot) : null;
-    const needs = NFL_TEAM_NEEDS[slot.team] || [];
-    const predHS = pred ? (_prospectHeadshotCache[pred.prospect.rank] || '') : '';
-    return `
-      <div class="prospect-card" style="margin-bottom:8px;border-left:5px dashed ${isNext ? '#f5a623' : '#333'};background:linear-gradient(90deg,${isNext ? 'rgba(245,166,35,0.08)' : '#ffffff04'} 0%,var(--surface) 100%);${!isNext ? 'opacity:0.45;' : ''}">
-        <div class="p-rank" style="color:${isNext ? '#f5a623' : 'var(--muted)'};">#${slot.pick}</div>
-        <div class="p-logo-box"><img src="${logoUrl}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:${isNext?'0.35':'0.15'};filter:drop-shadow(0 0 3px rgba(255,255,255,0.3));" onerror="this.style.display='none'"></div>
-        ${isNext && predHS ? `<img src="${predHS}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:0.7;filter:grayscale(30%);" onerror="this.style.display='none'">` : ''}
-        <div class="p-main">
-          <div class="p-name" style="color:${isNext?'var(--text)':'var(--muted)'};">Rnd ${slot.round} · Pick ${slot.pick}</div>
-          ${pred ? `
-            <div style="display:flex;align-items:center;gap:5px;margin-top:3px;">
-              <span style="font-size:0.7rem;">🤖</span>
-              <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:600;color:#f5a623;font-style:italic;">${pred.prospect.name}</span>
-              <span style="font-family:'Bebas Neue',sans-serif;font-size:0.7rem;color:var(--muted);">${pred.prospect.pos}</span>
-            </div>` :
-            `<div class="p-meta">${needs.slice(0,3).map(n=>`<span class="need-tag">${n}</span>`).join(' ')}</div>`}
-        </div>
-        ${isNext ? `<div style="position:absolute;top:8px;right:10px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;letter-spacing:2px;color:#f5a623;border:1px dashed rgba(245,166,35,0.5);border-radius:3px;padding:1px 5px;">PREDICTION</div>` : ''}
-      </div>`;
-  }).join('');
+  window._draftTeamFilter = abbr;
+  document.querySelectorAll('#draft-round-filters .pos-filter-btn').forEach(b => b.style.opacity = abbr === 'ALL' ? '1' : '0.3');
+  renderLiveDraftOrder();
 }
 
 
@@ -1107,63 +1100,64 @@ function _liveHeadshotUrl(livePick) {
 function renderLiveDraftOrder() {
   const container = document.getElementById('render-draft-order');
   if (!container) return;
-  const picks = _effectiveDraftOrder().filter(p => p.round === _draftRound);
+  const schoolMap = new Map(NFL_PROSPECTS.map(p => [p.name.toLowerCase(), p.school]));
   const liveMap = new Map(window._livePicks.map(p => [p.pick, p]));
-  const nextSlot = _liveNextSlot();
 
-  container.innerHTML = picks.map(slot => {
+  // Determine base pick set: by team (all rounds) or by round
+  let picks;
+  if (window._draftTeamFilter && window._draftTeamFilter !== 'ALL') {
+    picks = _effectiveDraftOrder().filter(p => p.team === window._draftTeamFilter);
+  } else {
+    picks = _effectiveDraftOrder().filter(p => p.round === _draftRound);
+  }
+
+  // Apply position filter (only makes sense on completed picks)
+  if (_draftPosFilter !== 'ALL') {
+    picks = picks.filter(slot => {
+      const live = liveMap.get(slot.pick);
+      return live && live.pos === _draftPosFilter;
+    });
+  }
+
+  // Apply school filter
+  if (_draftSchoolFilter) {
+    picks = picks.filter(slot => {
+      const live = liveMap.get(slot.pick);
+      if (!live) return false;
+      return schoolMap.get(live.name.toLowerCase()) === _draftSchoolFilter;
+    });
+  }
+
+  const cards = picks.map(slot => {
     const live = liveMap.get(slot.pick);
-    const isNext = nextSlot && slot.pick === nextSlot.pick;
     const teamData = NFL_TEAMS[slot.team] || { name: slot.team, color: '#333' };
     const color = teamData.color;
     const logo = `https://a.espncdn.com/i/teamlogos/nfl/500/${slot.team.toLowerCase()}.png`;
 
     if (live) {
       const hs = _liveHeadshotUrl(live);
-      // Find prediction log for this pick
-      const logEntry = window._predictionLog.find(e => e.pick === slot.pick);
-      const wasRight = logEntry?.correct === true;
-      const wasWrong = logEntry?.correct === false;
-      const resultBorderColor = wasRight ? '#00c864' : wasWrong ? '#ff4444' : color;
+      const school = schoolMap.get(live.name.toLowerCase()) || '';
       return `
-        <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${resultBorderColor};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
+        <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
           <div class="p-rank" style="color:${color};">#${slot.pick}</div>
           <div class="p-logo-box"><img src="${logo}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.3;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
           ${hs ? `<img src="${hs}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:1;" onerror="this.style.display='none'">` : ''}
           <div class="p-main">
             <div class="p-name">${live.name}</div>
-            <div class="p-meta"><span class="p-pos">${live.pos}</span> | ${teamData.name}</div>
-            ${logEntry && logEntry.actual !== null ? `
-              <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;font-family:'Barlow',sans-serif;">
-                Predicted: <span style="color:${wasRight?'#00c864':'#ff6b6b'};font-weight:600;">${logEntry.predicted.name}</span>
-                ${wasRight ? '✓' : '✗'}
-              </div>` : ''}
+            <div class="p-meta"><span class="p-pos">${live.pos}</span> | ${teamData.name}${school ? ` · ${school}` : ''}</div>
           </div>
-          <div style="position:absolute;top:8px;right:10px;font-family:'Bebas Neue',sans-serif;font-size:0.62rem;letter-spacing:2px;color:${color};opacity:0.9;">OFFICIAL</div>
         </div>`;
     }
 
-    const pred = isNext ? _livePredict(slot) : null;
-    const needs = NFL_TEAM_NEEDS[slot.team] || [];
-    const predHS = pred ? (_prospectHeadshotCache[pred.prospect.rank] || '') : '';
     return `
-      <div class="prospect-card" style="margin-bottom:8px;border-left:5px dashed ${isNext ? '#f5a623' : '#333'};background:linear-gradient(90deg,${isNext ? 'rgba(245,166,35,0.08)' : '#ffffff04'} 0%,var(--surface) 100%);${!isNext ? 'opacity:0.45;' : ''}">
-        <div class="p-rank" style="color:${isNext ? '#f5a623' : 'var(--muted)'};">#${slot.pick}</div>
-        <div class="p-logo-box"><img src="${logo}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:${isNext ? '0.35' : '0.15'};filter:drop-shadow(0 0 3px rgba(255,255,255,0.3));" onerror="this.style.display='none'"></div>
-        ${isNext && predHS ? `<img src="${predHS}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:0.7;filter:grayscale(30%);" onerror="this.style.display='none'">` : ''}
-        <div class="p-main">
-          <div class="p-name" style="color:${isNext ? 'var(--text)' : 'var(--muted)'};">${teamData.name}</div>
-          ${pred ? `
-            <div style="display:flex;align-items:center;gap:5px;margin-top:3px;">
-              <span style="font-size:0.7rem;">🤖</span>
-              <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:600;color:#f5a623;font-style:italic;">${pred.prospect.name}</span>
-              <span style="font-family:'Bebas Neue',sans-serif;font-size:0.7rem;color:var(--muted);">${pred.prospect.pos}</span>
-            </div>` :
-            `<div class="p-meta">${needs.slice(0,3).map(n=>`<span class="need-tag">${n}</span>`).join(' ')}</div>`}
-        </div>
-        ${isNext ? `<div style="position:absolute;top:8px;right:10px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;letter-spacing:2px;color:#f5a623;border:1px dashed rgba(245,166,35,0.5);border-radius:3px;padding:1px 5px;">PREDICTION</div>` : ''}
+      <div class="prospect-card" style="margin-bottom:8px;border-left:5px dashed #333;background:var(--surface);opacity:0.4;">
+        <div class="p-rank" style="color:var(--muted);">#${slot.pick}</div>
+        <div class="p-logo-box"><img src="${logo}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.15;" onerror="this.style.display='none'"></div>
+        <div class="p-main"><div class="p-name" style="color:var(--muted);">${teamData.name}</div></div>
       </div>`;
   }).join('');
+
+  container.innerHTML = cards || '<div style="padding:32px;text-align:center;color:var(--muted);font-family:Barlow Condensed,sans-serif;letter-spacing:1px;">No picks match the current filters.</div>';
 }
 
 function renderLiveProspectBoard() {
@@ -1223,16 +1217,8 @@ function renderLiveProspectBoard() {
 }
 
 async function renderNflBigBoard() {
-  await preloadProspectHeadshots();
-  if (!window._predLogLoaded) await _loadPredictionLog();
-  // Replay if log is stale (missing entries) or formula version has been bumped
-  if (window._livePicks.length > 0 && (window._predictionLog.length < window._livePicks.length || window._predictionLogVersion !== _PREDICTION_FORMULA_VERSION)) {
-    await _replayAllPredictions();
-  }
-  renderOnTheClock();
-  renderPredictionScorecard();
+  await fetchEspnDraftPicks();
   renderLiveDraftOrder();
-  renderLiveProspectBoard();
 }
 
 function startDraftPolling() {
@@ -1240,12 +1226,7 @@ function startDraftPolling() {
     await fetchEspnDraftPicks();
     const bb = document.getElementById('nfl-big-board');
     const visible = bb && getComputedStyle(bb).display !== 'none';
-    if (visible) {
-      renderOnTheClock();
-      renderPredictionScorecard();
-      renderLiveDraftOrder();
-      renderLiveProspectBoard();
-    }
+    if (visible) renderLiveDraftOrder();
   }
   function schedule() {
     if (!isDraftActive()) return;
