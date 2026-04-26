@@ -10452,89 +10452,79 @@ let _faTeamLabel = 'All Teams';
 
 // Parse a single ESPN transaction description.
 // Returns null for practice squad, futures, re-signs, releases, IR, waivers.
+// Returns an array of moves parsed from a single ESPN transaction entry.
+// Handles compound descriptions ("Signed X. Signed Y.") by splitting on sentence boundaries.
 function _parseFaTransaction(tx) {
-  const desc = tx.description || '';
   const teamAbbr = tx.team ? _normEspnAbbr(tx.team.abbreviation) : '';
   const teamName = tx.team ? tx.team.displayName : '';
   const date = tx.date ? tx.date.substring(0, 10) : '';
-
-  // Only post-Super Bowl moves
-  if (date < _FA_CUTOFF) return null;
+  if (date && date < _FA_CUTOFF) return [];
 
   const skipPhrases = [
     're-signed','re-sign','exclusive rights','futures','future','practice squad',
     'placed on','activated from','waived','released','terminated',
-    'signed to the active roster from','designated for return',
+    'signed to the active roster','designated for return',
     'reserve/','non-football','eligible','rookie contract',
-    'right of first refusal','tender','contract extension',
+    'right of first refusal','tendered','contract extension',
+    'fifth-year option','hired ','head coach','coordinator',
   ];
-  const descLower = desc.toLowerCase();
-  if (skipPhrases.some(p => descLower.includes(p))) return null;
 
-  // TRADE: "Acquired POS Name from Team in exchange for..."
-  const tradeMatch = desc.match(/^Acquired\s+([A-Z]+)\s+(.+?)\s+(?:from\s+.+?\s+)?in exchange for/i);
-  if (tradeMatch) {
-    const pos = _FA_POS_MAP[tradeMatch[1]] || tradeMatch[1];
-    return { type:'trade', player:tradeMatch[2].trim(), pos, toTeam:teamAbbr, toTeamName:teamName, fromTeam:'', date };
+  // Split compound entries only at sentence boundaries before known action verbs
+  const sentences = (tx.description || '').split(
+    /\.\s+(?=Signed|Acquired|Traded|Released|Waived|Re-signed|Agreed|Exercised|Tendered|Hired|Terminated|Placed|Activated|Designated)/i
+  );
+
+  const results = [];
+  for (let sent of sentences) {
+    sent = sent.replace(/\.$/, '').trim();
+    const lower = sent.toLowerCase();
+    if (skipPhrases.some(p => lower.includes(p))) continue;
+
+    // Trade: "Acquired POS Name [from Team] in exchange for..."
+    const tradeM = sent.match(/^Acquired\s+([A-Z]+)\s+(.+?)\s+(?:from\s+.+?\s+)?in exchange for/i);
+    if (tradeM) {
+      const pos = _FA_POS_MAP[tradeM[1]] || tradeM[1];
+      results.push({ type:'trade', player:tradeM[2].trim(), pos, toTeam:teamAbbr, toTeamName:teamName, fromTeam:'', date });
+      continue;
+    }
+
+    // Trade: "Acquired POS Name from Team for/in..."
+    const acqFromM = sent.match(/^Acquired\s+([A-Z]{1,4})\s+(.+?)\s+from\s+(?:the\s+)?(.+?)(?:\s+(?:for|in)\b|$)/i);
+    if (acqFromM) {
+      const pos = _FA_POS_MAP[acqFromM[1]] || acqFromM[1];
+      results.push({ type:'trade', player:acqFromM[2].trim(), pos, toTeam:teamAbbr, toTeamName:teamName, fromTeam:'', fromTeamName:acqFromM[3].trim(), date });
+      continue;
+    }
+
+    // Signing: "Signed POS NAME [and POS NAME ...] to [contract]"
+    const signM = sent.match(/^Signed\s+(.+?)\s+\bto\b\s+/i);
+    if (signM) { _faExtractPlayers(signM[1], teamAbbr, teamName, date, 'signing', results); continue; }
+
+    // Agreed to terms: "Agreed to terms with POS NAME on [contract]"
+    const agreedM = sent.match(/^Agreed to terms with\s+(.+?)\s+\bon\b\s+/i);
+    if (agreedM) { _faExtractPlayers(agreedM[1], teamAbbr, teamName, date, 'signing', results); continue; }
+
+    // Generic acquired (catch-all)
+    const acqM = sent.match(/^Acquired\s+([A-Z]{1,4})\s+(.+?)(?:\s+from\s+|\s+for\s+|$)/i);
+    if (acqM) {
+      const pos = _FA_POS_MAP[acqM[1]] || acqM[1];
+      results.push({ type:'acquisition', player:acqM[2].trim(), pos, toTeam:teamAbbr, toTeamName:teamName, fromTeam:'', date });
+    }
   }
-
-  // Alternate trade: "Traded POS Name to Team for..."
-  const tradeMatch2 = desc.match(/^Traded\s+([A-Z]+)\s+(.+?)\s+to\s+(.+?)\s+(?:for|in exchange)/i);
-  if (tradeMatch2) {
-    const pos = _FA_POS_MAP[tradeMatch2[1]] || tradeMatch2[1];
-    return { type:'trade', player:tradeMatch2[2].trim(), pos, toTeam:'', toTeamName:tradeMatch2[3].trim(), fromTeam:teamAbbr, fromTeamName:teamName, date };
-  }
-
-  // Free agent signing: "Signed POS Name to a ..."
-  const signMatch = desc.match(/^Signed\s+([A-Z]+)\s+(.+?)\s+to\s+a\s+/i);
-  if (signMatch) {
-    const pos = _FA_POS_MAP[signMatch[1]] || signMatch[1];
-    return { type:'signing', player:signMatch[2].trim(), pos, toTeam:teamAbbr, toTeamName:teamName, fromTeam:'', date };
-  }
-
-  // "Agreed to terms with POS Name on a ..." (alternate signing language ESPN uses)
-  const agreedMatch = desc.match(/^Agreed to terms with\s+([A-Z]+)\s+(.+?)\s+on\s+a\s+/i);
-  if (agreedMatch) {
-    const pos = _FA_POS_MAP[agreedMatch[1]] || agreedMatch[1];
-    return { type:'signing', player:agreedMatch[2].trim(), pos, toTeam:teamAbbr, toTeamName:teamName, fromTeam:'', date };
-  }
-
-  // Generic acquired
-  const acqMatch = desc.match(/^Acquired\s+([A-Z]+)\s+(.+?)(?:\.|$)/i);
-  if (acqMatch) {
-    const pos = _FA_POS_MAP[acqMatch[1]] || acqMatch[1];
-    return { type:'acquisition', player:acqMatch[2].trim(), pos, toTeam:teamAbbr, toTeamName:teamName, fromTeam:'', date };
-  }
-
-  return null;
+  return results;
 }
 
-// Build a Set of starter display names from a cached lineup.
-// Returns null if the lineup hasn't been fetched yet.
-function _faStarterNames(abbr) {
-  const lineup = LINEUP_CACHE[abbr];
-  if (!lineup) return null;
-  const names = new Set();
-  ['offense','defense'].forEach(side => {
-    Object.values(lineup[side] || {}).forEach(athletes => {
-      if (athletes && athletes[0]) {
-        const a = athletes[0];
-        // Match on any available name variant
-        if (a.displayName) names.add(a.displayName.toLowerCase());
-        if (a.shortName)   names.add(a.shortName.toLowerCase());
-        if (a.fullName)    names.add(a.fullName.toLowerCase());
-      }
-    });
-  });
-  return names;
-}
-
-// Returns true if the player is a starter on their new team (or if we have no data for that team).
-function _faIsStarter(playerName, teamAbbr) {
-  if (!teamAbbr) return true; // can't verify — include
-  const names = _faStarterNames(teamAbbr);
-  if (!names) return true;    // depth chart not loaded — include rather than hide
-  return names.has(playerName.toLowerCase());
+// Split "POS NAME [and POS NAME ...]" into individual player move objects
+function _faExtractPlayers(fragment, teamAbbr, teamName, date, type, out) {
+  const parts = fragment.split(/\s+and\s+(?=[A-Z]{1,4}\s)/);
+  for (const part of parts) {
+    const m = part.trim().match(/^([A-Z]{1,4})\s+(.+)$/);
+    if (!m) continue;
+    const rawPos = m[1];
+    const player = m[2].replace(/\s*,.*$/, '').trim();
+    const pos = _FA_POS_MAP[rawPos] || rawPos;
+    out.push({ type, player, pos, toTeam:teamAbbr, toTeamName:teamName, fromTeam:'', date });
+  }
 }
 
 async function loadFreeAgencyData() {
@@ -10562,24 +10552,18 @@ async function loadFreeAgencyData() {
       });
     } else if (Array.isArray(json.transactions)) {
       // ESPN API fallback: parse descriptions ourselves
-      moves = json.transactions.map(_parseFaTransaction).filter(Boolean);
+      moves = json.transactions.flatMap(tx => _parseFaTransaction(tx));
     }
 
     // Deduplicate by player + toTeam
     const seen = new Set();
-    moves = moves.filter(m => {
+    _faData = moves.filter(m => {
+      if (!m.player || !m.toTeam) return false;
       const key = `${m.player.toLowerCase()}|${m.toTeam}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
-
-    // Prefetch current depth charts for all receiving teams
-    const toTeams = [...new Set(moves.map(m => m.toTeam).filter(Boolean))];
-    await Promise.all(toTeams.map(a => fetchTeamLineup(a).catch(() => {})));
-
-    // Keep only players who are starters on their new team
-    _faData = moves.filter(m => _faIsStarter(m.player, m.toTeam));
 
   } catch(e) {
     _faData = [];
@@ -10639,7 +10623,7 @@ function renderFreeAgency() {
         <div class="fa-header">Free Agency Tracker</div>
         <button onclick="_faReload()" style="font-family:Barlow Condensed,sans-serif;font-size:0.75rem;font-weight:600;letter-spacing:1px;padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;text-transform:uppercase;">↺ Reload</button>
       </div>
-      <div class="fa-sub">2026 OFFSEASON · STARTERS WHO CHANGED TEAMS · POST-SUPER BOWL</div>
+      <div class="fa-sub">2026 OFFSEASON · FREE AGENTS & TRADES · POST-SUPER BOWL</div>
       <div class="fa-filters">
         <button class="fa-pill active" onclick="_faSetFilter('all',this)">All Moves</button>
         <button class="fa-pill" onclick="_faSetFilter('skill',this)">Skill Positions</button>
