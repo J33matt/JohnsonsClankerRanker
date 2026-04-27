@@ -10382,10 +10382,17 @@ function _hideStatsPanel() {
 // Close the fixed hover panel immediately when the page scrolls
 // (it's position:fixed and would visually detach from the card)
 window.addEventListener('scroll', () => {
-  // Only close if the mouse isn't currently over a card. If it is, a card
-  // may have just scrolled under the cursor (mouseenter fired) and we must
-  // not immediately kill the panel that was just opened.
-  if (_lastActiveCardEl !== null && _hoverPickNum === null) {
+  if (_lastActiveCardEl === null) return; // no hover panel open
+  if (_hoverPickNum !== null && _hoverCardEl !== null) {
+    // Mouse is on a card during scroll — reposition the fixed panel to match
+    // the card's current viewport position (fixes momentum-scroll misalignment)
+    const rect  = _hoverCardEl.getBoundingClientRect();
+    const panel = document.getElementById('draft-stats-panel');
+    const tab   = document.getElementById('draft-pull-tab');
+    if (panel) panel.style.top = rect.top + 'px';
+    if (tab)   tab.style.top   = rect.top + 'px';
+  } else {
+    // Mouse is not on any card — close the floating hover panel
     _cancelHideTimer();
     _hideStatsPanel();
   }
