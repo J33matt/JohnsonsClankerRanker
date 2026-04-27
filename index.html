@@ -207,9 +207,15 @@
   <div id="nfl-fantasy" class="nfl-panel panel" style="display:none;"></div>
 </div>
 
-<!-- Draft pick stats sidebar -->
-<div id="draft-stats-panel" style="position:fixed;display:none;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;padding:10px 12px 10px 11px;z-index:600;transition:clip-path 0.32s cubic-bezier(0.0,0,0.2,1);box-shadow:4px 0 20px rgba(0,0,0,0.4);">
+<!-- Draft pick stats panel (expands as drawer) -->
+<div id="draft-stats-panel" style="position:fixed;display:none;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;padding:10px 12px 10px 11px;z-index:600;transition:width 0.35s cubic-bezier(0.0,0,0.2,1);box-shadow:4px 0 20px rgba(0,0,0,0.4);"
+  onmouseenter="_cancelHideTimer()" onmouseleave="_unhoverPick()">
   <div id="draft-stats-content"></div>
+</div>
+<!-- Pull-tab handle that rides the expanding panel edge -->
+<div id="draft-pull-tab" style="position:fixed;display:none;width:18px;height:36px;border-radius:0 8px 8px 0;z-index:601;cursor:pointer;transition:left 0.35s cubic-bezier(0.0,0,0.2,1);box-shadow:3px 0 10px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.08);border-left:none;align-items:center;justify-content:center;"
+  onmouseenter="_cancelHideTimer()" onmouseleave="_unhoverPick()" onclick="_clickPullTab(event)">
+  <span id="draft-tab-chevron" style="color:rgba(255,255,255,0.9);font-size:1rem;line-height:1;pointer-events:none;">›</span>
 </div>
 </main>
 
@@ -10292,10 +10298,14 @@ const _statsCache = {};
 let _statsPinned = false;
 let _statsPinnedPick = null;
 let _statsHideTimer = null;
+let _panelCardRightEdge = 0;
+let _panelTargetWidth = 0;
+
+function _cancelHideTimer() { clearTimeout(_statsHideTimer); }
 
 function _hoverPick(pickNum, cardEl) {
   if (_statsPinned) return;
-  clearTimeout(_statsHideTimer);
+  _cancelHideTimer();
   _showStatsPanel(pickNum, cardEl);
 }
 
@@ -10312,14 +10322,37 @@ function _clickPick(e, pickNum, cardEl) {
     _statsPinned = true;
     _statsPinnedPick = pickNum;
     _showStatsPanel(pickNum, cardEl);
+    const chev = document.getElementById('draft-tab-chevron');
+    if (chev) chev.textContent = '‹';
+  }
+}
+
+function _clickPullTab(e) {
+  e.stopPropagation();
+  if (_statsPinned) {
+    _closeStatsPanel();
+  } else {
+    _statsPinned = true;
+    _statsPinnedPick = _statsPinnedPick; // already showing from hover
+    const chev = document.getElementById('draft-tab-chevron');
+    if (chev) chev.textContent = '‹';
   }
 }
 
 function _hideStatsPanel() {
-  const p = document.getElementById('draft-stats-panel');
-  if (!p) return;
-  p.style.clipPath = 'inset(0 100% 0 0)';
-  setTimeout(() => { if (!_statsPinned) p.style.display = 'none'; }, 340);
+  const panel = document.getElementById('draft-stats-panel');
+  const tab   = document.getElementById('draft-pull-tab');
+  const chev  = document.getElementById('draft-tab-chevron');
+  if (!panel) return;
+  panel.style.width = '0px';
+  if (tab) tab.style.left = _panelCardRightEdge + 'px';
+  if (chev) chev.textContent = '›';
+  setTimeout(() => {
+    if (!_statsPinned) {
+      panel.style.display = 'none';
+      if (tab) tab.style.display = 'none';
+    }
+  }, 360);
 }
 
 function _closeStatsPanel() {
@@ -10331,27 +10364,47 @@ function _closeStatsPanel() {
 document.addEventListener('click', e => {
   if (!_statsPinned) return;
   const panel = document.getElementById('draft-stats-panel');
-  if (panel && !panel.contains(e.target)) _closeStatsPanel();
+  const tab   = document.getElementById('draft-pull-tab');
+  if (panel && !panel.contains(e.target) && tab && !tab.contains(e.target)) _closeStatsPanel();
 });
 
 function _showStatsPanel(pickNum, cardEl) {
   const panel = document.getElementById('draft-stats-panel');
+  const tab   = document.getElementById('draft-pull-tab');
   if (!panel) return;
   const pick = (window._livePicks || []).find(p => p.pick === pickNum);
   if (!pick) return;
 
-  // Position as a direct extension of the card — same height, flush to its right edge
+  // Compute geometry
   const rect = cardEl.getBoundingClientRect();
-  panel.style.left   = (rect.right - 1) + 'px'; // -1 to share the card's right border
-  panel.style.right  = rect.left + 'px';         // mirror: right margin = card's left margin
+  const panelLeft  = rect.right - 1;                            // flush to card's right border
+  const panelWidth = window.innerWidth - rect.left - panelLeft; // mirror left margin on right
+  _panelCardRightEdge = panelLeft;
+  _panelTargetWidth   = panelWidth;
+
+  // Team color for the pull-tab
+  const teamColor = (typeof NFL_TEAMS !== 'undefined')
+    ? (NFL_TEAMS.find(t => t.abbr === pick.team)?.color || '#555')
+    : '#555';
+
+  // Position panel (width starts at 0, then animates open)
+  panel.style.left   = panelLeft + 'px';
+  panel.style.right  = 'auto';
   panel.style.top    = rect.top + 'px';
   panel.style.height = rect.height + 'px';
-
-  // Drawer slide-out from behind the card's right edge
-  panel.style.clipPath = 'inset(0 100% 0 0)';
+  panel.style.width  = '0px';
   panel.style.display = 'block';
+
+  // Position tab at the card's right edge (it will ride the expanding panel)
+  tab.style.backgroundColor = teamColor;
+  tab.style.left    = panelLeft + 'px';
+  tab.style.top     = (rect.top + rect.height / 2 - 18) + 'px';
+  tab.style.display = 'flex';
+
+  // Animate both with the same curve so the tab rides the panel edge
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    panel.style.clipPath = 'inset(0 0% 0 0)';
+    panel.style.width = panelWidth + 'px';
+    tab.style.left    = (panelLeft + panelWidth) + 'px';
   }));
 
   const content = document.getElementById('draft-stats-content');
