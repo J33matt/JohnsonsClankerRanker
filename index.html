@@ -10600,6 +10600,10 @@ function renderFantasyRankings() {
         border-bottom: 1px solid var(--border); text-align: left; }
       .ff-table th.rank-col { width: 52px; text-align: center; }
       .ff-table th.pos-col  { width: 60px; }
+      .ff-table th.team-col { width: 80px; }
+      .ff-team-cell { display:flex; align-items:center; gap:6px; }
+      .ff-team-logo { width:22px; height:22px; object-fit:contain; flex-shrink:0; }
+      .ff-team-abbr { font-family:'Barlow Condensed',sans-serif; font-size:0.85rem; font-weight:700; color:var(--muted); letter-spacing:0.5px; }
       .ff-row { border-bottom: 1px solid var(--border); transition: background 0.12s; }
       .ff-row:hover { background: var(--surface2); }
       .ff-row td { padding: 9px 12px; font-family: Barlow Condensed, sans-serif; font-size: 0.95rem; }
@@ -10653,9 +10657,14 @@ function _ffRenderTable() {
   const rows = filtered.map(p => {
     posRankMap[p.pos] = (posRankMap[p.pos] || 0) + 1;
     const posLabel = `${p.pos}${posRankMap[p.pos]}`;
+    const team = (typeof FF_TEAM_MAP !== 'undefined') ? (FF_TEAM_MAP[p.rank] || null) : null;
+    const teamCell = team
+      ? `<div class="ff-team-cell"><img class="ff-team-logo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${team.toLowerCase()}.png" onerror="this.style.display='none'"><span class="ff-team-abbr">${team}</span></div>`
+      : `<span class="ff-team-abbr" style="color:var(--border)">—</span>`;
     return `<tr class="ff-row">
       <td class="ff-rank">${p.rank}</td>
       <td class="ff-name">${p.name}</td>
+      <td>${teamCell}</td>
       <td><span class="ff-badge" style="background:${_ffPosColor(p.pos)}">${posLabel}</span></td>
     </tr>`;
   }).join('');
@@ -10664,6 +10673,7 @@ function _ffRenderTable() {
     <thead><tr>
       <th class="rank-col">Rank</th>
       <th>Player</th>
+      <th class="team-col">Team</th>
       <th class="pos-col">Pos</th>
     </tr></thead>
     <tbody>${rows}</tbody>
