@@ -10298,48 +10298,46 @@ function renderFreeAgencyResults() {
 
 // ── Draft Stats Panel ────────────────────────────────────────────
 const _statsCache = {};
-let _statsPinned = false;
-let _statsPinnedPick = null;
-let _statsHideTimer = null;
+const _pinnedPanels = new Map(); // pickNum -> { panelEl, tabEl, cardEl, panelLeft, panelWidth }
+let _statsHideTimer  = null;
 let _panelCardRightEdge = 0;
-let _panelTargetWidth = 0;
-let _lastActiveCardEl = null;
+let _lastActiveCardEl   = null;
+let _lastActivePickNum  = null;
+let _hoverPickNum       = null;
+let _hoverCardEl        = null;
 
 function _cancelHideTimer() { clearTimeout(_statsHideTimer); }
 
 function _hoverPick(pickNum, cardEl) {
-  if (_statsPinned) return;
   _cancelHideTimer();
+  _hoverPickNum = pickNum;
+  _hoverCardEl  = cardEl;
+  if (_pinnedPanels.has(pickNum)) return; // already pinned, don't show hover panel
   _showStatsPanel(pickNum, cardEl);
 }
 
 function _unhoverPick() {
-  if (_statsPinned) return;
+  if (_hoverPickNum !== null && _pinnedPanels.has(_hoverPickNum)) return;
   _statsHideTimer = setTimeout(() => _hideStatsPanel(), 180);
 }
 
 function _clickPick(e, pickNum, cardEl) {
   e.stopPropagation();
-  if (_statsPinned && _statsPinnedPick === pickNum) {
-    _closeStatsPanel();
+  if (_pinnedPanels.has(pickNum)) {
+    _unpinPanel(pickNum);
   } else {
-    _statsPinned = true;
-    _statsPinnedPick = pickNum;
-    _showStatsPanel(pickNum, cardEl);
-    const chev = document.getElementById('draft-tab-chevron');
-    if (chev) chev.textContent = '‹';
+    _hideStatsPanel();
+    _pinPanel(pickNum, cardEl);
   }
 }
 
 function _clickPullTab(e) {
   e.stopPropagation();
-  if (_statsPinned) {
-    _closeStatsPanel();
-  } else {
-    _statsPinned = true;
-    _statsPinnedPick = _statsPinnedPick; // already showing from hover
-    const chev = document.getElementById('draft-tab-chevron');
-    if (chev) chev.textContent = '‹';
+  if (_hoverPickNum !== null && !_pinnedPanels.has(_hoverPickNum)) {
+    const pickNum = _hoverPickNum;
+    const cardEl  = _hoverCardEl;
+    _hideStatsPanel();
+    _pinPanel(pickNum, cardEl);
   }
 }
 
@@ -10348,40 +10346,93 @@ function _hideStatsPanel() {
   const tab   = document.getElementById('draft-pull-tab');
   const chev  = document.getElementById('draft-tab-chevron');
   if (!panel) return;
+  _hoverPickNum = null;
   panel.style.width = '0px';
   if (tab) tab.style.left = _panelCardRightEdge + 'px';
   if (chev) chev.textContent = '›';
+  const snapCard = _lastActiveCardEl;
+  const snapPick = _lastActivePickNum;
+  _lastActiveCardEl  = null;
+  _lastActivePickNum = null;
   setTimeout(() => {
-    if (!_statsPinned) {
-      panel.style.display = 'none';
-      if (tab) tab.style.display = 'none';
-      if (_lastActiveCardEl) {
-        const st = _lastActiveCardEl.querySelector('.draft-static-tab');
-        if (st) st.style.visibility = 'visible';
-        _lastActiveCardEl = null;
-      }
+    panel.style.display = 'none';
+    if (tab) tab.style.display = 'none';
+    // Only restore static tab if this card wasn't pinned in the meantime
+    if (snapCard && !_pinnedPanels.has(snapPick)) {
+      const st = snapCard.querySelector('.draft-static-tab');
+      if (st) st.style.visibility = 'visible';
     }
   }, 360);
 }
 
-function _closeStatsPanel() {
-  _statsPinned = false;
-  _statsPinnedPick = null;
-  _hideStatsPanel();
-  // Restore static tab immediately (hideStatsPanel's timeout also does it, but belt-and-suspenders)
-  if (_lastActiveCardEl) {
-    const st = _lastActiveCardEl.querySelector('.draft-static-tab');
-    if (st) setTimeout(() => { st.style.visibility = 'visible'; }, 360);
-  }
+// ── Pinned panels (position:absolute — follow scroll naturally) ──
+function _pinPanel(pickNum, cardEl) {
+  const pick = (window._livePicks || []).find(p => p.pick === pickNum);
+  if (!pick) return;
+
+  const rect       = cardEl.getBoundingClientRect();
+  const panelLeft  = rect.right + window.scrollX - 1;
+  const panelTop   = rect.top  + window.scrollY;
+  const panelWidth = window.innerWidth - rect.left - (rect.right - 1);
+  const teamColor  = (typeof NFL_TEAMS !== 'undefined') ? (NFL_TEAMS[pick.team]?.color || '#555') : '#555';
+
+  const panelEl = document.createElement('div');
+  panelEl.style.cssText = `position:absolute;left:${panelLeft}px;top:${panelTop}px;width:0;height:${rect.height}px;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;z-index:600;transition:width 0.35s cubic-bezier(0.0,0,0.2,1);box-shadow:4px 0 20px rgba(0,0,0,0.4);`;
+  panelEl.innerHTML = `<div style="padding:10px 12px 10px 11px;height:100%;box-sizing:border-box;overflow:hidden;"><div style="font-family:'Bebas Neue',sans-serif;font-size:0.55rem;letter-spacing:2px;color:var(--accent);margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:3px;">2025 COLLEGE</div><div class="pinned-stats-body" style="display:flex;align-items:center;justify-content:center;min-height:36px;"><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--muted);letter-spacing:1px;">Loading…</div></div></div>`;
+  document.body.appendChild(panelEl);
+
+  const tabEl = document.createElement('div');
+  tabEl.style.cssText = `position:absolute;left:${panelLeft}px;top:${panelTop}px;width:20px;height:${rect.height}px;border-radius:0 8px 8px 0;z-index:601;cursor:pointer;background:${teamColor};transition:left 0.35s cubic-bezier(0.0,0,0.2,1);box-shadow:3px 0 10px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.08);border-left:none;display:flex;align-items:center;justify-content:center;`;
+  tabEl.innerHTML = '<span style="color:rgba(255,255,255,0.9);font-size:1rem;line-height:1;pointer-events:none;">‹</span>';
+  tabEl.addEventListener('click', e => { e.stopPropagation(); _unpinPanel(pickNum); });
+  tabEl.addEventListener('mouseenter', _cancelHideTimer);
+  document.body.appendChild(tabEl);
+
+  const staticTab = cardEl.querySelector('.draft-static-tab');
+  if (staticTab) staticTab.style.visibility = 'hidden';
+
+  _pinnedPanels.set(pickNum, { panelEl, tabEl, cardEl, panelLeft, panelWidth });
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    panelEl.style.width = panelWidth + 'px';
+    tabEl.style.left    = (panelLeft + panelWidth) + 'px';
+  }));
+
+  _loadStatsInto(pickNum, pick, panelEl.querySelector('.pinned-stats-body'));
 }
 
-document.addEventListener('click', e => {
-  if (!_statsPinned) return;
-  const panel = document.getElementById('draft-stats-panel');
-  const tab   = document.getElementById('draft-pull-tab');
-  if (panel && !panel.contains(e.target) && tab && !tab.contains(e.target)) _closeStatsPanel();
-});
+function _unpinPanel(pickNum) {
+  const pinned = _pinnedPanels.get(pickNum);
+  if (!pinned) return;
+  const { panelEl, tabEl, cardEl, panelLeft } = pinned;
+  _pinnedPanels.delete(pickNum);
+  panelEl.style.width = '0';
+  tabEl.style.left    = panelLeft + 'px';
+  setTimeout(() => {
+    panelEl.remove();
+    tabEl.remove();
+    const st = cardEl.querySelector('.draft-static-tab');
+    if (st) st.style.visibility = 'visible';
+  }, 360);
+}
 
+function _loadStatsInto(pickNum, pick, bodyEl) {
+  if (_statsCache[pickNum]) {
+    _renderCollegeStats(pick.pos, _statsCache[pickNum], bodyEl);
+    return;
+  }
+  fetch(`https://nfl-draft-proxy.j33matt.workers.dev/college-stats?name=${encodeURIComponent(pick.name)}&espnId=${encodeURIComponent(pick.espnAthleteId || '')}`)
+    .then(r => r.json())
+    .then(data => {
+      _statsCache[pickNum] = data.splits?.categories || data.categories || [];
+      _renderCollegeStats(pick.pos, _statsCache[pickNum], bodyEl);
+    })
+    .catch(() => {
+      bodyEl.innerHTML = '<div style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;font-size:0.85rem;letter-spacing:1px;">Stats unavailable</div>';
+    });
+}
+
+// ── Hover panel (position:fixed, transient) ──────────────────────
 function _showStatsPanel(pickNum, cardEl) {
   const panel = document.getElementById('draft-stats-panel');
   const tab   = document.getElementById('draft-pull-tab');
@@ -10389,43 +10440,37 @@ function _showStatsPanel(pickNum, cardEl) {
   const pick = (window._livePicks || []).find(p => p.pick === pickNum);
   if (!pick) return;
 
-  // Compute geometry
-  const rect = cardEl.getBoundingClientRect();
-  const panelLeft  = rect.right - 1;                            // flush to card's right border
-  const panelWidth = window.innerWidth - rect.left - panelLeft; // mirror left margin on right
+  const rect       = cardEl.getBoundingClientRect();
+  const panelLeft  = rect.right - 1;
+  const panelWidth = window.innerWidth - rect.left - panelLeft;
   _panelCardRightEdge = panelLeft;
-  _panelTargetWidth   = panelWidth;
 
-  // Team color for the pull-tab
   const teamColor = (typeof NFL_TEAMS !== 'undefined')
-    ? (NFL_TEAMS[pick.team]?.color || '#555')
-    : '#555';
+    ? (NFL_TEAMS[pick.team]?.color || '#555') : '#555';
 
-  // Hide static tab on this card; track it for restoration
-  if (_lastActiveCardEl && _lastActiveCardEl !== cardEl) {
+  // Restore previous hover card's static tab if switching cards
+  if (_lastActiveCardEl && _lastActiveCardEl !== cardEl && !_pinnedPanels.has(_lastActivePickNum)) {
     const prev = _lastActiveCardEl.querySelector('.draft-static-tab');
     if (prev) prev.style.visibility = 'visible';
   }
-  _lastActiveCardEl = cardEl;
+  _lastActiveCardEl  = cardEl;
+  _lastActivePickNum = pickNum;
   const staticTab = cardEl.querySelector('.draft-static-tab');
   if (staticTab) staticTab.style.visibility = 'hidden';
 
-  // Position panel (width starts at 0, then animates open)
-  panel.style.left   = panelLeft + 'px';
-  panel.style.right  = 'auto';
-  panel.style.top    = rect.top + 'px';
-  panel.style.height = rect.height + 'px';
-  panel.style.width  = '0px';
+  panel.style.left    = panelLeft + 'px';
+  panel.style.right   = 'auto';
+  panel.style.top     = rect.top + 'px';
+  panel.style.height  = rect.height + 'px';
+  panel.style.width   = '0px';
   panel.style.display = 'block';
 
-  // Position tab at the card's right edge (it will ride the expanding panel)
   tab.style.backgroundColor = teamColor;
   tab.style.height  = rect.height + 'px';
   tab.style.left    = panelLeft + 'px';
   tab.style.top     = rect.top + 'px';
   tab.style.display = 'flex';
 
-  // Animate both with the same curve so the tab rides the panel edge
   requestAnimationFrame(() => requestAnimationFrame(() => {
     panel.style.width = panelWidth + 'px';
     tab.style.left    = (panelLeft + panelWidth) + 'px';
@@ -10438,23 +10483,7 @@ function _showStatsPanel(pickNum, cardEl) {
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--muted);letter-spacing:1px;">Loading…</div>
     </div>
   `;
-
-  if (_statsCache[pickNum]) {
-    _renderCollegeStats(pick.pos, _statsCache[pickNum], document.getElementById('stats-body'));
-    return;
-  }
-
-  fetch(`https://nfl-draft-proxy.j33matt.workers.dev/college-stats?name=${encodeURIComponent(pick.name)}&espnId=${encodeURIComponent(pick.espnAthleteId || '')}`)
-    .then(r => r.json())
-    .then(data => {
-      _statsCache[pickNum] = data.splits?.categories || data.categories || [];
-      const body = document.getElementById('stats-body');
-      if (body) _renderCollegeStats(pick.pos, _statsCache[pickNum], body);
-    })
-    .catch(() => {
-      const body = document.getElementById('stats-body');
-      if (body) body.innerHTML = '<div style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;font-size:0.85rem;letter-spacing:1px;">Stats unavailable</div>';
-    });
+  _loadStatsInto(pickNum, pick, document.getElementById('stats-body'));
 }
 
 const _STAT_CONFIG = {
