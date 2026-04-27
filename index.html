@@ -208,8 +208,7 @@
 </div>
 
 <!-- Draft pick stats sidebar -->
-<div id="draft-stats-panel" style="position:fixed;display:none;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-left:none;border-radius:0 10px 10px 0;padding:14px 16px 14px 14px;z-index:600;transition:opacity 0.18s cubic-bezier(0.4,0,0.2,1),transform 0.18s cubic-bezier(0.4,0,0.2,1);box-shadow:6px 0 24px rgba(0,0,0,0.45);">
-  <button onclick="_closeStatsPanel()" style="position:absolute;top:8px;right:10px;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px;" title="Close">✕</button>
+<div id="draft-stats-panel" style="position:fixed;display:none;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;padding:12px 14px 12px 13px;z-index:600;transition:opacity 0.18s cubic-bezier(0.4,0,0.2,1),transform 0.18s cubic-bezier(0.4,0,0.2,1);box-shadow:4px 0 20px rgba(0,0,0,0.4);">
   <div id="draft-stats-content"></div>
 </div>
 </main>
@@ -10342,12 +10341,12 @@ function _showStatsPanel(pickNum, cardEl) {
   const pick = (window._livePicks || []).find(p => p.pick === pickNum);
   if (!pick) return;
 
-  // Position the panel as an extension of the card
+  // Position as a direct extension of the card — same height, flush to its right edge
   const rect = cardEl.getBoundingClientRect();
-  panel.style.left = (rect.right - 1) + 'px';  // -1 to share card's right border
-  panel.style.right = rect.left + 'px';          // mirror left margin on right side
-  panel.style.top = rect.top + 'px';
-  panel.style.maxHeight = (window.innerHeight - rect.top - 8) + 'px';
+  panel.style.left   = (rect.right - 1) + 'px'; // -1 to share the card's right border
+  panel.style.right  = rect.left + 'px';         // mirror: right margin = card's left margin
+  panel.style.top    = rect.top + 'px';
+  panel.style.height = rect.height + 'px';
 
   // Slide-in from right
   panel.style.display = 'block';
@@ -10359,26 +10358,11 @@ function _showStatsPanel(pickNum, cardEl) {
   }));
 
   const content = document.getElementById('draft-stats-content');
-  const hs    = pick.espnAthleteId ? `https://a.espncdn.com/i/headshots/college-football/players/full/${pick.espnAthleteId}.png` : '';
-  const cLogo = pick.collegeLogo || ((typeof COLLEGE_TEAMS !== 'undefined' && pick.college) ? (COLLEGE_TEAMS[pick.college]?.logo || '') : '');
-
   content.innerHTML = `
-    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;padding-right:20px;">
-      ${hs ? `<img src="${hs}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--border);" onerror="this.style.display='none'">` : ''}
-      <div style="min-width:0;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:2px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pick.name}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap;">
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:0.7rem;letter-spacing:1px;padding:2px 8px;border-radius:5px;background:${_faPosColor(pick.pos)};color:#fff;">${pick.pos}</span>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);">Pick #${pickNum}</span>
-        </div>
-        ${pick.college ? `<div style="display:flex;align-items:center;gap:5px;margin-top:5px;">${cLogo ? `<img src="${cLogo}" style="width:13px;height:13px;object-fit:contain;filter:drop-shadow(0 0 2px rgba(255,255,255,0.5));" onerror="this.style.display='none'">` : ''}<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);">${pick.college}</span></div>` : ''}
-      </div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:0.6rem;letter-spacing:2.5px;color:var(--accent);margin-bottom:5px;border-bottom:1px solid var(--border);padding-bottom:4px;">2025 COLLEGE SEASON</div>
+    <div id="stats-body" style="display:flex;align-items:center;justify-content:center;min-height:40px;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;color:var(--muted);letter-spacing:1px;">Loading…</div>
     </div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2.5px;color:var(--accent);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:5px;">2025 COLLEGE SEASON</div>
-    <div id="stats-body" style="min-height:64px;display:flex;align-items:center;justify-content:center;">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;color:var(--muted);letter-spacing:1px;">Loading...</div>
-    </div>
-    <div style="font-size:0.62rem;color:var(--muted);text-align:center;margin-top:10px;font-family:'Barlow',sans-serif;opacity:0.5;">Click card to pin · click again to close</div>
   `;
 
   if (_statsCache[pickNum]) {
@@ -10428,27 +10412,19 @@ function _getStat(categories, catName, ...keys) {
 
 function _renderCollegeStats(pos, categories, container) {
   const config = _STAT_CONFIG[pos] || _STAT_CONFIG[pos?.toUpperCase()];
+  const muted = `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;text-align:center;letter-spacing:1px;">`;
 
-  if (!config) {
-    container.innerHTML = `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;text-align:center;padding:8px 0;letter-spacing:1px;">No stat profile for ${pos}</div>`;
-    return;
-  }
-  if (!categories.length) {
-    container.innerHTML = `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;text-align:center;padding:8px 0;letter-spacing:1px;">Stats unavailable</div>`;
-    return;
-  }
+  if (!config) { container.innerHTML = muted + `No stats for ${pos}</div>`; return; }
+  if (!categories.length) { container.innerHTML = muted + `Stats unavailable</div>`; return; }
 
   const rows = config.map(([cat, keys, label]) => ({ label, val: _getStat(categories, cat, ...keys) ?? '—' }));
-  const hasAny = rows.some(r => r.val !== '—');
-  if (!hasAny) {
-    container.innerHTML = `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;text-align:center;padding:8px 0;letter-spacing:1px;">Stats unavailable</div>`;
-    return;
-  }
+  if (!rows.some(r => r.val !== '—')) { container.innerHTML = muted + `Stats unavailable</div>`; return; }
 
-  container.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">${
-    rows.map(r => `<div style="background:var(--surface2);border-radius:8px;padding:8px 6px;text-align:center;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:1px;color:var(--text);">${r.val}</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:1px;">${r.label}</div>
+  container.style.display = 'block';
+  container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;">${
+    rows.map(r => `<div style="background:var(--surface2);border-radius:6px;padding:5px 3px;text-align:center;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:0.5px;color:var(--text);line-height:1;">${r.val}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.52rem;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase;margin-top:2px;line-height:1;">${r.label}</div>
     </div>`).join('')
   }</div>`;
 }

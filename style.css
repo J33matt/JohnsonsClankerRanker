@@ -3172,6 +3172,15 @@
   padding: 0;
 }
 
+#render-draft-order .prospect-card {
+  height: 170px;
+  box-sizing: border-box;
+}
+
+#render-draft-order .prospect-card:hover {
+  transform: none;
+}
+
 #nfl-prospects-container,
 #nfl-draftorder-container {
   display: flex;
