@@ -10317,8 +10317,14 @@ function _hoverPick(pickNum, cardEl) {
 }
 
 function _unhoverPick() {
-  if (_hoverPickNum !== null && _pinnedPanels.has(_hoverPickNum)) return;
-  _statsHideTimer = setTimeout(() => _hideStatsPanel(), 180);
+  const leftPick = _hoverPickNum;
+  _hoverPickNum  = null; // mouse has left — clear immediately
+  _hoverCardEl   = null;
+  if (_pinnedPanels.has(leftPick)) return; // pinned card, no hover panel to hide
+  _statsHideTimer = setTimeout(() => {
+    // Only hide if mouse hasn't re-entered any card during the delay
+    if (_hoverPickNum === null) _hideStatsPanel();
+  }, 180);
 }
 
 function _clickPick(e, pickNum, cardEl) {
@@ -10346,7 +10352,6 @@ function _hideStatsPanel() {
   const tab   = document.getElementById('draft-pull-tab');
   const chev  = document.getElementById('draft-tab-chevron');
   if (!panel) return;
-  _hoverPickNum = null;
   panel.style.width = '0px';
   if (tab) tab.style.left = _panelCardRightEdge + 'px';
   if (chev) chev.textContent = '›';
@@ -10364,6 +10369,15 @@ function _hideStatsPanel() {
     }
   }, 360);
 }
+
+// Close the fixed hover panel immediately when the page scrolls
+// (it's position:fixed and would visually detach from the card)
+window.addEventListener('scroll', () => {
+  if (_lastActiveCardEl !== null) {
+    _cancelHideTimer();
+    _hideStatsPanel();
+  }
+}, { passive: true });
 
 // ── Pinned panels (position:absolute — follow scroll naturally) ──
 function _pinPanel(pickNum, cardEl) {
