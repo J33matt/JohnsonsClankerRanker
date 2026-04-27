@@ -10299,13 +10299,15 @@ function renderFreeAgencyResults() {
 // ── Draft Stats Panel ────────────────────────────────────────────
 const _statsCache = {};
 const _pinnedPanels = new Map(); // pickNum -> { panelEl, tabEl, cardEl, panelLeft, panelWidth }
-let _statsHideTimer   = null; // 180ms hover-debounce
-let _hideDisplayTimer = null; // 360ms display:none after collapse animation
-let _panelCardRightEdge = 0;
-let _lastActiveCardEl   = null;
-let _lastActivePickNum  = null;
-let _hoverPickNum       = null;
-let _hoverCardEl        = null;
+let _statsHideTimer      = null; // 180ms hover-debounce
+let _hideDisplayTimer    = null; // 360ms display:none after collapse animation
+let _hideDisplaySnapCard = null; // card whose static tab the timer will restore
+let _hideDisplaySnapPick = null;
+let _panelCardRightEdge  = 0;
+let _lastActiveCardEl    = null;
+let _lastActivePickNum   = null;
+let _hoverPickNum        = null;
+let _hoverCardEl         = null;
 
 function _cancelHideTimer() { clearTimeout(_statsHideTimer); }
 
@@ -10362,11 +10364,14 @@ function _hideStatsPanel() {
   _lastActiveCardEl  = null;
   _lastActivePickNum = null;
   clearTimeout(_hideDisplayTimer);
+  _hideDisplaySnapCard = snapCard;
+  _hideDisplaySnapPick = snapPick;
   _hideDisplayTimer = setTimeout(() => {
-    _hideDisplayTimer = null;
+    _hideDisplayTimer    = null;
+    _hideDisplaySnapCard = null;
+    _hideDisplaySnapPick = null;
     panel.style.display = 'none';
     if (tab) tab.style.display = 'none';
-    // Only restore static tab if this card wasn't pinned in the meantime
     if (snapCard && !_pinnedPanels.has(snapPick)) {
       const st = snapCard.querySelector('.draft-static-tab');
       if (st) st.style.visibility = 'visible';
@@ -10458,9 +10463,19 @@ function _showStatsPanel(pickNum, cardEl) {
   const pick = (window._livePicks || []).find(p => p.pick === pickNum);
   if (!pick) return;
 
-  // Cancel any in-flight display:none timer from a previous collapse
-  clearTimeout(_hideDisplayTimer);
-  _hideDisplayTimer = null;
+  // Cancel any in-flight display:none timer from a previous collapse.
+  // Immediately restore the static tab it was going to handle, since we're
+  // taking over and that card may never get its timer callback now.
+  if (_hideDisplayTimer !== null) {
+    clearTimeout(_hideDisplayTimer);
+    _hideDisplayTimer = null;
+    if (_hideDisplaySnapCard && _hideDisplaySnapCard !== cardEl && !_pinnedPanels.has(_hideDisplaySnapPick)) {
+      const st = _hideDisplaySnapCard.querySelector('.draft-static-tab');
+      if (st) st.style.visibility = 'visible';
+    }
+    _hideDisplaySnapCard = null;
+    _hideDisplaySnapPick = null;
+  }
 
   const rect       = cardEl.getBoundingClientRect();
   const panelLeft  = rect.right - 1;
