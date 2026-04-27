@@ -10649,11 +10649,10 @@ function _ffRenderTable() {
     return;
   }
 
-  let posRank = 0;
-  let lastPos = null;
+  const posRankMap = {};
   const rows = filtered.map(p => {
-    if (p.pos !== lastPos) { posRank = 1; lastPos = p.pos; } else { posRank++; }
-    const posLabel = _fantasyPosFilter === 'ALL' ? `${p.pos}${posRank}` : `${p.pos}${posRank}`;
+    posRankMap[p.pos] = (posRankMap[p.pos] || 0) + 1;
+    const posLabel = `${p.pos}${posRankMap[p.pos]}`;
     return `<tr class="ff-row">
       <td class="ff-rank">${p.rank}</td>
       <td class="ff-name">${p.name}</td>
