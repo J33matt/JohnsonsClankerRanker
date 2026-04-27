@@ -10419,9 +10419,9 @@ function _renderCollegeStats(pos, categories, container) {
 
   container.style.display = 'block';
   container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;">${
-    rows.map(r => `<div style="background:var(--surface2);border-radius:5px;padding:3px 2px;text-align:center;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:0.5px;color:var(--text);line-height:1;">${r.val}</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.48rem;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:1px;line-height:1;">${r.label}</div>
+    rows.map(r => `<div style="background:var(--surface2);border-radius:5px;padding:4px 4px;text-align:center;white-space:nowrap;">
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:0.5px;color:var(--text);">${r.val}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:0.5px;color:var(--muted);text-transform:uppercase;margin-left:3px;">${r.label}</span>
     </div>`).join('')
   }</div>`;
 }
