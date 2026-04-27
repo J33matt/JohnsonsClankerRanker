@@ -10370,7 +10370,7 @@ function _showStatsPanel(pickNum, cardEl) {
   fetch(`https://nfl-draft-proxy.j33matt.workers.dev/college-stats?name=${encodeURIComponent(pick.name)}&espnId=${encodeURIComponent(pick.espnAthleteId || '')}`)
     .then(r => r.json())
     .then(data => {
-      _statsCache[pickNum] = data.categories || [];
+      _statsCache[pickNum] = data.splits?.categories || data.categories || [];
       const body = document.getElementById('stats-body');
       if (body) _renderCollegeStats(pick.pos, _statsCache[pickNum], body);
     })
