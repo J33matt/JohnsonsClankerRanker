@@ -1126,7 +1126,7 @@ function renderLiveDraftOrder() {
           <div class="p-main">
             <div class="p-name">${live.name}</div>
             <div class="p-meta"><span class="p-pos">${live.pos}</span> | ${teamData.name}</div>
-            ${school ? (() => { const cLogo = (typeof COLLEGE_TEAMS !== 'undefined' && COLLEGE_TEAMS[school]?.logo) || ''; return `<div style="display:flex;align-items:center;gap:5px;margin-top:3px;">${cLogo ? `<img src="${cLogo}" style="width:16px;height:16px;object-fit:contain;opacity:0.85;" onerror="this.style.display='none'">` : ''}<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:600;color:var(--text);opacity:0.75;">${school}</span></div>`; })() : ''}
+            ${school ? (() => { const cLogo = (typeof COLLEGE_TEAMS !== 'undefined' && COLLEGE_TEAMS[school]?.logo) || ''; return `<div style="display:flex;align-items:center;gap:5px;margin-top:3px;">${cLogo ? `<img src="${cLogo}" style="width:16px;height:16px;object-fit:contain;opacity:0.85;filter:drop-shadow(0 0 3px rgba(255,255,255,0.5));" onerror="this.style.display='none'">` : ''}<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:600;color:var(--text);opacity:0.75;">${school}</span></div>`; })() : ''}
           </div>
         </div>`;
     }
