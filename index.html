@@ -213,7 +213,7 @@
   <div id="draft-stats-content"></div>
 </div>
 <!-- Pull-tab handle that rides the expanding panel edge -->
-<div id="draft-pull-tab" style="position:fixed;display:none;width:18px;height:36px;border-radius:0 8px 8px 0;z-index:601;cursor:pointer;transition:left 0.35s cubic-bezier(0.0,0,0.2,1);box-shadow:3px 0 10px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.08);border-left:none;align-items:center;justify-content:center;"
+<div id="draft-pull-tab" style="position:fixed;display:none;width:20px;border-radius:0 8px 8px 0;z-index:601;cursor:pointer;transition:left 0.35s cubic-bezier(0.0,0,0.2,1);box-shadow:3px 0 10px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.08);border-left:none;align-items:center;justify-content:center;"
   onmouseenter="_cancelHideTimer()" onmouseleave="_unhoverPick()" onclick="_clickPullTab(event)">
   <span id="draft-tab-chevron" style="color:rgba(255,255,255,0.9);font-size:1rem;line-height:1;pointer-events:none;">›</span>
 </div>
@@ -1125,14 +1125,17 @@ function renderLiveDraftOrder() {
       const school = live.college || '';
       const cLogo = live.collegeLogo || (school && (typeof COLLEGE_TEAMS !== 'undefined') ? (COLLEGE_TEAMS[school]?.logo || '') : '');
       return `
-        <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);cursor:pointer;transition:border-color 0.15s;" onmouseenter="_hoverPick(${slot.pick},this)" onmouseleave="_unhoverPick()" onclick="_clickPick(event,${slot.pick},this)">
+        <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);cursor:pointer;transition:border-color 0.15s;padding-right:34px;" onmouseenter="_hoverPick(${slot.pick},this)" onmouseleave="_unhoverPick()" onclick="_clickPick(event,${slot.pick},this)">
           <div class="p-rank" style="color:${color};">#${slot.pick}</div>
-          <div class="p-logo-box"><img src="${logo}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.3;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
-          ${hs ? `<img src="${hs}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:1;" onerror="this.style.display='none'">` : ''}
+          <div class="p-logo-box"><img src="${logo}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:28px;top:50%;transform:translateY(-50%);opacity:0.3;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
+          ${hs ? `<img src="${hs}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:88px;bottom:0;opacity:1;" onerror="this.style.display='none'">` : ''}
           <div class="p-main">
             <div class="p-name">${live.name}</div>
             <div class="p-meta"><span class="p-pos">${live.pos}</span> | ${teamData.name}</div>
             ${school ? `<div style="display:flex;align-items:center;gap:5px;margin-top:3px;">${cLogo ? `<img src="${cLogo}" style="width:16px;height:16px;object-fit:contain;opacity:0.85;filter:drop-shadow(0 0 3px rgba(255,255,255,0.5));" onerror="this.style.display='none'">` : ''}<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:600;color:var(--text);opacity:0.75;">${school}</span></div>` : ''}
+          </div>
+          <div class="draft-static-tab" style="position:absolute;right:0;top:0;height:100%;width:20px;background:${color};display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;" onmouseenter="_cancelHideTimer();_hoverPick(${slot.pick},this.parentElement);" onmouseleave="_unhoverPick()" onclick="_clickPick(event,${slot.pick},this.parentElement)">
+            <span style="color:rgba(255,255,255,0.9);font-size:1rem;line-height:1;pointer-events:none;">›</span>
           </div>
         </div>`;
     }
@@ -10300,6 +10303,7 @@ let _statsPinnedPick = null;
 let _statsHideTimer = null;
 let _panelCardRightEdge = 0;
 let _panelTargetWidth = 0;
+let _lastActiveCardEl = null;
 
 function _cancelHideTimer() { clearTimeout(_statsHideTimer); }
 
@@ -10351,6 +10355,11 @@ function _hideStatsPanel() {
     if (!_statsPinned) {
       panel.style.display = 'none';
       if (tab) tab.style.display = 'none';
+      if (_lastActiveCardEl) {
+        const st = _lastActiveCardEl.querySelector('.draft-static-tab');
+        if (st) st.style.visibility = 'visible';
+        _lastActiveCardEl = null;
+      }
     }
   }, 360);
 }
@@ -10359,6 +10368,11 @@ function _closeStatsPanel() {
   _statsPinned = false;
   _statsPinnedPick = null;
   _hideStatsPanel();
+  // Restore static tab immediately (hideStatsPanel's timeout also does it, but belt-and-suspenders)
+  if (_lastActiveCardEl) {
+    const st = _lastActiveCardEl.querySelector('.draft-static-tab');
+    if (st) setTimeout(() => { st.style.visibility = 'visible'; }, 360);
+  }
 }
 
 document.addEventListener('click', e => {
@@ -10387,6 +10401,15 @@ function _showStatsPanel(pickNum, cardEl) {
     ? (NFL_TEAMS[pick.team]?.color || '#555')
     : '#555';
 
+  // Hide static tab on this card; track it for restoration
+  if (_lastActiveCardEl && _lastActiveCardEl !== cardEl) {
+    const prev = _lastActiveCardEl.querySelector('.draft-static-tab');
+    if (prev) prev.style.visibility = 'visible';
+  }
+  _lastActiveCardEl = cardEl;
+  const staticTab = cardEl.querySelector('.draft-static-tab');
+  if (staticTab) staticTab.style.visibility = 'hidden';
+
   // Position panel (width starts at 0, then animates open)
   panel.style.left   = panelLeft + 'px';
   panel.style.right  = 'auto';
@@ -10397,8 +10420,9 @@ function _showStatsPanel(pickNum, cardEl) {
 
   // Position tab at the card's right edge (it will ride the expanding panel)
   tab.style.backgroundColor = teamColor;
+  tab.style.height  = rect.height + 'px';
   tab.style.left    = panelLeft + 'px';
-  tab.style.top     = (rect.top + rect.height / 2 - 18) + 'px';
+  tab.style.top     = rect.top + 'px';
   tab.style.display = 'flex';
 
   // Animate both with the same curve so the tab rides the panel edge
