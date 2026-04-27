@@ -206,6 +206,12 @@
   <div id="nfl-free-agency" class="nfl-panel panel" style="display:none;"></div>
   <div id="nfl-fantasy" class="nfl-panel panel" style="display:none;"></div>
 </div>
+
+<!-- Draft pick stats sidebar -->
+<div id="draft-stats-panel" style="position:fixed;top:50%;right:-380px;transform:translateY(-50%);width:300px;max-height:80vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px 0 0 12px;padding:20px 18px 16px;z-index:600;transition:right 0.22s cubic-bezier(0.4,0,0.2,1);box-shadow:-6px 0 32px rgba(0,0,0,0.55);">
+  <button onclick="_closeStatsPanel()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px;" title="Close">✕</button>
+  <div id="draft-stats-content"></div>
+</div>
 </main>
 
 <script>
@@ -274,11 +280,9 @@ function toggleDraftSchoolDropdown() {
 function initDraftSchoolDropdown() {
   const optionsContainer = document.getElementById('draft-school-options');
   if (!optionsContainer) return;
-  const schoolMap = new Map(NFL_PROSPECTS.map(p => [p.name.toLowerCase(), p.school]));
   const schoolCounts = {};
   window._livePicks.forEach(p => {
-    const school = schoolMap.get(p.name.toLowerCase());
-    if (school) schoolCounts[school] = (schoolCounts[school] || 0) + 1;
+    if (p.college) schoolCounts[p.college] = (schoolCounts[p.college] || 0) + 1;
   });
   const schools = Object.entries(schoolCounts).sort((a, b) => a[0].localeCompare(b[0]));
   schools.forEach(([school, count]) => {
@@ -654,10 +658,8 @@ async function fetchEspnDraftPicks() {
     const picks = (data.picks || [])
       .map(p => {
         const team = _NFL_ESPN_TEAM_IDS[String(p.teamId)] || '';
-        // Look up position from our board by name first (most reliable), fall back to posId map
-        const boardMatch = NFL_PROSPECTS.find(b => b.name.toLowerCase() === (p.name||'').toLowerCase());
-        const pos = boardMatch?.pos || _ESPN_POS_IDS[String(p.posId)] || '';
-        return { pick: p.pick, round: p.round, team, name: p.name || '', pos, espnAthleteId: p.espnAthleteId || '' };
+        const pos  = p.pos || _ESPN_POS_IDS[String(p.posId)] || '';
+        return { pick: p.pick, round: p.round, team, name: p.name || '', pos, espnAthleteId: p.espnAthleteId || '', college: p.college || '' };
       })
       .filter(p => p.name);
 
@@ -1076,7 +1078,6 @@ function _liveHeadshotUrl(livePick) {
 function renderLiveDraftOrder() {
   const container = document.getElementById('render-draft-order');
   if (!container) return;
-  const schoolMap = new Map(NFL_PROSPECTS.map(p => [p.name.toLowerCase(), p.school]));
   const liveMap = new Map(window._livePicks.map(p => [p.pick, p]));
 
   // Show all rounds when any cross-round filter is active, otherwise filter by selected round
@@ -1104,8 +1105,7 @@ function renderLiveDraftOrder() {
   if (_draftSchoolFilter) {
     picks = picks.filter(slot => {
       const live = liveMap.get(slot.pick);
-      if (!live) return false;
-      return schoolMap.get(live.name.toLowerCase()) === _draftSchoolFilter;
+      return live && live.college === _draftSchoolFilter;
     });
   }
 
@@ -1117,16 +1117,17 @@ function renderLiveDraftOrder() {
 
     if (live) {
       const hs = _liveHeadshotUrl(live);
-      const school = schoolMap.get(live.name.toLowerCase()) || '';
+      const school = live.college || '';
+      const cLogo = school && (typeof COLLEGE_TEAMS !== 'undefined') ? (COLLEGE_TEAMS[school]?.logo || '') : '';
       return `
-        <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
+        <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);cursor:pointer;transition:border-color 0.15s;" onmouseenter="_hoverPick(${slot.pick})" onmouseleave="_unhoverPick()" onclick="_clickPick(event,${slot.pick})">
           <div class="p-rank" style="color:${color};">#${slot.pick}</div>
           <div class="p-logo-box"><img src="${logo}" style="width:120px;height:120px;object-fit:contain;position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0.3;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));" onerror="this.style.display='none'"></div>
           ${hs ? `<img src="${hs}" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:1;" onerror="this.style.display='none'">` : ''}
           <div class="p-main">
             <div class="p-name">${live.name}</div>
             <div class="p-meta"><span class="p-pos">${live.pos}</span> | ${teamData.name}</div>
-            ${school ? (() => { const cLogo = (typeof COLLEGE_TEAMS !== 'undefined' && COLLEGE_TEAMS[school]?.logo) || ''; return `<div style="display:flex;align-items:center;gap:5px;margin-top:3px;">${cLogo ? `<img src="${cLogo}" style="width:16px;height:16px;object-fit:contain;opacity:0.85;filter:drop-shadow(0 0 3px rgba(255,255,255,0.5));" onerror="this.style.display='none'">` : ''}<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:600;color:var(--text);opacity:0.75;">${school}</span></div>`; })() : ''}
+            ${school ? `<div style="display:flex;align-items:center;gap:5px;margin-top:3px;">${cLogo ? `<img src="${cLogo}" style="width:16px;height:16px;object-fit:contain;opacity:0.85;filter:drop-shadow(0 0 3px rgba(255,255,255,0.5));" onerror="this.style.display='none'">` : ''}<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:600;color:var(--text);opacity:0.75;">${school}</span></div>` : ''}
           </div>
         </div>`;
     }
@@ -10286,6 +10287,154 @@ function renderFreeAgencyResults() {
 
 // ── END FREE AGENCY TRACKER ──────────────────────────────────────────────────
 
+
+// ── Draft Stats Panel ────────────────────────────────────────────
+const _statsCache = {};
+let _statsPinned = false;
+let _statsPinnedPick = null;
+let _statsHideTimer = null;
+
+function _hoverPick(pickNum) {
+  if (_statsPinned) return;
+  clearTimeout(_statsHideTimer);
+  _showStatsPanel(pickNum);
+}
+
+function _unhoverPick() {
+  if (_statsPinned) return;
+  _statsHideTimer = setTimeout(() => {
+    const p = document.getElementById('draft-stats-panel');
+    if (p) p.style.right = '-380px';
+  }, 180);
+}
+
+function _clickPick(e, pickNum) {
+  e.stopPropagation();
+  if (_statsPinned && _statsPinnedPick === pickNum) {
+    _closeStatsPanel();
+  } else {
+    _statsPinned = true;
+    _statsPinnedPick = pickNum;
+    _showStatsPanel(pickNum);
+  }
+}
+
+function _closeStatsPanel() {
+  _statsPinned = false;
+  _statsPinnedPick = null;
+  const p = document.getElementById('draft-stats-panel');
+  if (p) p.style.right = '-380px';
+}
+
+document.addEventListener('click', e => {
+  if (!_statsPinned) return;
+  const panel = document.getElementById('draft-stats-panel');
+  if (panel && !panel.contains(e.target)) _closeStatsPanel();
+});
+
+function _showStatsPanel(pickNum) {
+  const panel = document.getElementById('draft-stats-panel');
+  if (!panel) return;
+  const pick = (window._livePicks || []).find(p => p.pick === pickNum);
+  if (!pick) return;
+
+  panel.style.right = '0';
+
+  const content = document.getElementById('draft-stats-content');
+  const cData   = (typeof COLLEGE_TEAMS !== 'undefined' && pick.college) ? (COLLEGE_TEAMS[pick.college] || {}) : {};
+  const hs      = pick.espnAthleteId ? `https://a.espncdn.com/i/headshots/nfl/players/full/${pick.espnAthleteId}.png` : '';
+  const cLogo   = cData.logo || '';
+
+  content.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;padding-right:20px;">
+      ${hs ? `<img src="${hs}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--border);" onerror="this.style.display='none'">` : ''}
+      <div style="min-width:0;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:2px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pick.name}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap;">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:0.7rem;letter-spacing:1px;padding:2px 8px;border-radius:5px;background:${_faPosColor(pick.pos)};color:#fff;">${pick.pos}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);">Pick #${pickNum}</span>
+        </div>
+        ${pick.college ? `<div style="display:flex;align-items:center;gap:5px;margin-top:5px;">${cLogo ? `<img src="${cLogo}" style="width:13px;height:13px;object-fit:contain;filter:drop-shadow(0 0 2px rgba(255,255,255,0.5));" onerror="this.style.display='none'">` : ''}<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);">${pick.college}</span></div>` : ''}
+      </div>
+    </div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:0.65rem;letter-spacing:2.5px;color:var(--accent);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:5px;">2025 COLLEGE SEASON</div>
+    <div id="stats-body" style="min-height:64px;display:flex;align-items:center;justify-content:center;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;color:var(--muted);letter-spacing:1px;">Loading...</div>
+    </div>
+    <div style="font-size:0.62rem;color:var(--muted);text-align:center;margin-top:10px;font-family:'Barlow',sans-serif;opacity:0.5;">Click card to pin · click again to close</div>
+  `;
+
+  if (_statsCache[pickNum]) {
+    _renderCollegeStats(pick.pos, _statsCache[pickNum], document.getElementById('stats-body'));
+    return;
+  }
+
+  fetch(`https://nfl-draft-proxy.j33matt.workers.dev/college-stats?name=${encodeURIComponent(pick.name)}&espnId=${encodeURIComponent(pick.espnAthleteId || '')}`)
+    .then(r => r.json())
+    .then(data => {
+      _statsCache[pickNum] = data.categories || [];
+      const body = document.getElementById('stats-body');
+      if (body) _renderCollegeStats(pick.pos, _statsCache[pickNum], body);
+    })
+    .catch(() => {
+      const body = document.getElementById('stats-body');
+      if (body) body.innerHTML = '<div style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;font-size:0.85rem;letter-spacing:1px;">Stats unavailable</div>';
+    });
+}
+
+const _STAT_CONFIG = {
+  QB:   [['passing',['completions'],'CMP'],['passing',['passingAttempts','attempts'],'ATT'],['passing',['completionPct','completionPercentage'],'CMP%'],['passing',['passingYards','netPassingYards'],'YDS'],['passing',['passingTouchdowns','touchdowns'],'TD'],['passing',['interceptions'],'INT'],['rushing',['rushingYards'],'RUSH YDS'],['rushing',['rushingTouchdowns'],'RUSH TD']],
+  RB:   [['rushing',['rushingAttempts','carries'],'CAR'],['rushing',['rushingYards'],'YDS'],['rushing',['yardsPerRushAttempt','rushingYardsPerAttempt'],'YPC'],['rushing',['rushingTouchdowns'],'TD'],['receiving',['receptions'],'REC'],['receiving',['receivingYards'],'REC YDS'],['receiving',['receivingTouchdowns'],'REC TD']],
+  WR:   [['receiving',['receptions'],'REC'],['receiving',['receivingYards'],'YDS'],['receiving',['yardsPerReception'],'AVG'],['receiving',['receivingTouchdowns'],'TD'],['receiving',['targets'],'TGT']],
+  TE:   [['receiving',['receptions'],'REC'],['receiving',['receivingYards'],'YDS'],['receiving',['yardsPerReception'],'AVG'],['receiving',['receivingTouchdowns'],'TD']],
+  EDGE: [['defensive',['totalTackles','tackles'],'TACKLES'],['defensive',['sacks'],'SACKS'],['defensive',['tacklesForLoss'],'TFL'],['defensive',['passesDefended'],'PD']],
+  DT:   [['defensive',['totalTackles','tackles'],'TACKLES'],['defensive',['sacks'],'SACKS'],['defensive',['tacklesForLoss'],'TFL']],
+  LB:   [['defensive',['totalTackles','tackles'],'TACKLES'],['defensive',['sacks'],'SACKS'],['defensive',['tacklesForLoss'],'TFL'],['interceptions',['interceptions'],'INT'],['defensive',['passesDefended'],'PD']],
+  CB:   [['defensive',['totalTackles','tackles'],'TACKLES'],['interceptions',['interceptions'],'INT'],['defensive',['passesDefended'],'PD']],
+  S:    [['defensive',['totalTackles','tackles'],'TACKLES'],['interceptions',['interceptions'],'INT'],['defensive',['passesDefended'],'PD'],['defensive',['sacks'],'SACKS']],
+  OT:   null, OG: null, IOL: null, C: null, P: null,
+  K:    [['kicking',['fieldGoalsMade'],'FGM'],['kicking',['fieldGoalAttempts'],'FGA'],['kicking',['fieldGoalPct'],'FG%'],['kicking',['longFieldGoal'],'LONG'],['kicking',['extraPointsMade'],'PAT']],
+};
+
+function _getStat(categories, catName, ...keys) {
+  const cat = categories.find(c =>
+    c.name?.toLowerCase() === catName.toLowerCase() ||
+    c.displayName?.toLowerCase().includes(catName.toLowerCase())
+  );
+  if (!cat) return null;
+  for (const key of keys) {
+    const s = (cat.stats || []).find(s => s.name === key || s.abbreviation === key);
+    if (s) return s.displayValue ?? (s.value !== undefined ? String(Math.round(s.value * 10) / 10) : null);
+  }
+  return null;
+}
+
+function _renderCollegeStats(pos, categories, container) {
+  const config = _STAT_CONFIG[pos] || _STAT_CONFIG[pos?.toUpperCase()];
+
+  if (!config) {
+    container.innerHTML = `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;text-align:center;padding:8px 0;letter-spacing:1px;">No stat profile for ${pos}</div>`;
+    return;
+  }
+  if (!categories.length) {
+    container.innerHTML = `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;text-align:center;padding:8px 0;letter-spacing:1px;">Stats unavailable</div>`;
+    return;
+  }
+
+  const rows = config.map(([cat, keys, label]) => ({ label, val: _getStat(categories, cat, ...keys) ?? '—' }));
+  const hasAny = rows.some(r => r.val !== '—');
+  if (!hasAny) {
+    container.innerHTML = `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;text-align:center;padding:8px 0;letter-spacing:1px;">Stats unavailable</div>`;
+    return;
+  }
+
+  container.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">${
+    rows.map(r => `<div style="background:var(--surface2);border-radius:8px;padding:8px 6px;text-align:center;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:1px;color:var(--text);">${r.val}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:1px;">${r.label}</div>
+    </div>`).join('')
+  }</div>`;
+}
 
 // ── Fantasy Rankings ─────────────────────────────────────────────
 let _fantasyPosFilter = 'ALL';
