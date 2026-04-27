@@ -10066,24 +10066,36 @@ function renderFreeAgency() {
         color: var(--text); cursor: pointer; text-transform: uppercase; transition: all 0.15s; }
       .fa-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
       .fa-count { font-family: Barlow Condensed, sans-serif; font-size: 0.85rem; color: var(--muted); margin-left: auto; }
-      .fa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
-      .fa-card { background: var(--surface); border-radius: 12px; padding: 14px 16px;
-        border: 1px solid var(--border); transition: border-color 0.2s; }
-      .fa-card:hover { border-color: var(--accent); }
-      .fa-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+      .fa-grid { display: flex; flex-direction: column; gap: 10px; }
+      .fa-card { position: relative; border-radius: 14px; overflow: hidden; display: flex;
+        align-items: center; height: 92px; border: 1px solid var(--border);
+        transition: border-color 0.2s, transform 0.15s; }
+      .fa-card:hover { transform: translateX(4px); }
+      .fa-headshot-wrap { width: 78px; height: 100%; flex-shrink: 0; overflow: hidden; }
+      .fa-headshot { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+      .fa-card-body { flex: 1; padding: 10px 80px 10px 14px; display: flex; flex-direction: column;
+        justify-content: center; gap: 7px; min-width: 0; }
+      .fa-card-row1 { display: flex; align-items: center; gap: 8px; }
+      .fa-card-row2 { display: flex; align-items: center; gap: 7px; }
+      .fa-watermark { position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+        pointer-events: none; opacity: 0.13; }
+      .fa-watermark img { width: 68px; height: 68px; object-fit: contain; }
       .fa-pos-badge { font-family: Bebas Neue, sans-serif; font-size: 0.75rem; letter-spacing: 1px;
         padding: 2px 8px; border-radius: 6px; color: #fff; flex-shrink: 0; }
-      .fa-player-name { font-family: Barlow Condensed, sans-serif; font-size: 1.1rem; font-weight: 700; flex: 1; }
+      .fa-player-name { font-family: Barlow Condensed, sans-serif; font-size: 1.25rem; font-weight: 700;
+        flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .fa-type-badge { font-size: 0.68rem; font-family: Barlow Condensed, sans-serif; font-weight: 700;
-        letter-spacing: 1px; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; }
+        letter-spacing: 1px; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; flex-shrink: 0; }
       .fa-type-signing     { background: rgba(0,200,100,0.15); color: #00c864; border: 1px solid rgba(0,200,100,0.3); }
       .fa-type-trade       { background: rgba(255,160,0,0.15);  color: #ffa000; border: 1px solid rgba(255,160,0,0.3); }
       .fa-type-acquisition { background: rgba(100,160,255,0.15);color: #64a0ff; border: 1px solid rgba(100,160,255,0.3); }
-      .fa-teams-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); font-family: Barlow Condensed, sans-serif; }
-      .fa-team-logo { width: 22px; height: 22px; object-fit: contain; }
-      .fa-team-name-inline { color: var(--text); font-weight: 600; }
-      .fa-arrow { opacity: 0.5; }
-      .fa-date { font-size: 0.72rem; color: var(--muted); margin-top: 6px; font-family: Barlow, sans-serif; }
+      .fa-tm-logo { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+      .fa-tm-abbr { font-family: Barlow Condensed, sans-serif; font-size: 0.9rem; font-weight: 700;
+        color: var(--muted); letter-spacing: 0.5px; }
+      .fa-arrow { opacity: 0.45; font-size: 1rem; }
+      .fa-szn-chip { font-family: Barlow Condensed, sans-serif; font-size: 0.8rem; font-weight: 700;
+        padding: 1px 7px; border-radius: 4px; border: 1px solid var(--border);
+        background: rgba(255,255,255,0.07); color: var(--muted); letter-spacing: 0.4px; margin-left: 4px; }
       .fa-section-header { font-family: Bebas Neue, sans-serif; font-size: 1.3rem; letter-spacing: 2px;
         padding: 10px 0 6px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
       .fa-section-arrivals   { color: #00c864; }
@@ -10212,37 +10224,55 @@ function _faFilterMoves(moves) {
 }
 
 function _faBuildCard(m) {
+  // Build name→2025 finish lookup (cached on first call)
+  if (!_faBuildCard._sznMap) {
+    _faBuildCard._sznMap = {};
+    if (typeof FANTASY_RANKINGS !== 'undefined' && typeof FF_LAST_SEASON !== 'undefined') {
+      for (const p of FANTASY_RANKINGS) {
+        if (FF_LAST_SEASON[p.rank]) _faBuildCard._sznMap[p.name.toLowerCase()] = FF_LAST_SEASON[p.rank];
+      }
+    }
+  }
+
+  const lastSzn   = _faBuildCard._sznMap[m.player.toLowerCase()] || null;
   const typeClass = m.type === 'trade' ? 'fa-type-trade' : m.type === 'signing' ? 'fa-type-signing' : 'fa-type-acquisition';
   const typeLabel = m.type === 'trade' ? 'Trade' : m.type === 'signing' ? 'Signing' : 'Acquired';
-  const toAbbr  = m.toTeam   || '';
-  const fromAbbr = m.fromTeam || '';
-  const toName   = m.toTeamName   || (NFL_TEAMS[toAbbr]   ? NFL_TEAMS[toAbbr].name   : toAbbr);
-  const fromName = m.fromTeamName || (NFL_TEAMS[fromAbbr] ? NFL_TEAMS[fromAbbr].name : fromAbbr);
+  const toAbbr    = m.toTeam   || '';
+  const fromAbbr  = m.fromTeam || '';
 
-  let teamsHtml = '';
-  if (fromAbbr) {
-    teamsHtml += `<img class="fa-team-logo" src="${_faTeamLogoUrl(fromAbbr)}" onerror="this.style.display='none'">
-      <span class="fa-team-name-inline">${fromName}</span>
-      <span class="fa-arrow">→</span>`;
-  }
-  if (toAbbr) {
-    teamsHtml += `<img class="fa-team-logo" src="${_faTeamLogoUrl(toAbbr)}" onerror="this.style.display='none'">
-      <span class="fa-team-name-inline">${toName}</span>`;
-  } else if (toName && !fromAbbr) {
-    teamsHtml += `<span class="fa-team-name-inline">${toName}</span>`;
-  }
+  // Team color gradient background
+  const hex = ((NFL_TEAMS[toAbbr] || {}).color || '#555555').replace('#','');
+  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+  const bg  = `linear-gradient(to right,rgba(${r},${g},${b},0.28) 0%,rgba(${r},${g},${b},0.08) 55%,transparent 100%),var(--surface)`;
+  const bdr = `rgba(${r},${g},${b},0.4)`;
 
-  const dateStr = m.date ? new Date(m.date + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '';
+  // Headshot or team-logo fallback
+  const headshot = m.espnId
+    ? `<div class="fa-headshot-wrap"><img class="fa-headshot" src="https://a.espncdn.com/i/headshots/nfl/players/full/${m.espnId}.png" onerror="this.parentElement.style.visibility='hidden'"></div>`
+    : `<div class="fa-headshot-wrap" style="background:rgba(${r},${g},${b},0.15);display:flex;align-items:center;justify-content:center;"><img src="${_faTeamLogoUrl(toAbbr)}" style="width:44px;height:44px;object-fit:contain;opacity:0.35;" onerror="this.style.display='none'"></div>`;
+
+  const fromHtml = fromAbbr
+    ? `<img class="fa-tm-logo" src="${_faTeamLogoUrl(fromAbbr)}" onerror="this.style.display='none'"><span class="fa-tm-abbr">${fromAbbr}</span><span class="fa-arrow">→</span>`
+    : '';
+  const toHtml = toAbbr
+    ? `<img class="fa-tm-logo" src="${_faTeamLogoUrl(toAbbr)}" onerror="this.style.display='none'"><span class="fa-tm-abbr">${toAbbr}</span>`
+    : '';
+  const sznHtml = lastSzn ? `<span class="fa-szn-chip">${lastSzn}</span>` : '';
 
   return `
-    <div class="fa-card">
-      <div class="fa-card-top">
-        <span class="fa-pos-badge" style="background:${_faPosColor(m.pos)}">${m.pos}</span>
-        <span class="fa-player-name">${m.player}</span>
-        <span class="fa-type-badge ${typeClass}">${typeLabel}</span>
+    <div class="fa-card" style="background:${bg};border-color:${bdr};">
+      ${headshot}
+      <div class="fa-card-body">
+        <div class="fa-card-row1">
+          <span class="fa-pos-badge" style="background:${_faPosColor(m.pos)}">${m.pos}</span>
+          <span class="fa-player-name">${m.player}</span>
+          <span class="fa-type-badge ${typeClass}">${typeLabel}</span>
+        </div>
+        <div class="fa-card-row2">
+          ${fromHtml}${toHtml}${sznHtml}
+        </div>
       </div>
-      <div class="fa-teams-row">${teamsHtml}</div>
-      ${dateStr ? `<div class="fa-date">${dateStr}</div>` : ''}
+      <div class="fa-watermark"><img src="${_faTeamLogoUrl(toAbbr)}" onerror="this.style.display='none'"></div>
     </div>`;
 }
 
