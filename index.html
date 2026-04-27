@@ -10384,7 +10384,7 @@ function _showStatsPanel(pickNum, cardEl) {
 
   // Team color for the pull-tab
   const teamColor = (typeof NFL_TEAMS !== 'undefined')
-    ? (NFL_TEAMS.find(t => t.abbr === pick.team)?.color || '#555')
+    ? (NFL_TEAMS[pick.team]?.color || '#555')
     : '#555';
 
   // Position panel (width starts at 0, then animates open)
