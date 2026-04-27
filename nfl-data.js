@@ -1225,7 +1225,6 @@ const FA_CURATED_MOVES = [
   { player:'David Montgomery',    pos:'RB', type:'trade',   fromTeam:'DET', toTeam:'HOU', date:'2026-03-07', espnId:4035538  },
   { player:'Kyler Murray',        pos:'QB', type:'signing', fromTeam:'ARI', toTeam:'MIN', date:'2026-03-13', espnId:3917315  },
   { player:'Malik Willis',        pos:'QB', type:'signing', fromTeam:'GB',  toTeam:'MIA', date:'2026-03-12', espnId:4242512  },
-  { player:'Javonte Williams',    pos:'RB', type:'signing', fromTeam:'DEN', toTeam:'DAL', date:'2026-03-16', espnId:4361579  },
   { player:"Wan'Dale Robinson",   pos:'WR', type:'signing', fromTeam:'NYG', toTeam:'TEN', date:'2026-03-14', espnId:4569587  },
   { player:'Romeo Doubs',         pos:'WR', type:'signing', fromTeam:'GB',  toTeam:'NE',  date:'2026-03-13', espnId:4361432  },
   { player:'Rico Dowdle',         pos:'RB', type:'signing', fromTeam:'DAL', toTeam:'PIT', date:'2026-03-11', espnId:4038815  },
