@@ -659,7 +659,7 @@ async function fetchEspnDraftPicks() {
       .map(p => {
         const team = _NFL_ESPN_TEAM_IDS[String(p.teamId)] || '';
         const pos  = p.pos || _ESPN_POS_IDS[String(p.posId)] || '';
-        return { pick: p.pick, round: p.round, team, name: p.name || '', pos, espnAthleteId: p.espnAthleteId || '', college: p.college || '' };
+        return { pick: p.pick, round: p.round, team, name: p.name || '', pos, espnAthleteId: p.espnAthleteId || '', college: p.college || '', collegeLogo: p.collegeLogo || '' };
       })
       .filter(p => p.name);
 
@@ -1118,7 +1118,7 @@ function renderLiveDraftOrder() {
     if (live) {
       const hs = _liveHeadshotUrl(live);
       const school = live.college || '';
-      const cLogo = school && (typeof COLLEGE_TEAMS !== 'undefined') ? (COLLEGE_TEAMS[school]?.logo || '') : '';
+      const cLogo = live.collegeLogo || (school && (typeof COLLEGE_TEAMS !== 'undefined') ? (COLLEGE_TEAMS[school]?.logo || '') : '');
       return `
         <div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);cursor:pointer;transition:border-color 0.15s;" onmouseenter="_hoverPick(${slot.pick})" onmouseleave="_unhoverPick()" onclick="_clickPick(event,${slot.pick})">
           <div class="p-rank" style="color:${color};">#${slot.pick}</div>
