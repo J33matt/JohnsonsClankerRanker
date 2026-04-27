@@ -10382,7 +10382,10 @@ function _hideStatsPanel() {
 // Close the fixed hover panel immediately when the page scrolls
 // (it's position:fixed and would visually detach from the card)
 window.addEventListener('scroll', () => {
-  if (_lastActiveCardEl !== null) {
+  // Only close if the mouse isn't currently over a card. If it is, a card
+  // may have just scrolled under the cursor (mouseenter fired) and we must
+  // not immediately kill the panel that was just opened.
+  if (_lastActiveCardEl !== null && _hoverPickNum === null) {
     _cancelHideTimer();
     _hideStatsPanel();
   }
