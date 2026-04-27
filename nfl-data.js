@@ -1136,29 +1136,29 @@ const FF_TEAM_MAP = {
   1:'CIN', 2:'ATL', 3:'DET', 4:'LAR', 5:'SF',  6:'SEA', 7:'DET', 8:'IND',
   9:'DAL', 10:'KC', 11:'MIN', 12:'ATL', 13:'BUF', 14:'BUF', 15:'MIA',
   16:'LV',  17:'NYG', 18:'HOU', 19:'ARI', 20:'PHI', 21:'LAC', 22:'CIN',
-  23:'BAL', 24:'GB',  25:'DAL', 26:'NE',  27:'SEA', 28:'BAL', 29:'ARI',
+  23:'BAL', 24:'GB',  25:'DAL', 26:'NE',  27:'KC',  28:'BAL', 29:'ARI',  // 27: Walker→KC
   30:'NO',  31:'PHI', 32:'LV',  33:'NYJ', 34:'WAS', 35:'CIN', 36:'PHI',
-  37:'NYJ', 38:'DEN', 39:'PHI', 40:'BAL', 41:'CAR', 42:'CIN', 43:'LAR',
-  44:'JAX', 45:'MIA', 46:'LAR', 47:'NYG', 48:'LAC', 49:'JAX', 50:'TB',
+  37:'NYJ', 38:'DAL', 39:'PHI', 40:'BAL', 41:'CAR', 42:'CIN', 43:'LAR',  // 38: J.Williams→DAL
+  44:'NO',  45:'DEN', 46:'LAR', 47:'NYG', 48:'LAC', 49:'JAX', 50:'TB',   // 44: Etienne→NO, 45: Waddle→DEN
   51:'WAS', 52:'NYG', 53:'SF',  54:'CHI', 55:'LAC', 56:'DAL', 57:'CHI',
   58:'TB',  59:'IND', 60:'CHI', 61:'CLE', 62:'CHI', 63:'DET', 64:'NE',
   65:'DEN', 66:'KC',  67:'GB',  68:'CLE', 69:'DEN', 70:'CHI', 71:'PIT',
-  72:'LAR', 73:'TB',  74:'ARI', 75:'CHI', 76:'JAX', 77:'PIT', 78:'LV',
-  79:'TEN', 80:'DET', 81:'IND', 82:'DET', 83:'ARI', 84:'CAR', 85:'DET',
+  72:'LAR', 73:'SF',  74:'ARI', 75:'BUF', 76:'JAX', 77:'PIT', 78:'LV',   // 73: Evans→SF, 75: Moore→BUF
+  79:'TEN', 80:'HOU', 81:'PIT', 82:'DET', 83:'MIN', 84:'CAR', 85:'DET',  // 80: Montgomery→HOU, 81: Pittman→PIT, 83: Murray→MIN
   86:'NE',  87:'TEN', 88:'NO',  89:'IND', 90:'TB',  91:'GB',  92:'GB',
-  93:'HOU', 94:'TEN', 95:'TB',  96:'JAX', 97:'LAC', 98:'ATL', 99:'JAX',
-  100:'DAL',101:'PIT',102:'SF', 103:'ARI',104:'GB', 105:'MIN',106:'SEA',
-  107:'ARI',108:'DEN',109:'LAC',110:'PHI',111:'GB', 112:'TB', 113:'KC',
-  114:'LAC',115:'MIN',116:'NYG',117:'GB', 118:'GB', 119:'BUF',120:'MIN',
-  121:'KC', 122:'LAR',123:'WAS',124:'IND',125:'CAR',126:'TEN',127:'PHI',
+  93:'HOU', 94:'TEN', 95:'TB',  96:'JAX', 97:'DEN', 98:'ATL', 99:'JAX',  // 97: Harvey→DEN
+  100:'PIT',101:'PIT',102:'SF', 103:'ARI',104:'MIA',105:'MIN',106:'SEA',  // 100: Dowdle→PIT, 104: Willis→MIA
+  107:'ARI',108:'DEN',109:'DEN',110:'TB', 111:'NYJ',112:'WAS',113:'KC',   // 109: Dobbins→DEN, 110: Gainwell→TB, 111: G.Smith→NYJ, 112: R.White→WAS
+  114:'LAC',115:'SEA',116:'TEN',117:'GB', 118:'NE', 119:'BUF',120:'IND', // 115: Darnold→SEA, 116: Robinson→TEN, 118: Doubs→NE, 120: D.Jones→IND
+  121:'KC', 122:'LAR',123:'ARI',124:'IND',125:'CAR',126:'TEN',127:'PHI', // 123: Brissett→ARI
   128:'CHI',129:'DAL',130:'HOU',131:'DAL',132:'SEA',133:'SF', 134:'SEA',
   135:'HOU',136:'SF', 137:'SF', 138:'LAC',139:'NO', 140:'JAX',141:'NO',
-  142:'HOU',143:'NO', 144:'JAX',145:'SF', 146:'NE', 147:'CLE',148:'KC',
-  150:'BAL',151:'ARI',152:'MIA',153:'HOU',154:'DEN',155:'SF', 156:'BAL',
+  142:'HOU',143:'NO', 144:'JAX',145:'SF', 146:'NE', 147:'CLE',148:'DET', // 148: Pacheco→DET
+  150:'NYG',151:'ARI',152:'MIA',153:'HOU',154:'DEN',155:'SF', 156:'BAL', // 150: Likely→NYG
   157:'NO', 158:'SF', 160:'NE', 161:'NO', 162:'HOU',163:'NO', 164:'CAR',
-  165:'WAS',166:'CAR',168:'JAX',169:'TEN',175:'NO', 176:'ATL',178:'TB',
-  180:'NO', 181:'CLE',182:'TYR',183:'BUF',187:'PIT',190:'KC', 191:'TJ',
-  193:'DEN',195:'WAS',201:'HOU',202:'GB', 203:'CHI',205:'PIT',213:'PIT',
+  165:'WAS',166:'CAR',168:'JAX',169:'TEN',175:'NO', 176:'ARI',178:'TB',  // 176: Allgeier→ARI
+  180:'NO', 181:'CLE',182:'NYG',183:'BUF',187:'PIT',190:'KC', 191:'MIN', // 182: Tracy bug fix→NYG, 191: Hockenson bug fix→MIN
+  193:'DEN',195:'ATL',201:'HOU',202:'PHI',203:'CHI',205:'PIT',213:'PIT', // 195: B.Robinson→ATL, 202: Wicks→PHI
   214:'NO', 217:'CLE',218:'TEN',219:'PIT',220:'NYJ',221:'IND',224:'BAL',
   225:'GB', 226:'BAL',228:'DEN',230:'TEN',231:'PIT',237:'MIA',238:'ARI',
   241:'DAL',244:'CHI',245:'ATL',247:'MIN',248:'WAS',249:'HOU',250:'CHI',
