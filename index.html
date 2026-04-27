@@ -259,6 +259,8 @@ function filterDraftPos(pos, btn) {
   document.querySelectorAll('#draft-pos-filters .pos-filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   _draftPosFilter = pos;
+  const dim = pos !== 'ALL' || !!_draftSchoolFilter;
+  document.querySelectorAll('#draft-round-filters .pos-filter-btn').forEach(b => b.style.opacity = dim ? '0.3' : '1');
   renderLiveDraftOrder();
 }
 
@@ -309,6 +311,8 @@ function filterDraftBySchool(school, label) {
     <span style="color:var(--text);font-size:0.75rem;">▼</span>
   `;
   _draftSchoolFilter = school === 'ALL' ? null : school;
+  const dim = !!_draftSchoolFilter || _draftPosFilter !== 'ALL';
+  document.querySelectorAll('#draft-round-filters .pos-filter-btn').forEach(b => b.style.opacity = dim ? '0.3' : '1');
   renderLiveDraftOrder();
 }
 
@@ -1075,12 +1079,17 @@ function renderLiveDraftOrder() {
   const schoolMap = new Map(NFL_PROSPECTS.map(p => [p.name.toLowerCase(), p.school]));
   const liveMap = new Map(window._livePicks.map(p => [p.pick, p]));
 
-  // Determine base pick set: by team (all rounds) or by round
-  let picks;
+  // Show all rounds when any cross-round filter is active, otherwise filter by selected round
+  const crossRoundFilter = (window._draftTeamFilter && window._draftTeamFilter !== 'ALL')
+    || _draftPosFilter !== 'ALL'
+    || !!_draftSchoolFilter;
+  const picks_base = crossRoundFilter
+    ? _effectiveDraftOrder()
+    : _effectiveDraftOrder().filter(p => p.round === _draftRound);
+  let picks = picks_base;
+
   if (window._draftTeamFilter && window._draftTeamFilter !== 'ALL') {
-    picks = _effectiveDraftOrder().filter(p => p.team === window._draftTeamFilter);
-  } else {
-    picks = _effectiveDraftOrder().filter(p => p.round === _draftRound);
+    picks = picks.filter(p => p.team === window._draftTeamFilter);
   }
 
   // Apply position filter (only makes sense on completed picks)
