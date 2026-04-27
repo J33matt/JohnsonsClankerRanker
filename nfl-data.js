@@ -1240,4 +1240,7 @@ const FA_CURATED_MOVES = [
   { player:'J.K. Dobbins',        pos:'RB', type:'signing', fromTeam:'LAC', toTeam:'DEN', date:'2026-03-12', espnId:4241985  },
   { player:'Sam Darnold',         pos:'QB', type:'signing', fromTeam:'MIN', toTeam:'SEA', date:'2026-03-10', espnId:3912547  },
   { player:'Geno Smith',          pos:'QB', type:'trade',   fromTeam:'SEA', toTeam:'NYJ', date:'2026-03-07', espnId:15864    },
+  { player:'Jamel Dean',          pos:'CB', type:'signing', fromTeam:'TB',  toTeam:'PIT', date:'2026-03-09', espnId:3873935  },
+  { player:'Jaquan Brisker',      pos:'S',  type:'signing', fromTeam:'CHI', toTeam:'PIT', date:'2026-03-12', espnId:4570044  },
+  { player:'Christian Kirk',      pos:'WR', type:'signing', fromTeam:'JAX', toTeam:'SF',  date:'2026-03-16', espnId:3895856  },
 ];
