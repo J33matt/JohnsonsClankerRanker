@@ -10031,13 +10031,19 @@ async function loadFreeAgencyData() {
 
     // Deduplicate by player + toTeam
     const seen = new Set();
-    _faData = moves.filter(m => {
+    const deduped = moves.filter(m => {
       if (!m.player || !m.toTeam) return false;
       const key = `${m.player.toLowerCase()}|${m.toTeam}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+
+    // Seed with curated moves, then append non-duplicate API results
+    const curated = (typeof FA_CURATED_MOVES !== 'undefined') ? FA_CURATED_MOVES : [];
+    const curatedKeys = new Set(curated.map(m => m.player.toLowerCase()));
+    const apiExtra = deduped.filter(m => !curatedKeys.has(m.player.toLowerCase()));
+    _faData = [...curated, ...apiExtra];
 
   } catch(e) {
     _faData = [];

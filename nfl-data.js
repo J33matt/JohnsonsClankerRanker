@@ -1213,3 +1213,31 @@ const FF_LAST_SEASON = {
   // Atlanta Falcons DST11 — not in rankings
   246:'DST12',
 };
+
+// Curated 2026 offseason moves (fantasy-relevant skill positions)
+const FA_CURATED_MOVES = [
+  { player:'Kenneth Walker III',  pos:'RB', type:'signing', fromTeam:'SEA', toTeam:'KC',  date:'2026-03-15' },
+  { player:'Travis Etienne Jr.',  pos:'RB', type:'signing', fromTeam:'JAX', toTeam:'NO',  date:'2026-03-12' },
+  { player:'Jaylen Waddle',       pos:'WR', type:'trade',   fromTeam:'MIA', toTeam:'DEN', date:'2026-03-10' },
+  { player:'DJ Moore',            pos:'WR', type:'trade',   fromTeam:'CHI', toTeam:'BUF', date:'2026-03-08' },
+  { player:'Mike Evans',          pos:'WR', type:'signing', fromTeam:'TB',  toTeam:'SF',  date:'2026-03-14' },
+  { player:'Michael Pittman Jr.', pos:'WR', type:'trade',   fromTeam:'IND', toTeam:'PIT', date:'2026-03-09' },
+  { player:'David Montgomery',    pos:'RB', type:'trade',   fromTeam:'DET', toTeam:'HOU', date:'2026-03-07' },
+  { player:'Kyler Murray',        pos:'QB', type:'signing', fromTeam:'ARI', toTeam:'MIN', date:'2026-03-13' },
+  { player:'Malik Willis',        pos:'QB', type:'signing', fromTeam:'GB',  toTeam:'MIA', date:'2026-03-12' },
+  { player:'Javonte Williams',    pos:'RB', type:'signing', fromTeam:'DEN', toTeam:'DAL', date:'2026-03-16' },
+  { player:"Wan'Dale Robinson",   pos:'WR', type:'signing', fromTeam:'NYG', toTeam:'TEN', date:'2026-03-14' },
+  { player:'Romeo Doubs',         pos:'WR', type:'signing', fromTeam:'GB',  toTeam:'NE',  date:'2026-03-13' },
+  { player:'Rico Dowdle',         pos:'RB', type:'signing', fromTeam:'DAL', toTeam:'PIT', date:'2026-03-11' },
+  { player:'Rachaad White',       pos:'RB', type:'signing', fromTeam:'TB',  toTeam:'WAS', date:'2026-03-12' },
+  { player:'Isaiah Likely',       pos:'TE', type:'signing', fromTeam:'BAL', toTeam:'NYG', date:'2026-03-15' },
+  { player:'Isiah Pacheco',       pos:'RB', type:'signing', fromTeam:'KC',  toTeam:'DET', date:'2026-03-13' },
+  { player:'Kenneth Gainwell',    pos:'RB', type:'signing', fromTeam:'PHI', toTeam:'TB',  date:'2026-03-11' },
+  { player:'Tyler Allgeier',      pos:'RB', type:'signing', fromTeam:'ATL', toTeam:'ARI', date:'2026-03-12' },
+  { player:'Brian Robinson Jr.',  pos:'RB', type:'signing', fromTeam:'WAS', toTeam:'ATL', date:'2026-03-14' },
+  { player:'Dontayvion Wicks',    pos:'WR', type:'trade',   fromTeam:'GB',  toTeam:'PHI', date:'2026-03-08' },
+  { player:'Daniel Jones',        pos:'QB', type:'signing', fromTeam:'MIN', toTeam:'IND', date:'2026-03-13' },
+  { player:'J.K. Dobbins',        pos:'RB', type:'signing', fromTeam:'LAC', toTeam:'DEN', date:'2026-03-12' },
+  { player:'Sam Darnold',         pos:'QB', type:'signing', fromTeam:'MIN', toTeam:'SEA', date:'2026-03-10' },
+  { player:'Geno Smith',          pos:'QB', type:'trade',   fromTeam:'SEA', toTeam:'NYJ', date:'2026-03-07' },
+];
