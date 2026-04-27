@@ -10378,7 +10378,7 @@ function _pinPanel(pickNum, cardEl) {
 
   const panelEl = document.createElement('div');
   panelEl.style.cssText = `position:absolute;left:${panelLeft}px;top:${panelTop}px;width:0;height:${rect.height}px;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;z-index:600;transition:width 0.35s cubic-bezier(0.0,0,0.2,1);box-shadow:4px 0 20px rgba(0,0,0,0.4);`;
-  panelEl.innerHTML = `<div style="padding:10px 12px 10px 11px;height:100%;box-sizing:border-box;overflow:hidden;"><div style="font-family:'Bebas Neue',sans-serif;font-size:0.55rem;letter-spacing:2px;color:var(--accent);margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:3px;">2025 COLLEGE</div><div class="pinned-stats-body" style="display:flex;align-items:center;justify-content:center;min-height:36px;"><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--muted);letter-spacing:1px;">Loading…</div></div></div>`;
+  panelEl.innerHTML = `<div style="padding:10px 12px 10px 11px;height:100%;box-sizing:border-box;overflow:hidden;"><div style="font-family:'Bebas Neue',sans-serif;font-size:0.55rem;letter-spacing:2px;color:var(--accent);margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:3px;">2025 COLLEGE STATS</div><div class="pinned-stats-body" style="display:flex;align-items:center;justify-content:center;min-height:36px;"><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--muted);letter-spacing:1px;">Loading…</div></div></div>`;
   document.body.appendChild(panelEl);
 
   const tabEl = document.createElement('div');
@@ -10478,7 +10478,7 @@ function _showStatsPanel(pickNum, cardEl) {
 
   const content = document.getElementById('draft-stats-content');
   content.innerHTML = `
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:0.55rem;letter-spacing:2px;color:var(--accent);margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:3px;">2025 COLLEGE</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:0.55rem;letter-spacing:2px;color:var(--accent);margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:3px;">2025 COLLEGE STATS</div>
     <div id="stats-body" style="display:flex;align-items:center;justify-content:center;min-height:36px;">
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--muted);letter-spacing:1px;">Loading…</div>
     </div>
