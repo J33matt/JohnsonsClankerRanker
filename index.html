@@ -10299,7 +10299,8 @@ function renderFreeAgencyResults() {
 // ── Draft Stats Panel ────────────────────────────────────────────
 const _statsCache = {};
 const _pinnedPanels = new Map(); // pickNum -> { panelEl, tabEl, cardEl, panelLeft, panelWidth }
-let _statsHideTimer  = null;
+let _statsHideTimer   = null; // 180ms hover-debounce
+let _hideDisplayTimer = null; // 360ms display:none after collapse animation
 let _panelCardRightEdge = 0;
 let _lastActiveCardEl   = null;
 let _lastActivePickNum  = null;
@@ -10359,7 +10360,9 @@ function _hideStatsPanel() {
   const snapPick = _lastActivePickNum;
   _lastActiveCardEl  = null;
   _lastActivePickNum = null;
-  setTimeout(() => {
+  clearTimeout(_hideDisplayTimer);
+  _hideDisplayTimer = setTimeout(() => {
+    _hideDisplayTimer = null;
     panel.style.display = 'none';
     if (tab) tab.style.display = 'none';
     // Only restore static tab if this card wasn't pinned in the meantime
@@ -10453,6 +10456,10 @@ function _showStatsPanel(pickNum, cardEl) {
   if (!panel) return;
   const pick = (window._livePicks || []).find(p => p.pick === pickNum);
   if (!pick) return;
+
+  // Cancel any in-flight display:none timer from a previous collapse
+  clearTimeout(_hideDisplayTimer);
+  _hideDisplayTimer = null;
 
   const rect       = cardEl.getBoundingClientRect();
   const panelLeft  = rect.right - 1;
