@@ -10349,6 +10349,7 @@ function _clickPullTab(e) {
 }
 
 function _hideStatsPanel() {
+  if (_hideDisplayTimer !== null) return; // collapse already in progress; don't clobber snapCard
   const panel = document.getElementById('draft-stats-panel');
   const tab   = document.getElementById('draft-pull-tab');
   const chev  = document.getElementById('draft-tab-chevron');
