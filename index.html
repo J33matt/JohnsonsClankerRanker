@@ -208,7 +208,7 @@
 </div>
 
 <!-- Draft pick stats sidebar -->
-<div id="draft-stats-panel" style="position:fixed;display:none;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;padding:10px 12px 10px 11px;z-index:600;transition:opacity 0.18s cubic-bezier(0.4,0,0.2,1),transform 0.18s cubic-bezier(0.4,0,0.2,1);box-shadow:4px 0 20px rgba(0,0,0,0.4);">
+<div id="draft-stats-panel" style="position:fixed;display:none;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-left:none;border-radius:0 8px 8px 0;padding:10px 12px 10px 11px;z-index:600;transition:clip-path 0.32s cubic-bezier(0.0,0,0.2,1);box-shadow:4px 0 20px rgba(0,0,0,0.4);">
   <div id="draft-stats-content"></div>
 </div>
 </main>
@@ -10318,9 +10318,8 @@ function _clickPick(e, pickNum, cardEl) {
 function _hideStatsPanel() {
   const p = document.getElementById('draft-stats-panel');
   if (!p) return;
-  p.style.opacity = '0';
-  p.style.transform = 'translateX(16px)';
-  setTimeout(() => { if (!_statsPinned) p.style.display = 'none'; }, 190);
+  p.style.clipPath = 'inset(0 100% 0 0)';
+  setTimeout(() => { if (!_statsPinned) p.style.display = 'none'; }, 340);
 }
 
 function _closeStatsPanel() {
@@ -10348,13 +10347,11 @@ function _showStatsPanel(pickNum, cardEl) {
   panel.style.top    = rect.top + 'px';
   panel.style.height = rect.height + 'px';
 
-  // Slide-in from right
+  // Drawer slide-out from behind the card's right edge
+  panel.style.clipPath = 'inset(0 100% 0 0)';
   panel.style.display = 'block';
-  panel.style.opacity = '0';
-  panel.style.transform = 'translateX(16px)';
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    panel.style.opacity = '1';
-    panel.style.transform = 'translateX(0)';
+    panel.style.clipPath = 'inset(0 0% 0 0)';
   }));
 
   const content = document.getElementById('draft-stats-content');
