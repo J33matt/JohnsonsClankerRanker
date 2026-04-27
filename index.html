@@ -10601,6 +10601,10 @@ function renderFantasyRankings() {
       .ff-table th.rank-col { width: 52px; text-align: center; }
       .ff-table th.pos-col  { width: 60px; }
       .ff-table th.team-col { width: 80px; }
+      .ff-table th.szn-col  { width: 72px; }
+      .ff-szn-badge { display:inline-block; font-family:'Barlow Condensed',sans-serif; font-size:0.78rem;
+        font-weight:700; letter-spacing:0.4px; color:var(--muted); background:rgba(255,255,255,0.06);
+        border:1px solid var(--border); border-radius:4px; padding:1px 5px; white-space:nowrap; }
       .ff-team-cell { display:flex; align-items:center; gap:6px; }
       .ff-team-logo { width:22px; height:22px; object-fit:contain; flex-shrink:0; }
       .ff-team-abbr { font-family:'Barlow Condensed',sans-serif; font-size:0.85rem; font-weight:700; color:var(--muted); letter-spacing:0.5px; }
@@ -10661,11 +10665,16 @@ function _ffRenderTable() {
     const teamCell = team
       ? `<div class="ff-team-cell"><img class="ff-team-logo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${team.toLowerCase()}.png" onerror="this.style.display='none'"><span class="ff-team-abbr">${team}</span></div>`
       : `<span class="ff-team-abbr" style="color:var(--border)">—</span>`;
+    const lastSzn = (typeof FF_LAST_SEASON !== 'undefined') ? (FF_LAST_SEASON[p.rank] || null) : null;
+    const sznCell = lastSzn
+      ? `<span class="ff-szn-badge">${lastSzn}</span>`
+      : `<span style="color:var(--border)">—</span>`;
     return `<tr class="ff-row">
       <td class="ff-rank">${p.rank}</td>
       <td class="ff-name">${p.name}</td>
       <td>${teamCell}</td>
       <td><span class="ff-badge" style="background:${_ffPosColor(p.pos)}">${posLabel}</span></td>
+      <td>${sznCell}</td>
     </tr>`;
   }).join('');
 
@@ -10675,6 +10684,7 @@ function _ffRenderTable() {
       <th>Player</th>
       <th class="team-col">Team</th>
       <th class="pos-col">Pos</th>
+      <th class="szn-col">Last Szn</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
