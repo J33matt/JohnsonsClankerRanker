@@ -1301,7 +1301,7 @@ const FA_CURATED_MOVES = [
   { player:'Darnell Mooney',      pos:'WR', type:'signing', fromTeam:'ATL', toTeam:'NYG', date:'2026-03-17', espnId:4036132 },
   { player:'Greg Newsome II',     pos:'CB', type:'signing', fromTeam:'JAX', toTeam:'NYG', date:'2026-03-10', espnId:4240034 },
   { player:'Patrick Ricard',      pos:'FB', type:'signing', fromTeam:'BAL', toTeam:'NYG', date:'2026-03-12', espnId:3043831 },
-  { player:'Cam Taylor-Britt',    pos:'CB', type:'signing', fromTeam:'CIN', toTeam:'IND', date:'2026-03-17', espnId:4428532 },
+  { player:'Cam Taylor-Britt',    pos:'CB', type:'signing', fromTeam:'CIN', toTeam:'IND', date:'2026-03-17', espnId:4361196 },
   { player:'Akeem Davis-Gaither', pos:'LB', type:'signing', fromTeam:'ARI', toTeam:'IND', date:'2026-03-18', espnId:4242557 },
   { player:'Nick Westbrook-Ikhine',pos:'WR',type:'signing', fromTeam:'TEN', toTeam:'IND', date:'2026-03-18', espnId:4241074 },
   { player:'Jermaine Johnson',    pos:'DE', type:'signing', fromTeam:'NYJ', toTeam:'TEN', date:'2026-03-13', espnId:4428415 },
