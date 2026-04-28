@@ -10156,6 +10156,11 @@ function renderFreeAgency() {
   } else {
     renderFreeAgencyResults();
   }
+
+  // Ensure draft picks are loaded (may not be if Draft tab was never visited)
+  if (!(window._livePicks || []).length) {
+    fetchEspnDraftPicks().then(() => renderFreeAgencyResults()).catch(() => {});
+  }
 }
 
 function _faInitTeamDropdown() {
