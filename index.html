@@ -10110,6 +10110,16 @@ function renderFreeAgency() {
       #fa-team-options::-webkit-scrollbar-track { background: var(--surface2); border-radius: 8px; }
       #fa-team-options::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 8px; }
       .fa-team-option:hover { background: var(--surface) !important; }
+      .fa-type-draft { background: rgba(180,120,255,0.15); color: #b47fff; border: 1px solid rgba(180,120,255,0.3); }
+      .fa-draft-divider { display:flex; align-items:center; gap:10px; margin:18px 0 10px;
+        color:var(--muted); font-family:'Barlow Condensed',sans-serif; font-size:0.72rem;
+        letter-spacing:1.5px; text-transform:uppercase; }
+      .fa-draft-divider::before, .fa-draft-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+      .fa-college-name { font-family:'Barlow Condensed',sans-serif; font-size:0.82rem; font-weight:600;
+        color:var(--muted); max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .fa-pick-chip { font-family:'Barlow Condensed',sans-serif; font-size:0.8rem; font-weight:700;
+        padding:1px 7px; border-radius:4px; border:1px solid var(--border);
+        background:rgba(255,255,255,0.07); color:var(--muted); letter-spacing:0.4px; }
     </style>
     <div style="padding:0 0 24px;">
       <div style="display:flex;align-items:baseline;gap:14px;">
@@ -10280,6 +10290,45 @@ function _faBuildCard(m) {
     </div>`;
 }
 
+function _faBuildDraftCard(pick) {
+  const toAbbr = pick.team || '';
+  const hex = ((NFL_TEAMS[toAbbr] || {}).color || '#555555').replace('#','');
+  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+  const bg  = `linear-gradient(to right,rgba(${r},${g},${b},0.28) 0%,rgba(${r},${g},${b},0.08) 55%,transparent 100%),var(--surface)`;
+  const bdr = `rgba(${r},${g},${b},0.4)`;
+
+  const headshot = pick.espnAthleteId
+    ? `<div class="fa-headshot-wrap"><img class="fa-headshot" src="https://a.espncdn.com/i/headshots/nfl/players/full/${pick.espnAthleteId}.png" onerror="this.parentElement.style.visibility='hidden'"></div>`
+    : `<div class="fa-headshot-wrap" style="background:rgba(${r},${g},${b},0.15);display:flex;align-items:center;justify-content:center;"><img src="${_faTeamLogoUrl(toAbbr)}" style="width:44px;height:44px;object-fit:contain;opacity:0.35;" onerror="this.style.display='none'"></div>`;
+
+  // College logo — ESPN provides collegeLogo directly; fall back to COLLEGE_TEAMS lookup
+  const collegeLogo = pick.collegeLogo || ((typeof COLLEGE_TEAMS !== 'undefined' && COLLEGE_TEAMS[pick.college]) ? COLLEGE_TEAMS[pick.college].logo : '');
+  const collegeFromHtml = collegeLogo
+    ? `<img class="fa-tm-logo" src="${collegeLogo}" onerror="this.style.display='none'">`
+    : '';
+  const collegeNameHtml = `<span class="fa-college-name">${pick.college || '?'}</span>`;
+  const toHtml = `<img class="fa-tm-logo" src="${_faTeamLogoUrl(toAbbr)}" onerror="this.style.display='none'"><span class="fa-tm-abbr">${toAbbr}</span>`;
+
+  return `
+    <div class="fa-card" style="background:${bg};border-color:${bdr};">
+      ${headshot}
+      <div class="fa-card-body">
+        <div class="fa-name-col">
+          <span class="fa-pos-badge" style="background:${_faPosColor(pick.pos)}">${pick.pos}</span>
+          <span class="fa-player-name">${pick.name}</span>
+        </div>
+        <div class="fa-transfer-col">
+          ${collegeFromHtml}${collegeNameHtml}<span class="fa-arrow">→</span>${toHtml}
+        </div>
+        <div class="fa-badges-col">
+          <span class="fa-pick-chip">#${pick.pick}</span>
+          <span class="fa-type-badge fa-type-draft">Draft</span>
+        </div>
+      </div>
+      <div class="fa-watermark"><img src="${_faTeamLogoUrl(toAbbr)}" onerror="this.style.display='none'"></div>
+    </div>`;
+}
+
 function renderFreeAgencyResults() {
   const resultsEl = document.getElementById('fa-results');
   const countEl   = document.getElementById('fa-count');
@@ -10297,7 +10346,23 @@ function renderFreeAgencyResults() {
   if (_faTeam) {
     const arrivals   = filtered.filter(m => m.toTeam === _faTeam);
     const departures = filtered.filter(m => m.fromTeam === _faTeam);
-    if (countEl) countEl.textContent = `${arrivals.length} arrivals · ${departures.length} departures`;
+
+    // Draft picks for this team, filtered by active position filter
+    const draftPicks = (window._livePicks || [])
+      .filter(p => p.team === _faTeam)
+      .filter(p => {
+        if (_faFilter === 'skill') return _FA_SKILL_POS.has(p.pos);
+        if (_faFilter === 'off')   return _FA_OFF_POS.has(p.pos);
+        if (_faFilter === 'def')   return _FA_DEF_POS.has(p.pos);
+        return true;
+      })
+      .sort((a, b) => a.pick - b.pick);
+
+    const draftSection = draftPicks.length ? `
+      <div class="fa-draft-divider"><span>2026 Draft Class · ${draftPicks.length} pick${draftPicks.length !== 1 ? 's' : ''}</span></div>
+      ${draftPicks.map(_faBuildDraftCard).join('')}` : '';
+
+    if (countEl) countEl.textContent = `${arrivals.length} arrivals · ${draftPicks.length} draft picks · ${departures.length} departures`;
 
     const teamInfo = NFL_TEAMS[_faTeam] || {};
     resultsEl.innerHTML = `
@@ -10312,6 +10377,7 @@ function renderFreeAgencyResults() {
         <div>
           <div class="fa-section-header fa-section-arrivals">▲ Arrivals (${arrivals.length})</div>
           ${arrivals.length ? arrivals.map(_faBuildCard).join('') : '<div class="fa-empty">No arrivals</div>'}
+          ${draftSection}
         </div>
         <div>
           <div class="fa-section-header fa-section-departures">▼ Departures (${departures.length})</div>
