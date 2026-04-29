@@ -1242,8 +1242,8 @@ const MADDEN_RATINGS = {
   'aaron jones sr':80,'alvin kamara':80,'tyler allgeier':80,'rj harvey':79,
   'tyrone tracy jr':79,'blake corum':78,'brian robinson jr':78,'rachaad white':78,
   'isiah pacheco':76,'trey benson':77,'rhamondre stevenson':77,'tank bigsby':77,
-  'tyjae spears':77,'devin singletary':76,'kaleb johnson':74,'dylan sampson':75,
-  'zonovan knight':70,
+  'tyjae spears':77,'justice hill':77,'devin singletary':76,'kaleb johnson':74,
+  'dylan sampson':75,'zonovan knight':70,'rasheen ali':69,
   // WR
   'jamarr chase':99,'puka nacua':97,'amon-ra st brown':96,'jaxon smith-njigba':95,
   'justin jefferson':94,'ceedee lamb':93,'drake london':92,'devonta smith':91,
@@ -1265,7 +1265,8 @@ const MADDEN_RATINGS = {
   'demario douglas':77,'jalen nailor':77,'jayden higgins':77,'kendrick bourne':77,
   'mack hollins':77,'rashod bateman':77,'adonai mitchell':75,'keon coleman':75,
   'tutu atwell':75,'jalen tolbert':74,'nick westbrook-ikhine':74,
-  'andrei iosivas':73,'andre iosivas':73,'olamide zaccheaus':73,'lacale london':69,
+  'andrei iosivas':73,'andre iosivas':73,'olamide zaccheaus':73,
+  'devontez walker':71,'lajohntay wester':70,'lacale london':69,'bilhal kone':69,
   // TE
   'george kittle':98,'trey mcbride':97,'brock bowers':93,'mark andrews':91,
   'travis kelce':90,'dallas goedert':88,'sam laporta':87,'hunter henry':86,
@@ -1346,6 +1347,7 @@ const MADDEN_RATINGS = {
   'myles murphy':73,'payton turner':73,'tyree wilson':73,
   'adisa isaac':72,'alex wright':72,'bj ojulari':72,'bralen trice':71,
   'bud dupree':72,'cameron thomas':70,'david ojabo':72,'felix anudike-uzomah':72,
+  'tavius robinson':74,
   // DT
   'derrick brown':96,'cameron heyward':95,'jeffery simmons':95,'chris jones':94,
   'vita vea':94,'dexter lawrence ii':93,'nnamdi madubuike':92,'deforest buckner':91,
@@ -1360,7 +1362,8 @@ const MADDEN_RATINGS = {
   'maliek collins':77,'osa odighizuwa':77,'teair tart':77,'keeanu benton':76,
   'calijah kancey':76,'jerzhan newton':76,'tyleik williams':76,'bryan bresee':75,
   'kenneth grant':75,'kris jenkins jr':74,'levi onwuzurike':74,
-  'roy lopez':72,'darius robinson':70,'jonah williams':69,'maason smith':69,
+  'roy lopez':72,'broderick washington jr':71,'darius robinson':70,
+  'jonah williams':69,'maason smith':69,
   // LB
   'fred warner':97,'roquan smith':93,'demario davis':91,'zack baun':90,
   'drue tranquill':89,'dre greenlaw':88,'jack campbell':87,'devin bush':86,
@@ -1411,7 +1414,7 @@ const MADDEN_RATINGS = {
   'kool-aid mckinstry':76,'terrion arnold':76,'tyrique stevenson':76,
   'deonte banks':75,'jahdae barron':75,'keitrel clark':74,'max melton':74,
   'starling thomas v':73,'mike ford':73,'denzel burke':71,'elijah jones':71,
-  'darnay holmes':72,'cj henderson':70,'demarcco hellams':69,
+  'darnay holmes':72,'tj tampa':70,'cj henderson':70,'robert longerbeam':69,'demarcco hellams':69,
   // FS
   'jalen ramsey':94,'jessie bates iii':94,'antoine winfield jr':92,'kerby joseph':91,
   'minkah fitzpatrick':89,'julian love':85,'justin reid':85,'kevin byard iii':84,
@@ -1421,7 +1424,7 @@ const MADDEN_RATINGS = {
   'ardarius washington':78,'jaylinn hawkins':78,'malaki starks':78,
   'malik hooker':78,'andre cisco':77,'quan martin':77,'andrew wingard':76,
   'coby bryant':76,'ronnie hickman':76,'marcus epps':75,'isaiah simmons':74,
-  'damar hamlin':73,'avonte maddox':73,'dadrion taylor-demerson':72,
+  'damar hamlin':73,'avonte maddox':73,'dadrion taylor-demerson':72,'tyler loop':78,'nick moore':70,
   // SS
   'derwin james jr':93,'kyle hamilton':93,'xavier mckinney':92,'brian branch':91,
   'budda baker':90,'talanoa hufanga':88,'jaquan brisker':86,'nick emmanwori':85,
