@@ -9899,11 +9899,16 @@ function hexToRgbaLineups(hex, alpha) {
 
 function _maddenOvr(displayName) {
   if (!displayName || typeof MADDEN_RATINGS === 'undefined') return null;
-  const key = displayName.toLowerCase().replace(/[.']/g, '').trim();
+  // Strip periods and all apostrophe variants (ASCII, curly, backtick), collapse whitespace
+  const norm = s => s.toLowerCase().replace(/[.'''`]/g, '').replace(/\s+/g, ' ').trim();
+  const key = norm(displayName);
   if (MADDEN_RATINGS[key] !== undefined) return MADDEN_RATINGS[key];
-  // Try stripping suffixes like " Jr", " Sr", " II", " III", " IV"
+  // Try without name suffix (Jr, Sr, II, III, IV)
   const stripped = key.replace(/\s+(jr|sr|ii|iii|iv)$/i, '').trim();
-  return MADDEN_RATINGS[stripped] ?? null;
+  if (MADDEN_RATINGS[stripped] !== undefined) return MADDEN_RATINGS[stripped];
+  // Try adding "jr" in case ESPN omits it but we stored it with suffix
+  if (MADDEN_RATINGS[key + ' jr'] !== undefined) return MADDEN_RATINGS[key + ' jr'];
+  return null;
 }
 
 function _maddenOvrBadge(ovr) {
