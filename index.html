@@ -9873,18 +9873,21 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
     }
 
     const ovr = isRookie ? null : _maddenOvr(starter.displayName);
-    const isStar = ovr && ovr >= 95;
+    const isStar     = ovr && ovr >= 95;
+    const isPlatinum = ovr && ovr >= 90 && ovr < 95;
     // Top-right: OVR for veterans, R badge for rookies
     const topRightBadge = isRookie
       ? `<div style="position:absolute;top:3px;right:3px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;letter-spacing:1px;background:#f5a623;color:#000;border-radius:3px;padding:1px 4px;line-height:1.4;z-index:2;">R</div>`
       : (ovr ? _maddenOvrBadge(ovr) : '');
     // Top-left: position label
     const posLabel = `<div style="position:absolute;top:3px;left:3px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;color:${isRookie ? '#f5a623' : color};letter-spacing:1px;line-height:1.4;z-index:2;">${pos.toUpperCase()}</div>`;
-    // Star card border + glow for 95+ OVR
-    const cardBorder  = isRookie ? '#f5a623' : (isStar ? '#ff2222' : color);
-    const cardShadow  = isStar
+    // Card border + shadow — red glow for 95+, subtle blue-white glow for 90-94, normal otherwise
+    const cardBorder = isRookie ? '#f5a623' : (isStar ? '#ff2222' : color);
+    const cardShadow = isStar
       ? '0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35),0 0 14px 3px rgba(255,30,30,0.55)'
-      : '0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35)';
+      : isPlatinum
+        ? '0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35),0 0 8px 2px rgba(140,200,255,0.35)'
+        : '0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35)';
 
     html += `
       <div style="position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;">
