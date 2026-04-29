@@ -9867,20 +9867,21 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
       fallbackHs = cfbUrl;
     }
 
-    const rookieBadge = isRookie
-      ? `<div style="position:absolute;top:3px;right:3px;font-family:'Bebas Neue',sans-serif;font-size:0.55rem;letter-spacing:1px;background:#f5a623;color:#000;border-radius:3px;padding:1px 4px;line-height:1.3;z-index:2;">R</div>`
-      : '';
     const ovr = isRookie ? null : _maddenOvr(starter.displayName);
-    const ovrBadge = ovr ? _maddenOvrBadge(ovr) : '';
+    // Top-right: OVR for veterans, R badge for rookies
+    const topRightBadge = isRookie
+      ? `<div style="position:absolute;top:3px;right:3px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;letter-spacing:1px;background:#f5a623;color:#000;border-radius:3px;padding:1px 4px;line-height:1.4;z-index:2;">R</div>`
+      : (ovr ? _maddenOvrBadge(ovr) : '');
+    // Top-left: position label
+    const posLabel = `<div style="position:absolute;top:3px;left:3px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;color:${isRookie ? '#f5a623' : color};letter-spacing:1px;line-height:1.4;z-index:2;">${pos.toUpperCase()}</div>`;
 
     html += `
       <div style="position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;">
-        <div style="position:relative;width:80px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${isRookie ? '#f5a623' : color};border-radius:8px;overflow:hidden;text-align:center;padding:4px 3px 6px;box-shadow:0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35);">
-          ${rookieBadge}
-          ${ovrBadge}
+        <div style="position:relative;width:80px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${isRookie ? '#f5a623' : color};border-radius:8px;overflow:hidden;text-align:center;padding:18px 3px 5px;box-shadow:0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35);">
+          ${posLabel}
+          ${topRightBadge}
           <img src="${primaryHs}" data-fb="${fallbackHs}" data-name="${starter.displayName || ''}" style="width:60px;height:60px;object-fit:cover;object-position:top center;border-radius:5px;" onerror="_lineupsHsError(this)">
-          <div style="font-family:Bebas Neue,sans-serif;font-size:0.75rem;color:${isRookie ? '#f5a623' : color};letter-spacing:1px;">${pos.toUpperCase()}</div>
-          <div style="font-size:0.65rem;font-weight:600;line-height:1.2;opacity:0.9;">${starter.shortName || starter.displayName}</div>
+          <div style="font-size:0.65rem;font-weight:600;line-height:1.2;opacity:0.9;margin-top:3px;">${starter.shortName || starter.displayName}</div>
         </div>
       </div>`;
   });
@@ -9898,7 +9899,7 @@ function hexToRgbaLineups(hex, alpha) {
 
 function _maddenOvr(displayName) {
   if (!displayName || typeof MADDEN_RATINGS === 'undefined') return null;
-  const key = displayName.toLowerCase().replace(/\./g, '').trim();
+  const key = displayName.toLowerCase().replace(/[.']/g, '').trim();
   if (MADDEN_RATINGS[key] !== undefined) return MADDEN_RATINGS[key];
   // Try stripping suffixes like " Jr", " Sr", " II", " III", " IV"
   const stripped = key.replace(/\s+(jr|sr|ii|iii|iv)$/i, '').trim();
@@ -9913,7 +9914,7 @@ function _maddenOvrBadge(ovr) {
   else if (ovr >= 88) { bg = 'linear-gradient(135deg,#cd7f32,#a05020)'; color = '#fff'; }
   else if (ovr >= 80) { bg = 'rgba(80,180,80,0.85)'; color = '#fff'; }
   else                { bg = 'rgba(100,100,120,0.85)'; color = '#ddd'; }
-  return `<div style="position:absolute;bottom:3px;right:3px;background:${bg};color:${color};font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:0.5px;border-radius:3px;padding:1px 4px;line-height:1.4;z-index:2;">${ovr}</div>`;
+  return `<div style="position:absolute;top:3px;right:3px;background:${bg};color:${color};font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:0.5px;border-radius:3px;padding:1px 4px;line-height:1.4;z-index:2;">${ovr}</div>`;
 }
 
 // ── FREE AGENCY TRACKER ─────────────────────────────────────────────────────
