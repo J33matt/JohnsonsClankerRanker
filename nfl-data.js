@@ -1240,7 +1240,9 @@ async function loadAllMaddenRatings() {
     }
   }
   console.log('Madden ratings loaded:', Object.keys(MADDEN_RATINGS).length, 'players');
-}
+  if (typeof renderCards === 'function') renderCards();
+  if (typeof renderLineups === 'function') renderLineups();
+  }
 
 loadAllMaddenRatings();
 
