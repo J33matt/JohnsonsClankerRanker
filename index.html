@@ -9658,6 +9658,11 @@ function _sbQuickFavParlay() {
 }
 
 function renderLineups() {
+  // Ensure draft picks are loaded so rookie detection works
+  if (!(window._livePicks || []).length) {
+    fetchEspnDraftPicks().then(() => renderLineups()).catch(() => {});
+    return;
+  }
   const container = document.getElementById('nfl-lineups');
   container.style.marginLeft = 'calc(-5vw)';
   container.style.marginRight = 'calc(-5vw)';
