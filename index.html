@@ -9868,16 +9868,22 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
     }
 
     const ovr = isRookie ? null : _maddenOvr(starter.displayName);
+    const isStar = ovr && ovr >= 95;
     // Top-right: OVR for veterans, R badge for rookies
     const topRightBadge = isRookie
       ? `<div style="position:absolute;top:3px;right:3px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;letter-spacing:1px;background:#f5a623;color:#000;border-radius:3px;padding:1px 4px;line-height:1.4;z-index:2;">R</div>`
       : (ovr ? _maddenOvrBadge(ovr) : '');
     // Top-left: position label
     const posLabel = `<div style="position:absolute;top:3px;left:3px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;color:${isRookie ? '#f5a623' : color};letter-spacing:1px;line-height:1.4;z-index:2;">${pos.toUpperCase()}</div>`;
+    // Star card border + glow for 95+ OVR
+    const cardBorder  = isRookie ? '#f5a623' : (isStar ? '#ff2222' : color);
+    const cardShadow  = isStar
+      ? '0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35),0 0 14px 3px rgba(255,30,30,0.55)'
+      : '0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35)';
 
     html += `
       <div style="position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;">
-        <div style="position:relative;width:80px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${isRookie ? '#f5a623' : color};border-radius:8px;overflow:hidden;text-align:center;padding:18px 3px 5px;box-shadow:0 8px 16px rgba(0,0,0,0.55),0 3px 6px rgba(0,0,0,0.35);">
+        <div style="position:relative;width:80px;background:linear-gradient(135deg,${hexToRgbaLineups(color,0.3)},var(--surface));border:2px solid ${cardBorder};border-radius:8px;overflow:hidden;text-align:center;padding:18px 3px 5px;box-shadow:${cardShadow};">
           ${posLabel}
           ${topRightBadge}
           <img src="${primaryHs}" data-fb="${fallbackHs}" data-name="${starter.displayName || ''}" style="width:60px;height:60px;object-fit:cover;object-position:top center;border-radius:5px;" onerror="_lineupsHsError(this)">
@@ -9913,13 +9919,25 @@ function _maddenOvr(displayName) {
 
 function _maddenOvrBadge(ovr) {
   if (!ovr) return '';
-  let bg, color;
-  if (ovr >= 97)      { bg = 'linear-gradient(135deg,#ffd700,#ffaa00)'; color = '#000'; }
-  else if (ovr >= 93) { bg = 'linear-gradient(135deg,#c0c0c0,#a0a0a0)'; color = '#000'; }
-  else if (ovr >= 88) { bg = 'linear-gradient(135deg,#cd7f32,#a05020)'; color = '#fff'; }
-  else if (ovr >= 80) { bg = 'rgba(80,180,80,0.85)'; color = '#fff'; }
-  else                { bg = 'rgba(100,100,120,0.85)'; color = '#ddd'; }
-  return `<div style="position:absolute;top:3px;right:3px;background:${bg};color:${color};font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:0.5px;border-radius:3px;padding:1px 4px;line-height:1.4;z-index:2;">${ovr}</div>`;
+  let bg, color, extra = '';
+  if (ovr >= 95) {
+    // Red — star player
+    bg = 'linear-gradient(135deg,#ff2222,#aa0000)'; color = '#fff';
+    extra = 'box-shadow:0 0 5px rgba(255,40,40,0.8);';
+  } else if (ovr >= 90) {
+    // Platinum — blue-white shimmer
+    bg = 'linear-gradient(135deg,#e8f0ff,#aec6e8,#ddeeff)'; color = '#1a2a3a';
+  } else if (ovr >= 80) {
+    // Gold
+    bg = 'linear-gradient(135deg,#ffd700,#c8960c)'; color = '#000';
+  } else if (ovr >= 70) {
+    // Silver
+    bg = 'linear-gradient(135deg,#d0d0d0,#909090)'; color = '#000';
+  } else {
+    // Bronze
+    bg = 'linear-gradient(135deg,#cd7f32,#7a4010)'; color = '#fff';
+  }
+  return `<div style="position:absolute;top:3px;right:3px;background:${bg};color:${color};font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:0.5px;border-radius:3px;padding:1px 4px;line-height:1.4;z-index:2;${extra}">${ovr}</div>`;
 }
 
 // ── FREE AGENCY TRACKER ─────────────────────────────────────────────────────
