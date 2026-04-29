@@ -1359,7 +1359,7 @@ const MADDEN_RATINGS = {
   'maliek collins':77,'osa odighizuwa':77,'teair tart':77,'keeanu benton':76,
   'calijah kancey':76,'jerzhan newton':76,'tyleik williams':76,'bryan bresee':75,
   'kenneth grant':75,'kris jenkins jr':74,'levi onwuzurike':74,
-  'darius robinson':70,'jonah williams':69,
+  'roy lopez':72,'darius robinson':70,'jonah williams':69,
   // LB
   'fred warner':97,'roquan smith':93,'demario davis':91,'zack baun':90,
   'drue tranquill':89,'dre greenlaw':88,'jack campbell':87,'devin bush':86,
