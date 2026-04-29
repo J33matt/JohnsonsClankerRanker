@@ -9879,8 +9879,9 @@ function renderFormationGrid(positions, layout, color, abbr, flip = false) {
     const topRightBadge = isRookie
       ? `<div style="position:absolute;top:3px;right:3px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;letter-spacing:1px;background:#f5a623;color:#000;border-radius:3px;padding:1px 4px;line-height:1.4;z-index:2;">R</div>`
       : (ovr ? _maddenOvrBadge(ovr) : '');
-    // Top-left: position label
-    const posLabel = `<div style="position:absolute;top:3px;left:3px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;color:${isRookie ? '#f5a623' : color};letter-spacing:1px;line-height:1.4;z-index:2;">${pos.toUpperCase()}</div>`;
+    // Top-left: position label — use white for dark team colors so text doesn't vanish
+    const posTextColor = isRookie ? '#f5a623' : (_lineupsColorIsDark(color) ? '#ffffff' : color);
+    const posLabel = `<div style="position:absolute;top:3px;left:3px;font-family:'Bebas Neue',sans-serif;font-size:0.6rem;color:${posTextColor};letter-spacing:1px;line-height:1.4;z-index:2;text-shadow:0 1px 3px rgba(0,0,0,0.8);">${pos.toUpperCase()}</div>`;
     // Card border + shadow — red glow for 95+, subtle blue-white glow for 90-94, normal otherwise
     const cardBorder = isRookie ? '#f5a623' : (isStar ? '#ff2222' : color);
     const cardShadow = isStar
@@ -9909,6 +9910,13 @@ function hexToRgbaLineups(hex, alpha) {
   if (hex.length === 3) hex = hex.split('').map(x=>x+x).join('');
   const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function _lineupsColorIsDark(hex) {
+  hex = (hex || '#888').replace('#','');
+  if (hex.length === 3) hex = hex.split('').map(x=>x+x).join('');
+  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+  return (0.299*r + 0.587*g + 0.114*b) < 100;
 }
 
 function _maddenOvr(displayName) {
