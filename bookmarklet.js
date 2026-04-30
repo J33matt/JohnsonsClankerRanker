@@ -1,0 +1,45 @@
+javascript:(async()=>{
+const TOKEN='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';
+const TEAMS=['arizona-cardinals','atlanta-falcons','baltimore-ravens','buffalo-bills','carolina-panthers','chicago-bears','cincinnati-bengals','cleveland-browns','dallas-cowboys','denver-broncos','detroit-lions','green-bay-packers','houston-texans','indianapolis-colts','jacksonville-jaguars','kansas-city-chiefs','las-vegas-raiders','los-angeles-chargers','los-angeles-rams','miami-dolphins','minnesota-vikings','new-england-patriots','new-orleans-saints','new-york-giants','new-york-jets','philadelphia-eagles','pittsburgh-steelers','san-francisco-49ers','seattle-seahawks','tampa-bay-buccaneers','tennessee-titans','washington-commanders'];
+const ratings={};
+const status=document.createElement('div');
+status.style.cssText='position:fixed;top:10px;right:10px;background:#000;color:#0f0;padding:15px;border-radius:8px;z-index:99999;font-family:monospace;font-size:14px;min-width:300px;';
+document.body.appendChild(status);
+for(const team of TEAMS){
+  status.textContent=`Scraping ${team}...`;
+  await new Promise(r=>setTimeout(r,2000));
+  try{
+    const res=await fetch(`https://www.maddenratings.com/teams/${team}`);
+    const html=await res.text();
+    const parser=new DOMParser();
+    const doc=parser.parseFromString(html,'text/html');
+    const rows=doc.querySelectorAll('table tr');
+    rows.forEach(row=>{
+      const cells=row.querySelectorAll('td');
+      if(cells.length>=3){
+        const rawName=cells[1]?.innerText?.trim();
+        const name=rawName?.split('\n')[0].split('#')[0].trim();
+        const ovr=parseInt(cells[2]?.innerText?.trim());
+        if(name&&ovr&&ovr>50){
+          const key=name.toLowerCase().replace(/[.'''`]/g,'').replace(/\s+/g,' ').trim();
+          ratings[key]=ovr;
+        }
+      }
+    });
+    status.textContent=`✓ ${team} done. Total: ${Object.keys(ratings).length} players`;
+  }catch(e){
+    status.textContent=`✗ ${team} failed: ${e.message}`;
+  }
+}
+status.textContent='Fetching current nfl-data.js from GitHub...';
+const fileRes=await fetch('https://api.github.com/repos/j33matt/JohnsonsClankerRanker/contents/nfl-data.js',{headers:{'Authorization':`token ${TOKEN}`,'User-Agent':'madden-bookmarklet'}});
+const fileData=await fileRes.json();
+const currentContent=atob(fileData.content);
+const newRatingsStr='const MADDEN_RATINGS = '+JSON.stringify(ratings,null,2)+';';
+const newContent=currentContent.replace(/const MADDEN_RATINGS = \{[\s\S]*?\};/,newRatingsStr);
+status.textContent='Pushing to GitHub...';
+await fetch('https://api.github.com/repos/j33matt/JohnsonsClankerRanker/contents/nfl-data.js',{method:'PUT',headers:{'Authorization':`token ${TOKEN}`,'Content-Type':'application/json','User-Agent':'madden-bookmarklet'},body:JSON.stringify({message:'Update Madden ratings via bookmarklet',content:btoa(unescape(encodeURIComponent(newContent))),sha:fileData.sha})});
+status.style.color='#0f0';
+status.textContent=`✅ Done! ${Object.keys(ratings).length} players updated in nfl-data.js`;
+setTimeout(()=>status.remove(),5000);
+})();
