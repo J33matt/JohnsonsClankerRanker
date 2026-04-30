@@ -1216,36 +1216,6 @@ const FF_LAST_SEASON = {
 
 let MADDEN_RATINGS = {};
 
-async function loadAllMaddenRatings() {
-  const teams = [
-    'arizona-cardinals','atlanta-falcons','baltimore-ravens','buffalo-bills',
-    'carolina-panthers','chicago-bears','cincinnati-bengals','cleveland-browns',
-    'dallas-cowboys','denver-broncos','detroit-lions','green-bay-packers',
-    'houston-texans','indianapolis-colts','jacksonville-jaguars','kansas-city-chiefs',
-    'las-vegas-raiders','los-angeles-chargers','los-angeles-rams','miami-dolphins',
-    'minnesota-vikings','new-england-patriots','new-orleans-saints','new-york-giants',
-    'new-york-jets','philadelphia-eagles','pittsburgh-steelers','san-francisco-49ers',
-    'seattle-seahawks','tampa-bay-buccaneers','tennessee-titans','washington-commanders'
-  ];
-  for (const team of teams) {
-    try {
-      const res = await fetch(`https://nfl-draft-proxy.j33matt.workers.dev/madden-ratings?team=${team}`);
-      const players = await res.json();
-      players.forEach(p => {
-        const key = p.name.toLowerCase().replace(/[.'''`]/g, '').replace(/\s+/g, ' ').trim();
-        MADDEN_RATINGS[key] = p.ovr;
-      });
-    } catch(e) {
-      console.error(`Failed to load ratings for ${team}`, e);
-    }
-  }
-  console.log('Madden ratings loaded:', Object.keys(MADDEN_RATINGS).length, 'players');
-  if (typeof renderCards === 'function') renderCards();
-  if (typeof renderLineups === 'function') renderLineups();
-  }
-
-loadAllMaddenRatings();
-
 // Curated 2026 offseason moves (fantasy-relevant skill positions)
 const FA_CURATED_MOVES = [
   { player:'Kenneth Walker III',  pos:'RB', type:'signing', fromTeam:'SEA', toTeam:'KC',  date:'2026-03-15', espnId:4567048  },
