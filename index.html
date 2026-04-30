@@ -9700,10 +9700,68 @@ function renderLineups() {
       background-size:100% 100%,calc(100% - 3px) 26px;background-position:0 0,${dashPos};background-repeat:no-repeat,repeat-y;"></div>`;
   };
 
+  const isBrowseMode = savedOff === savedDef;
+  const offColor = NFL_TEAMS[savedOff]?.color || '#888';
+  const defColor = NFL_TEAMS[savedDef]?.color || '#888';
+
+  const teamPaginationHTML = (() => {
+    const pills = sortedTeams.map(([abbr]) => {
+      const color = NFL_TEAMS[abbr]?.color || '#888';
+      const isOff = abbr === savedOff;
+      const isDef = abbr === savedDef;
+      const isActive = isOff || isDef;
+      let ring, glow, badgeHTML = '', size;
+      if (isOff && isDef) {
+        ring = `2px solid ${color}`;
+        glow = `0 0 8px ${hexToRgbaLineups(color, 0.5)}`;
+        size = '38px';
+      } else if (isOff) {
+        ring = `2px solid ${color}`;
+        glow = `0 0 6px ${hexToRgbaLineups(color, 0.4)}`;
+        size = '36px';
+        badgeHTML = `<div style="position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);font-family:'Bebas Neue',sans-serif;font-size:0.48rem;letter-spacing:1px;color:${color};white-space:nowrap;">OFF</div>`;
+      } else if (isDef) {
+        ring = '2px solid #e03030';
+        glow = '0 0 6px rgba(220,50,50,0.4)';
+        size = '36px';
+        badgeHTML = `<div style="position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);font-family:'Bebas Neue',sans-serif;font-size:0.48rem;letter-spacing:1px;color:#e03030;white-space:nowrap;">DEF</div>`;
+      } else {
+        ring = '2px solid transparent';
+        glow = 'none';
+        size = '28px';
+      }
+      return `<div onclick="selectBrowseTeam('${abbr}')" title="${NFL_TEAMS[abbr]?.name || abbr}"
+        style="position:relative;display:flex;align-items:center;justify-content:center;padding:4px;border-radius:8px;border:${ring};box-shadow:${glow};background:${isActive ? hexToRgbaLineups(color, isOff && isDef ? 0.18 : 0.12) : 'transparent'};cursor:pointer;transition:all 0.15s;flex-shrink:0;${(!isBrowseMode && isActive) ? 'margin-bottom:14px;' : ''}">
+        <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${abbr.toLowerCase()}.png"
+          style="width:${size};height:${size};object-fit:contain;opacity:${isActive ? '1' : '0.3'};transition:all 0.15s;">
+        ${badgeHTML}
+      </div>`;
+    }).join('');
+
+    const modeSubtitle = isBrowseMode
+      ? `<span style="opacity:0.5;">${(NFL_TEAMS[savedOff]?.name || savedOff).toUpperCase()}&nbsp;&nbsp;·&nbsp;&nbsp;FULL ROSTER</span>`
+      : `<span style="color:${offColor};font-weight:700;">${savedOff}&nbsp;OFF</span><span style="opacity:0.4;">&nbsp;&nbsp;vs&nbsp;&nbsp;</span><span style="color:#e03030;font-weight:700;">${savedDef}&nbsp;DEF</span><span style="opacity:0.35;">&nbsp;&nbsp;·&nbsp;&nbsp;use side panels to mix teams</span>`;
+
+    return `<div style="padding:14px 16px 8px;border-bottom:1px solid var(--border);margin-bottom:4px;">
+      <div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center;padding-bottom:${isBrowseMode ? '0' : '14px'};">
+        ${pills}
+      </div>
+      <div style="text-align:center;padding-top:8px;font-family:'Bebas Neue',sans-serif;font-size:0.82rem;letter-spacing:2.5px;min-height:18px;">
+        ${modeSubtitle}
+      </div>
+    </div>`;
+  })();
+
+  const mainTitle = isBrowseMode ? 'NFL ROSTERS' : 'BUILD YOUR MATCHUP';
+  const mainSubtitle = isBrowseMode
+    ? 'Live 2026 NFL Rosters &nbsp;·&nbsp; Click any team above to browse'
+    : 'Live 2026 NFL Rosters &nbsp;·&nbsp; Pick an offense and a defense';
+
   container.innerHTML = `
-    <div style="text-align:center;padding:28px 0 20px;">
-      <div style="font-family:Bebas Neue,sans-serif;font-size:2.6rem;letter-spacing:6px;line-height:1;">BUILD YOUR MATCHUP</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;letter-spacing:3px;opacity:0.45;margin-top:6px;text-transform:uppercase;">Live 2026 NFL Rosters &nbsp;·&nbsp; Pick an offense and a defense</div>
+    ${teamPaginationHTML}
+    <div style="text-align:center;padding:20px 0 16px;">
+      <div style="font-family:Bebas Neue,sans-serif;font-size:2.6rem;letter-spacing:6px;line-height:1;">${mainTitle}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;letter-spacing:3px;opacity:0.45;margin-top:6px;text-transform:uppercase;">${mainSubtitle}</div>
     </div>
     <div style="position:relative;width:100%;min-height:1100px;padding:12px 0;">
       <div id="lineups-off-panel" style="${panelStyle('left')}">
@@ -9726,6 +9784,12 @@ function renderLineups() {
 
 function selectMatchupTeam(side, abbr) {
   localStorage.setItem(side === 'offense' ? 'lineupsOffTeam' : 'lineupsDefTeam', abbr);
+  renderLineups();
+}
+
+function selectBrowseTeam(abbr) {
+  localStorage.setItem('lineupsOffTeam', abbr);
+  localStorage.setItem('lineupsDefTeam', abbr);
   renderLineups();
 }
 
