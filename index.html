@@ -9919,11 +9919,19 @@ function _lineupsColorIsDark(hex) {
   return (0.299*r + 0.587*g + 0.114*b) < 100;
 }
 
+const MADDEN_NAME_ALIASES = {
+  'joshua palmer': 'josh palmer',
+  'greg rousseau': 'gregory rousseau',
+  "o'cyrus torrence": 'ocyrus torrence',
+};
+
 function _maddenOvr(displayName) {
   if (!displayName || typeof MADDEN_RATINGS === 'undefined') return null;
   // Strip periods and all apostrophe variants (ASCII, curly, backtick), collapse whitespace
   const norm = s => s.toLowerCase().replace(/[.'''`]/g, '').replace(/\s+/g, ' ').trim();
   const key = norm(displayName);
+  const aliased = MADDEN_NAME_ALIASES[key];
+  if (aliased && MADDEN_RATINGS[aliased] !== undefined) return MADDEN_RATINGS[aliased];
   if (MADDEN_RATINGS[key] !== undefined) return MADDEN_RATINGS[key];
   // Try without name suffix (Jr, Sr, II, III, IV)
   const stripped = key.replace(/\s+(jr|sr|ii|iii|iv)$/i, '').trim();
