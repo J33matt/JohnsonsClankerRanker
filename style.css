@@ -3769,3 +3769,16 @@
 
 .ffd-move-here-btn { border-color: #ffaa00 !important; color: #ffaa00 !important; }
 .ffd-move-here-btn:hover { background: #ffaa00 !important; color: #000 !important; }
+
+.ffdb-bb-rlabel {
+  width: var(--bb-lw);
+  flex-shrink: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--border);
+}

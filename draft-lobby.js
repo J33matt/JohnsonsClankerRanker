@@ -445,7 +445,7 @@
             : isOnClock ? `<div class="ffdb-bb-pname ffdb-bb-clock-label">ON CLOCK</div>` : ''}
         </div>`;
       }).join('');
-      return `<div class="ffdb-bb-round${isCur?' ffdb-bb-cur-round':''}" data-round="${r}">${cells}</div>`;
+      return `<div class="ffdb-bb-round${isCur?' ffdb-bb-cur-round':''}" data-round="${r}"><div class="ffdb-bb-rlabel">R${r+1}</div>${cells}</div>`;
     }).join('');
 
     return { headerCells, roundRows, currentRound0 };
