@@ -3694,6 +3694,15 @@
 /* ── Draft Board — Big Board ─────────────────────────────────────────────── */
 :root { --bb-rh: 56px; --bb-cw: 108px; --bb-lw: 36px; }
 .ffdb-bb-wrap { margin-bottom: 14px; }
+.ffdb-bb-viewtoggle { display: flex; gap: 6px; padding: 0 0 8px; }
+.ffdb-vt-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.78rem; font-weight: 600; padding: 4px 14px; cursor: pointer; letter-spacing: 0.04em; transition: border-color 0.15s, color 0.15s; }
+.ffdb-vt-btn.active { border-color: var(--accent); color: var(--accent); }
+.ffdb-vt-btn:hover:not(.active) { border-color: var(--text); color: var(--text); }
+.ffdb-rv-scroll { overflow-x: auto; min-width: max-content; }
+.ffdb-rv-row { height: var(--bb-rh); }
+.ffdb-rv-bench { background: rgba(255,255,255,0.015); }
+.ffdb-rv-label { font-family: 'Bebas Neue', sans-serif; font-size: 0.72rem; letter-spacing: 1px; color: var(--muted); }
+.ffdb-rv-cell { justify-content: center; gap: 4px; }
 .ffdb-bb-outer { overflow-x: auto; width: 100%; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .ffdb-bb-header-row { display: flex; min-width: max-content; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 3; }
 .ffdb-bb-corner { width: var(--bb-lw); flex-shrink: 0; font-family: 'Bebas Neue', sans-serif; font-size: 0.65rem; letter-spacing: 2px; color: var(--muted); display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--border); }
@@ -3701,7 +3710,7 @@
 .ffdb-bb-th:last-child { border-right: none; }
 .ffdb-bb-me-col { color: #ffaa00; }
 
-.ffdb-bb-scroll { height: calc(var(--bb-rh) * 2); overflow-y: scroll; scroll-snap-type: y mandatory; min-width: max-content; }
+.ffdb-bb-scroll { height: calc(var(--bb-rh) * 3); overflow-y: scroll; scroll-snap-type: y mandatory; min-width: max-content; }
 .ffdb-bb-scroll::-webkit-scrollbar { width: 4px; }
 .ffdb-bb-scroll::-webkit-scrollbar-track { background: transparent; }
 .ffdb-bb-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }

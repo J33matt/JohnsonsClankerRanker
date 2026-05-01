@@ -11,8 +11,9 @@
   let _lastDraftData = null;
   let _timerInterval = null;
   let _botTimeout    = null;
-  let _bbScrollTop   = -1;
-  window._draftQueue = [];
+  let _bbLastSnapRound = -1;
+  window._draftQueue    = [];
+  window._ffdbBoardView = 'round'; // 'round' | 'roster'
 
   function _db() { return firebase.firestore(); }
   function _panel() { return document.getElementById('nfl-ff-draft'); }
@@ -451,6 +452,37 @@
     return { headerCells, roundRows, currentRound0 };
   }
 
+  function _renderRosterBoard(data, leagueSize) {
+    const { draftOrder = [], picks = [], participants = {} } = data;
+    const teamOrder = draftOrder.slice(0, leagueSize);
+
+    const headerCells = teamOrder.map(uid => {
+      const isMe = uid === _myUid;
+      const name = (participants[uid] || {}).name || '?';
+      return `<div class="ffdb-bb-th${isMe ? ' ffdb-bb-me-col' : ''}">${name}</div>`;
+    }).join('');
+
+    const rosterRows = _ROSTER_SLOTS.map((slot, si) => {
+      const cells = teamOrder.map(uid => {
+        const isMe    = uid === _myUid;
+        const slots   = _buildRoster(picks, uid);
+        const filled  = slots[si] && slots[si].filled;
+        const pc      = filled ? _posColor(filled.playerPos) : '';
+        return `<div class="ffdb-bb-cell ffdb-rv-cell${isMe?' ffdb-bb-me-col':''}${filled?' ffdb-bb-picked':''}">
+          ${filled
+            ? `<div class="ffdb-bb-pdot" style="background:${pc}"></div><div class="ffdb-bb-pname">${filled.playerName}</div>`
+            : `<span class="ffdb-slot-empty">—</span>`}
+        </div>`;
+      }).join('');
+      const isBench = slot.label === 'BN';
+      return `<div class="ffdb-bb-round ffdb-rv-row${isBench?' ffdb-rv-bench':''}">
+        <div class="ffdb-bb-rlabel ffdb-rv-label">${slot.label}</div>${cells}
+      </div>`;
+    }).join('');
+
+    return { headerCells, rosterRows };
+  }
+
   function _renderDraftBoard(data, lobbyId) {
     const container = _panel();
     if (!container) return;
@@ -582,7 +614,19 @@
     }).join('');
 
     // Big board
-    const { headerCells, roundRows } = _renderBigBoard(data, leagueSize, currentPickIndex);
+    const boardView = window._ffdbBoardView || 'round';
+    const { headerCells, roundRows, currentRound0 } = _renderBigBoard(data, leagueSize, currentPickIndex);
+    const { headerCells: rvHeader, rosterRows }     = _renderRosterBoard(data, leagueSize);
+
+    const boardInner = boardView === 'roster'
+      ? `<div class="ffdb-bb-header-row">
+           <div class="ffdb-bb-corner">POS</div>${rvHeader}
+         </div>
+         <div class="ffdb-rv-scroll" id="ffdb-bb-scroll">${rosterRows}</div>`
+      : `<div class="ffdb-bb-header-row">
+           <div class="ffdb-bb-corner">RD</div>${headerCells}
+         </div>
+         <div class="ffdb-bb-scroll" id="ffdb-bb-scroll">${roundRows}</div>`;
 
     const forcedBanner = forcedMode
       ? `<div class="ffdb-forced-banner">⚠ Only showing players eligible for your remaining starter slots</div>` : '';
@@ -599,11 +643,12 @@
         </div>
 
         <div class="ffdb-bb-wrap">
+          <div class="ffdb-bb-viewtoggle">
+            <button class="ffdb-vt-btn${boardView==='round'?' active':''}" onclick="window._ffdbBoardView='round';if(_lastDraftData&&_lobbyId)_renderDraftBoard(_lastDraftData,_lobbyId)">Round View</button>
+            <button class="ffdb-vt-btn${boardView==='roster'?' active':''}" onclick="window._ffdbBoardView='roster';if(_lastDraftData&&_lobbyId)_renderDraftBoard(_lastDraftData,_lobbyId)">Roster View</button>
+          </div>
           <div class="ffdb-bb-outer" id="ffdb-bb-outer">
-            <div class="ffdb-bb-header-row">
-              <div class="ffdb-bb-corner">RD</div>${headerCells}
-            </div>
-            <div class="ffdb-bb-scroll" id="ffdb-bb-scroll">${roundRows}</div>
+            ${boardInner}
           </div>
         </div>
 
@@ -642,11 +687,15 @@
     const poolNew = document.getElementById('ffdb-pool-list');
     if (poolNew) poolNew.scrollTop = savedPoolScroll;
 
-    // Auto-scroll big board: previous round on top, current round on bottom
+    // Auto-scroll big board: only snap when a new round begins
     const bbNew = document.getElementById('ffdb-bb-scroll');
-    if (bbNew) {
-      const rowH = 56;
-      bbNew.scrollTop = Math.max(0, Math.floor(currentPickIndex / leagueSize) - 1) * rowH;
+    if (bbNew && boardView === 'round') {
+      const curRound0 = Math.floor(currentPickIndex / leagueSize);
+      if (curRound0 !== _bbLastSnapRound) {
+        _bbLastSnapRound = curRound0;
+        const rowH = 56;
+        bbNew.scrollTop = Math.max(0, curRound0 - 1) * rowH;
+      }
     }
 
     _startTimer(timerEndsAt, timerSecs, lobbyId);
@@ -712,6 +761,9 @@
       if (p.pos==='WR'  && wr>=5) s *= 0.4;
       if (p.pos==='TE'  && te>=2) s *= 0.2;
 
+      // Universal QB urgency: if no QB by round 9, all personalities start hunting one
+      if (p.pos==='QB' && qb===0 && round >= 9) s *= 4.0;
+
       switch (personality) {
 
         case 'hero-rb':
@@ -756,12 +808,15 @@
           break;
 
         case 'late-qbte':
-          // Ignore QB+TE until round 10; stack WR/RB depth early
-          if (round <= 9) {
+          // Suppress QB+TE early; start targeting them mid-draft
+          if (round <= 6) {
             if (p.pos==='QB')               s *= 0.04;
             if (p.pos==='TE')               s *= 0.08;
             if (p.pos==='WR')               s *= 1.35;
             if (p.pos==='RB')               s *= 1.2;
+          } else if (round <= 8) {
+            if (p.pos==='QB' && qb===0)     s *= 2.5;
+            if (p.pos==='TE' && te===0)     s *= 2.0;
           } else {
             if (p.pos==='QB' && qb===0)     s *= 3.5;
             if (p.pos==='TE' && te===0)     s *= 3.0;
@@ -769,9 +824,9 @@
           break;
 
         case 'stacker':
-          // Draft QB earlier than BPA; then heavily prefer skill players from QB's team
+          // Draft QB within first 7 rounds; then heavily prefer skill players from QB's team
           if (qb===0) {
-            if (round <= 5 && p.pos==='QB') s *= 2.2;
+            if (round <= 7 && p.pos==='QB') s *= 2.2;
           } else if (qbTeam) {
             const pTeam = _teamOf(p.name);
             if (pTeam && pTeam===qbTeam && (p.pos==='WR'||p.pos==='TE')) s *= 3.0;
