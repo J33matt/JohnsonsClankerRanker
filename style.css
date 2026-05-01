@@ -3753,3 +3753,16 @@
 .ffd-move-btn:hover { background: #ffaa00; color: #000; }
 .ffd-leave-btn { border-color: var(--border); color: var(--muted); }
 .ffd-leave-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+
+/* ── Lobby slot badge (manual order slot number) ─────────────────────────── */
+.ffd-slot-badge {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}

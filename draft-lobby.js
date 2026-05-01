@@ -180,24 +180,59 @@
     const pList       = Object.entries(participants).sort((a, b) => a[1].joinedAt - b[1].joinedAt);
     const count       = pList.length;
 
-    const participantRows = pList.map(([uid, p]) => {
-      const isMe = uid === _myUid;
-      const isH  = uid === hostId;
-      return `<div class="ffd-participant${isMe ? ' ffd-me' : ''}">
-        <div class="ffd-p-left">
-          ${isH ? '<span class="ffd-host-crown">👑</span>' : '<span class="ffd-p-dot"></span>'}
-          <span class="ffd-p-name">${p.name}${isMe ? ' <span class="ffd-you-tag">YOU</span>' : ''}</span>
-          ${p.isGuest ? '<span class="ffd-guest-tag">GUEST</span>' : ''}
-        </div>
-        ${isHost && !isH ? `<button class="ffd-give-host-btn" onclick="_draftGiveHost('${lobbyId}','${uid}')">Give Host</button>` : ''}
-      </div>`;
-    }).join('');
-
-    const emptySlots = Array.from({ length: Math.max(0, maxSlots - count) }, (_, i) =>
-      `<div class="ffd-participant ffd-empty">
-        <div class="ffd-p-left"><span class="ffd-p-dot ffd-dot-empty"></span><span class="ffd-p-name ffd-empty-label">Open slot ${count + i + 1}</span></div>
-      </div>`
-    ).join('');
+    // When manual order: render all N slots in pick order, each slot claimed or open
+    // When random: render joined participants then empty slots (original behaviour)
+    let participantRows, emptySlots;
+    if (!randomize) {
+      const myClaimedSlot = slotPreferences[_myUid] !== undefined ? slotPreferences[_myUid] : null;
+      participantRows = Array.from({ length: maxSlots }, (_, i) => {
+        const claimedUid  = Object.entries(slotPreferences).find(([, s]) => s === i)?.[0];
+        const p           = claimedUid ? participants[claimedUid] : null;
+        const isMe        = claimedUid === _myUid;
+        const isH         = claimedUid === hostId;
+        if (p) {
+          return `<div class="ffd-participant${isMe ? ' ffd-me' : ''}">
+            <div class="ffd-p-left">
+              ${isH ? '<span class="ffd-host-crown">👑</span>' : '<span class="ffd-p-dot"></span>'}
+              <span class="ffd-slot-badge">${i + 1}</span>
+              <span class="ffd-p-name">${p.name}${isMe ? ' <span class="ffd-you-tag">YOU</span>' : ''}</span>
+              ${p.isGuest ? '<span class="ffd-guest-tag">GUEST</span>' : ''}
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              ${isHost && !isH ? `<button class="ffd-give-host-btn" onclick="_draftGiveHost('${lobbyId}','${claimedUid}')">Give Host</button>` : ''}
+              ${isMe ? `<button class="ffd-give-host-btn" onclick="_draftClaimSlot('${lobbyId}',null)">Leave</button>` : ''}
+            </div>
+          </div>`;
+        }
+        return `<div class="ffd-participant ffd-empty">
+          <div class="ffd-p-left">
+            <span class="ffd-p-dot ffd-dot-empty"></span>
+            <span class="ffd-slot-badge" style="opacity:0.35">${i + 1}</span>
+            <span class="ffd-p-name ffd-empty-label">Open slot ${i + 1}</span>
+          </div>
+          ${myClaimedSlot !== i ? `<button class="ffd-give-host-btn" onclick="_draftClaimSlot('${lobbyId}',${i})">Move here</button>` : ''}
+        </div>`;
+      }).join('');
+      emptySlots = '';
+    } else {
+      participantRows = pList.map(([uid, p]) => {
+        const isMe = uid === _myUid;
+        const isH  = uid === hostId;
+        return `<div class="ffd-participant${isMe ? ' ffd-me' : ''}">
+          <div class="ffd-p-left">
+            ${isH ? '<span class="ffd-host-crown">👑</span>' : '<span class="ffd-p-dot"></span>'}
+            <span class="ffd-p-name">${p.name}${isMe ? ' <span class="ffd-you-tag">YOU</span>' : ''}</span>
+            ${p.isGuest ? '<span class="ffd-guest-tag">GUEST</span>' : ''}
+          </div>
+          ${isHost && !isH ? `<button class="ffd-give-host-btn" onclick="_draftGiveHost('${lobbyId}','${uid}')">Give Host</button>` : ''}
+        </div>`;
+      }).join('');
+      emptySlots = Array.from({ length: Math.max(0, maxSlots - count) }, (_, i) =>
+        `<div class="ffd-participant ffd-empty">
+          <div class="ffd-p-left"><span class="ffd-p-dot ffd-dot-empty"></span><span class="ffd-p-name ffd-empty-label">Open slot ${count + i + 1}</span></div>
+        </div>`
+      ).join('');
+    }
 
     const settingsPanel = isHost
       ? `<div class="ffd-settings-panel">
@@ -230,29 +265,6 @@
           <div class="ffd-settings-row"><span class="ffd-settings-label">Draft Order</span><span class="ffd-settings-val">${randomize ? 'Randomized' : 'Manual'}</span></div>
         </div>`;
 
-    // Slot selection grid (shown when manual order)
-    const myClaimedSlot = slotPreferences[_myUid] !== undefined ? slotPreferences[_myUid] : null;
-    const slotGrid = !randomize ? `
-      <div class="ffd-slot-section">
-        <div class="ffd-panel-title" style="margin-bottom:12px">DRAFT POSITIONS · Choose your slot</div>
-        <div class="ffd-slot-grid">
-          ${Array.from({length: maxSlots}, (_, i) => {
-            const claimedUid = Object.entries(slotPreferences).find(([,s]) => s === i)?.[0];
-            const claimedName = claimedUid ? (participants[claimedUid]?.name || '?') : null;
-            const isMySlot = claimedUid === _myUid;
-            const isTaken  = claimedUid && !isMySlot;
-            return `<div class="ffd-slot-item${isMySlot ? ' ffd-slot-mine' : isTaken ? ' ffd-slot-taken' : ''}">
-              <span class="ffd-slot-num">Slot ${i+1}</span>
-              <span class="ffd-slot-name">${claimedName || 'Open'}</span>
-              ${isMySlot
-                ? `<button class="ffd-move-btn ffd-leave-btn" onclick="_draftClaimSlot('${lobbyId}',null)">Leave</button>`
-                : !isTaken
-                  ? `<button class="ffd-move-btn" onclick="_draftClaimSlot('${lobbyId}',${i})">Move here</button>`
-                  : ''}
-            </div>`;
-          }).join('')}
-        </div>
-      </div>` : '';
 
     const canStart = isHost && count >= 1;
     const actionArea = isHost
@@ -273,7 +285,6 @@
           </div>
           ${settingsPanel}
         </div>
-        ${slotGrid}
         ${actionArea}
       </div>`;
   }
