@@ -10900,7 +10900,7 @@ function _ffSetFilter(pos, btn) {
 function _ffGoPage(dir) {
   _ffPage += dir;
   _ffRenderTable();
-  document.getElementById('ff-table-wrap')?.scrollIntoView({ behavior:'smooth', block:'start' });
+  document.getElementById('ff-table-wrap')?.querySelector('.ff-pagination')?.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 
 function _ffPosColor(pos) {
@@ -10986,7 +10986,7 @@ function _ffRenderTable() {
     <button class="ff-page-btn" onclick="_ffGoPage(1)" ${_ffPage >= totalPages - 1 ? 'disabled' : ''}>Next &#8594;</button>
   </div>`;
 
-  wrap.innerHTML = cards + pagination;
+  wrap.innerHTML = pagination + cards + pagination.replace('ff-pagination', 'ff-pagination ff-pagination-bottom');
 }
 </script>
 <script src="cards-data.js"></script>
