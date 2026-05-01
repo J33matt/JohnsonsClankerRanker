@@ -10981,6 +10981,7 @@ function _ffRenderTable() {
         <div class="ff-card-meta">
           <span class="ff-badge" style="background:${_ffPosColor(p.pos)}">${posLabel}</span>
           ${team ? `<span class="ff-team-abbr">${team}</span>` : ''}
+          ${(team && typeof BYE_WEEKS !== 'undefined' && BYE_WEEKS[team]) ? `<span class="ff-szn-badge" style="color:var(--muted)">BYE ${BYE_WEEKS[team]}</span>` : ''}
           ${sznBadge}
         </div>
       </div>
