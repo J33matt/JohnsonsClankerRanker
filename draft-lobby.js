@@ -687,6 +687,109 @@
     });
   };
 
+  // ── Bot personality engine ──────────────────────────────────────────────────
+  function _botPickPlayer(personality, available, myPicks, round) {
+    if (!available.length) return null;
+
+    // Current roster summary
+    const cnt = {};
+    myPicks.forEach(p => { cnt[p.playerPos] = (cnt[p.playerPos] || 0) + 1; });
+    const rb = cnt.RB||0, wr = cnt.WR||0, qb = cnt.QB||0, te = cnt.TE||0;
+    const hasEliteRB = myPicks.some(p => p.playerPos==='RB' && p.playerRank<=20);
+
+    // QB's team for stacker
+    const myQB   = myPicks.find(p => p.playerPos==='QB');
+    const qbTeam = myQB ? _teamOf(myQB.playerName) : null;
+
+    const scored = available.map(p => {
+      let s = 400 - p.rank; // base: higher rank number = lower score
+
+      // Hard need guards — heavily penalise over-drafting a filled position
+      if (p.pos==='QB'  && qb>=1) s *= 0.08;
+      if (p.pos==='K'   && (cnt.K||0)>=1)   s *= 0.05;
+      if (p.pos==='DST' && (cnt.DST||0)>=1) s *= 0.05;
+      if (p.pos==='RB'  && rb>=5) s *= 0.4;
+      if (p.pos==='WR'  && wr>=5) s *= 0.4;
+      if (p.pos==='TE'  && te>=2) s *= 0.2;
+
+      switch (personality) {
+
+        case 'hero-rb':
+          // Round 1-2: chase elite RB; once secured, pivot hard to WR/TE/QB mid-rounds
+          if (round <= 2) {
+            if (p.pos==='RB' && rb===0) s *= 2.8;
+            else if (p.pos==='RB')      s *= 0.4;
+          } else if (round <= 6) {
+            if (hasEliteRB) {
+              if (p.pos==='RB')          s *= 0.15;
+              if (p.pos==='WR'||p.pos==='TE') s *= 1.5;
+              if (p.pos==='QB'&&qb===0)  s *= 1.3;
+            } else {
+              if (p.pos==='RB')          s *= 1.6; // still needs the hero
+            }
+          } else {
+            if (p.pos==='RB' && rb>=2)  s *= 0.35;
+          }
+          break;
+
+        case 'zero-rb':
+          // Skip RB for rounds 1-8; flood WR/QB/TE; then load up on RBs late
+          if (round <= 8) {
+            if (p.pos==='RB')               s *= 0.04;
+            if (p.pos==='WR')               s *= 1.5;
+            if (p.pos==='QB' && qb===0)     s *= 1.3;
+            if (p.pos==='TE' && te===0)     s *= 1.3;
+          } else {
+            if (p.pos==='RB')               s *= 2.2; // quantity late
+          }
+          break;
+
+        case 'robust-rb':
+          // 3-4 RBs in first 6 rounds, then flip to WR/TE
+          if (rb < 3 && round <= 6) {
+            if (p.pos==='RB')               s *= 2.4;
+          } else if (rb >= 3) {
+            if (p.pos==='RB')               s *= 0.2;
+            if (p.pos==='WR')               s *= 2.1;
+            if (p.pos==='TE' && te===0)     s *= 1.9;
+          }
+          break;
+
+        case 'late-qbte':
+          // Ignore QB+TE until round 10; stack WR/RB depth early
+          if (round <= 9) {
+            if (p.pos==='QB')               s *= 0.04;
+            if (p.pos==='TE')               s *= 0.08;
+            if (p.pos==='WR')               s *= 1.35;
+            if (p.pos==='RB')               s *= 1.2;
+          } else {
+            if (p.pos==='QB' && qb===0)     s *= 3.5;
+            if (p.pos==='TE' && te===0)     s *= 3.0;
+          }
+          break;
+
+        case 'stacker':
+          // Draft QB earlier than BPA; then heavily prefer skill players from QB's team
+          if (qb===0) {
+            if (round <= 5 && p.pos==='QB') s *= 2.2;
+          } else if (qbTeam) {
+            const pTeam = _teamOf(p.name);
+            if (pTeam && pTeam===qbTeam && (p.pos==='WR'||p.pos==='TE')) s *= 3.0;
+          }
+          break;
+
+        case 'bpa':
+        default:
+          break; // pure rank — no modifiers
+      }
+
+      return { player: p, score: s };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored[0].player;
+  }
+
   // ── Bot picks ───────────────────────────────────────────────────────────────
   function _handleBotPick(data, lobbyId) {
     if (_myUid !== data.hostId) return;
@@ -699,10 +802,17 @@
       if (!snap.exists) return;
       const fresh = snap.data();
       if ((fresh.draftOrder || [])[fresh.currentPickIndex] !== currentUid) return;
-      const drafted = new Set(fresh.draftedRanks || []);
-      const bpa = (typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : [])
-        .find(p => !drafted.has(p.rank));
-      if (bpa) await window._draftMakePick(lobbyId, bpa.rank, currentUid);
+
+      const all         = typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : [];
+      const drafted     = new Set(fresh.draftedRanks || []);
+      const available   = all.filter(p => !drafted.has(p.rank));
+      const personality = fresh.participants?.[currentUid]?.botPersonality || 'bpa';
+      const leagueSize  = fresh.settings?.leagueSize || 10;
+      const round       = Math.floor(fresh.currentPickIndex / leagueSize) + 1;
+      const myPicks     = (fresh.picks || []).filter(p => p.uid === currentUid);
+
+      const pick = _botPickPlayer(personality, available, myPicks, round);
+      if (pick) await window._draftMakePick(lobbyId, pick.rank, currentUid);
     }, 3000);
   }
 
