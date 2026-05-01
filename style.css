@@ -3687,3 +3687,69 @@
 .ffdb-recent-meta { font-family: 'Barlow Condensed', sans-serif; font-size: 0.7rem; color: var(--muted); width: 34px; flex-shrink: 0; }
 .ffdb-recent-name { font-family: 'Barlow Condensed', sans-serif; font-size: 0.85rem; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ffdb-recent-picker { font-family: 'Barlow Condensed', sans-serif; font-size: 0.7rem; color: var(--muted); max-width: 72px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Draft Board — Big Board ─────────────────────────────────────────────── */
+:root { --bb-rh: 56px; --bb-cw: 108px; --bb-lw: 36px; }
+.ffdb-bb-wrap { margin-bottom: 14px; }
+.ffdb-bb-outer { overflow-x: auto; width: 100%; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.ffdb-bb-header-row { display: flex; min-width: max-content; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 3; }
+.ffdb-bb-corner { width: var(--bb-lw); flex-shrink: 0; font-family: 'Bebas Neue', sans-serif; font-size: 0.65rem; letter-spacing: 2px; color: var(--muted); display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--border); }
+.ffdb-bb-th { width: var(--bb-cw); flex-shrink: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; padding: 6px 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-right: 1px solid var(--border); }
+.ffdb-bb-th:last-child { border-right: none; }
+.ffdb-bb-me-col { color: #ffaa00; }
+
+.ffdb-bb-scroll { height: calc(var(--bb-rh) * 2); overflow-y: scroll; scroll-snap-type: y mandatory; min-width: max-content; }
+.ffdb-bb-scroll::-webkit-scrollbar { width: 4px; }
+.ffdb-bb-scroll::-webkit-scrollbar-track { background: transparent; }
+.ffdb-bb-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.ffdb-bb-round { display: flex; height: var(--bb-rh); scroll-snap-align: start; border-bottom: 1px solid var(--border); }
+.ffdb-bb-round:last-child { border-bottom: none; }
+.ffdb-bb-cur-round { background: rgba(255,170,0,0.04); }
+
+.ffdb-bb-cell { width: var(--bb-cw); flex-shrink: 0; border-right: 1px solid var(--border); padding: 4px 6px; display: flex; flex-direction: column; justify-content: center; position: relative; min-width: 0; }
+.ffdb-bb-cell:last-child { border-right: none; }
+.ffdb-bb-me-col { background: rgba(255,170,0,0.04); }
+.ffdb-bb-picked { background: rgba(255,255,255,0.03); }
+.ffdb-bb-onclock { outline: 2px solid #ffaa00; outline-offset: -2px; }
+.ffdb-bb-picknum { font-family: 'Barlow Condensed', sans-serif; font-size: 0.6rem; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 2px; }
+.ffdb-bb-pname { font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+.ffdb-bb-clock-label { color: #ffaa00; font-size: 0.68rem; letter-spacing: 1px; }
+.ffdb-bb-pdot { width: 6px; height: 6px; border-radius: 50%; margin-top: 3px; }
+
+/* ── Draft Board — Pick Indicators ──────────────────────────────────────── */
+.ffdb-pick-indicator { display: flex; align-items: center; gap: 8px; padding: 5px 14px; background: rgba(255,170,0,0.07); border-top: 1px dashed rgba(255,170,0,0.35); border-bottom: 1px dashed rgba(255,170,0,0.35); }
+.ffdb-pi-line { flex: 1; height: 1px; background: rgba(255,170,0,0.25); }
+.ffdb-pi-label { font-family: 'Bebas Neue', sans-serif; font-size: 0.72rem; letter-spacing: 1.5px; color: #ffaa00; white-space: nowrap; }
+.ffdb-pi-end { opacity: 0.55; }
+
+/* ── Draft Board — Queue ─────────────────────────────────────────────────── */
+.ffdb-queue-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.ffdb-q-btn { background: transparent; border: none; cursor: pointer; font-size: 0.95rem; color: var(--muted); padding: 0 4px; flex-shrink: 0; line-height: 1; transition: color 0.1s; }
+.ffdb-q-btn:hover { color: #ffaa00; }
+.ffdb-q-active { color: #ffaa00; }
+.ffdb-in-queue { background: rgba(255,170,0,0.06); }
+.ffdb-q-row { display: flex; align-items: center; gap: 7px; padding: 5px 0; border-bottom: 1px solid var(--border); font-family: 'Barlow Condensed', sans-serif; }
+.ffdb-q-row:last-child { border-bottom: none; }
+.ffdb-q-pos { font-size: 0.72rem; color: var(--muted); width: 18px; flex-shrink: 0; }
+.ffdb-q-name { font-size: 0.88rem; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ffdb-q-gone { opacity: 0.4; }
+.ffdb-q-tag { font-size: 0.62rem; letter-spacing: 1px; color: #e74c3c; border: 1px solid #e74c3c; border-radius: 3px; padding: 1px 4px; flex-shrink: 0; }
+.ffdb-q-rm { background: transparent; border: none; cursor: pointer; color: var(--muted); font-size: 0.75rem; padding: 0 2px; flex-shrink: 0; }
+.ffdb-q-rm:hover { color: #e74c3c; }
+
+/* ── Draft Board — Forced starter mode ──────────────────────────────────── */
+.ffdb-forced-banner { font-family: 'Barlow Condensed', sans-serif; font-size: 0.82rem; letter-spacing: 1px; color: #e67e22; background: rgba(230,126,34,0.08); border-bottom: 1px solid rgba(230,126,34,0.2); padding: 7px 14px; }
+
+/* ── Lobby — Slot selection ──────────────────────────────────────────────── */
+.ffd-slot-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 16px; }
+.ffd-slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.ffd-slot-item { display: flex; align-items: center; gap: 8px; background: var(--surface2, rgba(255,255,255,0.03)); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+.ffd-slot-item.ffd-slot-mine { border-color: #ffaa00; background: rgba(255,170,0,0.08); }
+.ffd-slot-item.ffd-slot-taken { opacity: 0.65; }
+.ffd-slot-num { font-family: 'Bebas Neue', sans-serif; font-size: 0.8rem; letter-spacing: 1px; color: var(--muted); flex-shrink: 0; }
+.ffd-slot-name { font-family: 'Barlow Condensed', sans-serif; font-size: 0.88rem; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ffd-move-btn { font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; letter-spacing: 1px; padding: 3px 9px; border-radius: 8px; border: 1px solid rgba(255,170,0,0.5); background: transparent; color: #ffaa00; cursor: pointer; flex-shrink: 0; white-space: nowrap; transition: all 0.12s; }
+.ffd-move-btn:hover { background: #ffaa00; color: #000; }
+.ffd-leave-btn { border-color: var(--border); color: var(--muted); }
+.ffd-leave-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }

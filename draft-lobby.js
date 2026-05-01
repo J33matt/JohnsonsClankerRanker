@@ -11,6 +11,8 @@
   let _lastDraftData = null;
   let _timerInterval = null;
   let _botTimeout    = null;
+  let _bbScrollTop   = -1;
+  window._draftQueue = [];
 
   function _db() { return firebase.firestore(); }
   function _panel() { return document.getElementById('nfl-ff-draft'); }
@@ -171,11 +173,12 @@
     const container = _panel();
     if (!container) return;
 
-    const { settings = {}, participants = {}, hostId } = data;
-    const isHost   = hostId === _myUid;
-    const maxSlots = settings.leagueSize || 10;
-    const pList    = Object.entries(participants).sort((a, b) => a[1].joinedAt - b[1].joinedAt);
-    const count    = pList.length;
+    const { settings = {}, participants = {}, hostId, slotPreferences = {} } = data;
+    const isHost      = hostId === _myUid;
+    const maxSlots    = settings.leagueSize || 10;
+    const randomize   = settings.randomizeOrder !== false; // default true
+    const pList       = Object.entries(participants).sort((a, b) => a[1].joinedAt - b[1].joinedAt);
+    const count       = pList.length;
 
     const participantRows = pList.map(([uid, p]) => {
       const isMe = uid === _myUid;
@@ -202,48 +205,75 @@
           <div class="ffd-settings-row">
             <span class="ffd-settings-label">League Size</span>
             <div class="ffd-opts">
-              ${[8, 10, 12].map(n => `<button class="ffd-opt${settings.leagueSize === n ? ' active' : ''}" onclick="_draftSetSetting('${lobbyId}','leagueSize',${n})">${n}</button>`).join('')}
+              ${[8,10,12].map(n => `<button class="ffd-opt${settings.leagueSize===n?' active':''}" onclick="_draftSetSetting('${lobbyId}','leagueSize',${n})">${n}</button>`).join('')}
             </div>
           </div>
           <div class="ffd-settings-row">
             <span class="ffd-settings-label">Pick Timer</span>
             <div class="ffd-opts">
-              ${[15, 30, 60, 90].map(n => `<button class="ffd-opt${settings.timerSeconds === n ? ' active' : ''}" onclick="_draftSetSetting('${lobbyId}','timerSeconds',${n})">${n}s</button>`).join('')}
-              <button class="ffd-opt${!settings.timerSeconds ? ' active' : ''}" onclick="_draftSetSetting('${lobbyId}','timerSeconds',0)">∞</button>
+              ${[15,30,60,90].map(n => `<button class="ffd-opt${settings.timerSeconds===n?' active':''}" onclick="_draftSetSetting('${lobbyId}','timerSeconds',${n})">${n}s</button>`).join('')}
+              <button class="ffd-opt${!settings.timerSeconds?' active':''}" onclick="_draftSetSetting('${lobbyId}','timerSeconds',0)">∞</button>
+            </div>
+          </div>
+          <div class="ffd-settings-row">
+            <span class="ffd-settings-label">Draft Order</span>
+            <div class="ffd-opts">
+              <button class="ffd-opt${randomize?' active':''}" onclick="_draftSetSetting('${lobbyId}','randomizeOrder',true)">Random</button>
+              <button class="ffd-opt${!randomize?' active':''}" onclick="_draftSetSetting('${lobbyId}','randomizeOrder',false)">Manual</button>
             </div>
           </div>
         </div>`
       : `<div class="ffd-settings-panel ffd-settings-ro">
           <div class="ffd-panel-title">LOBBY SETTINGS</div>
           <div class="ffd-settings-row"><span class="ffd-settings-label">League Size</span><span class="ffd-settings-val">${maxSlots} teams</span></div>
-          <div class="ffd-settings-row"><span class="ffd-settings-label">Pick Timer</span><span class="ffd-settings-val">${settings.timerSeconds ? settings.timerSeconds + 's' : 'No limit'}</span></div>
+          <div class="ffd-settings-row"><span class="ffd-settings-label">Pick Timer</span><span class="ffd-settings-val">${settings.timerSeconds ? settings.timerSeconds+'s' : 'No limit'}</span></div>
+          <div class="ffd-settings-row"><span class="ffd-settings-label">Draft Order</span><span class="ffd-settings-val">${randomize ? 'Randomized' : 'Manual'}</span></div>
         </div>`;
+
+    // Slot selection grid (shown when manual order)
+    const myClaimedSlot = slotPreferences[_myUid] !== undefined ? slotPreferences[_myUid] : null;
+    const slotGrid = !randomize ? `
+      <div class="ffd-slot-section">
+        <div class="ffd-panel-title" style="margin-bottom:12px">DRAFT POSITIONS · Choose your slot</div>
+        <div class="ffd-slot-grid">
+          ${Array.from({length: maxSlots}, (_, i) => {
+            const claimedUid = Object.entries(slotPreferences).find(([,s]) => s === i)?.[0];
+            const claimedName = claimedUid ? (participants[claimedUid]?.name || '?') : null;
+            const isMySlot = claimedUid === _myUid;
+            const isTaken  = claimedUid && !isMySlot;
+            return `<div class="ffd-slot-item${isMySlot ? ' ffd-slot-mine' : isTaken ? ' ffd-slot-taken' : ''}">
+              <span class="ffd-slot-num">Slot ${i+1}</span>
+              <span class="ffd-slot-name">${claimedName || 'Open'}</span>
+              ${isMySlot
+                ? `<button class="ffd-move-btn ffd-leave-btn" onclick="_draftClaimSlot('${lobbyId}',null)">Leave</button>`
+                : !isTaken
+                  ? `<button class="ffd-move-btn" onclick="_draftClaimSlot('${lobbyId}',${i})">Move here</button>`
+                  : ''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : '';
 
     const canStart = isHost && count >= 1;
     const actionArea = isHost
-      ? `<button class="ffd-start-btn" onclick="_draftStartDraft('${lobbyId}')" ${canStart ? '' : 'disabled'}>
-           START DRAFT
-         </button>`
+      ? `<button class="ffd-start-btn" onclick="_draftStartDraft('${lobbyId}')" ${canStart ? '' : 'disabled'}>START DRAFT</button>`
       : `<div class="ffd-waiting-msg">Waiting for host to start…</div>`;
 
     container.innerHTML = `
       <div class="ffd-wrap">
         <div class="ffd-topbar">
-          <span class="ffd-lobby-code">LOBBY · ${lobbyId.slice(0, 8).toUpperCase()}</span>
+          <span class="ffd-lobby-code">LOBBY · ${lobbyId.slice(0,8).toUpperCase()}</span>
         </div>
-
         <div class="ffd-lobby-header">🏈 DRAFT LOBBY</div>
-        <div class="ffd-lobby-sub">${count} / ${maxSlots} players joined · ${maxSlots - count > 0 ? (maxSlots - count) + ' open slot' + (maxSlots - count !== 1 ? 's' : '') + ' (bots will fill on start)' : 'lobby full'}</div>
-
+        <div class="ffd-lobby-sub">${count} / ${maxSlots} players joined · ${maxSlots - count > 0 ? (maxSlots-count)+' open slot'+(maxSlots-count!==1?'s':'')+' (bots will fill on start)' : 'lobby full'}</div>
         <div class="ffd-body">
           <div class="ffd-participants-panel">
             <div class="ffd-panel-title">PARTICIPANTS</div>
-            ${participantRows}
-            ${emptySlots}
+            ${participantRows}${emptySlots}
           </div>
           ${settingsPanel}
         </div>
-
+        ${slotGrid}
         ${actionArea}
       </div>`;
   }
@@ -259,17 +289,34 @@
   };
 
   window._draftStartDraft = async function (lobbyId) {
-    const db = _db();
+    const db   = _db();
     const snap = await db.collection('ff_draft_lobbies').doc(lobbyId).get();
     const data = snap.data();
-    const settings = data.settings || {};
-    const leagueSize = settings.leagueSize || 10;
-    const timerSecs  = settings.timerSeconds || 0;
-    const participants = { ...(data.participants || {}) };
+    const settings       = data.settings || {};
+    const leagueSize     = settings.leagueSize || 10;
+    const timerSecs      = settings.timerSeconds || 0;
+    const randomize      = settings.randomizeOrder !== false;
+    const slotPrefs      = data.slotPreferences || {};
+    const participants   = { ...(data.participants || {}) };
 
-    const humanUids = Object.entries(participants)
-      .sort((a, b) => a[1].joinedAt - b[1].joinedAt)
+    // Order humans by their claimed slot (manual) or join order, then shuffle if random
+    let humanUids = Object.entries(participants)
+      .sort((a, b) => {
+        if (!randomize) {
+          const sa = slotPrefs[a[0]] !== undefined ? slotPrefs[a[0]] : 999;
+          const sb = slotPrefs[b[0]] !== undefined ? slotPrefs[b[0]] : 999;
+          if (sa !== sb) return sa - sb;
+        }
+        return a[1].joinedAt - b[1].joinedAt;
+      })
       .map(([uid]) => uid);
+
+    if (randomize) {
+      for (let i = humanUids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [humanUids[i], humanUids[j]] = [humanUids[j], humanUids[i]];
+      }
+    }
 
     let botCount = 0;
     while (humanUids.length < leagueSize) {
@@ -286,13 +333,11 @@
 
     const draftOrder = [];
     for (let r = 0; r < 16; r++) {
-      const row = r % 2 === 0 ? [...humanUids] : [...humanUids].reverse();
-      draftOrder.push(...row);
+      draftOrder.push(...(r % 2 === 0 ? [...humanUids] : [...humanUids].reverse()));
     }
 
     const timerEndsAt = timerSecs > 0
-      ? firebase.firestore.Timestamp.fromMillis(Date.now() + timerSecs * 1000)
-      : null;
+      ? firebase.firestore.Timestamp.fromMillis(Date.now() + timerSecs * 1000) : null;
 
     const batch = db.batch();
     batch.update(db.collection('ff_draft_lobbies').doc(lobbyId), {
@@ -340,6 +385,48 @@
     return slots;
   }
 
+  function _posColor(p) { return typeof _ffPosColor === 'function' ? _ffPosColor(p) : '#888'; }
+  function _teamOf(name) {
+    const k = (name||'').toLowerCase().replace(/[.'''`]/g,'').replace(/\s+/g,' ').trim();
+    return (window._playerTeamMap && (window._playerTeamMap[k] ||
+      window._playerTeamMap[k.replace(/\s+(jr|sr|ii|iii|iv)$/i,'').trim()])) || '';
+  }
+
+  function _renderBigBoard(data, leagueSize, currentPickIndex) {
+    const { draftOrder = [], picks = [], participants = {} } = data;
+    const picksMap = {};
+    picks.forEach(p => { picksMap[p.pickIndex] = p; });
+    const teamOrder  = draftOrder.slice(0, leagueSize);
+    const totalRounds = 16;
+    const currentRound0 = Math.floor(currentPickIndex / leagueSize); // 0-indexed
+
+    const headerCells = teamOrder.map((uid, c) => {
+      const isMe = uid === _myUid;
+      const name = (participants[uid] || {}).name || '?';
+      return `<div class="ffdb-bb-th${isMe ? ' ffdb-bb-me-col' : ''}">${name}</div>`;
+    }).join('');
+
+    const roundRows = Array.from({length: totalRounds}, (_, r) => {
+      const isCur = r === currentRound0;
+      const cells = teamOrder.map((uid, c) => {
+        const pickIdx = r * leagueSize + (r % 2 === 0 ? c : leagueSize - 1 - c);
+        const pick    = picksMap[pickIdx];
+        const isOnClock = pickIdx === currentPickIndex;
+        const isMe    = uid === _myUid;
+        const pc      = pick ? _posColor(pick.playerPos) : '';
+        return `<div class="ffdb-bb-cell${pick?' ffdb-bb-picked':''}${isOnClock?' ffdb-bb-onclock':''}${isMe?' ffdb-bb-me-col':''}">
+          <div class="ffdb-bb-picknum">${r+1}.${String((r%2===0?c:leagueSize-1-c)+1).padStart(2,'0')}</div>
+          ${pick
+            ? `<div class="ffdb-bb-pname">${pick.playerName}</div><div class="ffdb-bb-pdot" style="background:${pc}"></div>`
+            : isOnClock ? `<div class="ffdb-bb-pname ffdb-bb-clock-label">ON CLOCK</div>` : ''}
+        </div>`;
+      }).join('');
+      return `<div class="ffdb-bb-round${isCur?' ffdb-bb-cur-round':''}" data-round="${r}">${cells}</div>`;
+    }).join('');
+
+    return { headerCells, roundRows, currentRound0 };
+  }
+
   function _renderDraftBoard(data, lobbyId) {
     const container = _panel();
     if (!container) return;
@@ -356,69 +443,144 @@
       return;
     }
 
-    const currentUid   = draftOrder[currentPickIndex];
+    const currentUid    = draftOrder[currentPickIndex];
     const currentPicker = participants[currentUid] || {};
-    const isMyTurn     = currentUid === _myUid;
-    const currentRound = Math.floor(currentPickIndex / leagueSize) + 1;
-    const pickInRound  = (currentPickIndex % leagueSize) + 1;
+    const isMyTurn      = currentUid === _myUid;
+    const currentRound  = Math.floor(currentPickIndex / leagueSize) + 1;
+    const pickInRound   = (currentPickIndex % leagueSize) + 1;
 
+    // Save big board scroll before re-render
+    const bbOld = document.getElementById('ffdb-bb-scroll');
+    if (bbOld) _bbScrollTop = bbOld.scrollTop;
+
+    // Forced starter mode
+    const myRemainingPicks = draftOrder.slice(currentPickIndex).filter(u => u === _myUid).length;
+    const unfilledStarters = _buildRoster(picks, _myUid).filter(s => !s.id.startsWith('BN') && !s.filled);
+    const forcedMode = unfilledStarters.length > 0 && unfilledStarters.length >= myRemainingPicks;
+    const forcedPos  = forcedMode ? new Set(unfilledStarters.flatMap(s => s.pos)) : null;
+
+    // Available players
     const posFilter  = window._ffdbPosFilter || 'ALL';
     const draftedSet = new Set(draftedRanks);
     const available  = (typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : [])
       .filter(p => !draftedSet.has(p.rank));
     const flexSet    = new Set(['QB','RB','WR','TE']);
-    const filtered   = posFilter === 'ALL' ? available
+    let filtered = posFilter === 'ALL' ? available
       : posFilter === 'FLEX' ? available.filter(p => flexSet.has(p.pos))
       : available.filter(p => p.pos === posFilter);
+    if (forcedMode) filtered = available.filter(p => forcedPos.has(p.pos));
 
-    const posColor = p => (typeof _ffPosColor === 'function' ? _ffPosColor(p) : '#888');
-    const teamOf   = name => {
-      const k = (name||'').toLowerCase().replace(/[.'''`]/g,'').replace(/\s+/g,' ').trim();
-      return (window._playerTeamMap && (window._playerTeamMap[k] ||
-        window._playerTeamMap[k.replace(/\s+(jr|sr|ii|iii|iv)$/i,'').trim()])) || '';
-    };
+    // My future pick indicators
+    const myFuturePicks = [];
+    for (let i = currentPickIndex; i < draftOrder.length; i++) {
+      if (draftOrder[i] === _myUid) {
+        myFuturePicks.push({
+          pickIdx: i,
+          round: Math.floor(i / leagueSize) + 1,
+          playersBefore: i - currentPickIndex
+        });
+      }
+    }
 
-    const playerRows = filtered.map(p => `
-      <div class="ffdb-player-row">
+    // Build player rows with indicators interspersed
+    const queue = window._draftQueue || [];
+    const poolRows = [];
+    let indIdx = 0;
+    filtered.forEach((p, i) => {
+      while (indIdx < myFuturePicks.length && myFuturePicks[indIdx].playersBefore === i) {
+        const fp = myFuturePicks[indIdx++];
+        poolRows.push(`<div class="ffdb-pick-indicator">
+          <span class="ffdb-pi-line"></span>
+          <span class="ffdb-pi-label">▼ YOUR R${fp.round} PICK (EST. #${fp.pickIdx + 1} OVERALL)</span>
+          <span class="ffdb-pi-line"></span>
+        </div>`);
+      }
+      const inQueue = queue.includes(p.rank);
+      poolRows.push(`<div class="ffdb-player-row${inQueue?' ffdb-in-queue':''}">
         <span class="ffdb-p-rank">${p.rank}</span>
-        <span class="ffdb-pos-badge" style="background:${posColor(p.pos)}">${p.pos}</span>
+        <span class="ffdb-pos-badge" style="background:${_posColor(p.pos)}">${p.pos}</span>
         <span class="ffdb-p-name">${p.name}</span>
-        <span class="ffdb-p-team">${teamOf(p.name)}</span>
-        ${isMyTurn
+        <span class="ffdb-p-team">${_teamOf(p.name)}</span>
+        <button class="ffdb-q-btn${inQueue?' ffdb-q-active':''}" onclick="_toggleQueue(${p.rank})" title="${inQueue?'Remove from queue':'Add to queue'}">${inQueue?'★':'☆'}</button>
+        ${isMyTurn && (!forcedMode || forcedPos.has(p.pos))
           ? `<button class="ffdb-pick-btn" onclick="_draftMakePick('${lobbyId}',${p.rank})">DRAFT</button>`
           : '<span class="ffdb-pick-ph"></span>'}
-      </div>`).join('');
+      </div>`);
+    });
+    // Remaining indicators beyond available pool
+    while (indIdx < myFuturePicks.length) {
+      const fp = myFuturePicks[indIdx++];
+      poolRows.push(`<div class="ffdb-pick-indicator ffdb-pi-end">
+        <span class="ffdb-pi-line"></span>
+        <span class="ffdb-pi-label">▼ YOUR R${fp.round} PICK (EST. #${fp.pickIdx + 1} OVERALL)</span>
+        <span class="ffdb-pi-line"></span>
+      </div>`);
+    }
 
+    // Queue panel
+    const queueRows = queue.length
+      ? queue.map((rank, qi) => {
+          const p = (typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : []).find(x => x.rank === rank);
+          if (!p) return '';
+          const gone = draftedSet.has(rank);
+          return `<div class="ffdb-q-row${gone?' ffdb-q-gone':''}">
+            <span class="ffdb-q-pos">${qi+1}.</span>
+            <span class="ffdb-pos-badge ffdb-pos-sm" style="background:${_posColor(p.pos)}">${p.pos}</span>
+            <span class="ffdb-q-name">${p.name}</span>
+            ${gone ? '<span class="ffdb-q-tag">GONE</span>' : ''}
+            ${isMyTurn && !gone
+              ? `<button class="ffdb-pick-btn" style="font-size:0.68rem;padding:3px 8px" onclick="_draftMakePick('${lobbyId}',${rank})">DRAFT</button>`
+              : ''}
+            <button class="ffdb-q-rm" onclick="_toggleQueue(${rank})">✕</button>
+          </div>`;
+        }).join('')
+      : '<div class="ffdb-empty-pool">No players queued. Star ☆ players to add.</div>';
+
+    // Roster
     const rosterSlots = _buildRoster(picks, _myUid).map(s => `
-      <div class="ffdb-slot${s.filled ? ' ffdb-slot-filled' : ''}">
+      <div class="ffdb-slot${s.filled?' ffdb-slot-filled':''}">
         <span class="ffdb-slot-label">${s.label}</span>
         ${s.filled
-          ? `<span class="ffdb-slot-player"><span class="ffdb-slot-pos" style="color:${posColor(s.filled.playerPos)}">${s.filled.playerPos}</span> ${s.filled.playerName}</span>`
+          ? `<span class="ffdb-slot-player"><span class="ffdb-slot-pos" style="color:${_posColor(s.filled.playerPos)}">${s.filled.playerPos}</span> ${s.filled.playerName}</span>`
           : `<span class="ffdb-slot-empty">—</span>`}
       </div>`).join('');
 
-    const recentPicks = [...picks].sort((a,b) => b.pickIndex - a.pickIndex).slice(0, 10)
-      .map(p => {
-        const r = Math.floor(p.pickIndex / leagueSize) + 1;
-        const pk = (p.pickIndex % leagueSize) + 1;
-        const pName = (participants[p.uid] || {}).name || '?';
-        return `<div class="ffdb-recent-row">
-          <span class="ffdb-recent-meta">R${r}.${pk}</span>
-          <span class="ffdb-pos-badge ffdb-pos-sm" style="background:${posColor(p.playerPos)}">${p.playerPos}</span>
-          <span class="ffdb-recent-name">${p.playerName}</span>
-          <span class="ffdb-recent-picker">${pName}</span>
-        </div>`;
-      }).join('');
+    // Recent picks
+    const recentPicks = [...picks].sort((a,b) => b.pickIndex - a.pickIndex).slice(0, 10).map(p => {
+      const r  = Math.floor(p.pickIndex / leagueSize) + 1;
+      const pk = (p.pickIndex % leagueSize) + 1;
+      return `<div class="ffdb-recent-row">
+        <span class="ffdb-recent-meta">R${r}.${pk}</span>
+        <span class="ffdb-pos-badge ffdb-pos-sm" style="background:${_posColor(p.playerPos)}">${p.playerPos}</span>
+        <span class="ffdb-recent-name">${p.playerName}</span>
+        <span class="ffdb-recent-picker">${(participants[p.uid]||{}).name||'?'}</span>
+      </div>`;
+    }).join('');
+
+    // Big board
+    const { headerCells, roundRows } = _renderBigBoard(data, leagueSize, currentPickIndex);
+
+    const forcedBanner = forcedMode
+      ? `<div class="ffdb-forced-banner">⚠ Only showing players eligible for your remaining starter slots</div>` : '';
 
     container.innerHTML = `
       <div class="ffdb-wrap">
         <div class="ffdb-topbar">
           <div class="ffdb-round-info">Round ${currentRound} · Pick ${pickInRound} / ${leagueSize}</div>
-          <div class="ffdb-clock${isMyTurn ? ' ffdb-your-turn' : ''}">
-            ${isMyTurn ? '⚡ YOUR PICK' : `${currentPicker.name || '?'} is picking…`}
+          <div class="ffdb-clock${isMyTurn?' ffdb-your-turn':''}">
+            ${isMyTurn ? '⚡ YOUR PICK' : `${currentPicker.name||'?'} is picking…`}
             ${timerSecs > 0 ? `<span class="ffdb-timer" id="ffdb-timer">--</span>` : ''}
           </div>
           <div class="ffdb-pick-count">${currentPickIndex} / ${totalPicks} picks made</div>
+        </div>
+
+        <div class="ffdb-bb-wrap">
+          <div class="ffdb-bb-outer" id="ffdb-bb-outer">
+            <div class="ffdb-bb-header-row">
+              <div class="ffdb-bb-corner">RD</div>${headerCells}
+            </div>
+            <div class="ffdb-bb-scroll" id="ffdb-bb-scroll">${roundRows}</div>
+          </div>
         </div>
 
         <div class="ffdb-main">
@@ -427,16 +589,19 @@
               <span class="ffdb-panel-title">AVAILABLE · ${filtered.length}</span>
               <div class="ffdb-pos-filters">
                 ${['ALL','FLEX','QB','RB','WR','TE','K','DST'].map(pos =>
-                  `<button class="ffdb-pos-pill${posFilter===pos?' active':''}" onclick="_ffdbSetFilter('${pos}','${lobbyId}')">${pos}</button>`
+                  `<button class="ffdb-pos-pill${posFilter===pos&&!forcedMode?' active':''}" onclick="_ffdbSetFilter('${pos}')">${pos}</button>`
                 ).join('')}
               </div>
             </div>
-            <div class="ffdb-pool-list">
-              ${playerRows || '<div class="ffdb-empty-pool">No players match filter.</div>'}
-            </div>
+            ${forcedBanner}
+            <div class="ffdb-pool-list">${poolRows.join('')||'<div class="ffdb-empty-pool">No players available.</div>'}</div>
           </div>
 
           <div class="ffdb-right-panel">
+            <div class="ffdb-queue-panel">
+              <div class="ffdb-panel-title">MY QUEUE · ${queue.length}</div>
+              ${queueRows}
+            </div>
             <div class="ffdb-roster-panel">
               <div class="ffdb-panel-title">MY ROSTER</div>
               ${rosterSlots}
@@ -448,6 +613,17 @@
           </div>
         </div>
       </div>`;
+
+    // Restore / init big board scroll
+    const bbNew = document.getElementById('ffdb-bb-scroll');
+    if (bbNew) {
+      if (_bbScrollTop >= 0) {
+        bbNew.scrollTop = _bbScrollTop;
+      } else {
+        const rowH = 56;
+        bbNew.scrollTop = Math.max(0, Math.floor(currentPickIndex / leagueSize) - 1) * rowH;
+      }
+    }
 
     _startTimer(timerEndsAt, timerSecs, lobbyId);
   }
@@ -494,7 +670,7 @@
     if (!currentUid || !data.participants?.[currentUid]?.isBot) return;
 
     if (_botTimeout) { clearTimeout(_botTimeout); _botTimeout = null; }
-    _botTimeout = setTimeout(async () => {
+    _botTimeout = setTimeout(async () => {  // 3s bot delay
       const snap = await _db().collection('ff_draft_lobbies').doc(lobbyId).get();
       if (!snap.exists) return;
       const fresh = snap.data();
@@ -503,7 +679,7 @@
       const bpa = (typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : [])
         .find(p => !drafted.has(p.rank));
       if (bpa) await window._draftMakePick(lobbyId, bpa.rank, currentUid);
-    }, 5000);
+    }, 3000);
   }
 
   // ── Timer countdown ─────────────────────────────────────────────────────────
@@ -528,9 +704,9 @@
           // Bot expiry: host handles (already covered by _handleBotPick)
           if (uid !== _myUid) return;
           const drafted = new Set(d.draftedRanks || []);
-          const bpa = (typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : [])
-            .find(p => !drafted.has(p.rank));
-          if (bpa) window._draftMakePick(lobbyId, bpa.rank);
+          const all = typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : [];
+          const pick = _queueOrBpa(all, drafted);
+          if (pick) window._draftMakePick(lobbyId, pick.rank);
         });
       }
     };
@@ -543,5 +719,37 @@
   window._ffdbSetFilter = function (pos) {
     window._ffdbPosFilter = pos;
     if (_lastDraftData && _lobbyId) _renderDraftBoard(_lastDraftData, _lobbyId);
+  };
+
+  // ── Queue helpers ────────────────────────────────────────────────────────────
+  function _queueOrBpa(all, drafted) {
+    for (const rank of (window._draftQueue || [])) {
+      const p = all.find(x => x.rank === rank && !drafted.has(x.rank));
+      if (p) return p;
+    }
+    return all.find(p => !drafted.has(p.rank)) || null;
+  }
+
+  window._toggleQueue = function (rank) {
+    const q = window._draftQueue;
+    const i = q.indexOf(rank);
+    if (i >= 0) q.splice(i, 1); else q.push(rank);
+    if (_lastDraftData && _lobbyId) _renderDraftBoard(_lastDraftData, _lobbyId);
+  };
+
+  // ── Slot claim ───────────────────────────────────────────────────────────────
+  window._draftClaimSlot = async function (lobbyId, slotIndex) {
+    const ref = _db().collection('ff_draft_lobbies').doc(lobbyId);
+    await _db().runTransaction(async tx => {
+      const doc  = await tx.get(ref);
+      const data = doc.data();
+      const prefs = { ...(data.slotPreferences || {}) };
+      delete prefs[_myUid];
+      if (slotIndex !== null) {
+        const taken = Object.entries(prefs).some(([uid, s]) => s === slotIndex && uid !== _myUid);
+        if (!taken) prefs[_myUid] = slotIndex;
+      }
+      tx.update(ref, { slotPreferences: prefs });
+    });
   };
 })();
