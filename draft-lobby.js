@@ -340,7 +340,7 @@
       participants[botUid] = {
         name: _BOT_NAMES[botCount] || ('Bot ' + (botCount + 1)),
         isBot: true,
-        botPersonality: _BOT_PERSONALITIES[botCount % _BOT_PERSONALITIES.length],
+        botPersonality: 'emergent',
         joinedAt: Date.now() + botCount + 1
       };
       humanUids.push(botUid);
@@ -930,6 +930,10 @@
           break;
         }
 
+        case 'emergent':
+          // Fluid state — no multipliers; round-1 weighted draw handled before this map
+          break;
+
         case 'bpa':
         default:
           break;
@@ -940,6 +944,29 @@
 
     scored.sort((a, b) => b.score - a.score);
     return scored[0].player;
+  }
+
+  function _resolveArchetype(picks) {
+    const p1 = picks[0]?.playerPos;
+    const p2 = picks[1]?.playerPos;
+    const key = `${p1}+${p2}`;
+    switch (key) {
+      case 'RB+RB': return 'robust-rb';
+      case 'RB+WR': return 'hero-rb';
+      case 'RB+TE': return 'hero-rb';
+      case 'WR+WR': return 'zero-rb';
+      case 'WR+RB': return 'zero-rb';
+      case 'WR+TE': return 'zero-rb';
+      case 'TE+TE': return 'bully-te';
+      case 'TE+RB': return 'bully-te';
+      case 'TE+WR': return 'bully-te';
+      case 'QB+WR': return 'stacker';
+      case 'QB+RB': return 'stacker';
+      case 'QB+TE': return 'stacker';
+      case 'RB+QB': return 'late-qbte';
+      case 'WR+QB': return 'late-qbte';
+      default:      return 'bpa';
+    }
   }
 
   // ── Bot picks ───────────────────────────────────────────────────────────────
@@ -958,10 +985,27 @@
       const all         = typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : [];
       const drafted     = new Set(fresh.draftedRanks || []);
       const available   = all.filter(p => !drafted.has(p.rank));
-      const personality = fresh.participants?.[currentUid]?.botPersonality || 'bpa';
+      let   personality = fresh.participants?.[currentUid]?.botPersonality || 'bpa';
       const leagueSize  = fresh.settings?.leagueSize || 10;
       const round       = Math.floor(fresh.currentPickIndex / leagueSize) + 1;
       const myPicks     = (fresh.picks || []).filter(p => p.uid === currentUid);
+
+      // Round 1 emergent: weighted draw from top 3 (70/20/10), bypass scoring
+      if (round === 1 && personality === 'emergent') {
+        const roll = Math.random();
+        const idx  = roll < 0.70 ? 0 : roll < 0.90 ? 1 : 2;
+        const pick = available[Math.min(idx, available.length - 1)];
+        if (pick) await window._draftMakePick(lobbyId, pick.rank, currentUid);
+        return;
+      }
+
+      // Round 3+ emergent: lock in archetype based on first two picks
+      if (personality === 'emergent' && myPicks.length >= 2) {
+        personality = _resolveArchetype(myPicks);
+        await _db().collection('ff_draft_lobbies').doc(lobbyId).update({
+          [`participants.${currentUid}.botPersonality`]: personality
+        });
+      }
 
       const pick = _botPickPlayer(personality, available, myPicks, round);
       if (pick) await window._draftMakePick(lobbyId, pick.rank, currentUid);
