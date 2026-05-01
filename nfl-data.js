@@ -1177,6 +1177,22 @@ const FF_TEAM_MAP = {
   285:'CHI',291:'NYJ',292:'TB', 302:'CIN',310:'WAS',319:'TEN',
 };
 
+// 2025 first-year NFL players
+const FF_ROOKIES = new Set([
+  "cam ward", "shedeur sanders", "jaxson dart", "fernando mendoza",
+  "ashton jeanty", "omarion hampton", "cam skattebo", "quinshon judkins",
+  "rj harvey", "jadarian price", "kyle monangai", "kaytron allen",
+  "jeremiyah love", "nicholas singleton", "brashard smith", "demond claiborne",
+  "dylan sampson", "lequint allen jr.", "jaydon blue", "tetairoa mcmillan",
+  "travis hunter", "tre harris", "luther burden iii", "emeka egbuka",
+  "carnell tate", "makai lemon", "jayden higgins", "matthew golden",
+  "kc concepcion", "denzel boston", "omar cooper jr.", "caleb douglas",
+  "germie bernard", "pat bryant", "tory horton", "savion williams",
+  "jack bech", "de'zhaun stribling", "mason taylor", "jordyn tyson",
+  "tai felton", "mike washington jr.", "colston loveland", "tyler warren",
+  "harold fannin jr.", "gunnar helm", "kenyon sadiq", "elijah arroyo",
+]);
+
 // 2025 PPR positional finish -- keyed by lowercase player name
 const FF_LAST_SEASON = {
   // RB
