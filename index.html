@@ -10857,21 +10857,7 @@ function renderFantasyRankings() {
       .ff-team-abbr { font-family:'Barlow Condensed',sans-serif; font-size:0.85rem; font-weight:700; color:var(--muted); letter-spacing:0.5px; }
       .ff-badge { font-family: Bebas Neue, sans-serif; font-size: 0.72rem; letter-spacing: 1px;
         padding: 2px 8px; border-radius: 6px; color: #fff; display: inline-block; }
-      .ff-card { position:relative; overflow:hidden; border-radius:8px; margin-bottom:8px;
-        border-left:5px solid #444; min-height:72px; display:flex; align-items:center;
-        padding:10px 14px; padding-right:160px; cursor:default; transition:filter 0.12s; }
-      .ff-card:hover { filter:brightness(1.08); }
-      .ff-card-logo { position:absolute; right:8px; top:50%; transform:translateY(-50%);
-        width:100px; height:100px; object-fit:contain; opacity:0.22;
-        filter:drop-shadow(0 0 4px rgba(255,255,255,0.15)); pointer-events:none; }
-      .ff-card-headshot { position:absolute; right:60px; bottom:0; height:90%; max-height:68px;
-        width:auto; object-fit:contain; object-position:bottom; opacity:0.92; pointer-events:none; }
-      .ff-card-rank { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; color:rgba(255,255,255,0.25);
-        min-width:38px; flex-shrink:0; line-height:1; }
-      .ff-card-content { display:flex; flex-direction:column; gap:4px; min-width:0; }
-      .ff-card-name { font-family:'Barlow Condensed',sans-serif; font-size:1.05rem; font-weight:700;
-        color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .ff-card-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+      .ff-card-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:3px; }
       .ff-pagination { display:flex; align-items:center; justify-content:center; gap:12px;
         padding:16px 0 4px; font-family:'Barlow Condensed',sans-serif; }
       .ff-page-btn { font-family:'Barlow Condensed',sans-serif; font-size:0.9rem; font-weight:600;
@@ -10979,12 +10965,12 @@ function _ffRenderTable() {
       ? `<span class="ff-szn-badge${lastSzn === 'R' ? ' ff-rookie-badge' : ''}">${lastSzn}</span>`
       : '';
 
-    return `<div class="ff-card" style="border-left-color:${color};background:linear-gradient(90deg,${color}28 0%,var(--surface) 55%);">
-      ${logoUrl ? `<img class="ff-card-logo" src="${logoUrl}" onerror="this.style.display='none'">` : ''}
-      ${headshotUrl ? `<img class="ff-card-headshot" src="${headshotUrl}" onerror="this.style.display='none'">` : ''}
-      <div class="ff-card-rank">${p.rank}</div>
-      <div class="ff-card-content">
-        <div class="ff-card-name">${p.name}</div>
+    return `<div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
+      ${logoUrl ? `<img src="${logoUrl}" onerror="this.style.display='none'" style="width:120px;height:120px;object-fit:contain;position:absolute;right:20px;top:50%;transform:translateY(-50%);opacity:0.35;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));pointer-events:none;">` : ''}
+      ${headshotUrl ? `<img src="${headshotUrl}" onerror="this.style.display='none'" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:0.95;pointer-events:none;">` : ''}
+      <div class="p-rank">${p.rank}</div>
+      <div class="p-main">
+        <div class="p-name">${p.name}</div>
         <div class="ff-card-meta">
           <span class="ff-badge" style="background:${_ffPosColor(p.pos)}">${posLabel}</span>
           ${team ? `<span class="ff-team-abbr">${team}</span>` : ''}

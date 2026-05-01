@@ -131,7 +131,9 @@ async function buildPlayerTeamMap() {
             const key = _normPTMName(player.displayName || player.fullName || ‘’);
             if (key) {
               window._playerTeamMap[key] = abbr;
-              if (player.id) window._playerIdMap[key] = player.id;
+              const hrefId = (player.headshot?.href || player.links?.[0]?.href || '').match(/\/(\d+)\.png/)?.[1];
+              const athleteId = player.id || hrefId;
+              if (athleteId) window._playerIdMap[key] = athleteId;
             }
           });
         });
