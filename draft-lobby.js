@@ -186,10 +186,10 @@
           <div class="ffd-settings-row"><span class="ffd-settings-label">Pick Timer</span><span class="ffd-settings-val">${settings.timerSeconds ? settings.timerSeconds + 's' : 'No limit'}</span></div>
         </div>`;
 
-    const canStart = isHost && count >= 2;
+    const canStart = isHost && count >= 1;
     const actionArea = isHost
       ? `<button class="ffd-start-btn" onclick="_draftStartDraft('${lobbyId}')" ${canStart ? '' : 'disabled'}>
-           START DRAFT${count < 2 ? ' <span style="font-size:0.75em;letter-spacing:1px">(need 2+ players)</span>' : ''}
+           START DRAFT
          </button>`
       : `<div class="ffd-waiting-msg">Waiting for host to start…</div>`;
 
