@@ -10890,10 +10890,14 @@ function renderFantasyRankings() {
         <button class="ff-pill ${_fantasyPosFilter==='K'  ?'active':''}"  onclick="_ffSetFilter('K',this)">K</button>
         <button class="ff-pill ${_fantasyPosFilter==='DST'?'active':''}"  onclick="_ffSetFilter('DST',this)">DST</button>
       </div>
-      <div id="ff-table-wrap"></div>
+      <div id="ff-table-wrap"><div style="text-align:center;padding:40px;font-family:'Barlow Condensed',sans-serif;font-size:1rem;letter-spacing:1px;color:var(--muted);">Loading rosters…</div></div>
     </div>`;
 
-  _ffRenderTable();
+  if (typeof buildPlayerTeamMap === 'function') {
+    buildPlayerTeamMap().then(() => _ffRenderTable());
+  } else {
+    _ffRenderTable();
+  }
 }
 
 function _ffSetFilter(pos, btn) {
@@ -10919,11 +10923,30 @@ function _ffRenderTable() {
     return;
   }
 
+  // Build DST name → abbr from NFL_TEAMS (e.g. "Houston Texans" → "HOU")
+  const _dstLookup = {};
+  if (typeof NFL_TEAMS !== 'undefined') {
+    Object.entries(NFL_TEAMS).forEach(([abbr, t]) => { _dstLookup[t.name.toLowerCase()] = abbr; });
+  }
+
   const posRankMap = {};
   const rows = filtered.map(p => {
     posRankMap[p.pos] = (posRankMap[p.pos] || 0) + 1;
     const posLabel = `${p.pos}${posRankMap[p.pos]}`;
-    const team = (typeof FF_TEAM_MAP !== 'undefined') ? (FF_TEAM_MAP[p.rank] || null) : null;
+
+    let team = null;
+    if (p.pos === 'DST') {
+      team = _dstLookup[p.name.toLowerCase()] || null;
+    } else {
+      const key = (p.name || '').toLowerCase().replace(/[.'''`]/g, '').replace(/\s+/g, ' ').trim();
+      team = (window._playerTeamMap && window._playerTeamMap[key]) || null;
+      // suffix fallback: try without Jr/Sr/II/III/IV
+      if (!team) {
+        const stripped = key.replace(/\s+(jr|sr|ii|iii|iv)$/i, '').trim();
+        team = (window._playerTeamMap && window._playerTeamMap[stripped]) || null;
+      }
+    }
+
     const teamCell = team
       ? `<div class="ff-team-cell"><img class="ff-team-logo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${team.toLowerCase()}.png" onerror="this.style.display='none'"><span class="ff-team-abbr">${team}</span></div>`
       : `<span class="ff-team-abbr" style="color:var(--border)">—</span>`;

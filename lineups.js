@@ -107,6 +107,37 @@ function getHeadshotUrl(athleteId) {
   return `https://a.espncdn.com/i/headshots/nfl/players/full/${athleteId}.png`;
 }
 
+// ── Player → Team map ────────────────────────────────────────────────────────
+// Fetches ESPN rosters for all 32 teams in parallel and builds a normalised
+// displayName → team-abbr lookup.  Shared with the fantasy rankings tab.
+// The promise is cached so subsequent calls are free.
+window._playerTeamMap = window._playerTeamMap || {};
+let _ptmPromise = null;
+
+function _normPTMName(n) {
+  return (n || '').toLowerCase().replace(/[.'’‘`]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+async function buildPlayerTeamMap() {
+  if (_ptmPromise) return _ptmPromise;
+  _ptmPromise = Promise.all(
+    Object.entries(NFL_ESPN_IDS).map(async ([abbr, espnId]) => {
+      try {
+        const res  = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${espnId}/roster`);
+        const data = await res.json();
+        (data.athletes || []).forEach(group => {
+          (group.items || []).forEach(player => {
+            const key = _normPTMName(player.displayName || player.fullName || '');
+            if (key) window._playerTeamMap[key] = abbr;
+          });
+        });
+      } catch (_) { /* silent — just leaves those players with no team */ }
+    })
+  );
+  return _ptmPromise;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getDefenseLayout(abbr) {
   const scheme = (NFL_TEAM_CONTEXT[abbr] || {}).scheme || '4-3';
   return scheme === '3-4' ? DEFENSE_34_LAYOUT : DEFENSE_43_LAYOUT;
