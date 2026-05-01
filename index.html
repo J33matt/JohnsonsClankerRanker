@@ -8744,9 +8744,11 @@ function _renderSbGameCard(g, openBets) {
     </button>`;
   };
 
-  const logoStyle = 'width:36px;height:36px;object-fit:contain;flex-shrink:0';
-  const awayLogoHtml = awayLogo ? `<img src="${awayLogo}" alt="${g.away}" style="${logoStyle}" onerror="this.style.display='none'">` : '';
-  const homeLogoHtml = homeLogo ? `<img src="${homeLogo}" alt="${g.home}" style="${logoStyle}" onerror="this.style.display='none'">` : '';
+  const awayGlow  = isHex(awayColors.bg) ? awayColors.bg : '#ffffff';
+  const homeGlow  = isHex(homeColors.bg) ? homeColors.bg : '#ffffff';
+  const logoBase  = 'width:52px;height:52px;object-fit:contain;flex-shrink:0';
+  const awayLogoHtml = awayLogo ? `<img src="${awayLogo}" alt="${g.away}" style="${logoBase};filter:drop-shadow(0 0 8px ${awayGlow}88)" onerror="this.style.display='none'">` : '';
+  const homeLogoHtml = homeLogo ? `<img src="${homeLogo}" alt="${g.home}" style="${logoBase};filter:drop-shadow(0 0 8px ${homeGlow}88)" onerror="this.style.display='none'">` : '';
   const awayClr = awayBarColor;
   const homeClr = homeBarColor;
 
