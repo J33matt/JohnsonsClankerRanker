@@ -10877,7 +10877,10 @@ function renderFantasyRankings() {
       .ff-page-info { font-size:0.85rem; color:var(--muted); letter-spacing:0.5px; }
     </style>
     <div style="padding: 0 0 24px;">
-      <div class="ff-header">Fantasy Football Rankings</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:4px;">
+        <div class="ff-header" style="margin-bottom:0">Fantasy Football Rankings</div>
+        <button class="ffd-entry-btn" onclick="_showDraftLobby()">🏈 Live Draft</button>
+      </div>
       <div class="ff-sub">2026 SEASON · AVERAGED ACROSS 3 SOURCES · PRE-DRAFT</div>
       <div class="ff-filters">
         <button class="ff-pill ${_fantasyPosFilter==='ALL' ?'active':''}" onclick="_ffSetFilter('ALL',this)">All</button>
@@ -11017,5 +11020,7 @@ function _ffRenderTable() {
 }
 </script>
 <script src="cards-data.js"></script>
-<script src="cards-logic.js"></script></body>
+<script src="cards-logic.js"></script>
+<script src="draft-lobby.js"></script>
+</body>
 </html>
