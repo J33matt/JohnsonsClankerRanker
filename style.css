@@ -3657,7 +3657,10 @@
 .ffdb-pos-filters { display: flex; gap: 4px; flex-wrap: wrap; }
 .ffdb-pos-pill { font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 1px; padding: 3px 9px; border-radius: 12px; border: 1.5px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.12s; }
 .ffdb-pos-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-.ffdb-pool-list { max-height: calc(100vh - 270px); overflow-y: auto; }
+.ffdb-pool-list { max-height: calc(100vh - 270px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--accent) var(--surface2); }
+.ffdb-pool-list::-webkit-scrollbar { width: 6px; }
+.ffdb-pool-list::-webkit-scrollbar-track { background: var(--surface2); border-radius: 8px; }
+.ffdb-pool-list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 8px; }
 
 .ffdb-player-row { display: flex; align-items: center; gap: 9px; padding: 6px 14px; border-bottom: 1px solid var(--border); }
 .ffdb-player-row:hover { background: rgba(255,255,255,0.03); }
