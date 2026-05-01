@@ -10858,6 +10858,15 @@ function renderFantasyRankings() {
       .ff-badge { font-family: Bebas Neue, sans-serif; font-size: 0.72rem; letter-spacing: 1px;
         padding: 2px 8px; border-radius: 6px; color: #fff; display: inline-block; }
       .ff-card-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:3px; }
+      .ff-p-main { display:flex; align-items:center; gap:16px; flex:1; min-width:0; }
+      .ff-p-name { font-family:'Barlow Condensed',sans-serif; font-size:1.4rem; font-weight:700;
+        letter-spacing:0.5px; text-transform:uppercase; color:var(--text);
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; }
+      .ff-stat { display:flex; flex-direction:column; align-items:center; flex-shrink:0; min-width:36px; }
+      .ff-stat-label { font-family:'Barlow Condensed',sans-serif; font-size:0.62rem; font-weight:600;
+        letter-spacing:1px; text-transform:uppercase; color:var(--muted); line-height:1; margin-bottom:2px; }
+      .ff-stat-val { font-family:'Barlow Condensed',sans-serif; font-size:0.9rem; font-weight:700;
+        color:var(--text); white-space:nowrap; }
       .ff-pagination { display:flex; align-items:center; justify-content:center; gap:12px;
         padding:16px 0 4px; font-family:'Barlow Condensed',sans-serif; }
       .ff-page-btn { font-family:'Barlow Condensed',sans-serif; font-size:0.9rem; font-weight:600;
@@ -10976,14 +10985,24 @@ function _ffRenderTable() {
       ${logoUrl ? `<img src="${logoUrl}" onerror="this.style.display='none'" style="width:120px;height:120px;object-fit:contain;position:absolute;right:20px;top:50%;transform:translateY(-50%);opacity:${headshotUrl ? '0.35' : '0.75'};filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));pointer-events:none;">` : ''}
       ${headshotUrl ? `<img src="${headshotUrl}" onerror="this.style.display='none'" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:0.95;pointer-events:none;">` : ''}
       <div class="p-rank">${p.rank}</div>
-      <div class="p-main">
-        <div class="p-name">${p.name}</div>
-        <div class="ff-card-meta">
-          <span class="ff-badge" style="background:${_ffPosColor(p.pos)}">${posLabel}</span>
-          ${team ? `<span class="ff-team-abbr">${team}</span>` : ''}
-          ${(team && typeof BYE_WEEKS !== 'undefined' && BYE_WEEKS[team]) ? `<span class="ff-szn-badge" style="color:var(--muted)">BYE ${BYE_WEEKS[team]}</span>` : ''}
-          ${sznBadge}
+      <div class="ff-p-main">
+        <div class="ff-p-name">${p.name}</div>
+        <div class="ff-stat">
+          <div class="ff-stat-label">Pos</div>
+          <div class="ff-stat-val"><span class="ff-badge" style="background:${_ffPosColor(p.pos)}">${posLabel}</span></div>
         </div>
+        ${team ? `<div class="ff-stat">
+          <div class="ff-stat-label">Team</div>
+          <div class="ff-stat-val ff-team-abbr">${team}</div>
+        </div>` : ''}
+        ${(team && typeof BYE_WEEKS !== 'undefined' && BYE_WEEKS[team]) ? `<div class="ff-stat">
+          <div class="ff-stat-label">Bye</div>
+          <div class="ff-stat-val">${BYE_WEEKS[team]}</div>
+        </div>` : ''}
+        ${lastSzn ? `<div class="ff-stat">
+          <div class="ff-stat-label">2025</div>
+          <div class="ff-stat-val"><span class="ff-szn-badge${lastSzn === 'R' ? ' ff-rookie-badge' : ''}">${lastSzn}</span></div>
+        </div>` : ''}
       </div>
     </div>`;
   }).join('');
