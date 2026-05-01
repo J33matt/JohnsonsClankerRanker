@@ -8654,6 +8654,19 @@ function _renderSbGameCard(g, openBets) {
   const homeRec = STANDINGS_DATA.find(t => t.abbr === g.home);
   const awayRecStr = awayRec ? `${awayRec.wins}\u2013${awayRec.losses}` : '';
   const homeRecStr = homeRec ? `${homeRec.wins}\u2013${homeRec.losses}` : '';
+
+  // Playoff detection + series score
+  const _playoffPool = new Set([...PLAYOFF_SEEDS.west, ...PLAYOFF_SEEDS.east]);
+  const isPlayoffGame = g.date >= PLAYOFF_START && _playoffPool.has(g.away) && _playoffPool.has(g.home);
+  let seriesStr = '';
+  if (isPlayoffGame) {
+    const sk = [g.home, g.away].sort().join('|');
+    const sw = _playoffSeries[sk];
+    const aw = sw ? (sw[g.away] || 0) : 0;
+    const hw = sw ? (sw[g.home] || 0) : 0;
+    seriesStr = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:1px;color:var(--muted);text-align:center;margin-top:3px">${g.away} ${aw}\u2013${hw} ${g.home}</div>`;
+  }
+
   const awayLogo = getLogoUrl(g.away);
   const homeLogo = getLogoUrl(g.home);
 
@@ -8707,10 +8720,10 @@ function _renderSbGameCard(g, openBets) {
       <span style="color:var(--muted);font-size:1.2rem"> \u2013 </span>
       <span class="${!hWon && g.isFinal ? 'losing' : ''}">${g.homeScore ?? '\u2014'}</span>
     </div>
-    <div class="sb-ou-line">O/U ${g.total}</div>`;
+    ${seriesStr}`;
   } else {
-    scoreCenter = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:2px;color:var(--muted);line-height:1.2;text-align:center">VS<br><span style="font-size:0.65rem;color:rgba(255,255,255,0.25)">${g.tipDisplay || ''}</span></div>
-    <div class="sb-ou-line" style="margin-top:4px">O/U ${g.total}</div>`;
+    scoreCenter = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:2px;color:var(--muted);line-height:1.2;text-align:center">VS<br><span style="font-size:0.65rem;color:var(--green)">${g.tipDisplay || ''}</span></div>
+    ${seriesStr}`;
   }
 
 // Bet button factory
@@ -8741,14 +8754,14 @@ function _renderSbGameCard(g, openBets) {
   <div class="sb-game-card${isLocked ? ' locked' : ''}${g.isLive ? ' is-live' : ''}">
     <div class="sb-game-header">
       <span>${g.away} @ ${g.home} ${betBadge}</span>
-      <span class="${statusCls}">${statusLabel}</span>
+      ${g.isLive || g.isFinal ? `<span class="${statusCls}">${statusLabel}</span>` : ''}
     </div>
     <div class="sb-teams-row">
       <div class="sb-team away" style="flex-direction:row;align-items:center;gap:8px">
         ${awayLogoHtml}
         <div>
           <div class="sb-team-abbr" style="color:${awayClr}">${g.away}</div>
-          <div class="sb-team-rec">${awayRecStr} &middot; Away</div>
+          ${isPlayoffGame ? '' : `<div class="sb-team-rec">${awayRecStr} &middot; Away</div>`}
         </div>
       </div>
       <div class="sb-score-center">${scoreCenter}</div>
@@ -8756,7 +8769,7 @@ function _renderSbGameCard(g, openBets) {
         ${homeLogoHtml}
         <div style="text-align:right">
           <div class="sb-team-abbr" style="color:${homeClr}">${g.home}</div>
-          <div class="sb-team-rec">${homeRecStr} &middot; Home</div>
+          ${isPlayoffGame ? '' : `<div class="sb-team-rec">${homeRecStr} &middot; Home</div>`}
         </div>
       </div>
     </div>
