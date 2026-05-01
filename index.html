@@ -10970,7 +10970,7 @@ function _ffRenderTable() {
       : '';
 
     return `<div class="prospect-card" style="margin-bottom:8px;border-left:5px solid ${color};background:linear-gradient(90deg,${color}22 0%,var(--surface) 100%);">
-      ${logoUrl ? `<img src="${logoUrl}" onerror="this.style.display='none'" style="width:120px;height:120px;object-fit:contain;position:absolute;right:20px;top:50%;transform:translateY(-50%);opacity:0.35;filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));pointer-events:none;">` : ''}
+      ${logoUrl ? `<img src="${logoUrl}" onerror="this.style.display='none'" style="width:120px;height:120px;object-fit:contain;position:absolute;right:20px;top:50%;transform:translateY(-50%);opacity:${headshotUrl ? '0.35' : '0.75'};filter:drop-shadow(0 0 3px rgba(255,255,255,0.4));pointer-events:none;">` : ''}
       ${headshotUrl ? `<img src="${headshotUrl}" onerror="this.style.display='none'" style="height:100%;max-height:80px;width:auto;object-fit:contain;object-position:bottom;position:absolute;right:70px;bottom:0;opacity:0.95;pointer-events:none;">` : ''}
       <div class="p-rank">${p.rank}</div>
       <div class="p-main">
