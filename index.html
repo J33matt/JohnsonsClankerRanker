@@ -10871,8 +10871,9 @@ function renderFantasyRankings() {
       <div class="ff-header">Fantasy Football Rankings</div>
       <div class="ff-sub">2026 SEASON · AVERAGED ACROSS 3 SOURCES · PRE-DRAFT</div>
       <div class="ff-filters">
-        <button class="ff-pill ${_fantasyPosFilter==='ALL'?'active':''}"  onclick="_ffSetFilter('ALL',this)">All</button>
-        <button class="ff-pill ${_fantasyPosFilter==='QB' ?'active':''}"  onclick="_ffSetFilter('QB',this)">QB</button>
+        <button class="ff-pill ${_fantasyPosFilter==='ALL' ?'active':''}" onclick="_ffSetFilter('ALL',this)">All</button>
+        <button class="ff-pill ${_fantasyPosFilter==='FLEX'?'active':''}" onclick="_ffSetFilter('FLEX',this)">Flex</button>
+        <button class="ff-pill ${_fantasyPosFilter==='QB'  ?'active':''}" onclick="_ffSetFilter('QB',this)">QB</button>
         <button class="ff-pill ${_fantasyPosFilter==='RB' ?'active':''}"  onclick="_ffSetFilter('RB',this)">RB</button>
         <button class="ff-pill ${_fantasyPosFilter==='WR' ?'active':''}"  onclick="_ffSetFilter('WR',this)">WR</button>
         <button class="ff-pill ${_fantasyPosFilter==='TE' ?'active':''}"  onclick="_ffSetFilter('TE',this)">TE</button>
@@ -10912,7 +10913,10 @@ function _ffRenderTable() {
   const wrap = document.getElementById('ff-table-wrap');
   if (!wrap) return;
   const data = (typeof FANTASY_RANKINGS !== 'undefined') ? FANTASY_RANKINGS : [];
-  const filtered = _fantasyPosFilter === 'ALL' ? data : data.filter(p => p.pos === _fantasyPosFilter);
+  const _flexPos = new Set(['QB','RB','WR','TE']);
+  const filtered = _fantasyPosFilter === 'ALL' ? data
+    : _fantasyPosFilter === 'FLEX' ? data.filter(p => _flexPos.has(p.pos))
+    : data.filter(p => p.pos === _fantasyPosFilter);
 
   if (!filtered.length) {
     wrap.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-family:Barlow Condensed,sans-serif;font-size:1.1rem;letter-spacing:1px;">No players found.</div>`;
