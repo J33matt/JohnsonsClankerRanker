@@ -112,10 +112,11 @@ function getHeadshotUrl(athleteId) {
 // displayName → team-abbr lookup.  Shared with the fantasy rankings tab.
 // The promise is cached so subsequent calls are free.
 window._playerTeamMap = window._playerTeamMap || {};
+window._playerIdMap   = window._playerIdMap   || {};
 let _ptmPromise = null;
 
 function _normPTMName(n) {
-  return (n || '').toLowerCase().replace(/[.'’‘`]/g, '').replace(/\s+/g, ' ').trim();
+  return (n || ‘’).toLowerCase().replace(/[.’’’`]/g, ‘’).replace(/\s+/g, ‘ ‘).trim();
 }
 
 async function buildPlayerTeamMap() {
@@ -127,8 +128,11 @@ async function buildPlayerTeamMap() {
         const data = await res.json();
         (data.athletes || []).forEach(group => {
           (group.items || []).forEach(player => {
-            const key = _normPTMName(player.displayName || player.fullName || '');
-            if (key) window._playerTeamMap[key] = abbr;
+            const key = _normPTMName(player.displayName || player.fullName || ‘’);
+            if (key) {
+              window._playerTeamMap[key] = abbr;
+              if (player.id) window._playerIdMap[key] = player.id;
+            }
           });
         });
       } catch (_) { /* silent — just leaves those players with no team */ }

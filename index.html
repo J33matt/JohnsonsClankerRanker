@@ -10835,6 +10835,8 @@ function _renderCollegeStats(pos, categories, container) {
 
 // ── Fantasy Rankings ─────────────────────────────────────────────
 let _fantasyPosFilter = 'ALL';
+let _ffPage = 0;
+const _FF_PER_PAGE = 25;
 
 function renderFantasyRankings() {
   const container = document.getElementById('nfl-fantasy');
@@ -10848,28 +10850,36 @@ function renderFantasyRankings() {
         padding: 6px 16px; border-radius: 20px; border: 1.5px solid var(--border); background: transparent;
         color: var(--text); cursor: pointer; text-transform: uppercase; transition: all 0.15s; }
       .ff-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-      .ff-table { width: 100%; border-collapse: collapse; }
-      .ff-table th { font-family: Barlow Condensed, sans-serif; font-size: 0.75rem; font-weight: 700;
-        letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 6px 12px;
-        border-bottom: 1px solid var(--border); text-align: left; }
-      .ff-table th.rank-col { width: 52px; text-align: center; }
-      .ff-table th.pos-col  { width: 60px; }
-      .ff-table th.team-col { width: 80px; }
-      .ff-table th.szn-col  { width: 72px; }
       .ff-szn-badge { display:inline-block; font-family:'Barlow Condensed',sans-serif; font-size:0.78rem;
         font-weight:700; letter-spacing:0.4px; color:var(--muted); background:rgba(255,255,255,0.06);
         border:1px solid var(--border); border-radius:4px; padding:1px 5px; white-space:nowrap; }
       .ff-rookie-badge { color:#f59e0b; border-color:#f59e0b; background:rgba(245,158,11,0.1); }
-      .ff-team-cell { display:flex; align-items:center; gap:6px; }
-      .ff-team-logo { width:22px; height:22px; object-fit:contain; flex-shrink:0; }
       .ff-team-abbr { font-family:'Barlow Condensed',sans-serif; font-size:0.85rem; font-weight:700; color:var(--muted); letter-spacing:0.5px; }
-      .ff-row { border-bottom: 1px solid var(--border); transition: background 0.12s; }
-      .ff-row:hover { background: var(--surface2); }
-      .ff-row td { padding: 9px 12px; font-family: Barlow Condensed, sans-serif; font-size: 0.95rem; }
-      .ff-rank { text-align: center; font-weight: 700; color: var(--muted); font-size: 0.85rem; }
-      .ff-name { font-weight: 700; color: var(--text); font-size: 1rem; }
       .ff-badge { font-family: Bebas Neue, sans-serif; font-size: 0.72rem; letter-spacing: 1px;
         padding: 2px 8px; border-radius: 6px; color: #fff; display: inline-block; }
+      .ff-card { position:relative; overflow:hidden; border-radius:8px; margin-bottom:8px;
+        border-left:5px solid #444; min-height:72px; display:flex; align-items:center;
+        padding:10px 14px; padding-right:160px; cursor:default; transition:filter 0.12s; }
+      .ff-card:hover { filter:brightness(1.08); }
+      .ff-card-logo { position:absolute; right:8px; top:50%; transform:translateY(-50%);
+        width:100px; height:100px; object-fit:contain; opacity:0.22;
+        filter:drop-shadow(0 0 4px rgba(255,255,255,0.15)); pointer-events:none; }
+      .ff-card-headshot { position:absolute; right:60px; bottom:0; height:90%; max-height:68px;
+        width:auto; object-fit:contain; object-position:bottom; opacity:0.92; pointer-events:none; }
+      .ff-card-rank { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; color:rgba(255,255,255,0.25);
+        min-width:38px; flex-shrink:0; line-height:1; }
+      .ff-card-content { display:flex; flex-direction:column; gap:4px; min-width:0; }
+      .ff-card-name { font-family:'Barlow Condensed',sans-serif; font-size:1.05rem; font-weight:700;
+        color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .ff-card-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+      .ff-pagination { display:flex; align-items:center; justify-content:center; gap:12px;
+        padding:16px 0 4px; font-family:'Barlow Condensed',sans-serif; }
+      .ff-page-btn { font-family:'Barlow Condensed',sans-serif; font-size:0.9rem; font-weight:600;
+        letter-spacing:1px; padding:6px 18px; border-radius:20px; border:1.5px solid var(--border);
+        background:transparent; color:var(--text); cursor:pointer; transition:all 0.15s; text-transform:uppercase; }
+      .ff-page-btn:hover:not(:disabled) { background:var(--accent); border-color:var(--accent); color:#fff; }
+      .ff-page-btn:disabled { opacity:0.3; cursor:default; }
+      .ff-page-info { font-size:0.85rem; color:var(--muted); letter-spacing:0.5px; }
     </style>
     <div style="padding: 0 0 24px;">
       <div class="ff-header">Fantasy Football Rankings</div>
@@ -10895,9 +10905,16 @@ function renderFantasyRankings() {
 
 function _ffSetFilter(pos, btn) {
   _fantasyPosFilter = pos;
+  _ffPage = 0;
   document.querySelectorAll('.ff-pill').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   _ffRenderTable();
+}
+
+function _ffGoPage(dir) {
+  _ffPage += dir;
+  _ffRenderTable();
+  document.getElementById('ff-table-wrap')?.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
 function _ffPosColor(pos) {
@@ -10916,16 +10933,22 @@ function _ffRenderTable() {
     return;
   }
 
-  // Build DST name → abbr from NFL_TEAMS (e.g. "Houston Texans" → "HOU")
   const _dstLookup = {};
   if (typeof NFL_TEAMS !== 'undefined') {
     Object.entries(NFL_TEAMS).forEach(([abbr, t]) => { _dstLookup[t.name.toLowerCase()] = abbr; });
   }
 
+  // Clamp page
+  const totalPages = Math.ceil(filtered.length / _FF_PER_PAGE);
+  _ffPage = Math.max(0, Math.min(_ffPage, totalPages - 1));
+  const page = filtered.slice(_ffPage * _FF_PER_PAGE, (_ffPage + 1) * _FF_PER_PAGE);
+
+  // Pre-build pos rank map for full filtered list so pos labels are correct
   const posRankMap = {};
-  const rows = filtered.map(p => {
-    posRankMap[p.pos] = (posRankMap[p.pos] || 0) + 1;
-    const posLabel = `${p.pos}${posRankMap[p.pos]}`;
+  filtered.forEach(p => { posRankMap[p.pos] = (posRankMap[p.pos] || 0) + 1; p._posRank = posRankMap[p.pos]; });
+
+  const cards = page.map(p => {
+    const posLabel = `${p.pos}${p._posRank}`;
 
     let team = null;
     if (p.pos === 'DST') {
@@ -10933,40 +10956,51 @@ function _ffRenderTable() {
     } else {
       const key = (p.name || '').toLowerCase().replace(/[.'''`]/g, '').replace(/\s+/g, ' ').trim();
       team = (window._playerTeamMap && window._playerTeamMap[key]) || null;
-      // suffix fallback: try without Jr/Sr/II/III/IV
       if (!team) {
         const stripped = key.replace(/\s+(jr|sr|ii|iii|iv)$/i, '').trim();
         team = (window._playerTeamMap && window._playerTeamMap[stripped]) || null;
       }
     }
 
-    const teamCell = team
-      ? `<div class="ff-team-cell"><img class="ff-team-logo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${team.toLowerCase()}.png" onerror="this.style.display='none'"><span class="ff-team-abbr">${team}</span></div>`
-      : `<span class="ff-team-abbr" style="color:var(--border)">—</span>`;
+    const color = team ? (NFL_TEAMS[team]?.color || '#444') : _ffPosColor(p.pos);
+    const logoUrl = team ? `https://a.espncdn.com/i/teamlogos/nfl/500/${team.toLowerCase()}.png` : '';
+
+    // Headshot: lookup by name in _playerIdMap
+    let headshotUrl = '';
+    if (p.pos !== 'DST' && p.pos !== 'K') {
+      const key = (p.name || '').toLowerCase().replace(/[.'''`]/g, '').replace(/\s+/g, ' ').trim();
+      const athleteId = (window._playerIdMap && (window._playerIdMap[key] || window._playerIdMap[key.replace(/\s+(jr|sr|ii|iii|iv)$/i,'').trim()]));
+      if (athleteId) headshotUrl = `https://a.espncdn.com/i/headshots/nfl/players/full/${athleteId}.png`;
+    }
+
     const _isRookie = (typeof FF_ROOKIES !== 'undefined') && FF_ROOKIES.has(p.name.toLowerCase());
     const lastSzn = _isRookie ? 'R' : (typeof FF_LAST_SEASON !== 'undefined') ? (FF_LAST_SEASON[p.name.toLowerCase()] || null) : null;
-    const sznCell = lastSzn
+    const sznBadge = lastSzn
       ? `<span class="ff-szn-badge${lastSzn === 'R' ? ' ff-rookie-badge' : ''}">${lastSzn}</span>`
-      : `<span style="color:var(--border)">—</span>`;
-    return `<tr class="ff-row">
-      <td class="ff-rank">${p.rank}</td>
-      <td class="ff-name">${p.name}</td>
-      <td>${teamCell}</td>
-      <td><span class="ff-badge" style="background:${_ffPosColor(p.pos)}">${posLabel}</span></td>
-      <td>${sznCell}</td>
-    </tr>`;
+      : '';
+
+    return `<div class="ff-card" style="border-left-color:${color};background:linear-gradient(90deg,${color}28 0%,var(--surface) 55%);">
+      ${logoUrl ? `<img class="ff-card-logo" src="${logoUrl}" onerror="this.style.display='none'">` : ''}
+      ${headshotUrl ? `<img class="ff-card-headshot" src="${headshotUrl}" onerror="this.style.display='none'">` : ''}
+      <div class="ff-card-rank">${p.rank}</div>
+      <div class="ff-card-content">
+        <div class="ff-card-name">${p.name}</div>
+        <div class="ff-card-meta">
+          <span class="ff-badge" style="background:${_ffPosColor(p.pos)}">${posLabel}</span>
+          ${team ? `<span class="ff-team-abbr">${team}</span>` : ''}
+          ${sznBadge}
+        </div>
+      </div>
+    </div>`;
   }).join('');
 
-  wrap.innerHTML = `<table class="ff-table">
-    <thead><tr>
-      <th class="rank-col">Rank</th>
-      <th>Player</th>
-      <th class="team-col">Team</th>
-      <th class="pos-col">Pos</th>
-      <th class="szn-col">Last Szn</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+  const pagination = `<div class="ff-pagination">
+    <button class="ff-page-btn" onclick="_ffGoPage(-1)" ${_ffPage === 0 ? 'disabled' : ''}>&#8592; Prev</button>
+    <span class="ff-page-info">Page ${_ffPage + 1} of ${totalPages} &nbsp;·&nbsp; ${filtered.length} players</span>
+    <button class="ff-page-btn" onclick="_ffGoPage(1)" ${_ffPage >= totalPages - 1 ? 'disabled' : ''}>Next &#8594;</button>
+  </div>`;
+
+  wrap.innerHTML = cards + pagination;
 }
 </script>
 <script src="cards-data.js"></script>
