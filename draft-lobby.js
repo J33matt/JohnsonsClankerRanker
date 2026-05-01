@@ -335,13 +335,6 @@
       })
       .map(([uid]) => uid);
 
-    if (randomize) {
-      for (let i = humanUids.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [humanUids[i], humanUids[j]] = [humanUids[j], humanUids[i]];
-      }
-    }
-
     let botCount = 0;
     while (humanUids.length < leagueSize) {
       const botUid = 'bot_' + Math.random().toString(36).slice(2, 10);
@@ -353,6 +346,13 @@
       };
       humanUids.push(botUid);
       botCount++;
+    }
+
+    if (randomize) {
+      for (let i = humanUids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [humanUids[i], humanUids[j]] = [humanUids[j], humanUids[i]];
+      }
     }
 
     const draftOrder = [];
