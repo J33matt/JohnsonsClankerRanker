@@ -21,8 +21,6 @@
   const _BOT_NAMES = ['Alpha Bot','Bravo Bot','Charlie Bot','Delta Bot','Echo Bot',
     'Foxtrot Bot','Golf Bot','Hotel Bot','India Bot','Juliet Bot','Kilo Bot','Lima Bot'];
 
-  const _BOT_PERSONALITIES = ['hero-rb','zero-rb','robust-rb','late-qbte','stacker','bpa'];
-
   const _ROSTER_SLOTS = [
     {id:'QB',  label:'QB',   pos:['QB']},
     {id:'RB1', label:'RB',   pos:['RB']},
@@ -737,6 +735,8 @@
   };
 
   // ── Bot personality engine ──────────────────────────────────────────────────
+  const _BOT_PERSONALITIES = ['hero-rb','zero-rb','robust-rb','late-qbte','stacker','bpa','bully-te','franchise','rookie-fever'];
+
   function _botPickPlayer(personality, available, myPicks, round) {
     if (!available.length) return null;
 
@@ -746,14 +746,37 @@
     const rb = cnt.RB||0, wr = cnt.WR||0, qb = cnt.QB||0, te = cnt.TE||0;
     const hasEliteRB = myPicks.some(p => p.playerPos==='RB' && p.playerRank<=20);
 
-    // QB's team for stacker
-    const myQB   = myPicks.find(p => p.playerPos==='QB');
-    const qbTeam = myQB ? _teamOf(myQB.playerName) : null;
+    // Pre-compute shared values
+    const myQB    = myPicks.find(p => p.playerPos==='QB');
+    const myTE    = myPicks.find(p => p.playerPos==='TE');
+    const qbTeam  = myQB ? _teamOf(myQB.playerName) : null;
+    const myQBRank = myQB ? myQB.playerRank : 999;
+    const myTERank = myTE ? myTE.playerRank : 999;
+    const eliteQB  = myQBRank <= 15;
+    const mediumQB = myQBRank <= 50;
+    const eliteTE  = myTERank <= 12;
+    const mediumTE = myTERank <= 40;
+
+    // Best available rank (for stacker rank-delta check)
+    const bpaRank = available.length ? available[0].rank : 999;
+
+    // Bye week map for shared-bye penalty
+    const byeMap = (typeof BYE_WEEKS !== 'undefined') ? BYE_WEEKS : {};
+    const myTeams = new Set(myPicks.map(pp => _teamOf(pp.playerName)).filter(Boolean));
+    const myByesByPos = {};
+    myPicks.forEach(pp => {
+      const t = _teamOf(pp.playerName);
+      if (!t) return;
+      const bw = byeMap[t];
+      if (!bw) return;
+      if (!myByesByPos[pp.playerPos]) myByesByPos[pp.playerPos] = new Set();
+      myByesByPos[pp.playerPos].add(bw);
+    });
 
     const scored = available.map(p => {
-      let s = 400 - p.rank; // base: higher rank number = lower score
+      let s = 400 - p.rank;
 
-      // Hard caps — never draft beyond these counts
+      // ── Hard caps ────────────────────────────────────────────────────────────
       if (p.pos==='QB'  && qb>=2) s *= 0.02;
       if (p.pos==='TE'  && te>=2) s *= 0.02;
       if (p.pos==='K'   && (cnt.K||0)>=1)   s *= 0.05;
@@ -761,40 +784,30 @@
       if (p.pos==='RB'  && rb>=5) s *= 0.4;
       if (p.pos==='WR'  && wr>=5) s *= 0.4;
 
-      // QB backup logic: want exactly 2 QBs; timing depends on starter quality
-      const myQBRank  = myQB ? myQB.playerRank : 999;
-      const eliteQB   = myQBRank <= 15;  // top-5 fantasy QB
-      const mediumQB  = myQBRank <= 50;
+      // ── K/DST timing: no bot drafts these before round 14 ────────────────────
+      if ((p.pos==='K' || p.pos==='DST') && (cnt[p.pos]||0)===0 && round < 14) s *= 0.02;
+
+      // ── QB backup timing ──────────────────────────────────────────────────────
       if (p.pos==='QB' && qb===0) {
-        if (round >= 9) s *= 4.0; // universal urgency: no QB by round 9
+        if (round >= 9) s *= 4.0;
       } else if (p.pos==='QB' && qb===1) {
-        // Suppress backup QB until the right window, then boost it
         if (eliteQB) {
-          // Got an elite starter — wait until round 13+ for a handcuff
-          if (round < 13)       s *= 0.05;
-          else                  s *= 2.5;
+          if (round < 13)       s *= 0.05; else s *= 2.5;
         } else if (mediumQB) {
-          // Mid-tier starter — pick up backup rounds 10-12
           if (round < 10)       s *= 0.05;
           else if (round <= 12) s *= 2.0;
           else                  s *= 1.5;
         } else {
-          // Streamer/late QB — get a backup by round 8-10
           if (round < 8)        s *= 0.05;
           else if (round <= 10) s *= 2.5;
           else                  s *= 2.0;
         }
       }
 
-      // TE backup logic: same structure as QB
-      const myTE      = myPicks.find(pp => pp.playerPos==='TE');
-      const myTERank  = myTE ? myTE.playerRank : 999;
-      const eliteTE   = myTERank <= 12;
-      const mediumTE  = myTERank <= 40;
+      // ── TE backup timing ──────────────────────────────────────────────────────
       if (p.pos==='TE' && te===1) {
         if (eliteTE) {
-          if (round < 13)       s *= 0.05;
-          else                  s *= 2.0;
+          if (round < 13)       s *= 0.05; else s *= 2.0;
         } else if (mediumTE) {
           if (round < 10)       s *= 0.05;
           else if (round <= 12) s *= 1.8;
@@ -806,40 +819,54 @@
         }
       }
 
+      // ── Shared-bye penalty (all bots, all positions) ──────────────────────────
+      const pTeamAbbr = _teamOf(p.name);
+      if (pTeamAbbr && byeMap[pTeamAbbr] && myByesByPos[p.pos]) {
+        if (myByesByPos[p.pos].has(byeMap[pTeamAbbr])) s *= 0.8;
+      }
+
+      // ── Personality modifiers ─────────────────────────────────────────────────
       switch (personality) {
 
-        case 'hero-rb':
-          // Round 1-2: chase elite RB; once secured, pivot hard to WR/TE/QB mid-rounds
+        case 'hero-rb': {
+          // Rounds 1-2: only chase elite RBs (rank ≤ 15); if none available, BPA
+          const bestAvailRB = available.find(x => x.pos==='RB');
+          const topRBGone   = !bestAvailRB || bestAvailRB.rank > 15;
           if (round <= 2) {
-            if (p.pos==='RB' && rb===0) s *= 2.8;
-            else if (p.pos==='RB')      s *= 0.4;
+            if (p.pos==='RB' && rb===0 && !topRBGone) s *= 2.8;
+            else if (p.pos==='RB' && rb===0 && topRBGone) { /* BPA — no multiplier */ }
+            else if (p.pos==='RB') s *= 0.4;
           } else if (round <= 6) {
             if (hasEliteRB) {
-              if (p.pos==='RB')          s *= 0.15;
-              if (p.pos==='WR'||p.pos==='TE') s *= 1.5;
-              if (p.pos==='QB'&&qb===0)  s *= 1.3;
+              if (p.pos==='RB')                      s *= 0.15;
+              if (p.pos==='WR'||p.pos==='TE')        s *= 1.5;
+              if (p.pos==='QB' && qb===0)            s *= 1.3;
             } else {
-              if (p.pos==='RB')          s *= 1.6; // still needs the hero
+              if (p.pos==='RB') s *= 1.6;
             }
           } else {
-            if (p.pos==='RB' && rb>=2)  s *= 0.35;
+            if (p.pos==='RB' && rb>=2) s *= 0.35;
           }
+          // Flex tolerance: allow up to 7 RBs/WRs for this build
+          if (p.pos==='RB' && rb>=5 && rb<7) s *= 2.0; // undo soft cap partially
           break;
+        }
 
-        case 'zero-rb':
-          // Skip RB for rounds 1-8; flood WR/QB/TE; then load up on RBs late
+        case 'zero-rb': {
           if (round <= 8) {
             if (p.pos==='RB')               s *= 0.04;
             if (p.pos==='WR')               s *= 1.5;
             if (p.pos==='QB' && qb===0)     s *= 1.3;
             if (p.pos==='TE' && te===0)     s *= 1.3;
           } else {
-            if (p.pos==='RB')               s *= 2.2; // quantity late
+            if (p.pos==='RB')               s *= 2.2;
           }
+          // Flex tolerance: allow up to 7 WRs for this build
+          if (p.pos==='WR' && wr>=5 && wr<7) s *= 2.0;
           break;
+        }
 
         case 'robust-rb':
-          // 3-4 RBs in first 6 rounds, then flip to WR/TE
           if (rb < 3 && round <= 6) {
             if (p.pos==='RB')               s *= 2.4;
           } else if (rb >= 3) {
@@ -850,15 +877,15 @@
           break;
 
         case 'late-qbte':
-          // Suppress QB+TE early; start targeting them mid-draft
+          // Trigger urgency at round 8 (earlier than the universal round-9 fallback)
           if (round <= 6) {
             if (p.pos==='QB')               s *= 0.04;
             if (p.pos==='TE')               s *= 0.08;
             if (p.pos==='WR')               s *= 1.35;
             if (p.pos==='RB')               s *= 1.2;
           } else if (round <= 8) {
-            if (p.pos==='QB' && qb===0)     s *= 2.5;
-            if (p.pos==='TE' && te===0)     s *= 2.0;
+            if (p.pos==='QB' && qb===0)     s *= 3.0; // bump urgency a round early
+            if (p.pos==='TE' && te===0)     s *= 2.5;
           } else {
             if (p.pos==='QB' && qb===0)     s *= 3.5;
             if (p.pos==='TE' && te===0)     s *= 3.0;
@@ -866,18 +893,46 @@
           break;
 
         case 'stacker':
-          // Draft QB within first 7 rounds; then heavily prefer skill players from QB's team
           if (qb===0) {
             if (round <= 7 && p.pos==='QB') s *= 2.2;
           } else if (qbTeam) {
-            const pTeam = _teamOf(p.name);
-            if (pTeam && pTeam===qbTeam && (p.pos==='WR'||p.pos==='TE')) s *= 3.0;
+            const tm = _teamOf(p.name);
+            // Only apply stack bonus if teammate is within 25 ranks of BPA
+            if (tm && tm===qbTeam && (p.pos==='WR'||p.pos==='TE') && (p.rank - bpaRank) <= 25) {
+              s *= 3.0;
+            }
           }
           break;
 
+        case 'bully-te':
+          // Target 2 elite TEs in rounds 1-5; flex one every week
+          if (te < 2 && round <= 5) {
+            if (p.pos==='TE')               s *= 3.5;
+          } else if (te >= 2) {
+            if (p.pos==='TE')               s *= 0.05; // already loaded
+            if (p.pos==='RB' && rb < 2)     s *= 1.8;
+            if (p.pos==='WR' && wr < 2)     s *= 1.8;
+          }
+          break;
+
+        case 'franchise':
+          // Avoid stacking multiple players from the same NFL team; mild bye-week diversity bonus
+          if (pTeamAbbr && myTeams.has(pTeamAbbr)) s *= 0.6;
+          break;
+
+        case 'rookie-fever': {
+          // Boost rookies 1.5×; slight preference for high-upside positions
+          const isRookie = (typeof FF_ROOKIES !== 'undefined') && FF_ROOKIES.has((p.name||'').toLowerCase());
+          if (isRookie) {
+            s *= 1.5;
+            if (p.pos==='RB'||p.pos==='WR') s *= 1.1; // extra juice for skill rookies
+          }
+          break;
+        }
+
         case 'bpa':
         default:
-          break; // pure rank — no modifiers
+          break;
       }
 
       return { player: p, score: s };
