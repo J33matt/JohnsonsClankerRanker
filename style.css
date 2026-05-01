@@ -3766,3 +3766,6 @@
   padding: 1px 6px;
   flex-shrink: 0;
 }
+
+.ffd-move-here-btn { border-color: #ffaa00 !important; color: #ffaa00 !important; }
+.ffd-move-here-btn:hover { background: #ffaa00 !important; color: #000 !important; }

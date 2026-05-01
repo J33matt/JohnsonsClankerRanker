@@ -148,7 +148,20 @@
       if (!parts[_myUid]) {
         parts[_myUid] = { name: _myName, isBot: false, isGuest: _isGuest, joinedAt: Date.now() };
       }
-      tx.update(ref, { participants: parts, hostId: data.hostId || _myUid });
+      const update = { participants: parts, hostId: data.hostId || _myUid };
+      // Auto-claim first open slot when manual order is active
+      if (data.settings?.randomizeOrder === false) {
+        const prefs = { ...(data.slotPreferences || {}) };
+        if (prefs[_myUid] === undefined) {
+          const leagueSize = data.settings?.leagueSize || 10;
+          const taken = new Set(Object.values(prefs));
+          for (let i = 0; i < leagueSize; i++) {
+            if (!taken.has(i)) { prefs[_myUid] = i; break; }
+          }
+          update.slotPreferences = prefs;
+        }
+      }
+      tx.update(ref, update);
     });
   }
 
@@ -210,7 +223,7 @@
             <span class="ffd-slot-badge" style="opacity:0.35">${i + 1}</span>
             <span class="ffd-p-name ffd-empty-label">Open slot ${i + 1}</span>
           </div>
-          ${myClaimedSlot !== i ? `<button class="ffd-give-host-btn" onclick="_draftClaimSlot('${lobbyId}',${i})">Move here</button>` : ''}
+          ${myClaimedSlot !== i ? `<button class="ffd-give-host-btn ffd-move-here-btn" onclick="_draftClaimSlot('${lobbyId}',${i})">Move here</button>` : ''}
         </div>`;
       }).join('');
       emptySlots = '';
