@@ -59,6 +59,7 @@
   <button class="tab-btn" onclick="showNflTab('lineups', this)">Lineups</button>
   <button class="tab-btn" onclick="showNflTab('free-agency', this)">Free Agency</button>
   <button class="tab-btn" onclick="showNflTab('fantasy', this)">Fantasy</button>
+  <button class="tab-btn" onclick="showNflTab('ff-draft', this)">🏈 FF Draft</button>
 </div>
 
 <main>
@@ -205,6 +206,7 @@
   <div id="nfl-lineups" class="nfl-panel panel" style="display:none;"></div>
   <div id="nfl-free-agency" class="nfl-panel panel" style="display:none;"></div>
   <div id="nfl-fantasy" class="nfl-panel panel" style="display:none;"></div>
+  <div id="nfl-ff-draft" class="nfl-panel panel" style="display:none;"></div>
 </div>
 
 <!-- Draft pick stats panel (expands as drawer) -->
@@ -1234,6 +1236,7 @@ function setNflView(view, btn) {
 }
 
 function showNflTab(tabName, btn) {
+  if (tabName !== 'ff-draft' && typeof _draftLeaveLobby === 'function') _draftLeaveLobby();
   localStorage.setItem('activeNflTab', tabName);
   document.querySelectorAll('.nfl-panel').forEach(p => { p.style.display = 'none'; p.style.marginLeft = ''; p.style.marginRight = ''; p.style.width = ''; });
   document.querySelectorAll('#nfl-tabs button').forEach(b => b.classList.remove('active'));
@@ -1247,6 +1250,7 @@ function showNflTab(tabName, btn) {
 if (tabName === 'lineups') renderLineups();
 if (tabName === 'free-agency') renderFreeAgency();
 if (tabName === 'fantasy') renderFantasyRankings();
+if (tabName === 'ff-draft') renderDraftLobbyTab();
 }
 
 // ── Firebase cloud storage ───────────────────────────────────
@@ -10877,10 +10881,7 @@ function renderFantasyRankings() {
       .ff-page-info { font-size:0.85rem; color:var(--muted); letter-spacing:0.5px; }
     </style>
     <div style="padding: 0 0 24px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:4px;">
-        <div class="ff-header" style="margin-bottom:0">Fantasy Football Rankings</div>
-        <button class="ffd-entry-btn" onclick="_showDraftLobby()">🏈 Live Draft</button>
-      </div>
+      <div class="ff-header">Fantasy Football Rankings</div>
       <div class="ff-sub">2026 SEASON · AVERAGED ACROSS 3 SOURCES · PRE-DRAFT</div>
       <div class="ff-filters">
         <button class="ff-pill ${_fantasyPosFilter==='ALL' ?'active':''}" onclick="_ffSetFilter('ALL',this)">All</button>

@@ -10,15 +10,17 @@
   let _unsubLobby = null;
 
   function _db() { return firebase.firestore(); }
+  function _panel() { return document.getElementById('nfl-ff-draft'); }
 
-  // ── Public entry point (called from rankings header button) ─────────────────
-  window._showDraftLobby = async function () {
-    const container = document.getElementById('nfl-fantasy');
+  // ── Tab entry point (called by showNflTab) ──────────────────────────────────
+  window.renderDraftLobbyTab = async function () {
+    const container = _panel();
+    if (!container) return;
     container.innerHTML = `<div class="ffd-loading">Connecting to lobby…</div>`;
 
     try {
       const identity = await _draftGetIdentity();
-      if (!identity) return; // user closed modal
+      if (!identity) return;
       _myUid   = identity.uid;
       _myName  = identity.name;
       _isGuest = identity.isGuest;
@@ -28,7 +30,7 @@
       _draftSubscribe(_lobbyId);
     } catch (e) {
       console.error('[Draft] lobby error:', e);
-      const c = document.getElementById('nfl-fantasy');
+      const c = _panel();
       if (c) c.innerHTML = `<div class="ffd-loading" style="color:#ff6b6b">Failed to connect. Please try again.</div>`;
     }
   };
@@ -133,7 +135,7 @@
 
   // ── Render lobby UI ─────────────────────────────────────────────────────────
   function _draftRenderLobby(data, lobbyId) {
-    const container = document.getElementById('nfl-fantasy');
+    const container = _panel();
     if (!container) return;
 
     const { settings = {}, participants = {}, hostId } = data;
@@ -194,7 +196,6 @@
     container.innerHTML = `
       <div class="ffd-wrap">
         <div class="ffd-topbar">
-          <button class="ffd-back-btn" onclick="_draftLeaveLobby()">← Rankings</button>
           <span class="ffd-lobby-code">LOBBY · ${lobbyId.slice(0, 8).toUpperCase()}</span>
         </div>
 
@@ -238,7 +239,7 @@
     });
     await batch.commit();
     // Phase 2: transition to draft board
-    const c = document.getElementById('nfl-fantasy');
+    const c = _panel();
     if (c) c.innerHTML = `<div class="ffd-loading">Draft starting… (board coming in Phase 2)</div>`;
   };
 
@@ -262,6 +263,5 @@
     }
 
     _lobbyId = null;
-    renderFantasyRankings();
   };
 })();
