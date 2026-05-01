@@ -128,7 +128,7 @@ async function buildPlayerTeamMap() {
         const data = await res.json();
         (data.athletes || []).forEach(group => {
           (group.items || []).forEach(player => {
-            const key = _normPTMName(player.displayName || player.fullName || ‘’);
+            const key = _normPTMName(player.displayName || player.fullName || '');
             if (key) {
               window._playerTeamMap[key] = abbr;
               const hrefId = (player.headshot?.href || player.links?.[0]?.href || '').match(/\/(\d+)\.png/)?.[1];
