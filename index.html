@@ -8335,12 +8335,16 @@ async function renderSportsbook() {
 
   // Determine active date — stays on yesterday until all games are final
   const today = await _sbGetActiveDate();
-  const [fetchedGames, odds, leaderboard, bets] = await Promise.all([
+  const _sbPast7 = getDateRange(7, 0).slice(0, 7); // past 7 days (excl. today) for series backfill
+  const [fetchedGames, odds, leaderboard, bets, ..._sbPastResults] = await Promise.all([
     espnFetchDate(today).catch(() => null),
     fetchOddsForDate(today).catch(() => ({})),
     _sbFetchLeaderboard(),
-    _sbLoadBets()
+    _sbLoadBets(),
+    ..._sbPast7.map(d => espnFetchDate(d).catch(() => null))
   ]);
+  // Backfill _playoffSeries with all recent final games so series scores are never stale
+  _trackPlayoffGames(_sbPastResults.flatMap(r => r || []).filter(g => g.isFinal));
 
  // Merge with UPCOMING_GAMES
   let games = fetchedGames || [];
