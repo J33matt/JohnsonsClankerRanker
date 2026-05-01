@@ -10953,11 +10953,13 @@ function _ffRenderTable() {
     }
 
     const color = team ? (NFL_TEAMS[team]?.color || '#444') : _ffPosColor(p.pos);
-    const logoUrl = team ? `https://a.espncdn.com/i/teamlogos/nfl/500/${team.toLowerCase()}.png` : '';
+    const logoUrl = team
+      ? `https://a.espncdn.com/i/teamlogos/nfl/500/${team.toLowerCase()}.png`
+      : (p.pos !== 'DST' ? 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png' : '');
 
-    // Headshot: lookup by name in _playerIdMap
+    // Headshot: lookup by name in _playerIdMap (all positions except DST)
     let headshotUrl = '';
-    if (p.pos !== 'DST' && p.pos !== 'K') {
+    if (p.pos !== 'DST') {
       const key = (p.name || '').toLowerCase().replace(/[.'''`]/g, '').replace(/\s+/g, ' ').trim();
       const athleteId = (window._playerIdMap && (window._playerIdMap[key] || window._playerIdMap[key.replace(/\s+(jr|sr|ii|iii|iv)$/i,'').trim()]));
       if (athleteId) headshotUrl = `https://a.espncdn.com/i/headshots/nfl/players/full/${athleteId}.png`;
