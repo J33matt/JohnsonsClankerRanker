@@ -3725,9 +3725,9 @@
 
 /* ── Draft Board — Queue ─────────────────────────────────────────────────── */
 .ffdb-queue-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
-.ffdb-q-btn { background: transparent; border: none; cursor: pointer; font-size: 0.95rem; color: var(--muted); padding: 0 4px; flex-shrink: 0; line-height: 1; transition: color 0.1s; }
-.ffdb-q-btn:hover { color: #ffaa00; }
-.ffdb-q-active { color: #ffaa00; }
+.ffdb-q-pill { background: transparent; border: 1px solid var(--muted); border-radius: 999px; cursor: pointer; font-size: 0.7rem; font-weight: 600; color: var(--muted); padding: 2px 8px; flex-shrink: 0; line-height: 1.4; transition: background 0.1s, color 0.1s, border-color 0.1s; white-space: nowrap; }
+.ffdb-q-pill:hover { border-color: #ffaa00; color: #ffaa00; }
+.ffdb-q-pill.ffdb-q-active { background: rgba(255,170,0,0.18); border-color: #ffaa00; color: #ffaa00; }
 .ffdb-in-queue { background: rgba(255,170,0,0.06); }
 .ffdb-q-row { display: flex; align-items: center; gap: 7px; padding: 5px 0; border-bottom: 1px solid var(--border); font-family: 'Barlow Condensed', sans-serif; }
 .ffdb-q-row:last-child { border-bottom: none; }

@@ -473,9 +473,9 @@
     const currentRound  = Math.floor(currentPickIndex / leagueSize) + 1;
     const pickInRound   = (currentPickIndex % leagueSize) + 1;
 
-    // Save big board scroll before re-render
-    const bbOld = document.getElementById('ffdb-bb-scroll');
-    if (bbOld) _bbScrollTop = bbOld.scrollTop;
+    // Save pool scroll position before re-render
+    const poolOld = document.getElementById('ffdb-pool-list');
+    const savedPoolScroll = poolOld ? poolOld.scrollTop : 0;
 
     // Forced starter mode
     const myRemainingPicks = draftOrder.slice(currentPickIndex).filter(u => u === _myUid).length;
@@ -525,7 +525,7 @@
         <span class="ffdb-pos-badge" style="background:${_posColor(p.pos)}">${p.pos}</span>
         <span class="ffdb-p-name">${p.name}</span>
         <span class="ffdb-p-team">${_teamOf(p.name)}</span>
-        <button class="ffdb-q-btn${inQueue?' ffdb-q-active':''}" onclick="_toggleQueue(${p.rank})" title="${inQueue?'Remove from queue':'Add to queue'}">${inQueue?'★':'☆'}</button>
+        <button class="ffdb-q-pill${inQueue?' ffdb-q-active':''}" onclick="_toggleQueue(${p.rank})">${inQueue?'Queued':'+ Queue'}</button>
         ${isMyTurn && (!forcedMode || forcedPos.has(p.pos))
           ? `<button class="ffdb-pick-btn" onclick="_draftMakePick('${lobbyId}',${p.rank})">DRAFT</button>`
           : '<span class="ffdb-pick-ph"></span>'}
@@ -558,7 +558,7 @@
             <button class="ffdb-q-rm" onclick="_toggleQueue(${rank})">✕</button>
           </div>`;
         }).join('')
-      : '<div class="ffdb-empty-pool">No players queued. Star ☆ players to add.</div>';
+      : '<div class="ffdb-empty-pool">No players queued. Use "+ Queue" to add players.</div>';
 
     // Roster
     const rosterSlots = _buildRoster(picks, _myUid).map(s => `
@@ -638,15 +638,15 @@
         </div>
       </div>`;
 
-    // Restore / init big board scroll
+    // Restore pool scroll
+    const poolNew = document.getElementById('ffdb-pool-list');
+    if (poolNew) poolNew.scrollTop = savedPoolScroll;
+
+    // Auto-scroll big board: previous round on top, current round on bottom
     const bbNew = document.getElementById('ffdb-bb-scroll');
     if (bbNew) {
-      if (_bbScrollTop >= 0) {
-        bbNew.scrollTop = _bbScrollTop;
-      } else {
-        const rowH = 56;
-        bbNew.scrollTop = Math.max(0, Math.floor(currentPickIndex / leagueSize) - 1) * rowH;
-      }
+      const rowH = 56;
+      bbNew.scrollTop = Math.max(0, Math.floor(currentPickIndex / leagueSize) - 1) * rowH;
     }
 
     _startTimer(timerEndsAt, timerSecs, lobbyId);
