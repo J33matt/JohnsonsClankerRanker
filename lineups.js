@@ -139,7 +139,38 @@ async function buildPlayerTeamMap() {
         });
       } catch (_) { /* silent — just leaves those players with no team */ }
     })
-  );
+  ).then(async () => {
+    // Secondary pass: look up ESPN IDs for any FANTASY_RANKINGS skill players
+    // still missing from _playerIdMap (free agents not on any roster)
+    if (typeof FANTASY_RANKINGS === 'undefined') return;
+    const missing = FANTASY_RANKINGS.filter(p => {
+      if (p.pos === 'DST') return false;
+      const key = _normPTMName(p.name);
+      const stripped = key.replace(/\s+(jr|sr|ii|iii|iv)$/i, '').trim();
+      return !window._playerIdMap[key] && !window._playerIdMap[stripped];
+    });
+    await Promise.all(missing.map(async p => {
+      try {
+        const q = encodeURIComponent(p.name);
+        const res = await fetch(`https://site.api.espn.com/apis/search/v2?query=${q}&sport=football&league=nfl&type=athlete&limit=3`);
+        const data = await res.json();
+        const hits = (data.results || []).flatMap(r => r.contents || []);
+        for (const hit of hits) {
+          const d = hit.data || hit;
+          const uid = d.uid || '';
+          const athleteId = d.id || uid.split('~a:')?.[1];
+          if (!athleteId) continue;
+          // Verify name matches closely enough
+          const hitName = _normPTMName(d.displayName || d.name || '');
+          const queryKey = _normPTMName(p.name);
+          if (hitName === queryKey || hitName.includes(queryKey) || queryKey.includes(hitName)) {
+            window._playerIdMap[queryKey] = athleteId;
+            break;
+          }
+        }
+      } catch (_) { /* silent */ }
+    }));
+  });
   return _ptmPromise;
 }
 // ─────────────────────────────────────────────────────────────────────────────
