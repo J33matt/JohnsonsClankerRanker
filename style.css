@@ -3629,3 +3629,61 @@
   color: var(--muted);
   padding: 16px;
 }
+/* ── FF Draft Board ──────────────────────────────────────────────────────── */
+.ffdb-wrap { max-width: 1200px; margin: 0 auto; padding: 0 0 48px; }
+
+.ffdb-topbar {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 10px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 20px; margin-bottom: 14px;
+}
+.ffdb-round-info { font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; letter-spacing: 1px; color: var(--muted); }
+.ffdb-clock { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 2px; }
+.ffdb-your-turn { color: #ffaa00; }
+.ffdb-timer { font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; font-weight: 700; margin-left: 10px; letter-spacing: 1px; }
+.ffdb-pick-count { font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; color: var(--muted); letter-spacing: 1px; }
+
+.ffdb-main { display: grid; grid-template-columns: 1fr 320px; gap: 14px; align-items: start; }
+@media (max-width: 860px) { .ffdb-main { grid-template-columns: 1fr; } }
+
+.ffdb-pool-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+
+.ffdb-pool-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--surface); z-index: 2;
+}
+.ffdb-panel-title { font-family: 'Bebas Neue', sans-serif; font-size: 0.82rem; letter-spacing: 3px; color: var(--muted); }
+.ffdb-pos-filters { display: flex; gap: 4px; flex-wrap: wrap; }
+.ffdb-pos-pill { font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 1px; padding: 3px 9px; border-radius: 12px; border: 1.5px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.12s; }
+.ffdb-pos-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ffdb-pool-list { max-height: calc(100vh - 270px); overflow-y: auto; }
+
+.ffdb-player-row { display: flex; align-items: center; gap: 9px; padding: 6px 14px; border-bottom: 1px solid var(--border); }
+.ffdb-player-row:hover { background: rgba(255,255,255,0.03); }
+.ffdb-player-row:last-child { border-bottom: none; }
+.ffdb-p-rank { font-family: 'Barlow Condensed', sans-serif; font-size: 0.78rem; color: var(--muted); width: 24px; text-align: right; flex-shrink: 0; }
+.ffdb-pos-badge { font-family: 'Bebas Neue', sans-serif; font-size: 0.68rem; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; color: #fff; flex-shrink: 0; }
+.ffdb-pos-sm { font-size: 0.6rem; padding: 1px 4px; }
+.ffdb-p-name { font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ffdb-p-team { font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; color: var(--muted); width: 32px; text-align: right; flex-shrink: 0; }
+.ffdb-pick-btn { font-family: 'Bebas Neue', sans-serif; font-size: 0.75rem; letter-spacing: 1.5px; padding: 4px 11px; border-radius: 6px; border: none; background: #ffaa00; color: #000; cursor: pointer; flex-shrink: 0; transition: opacity 0.1s; }
+.ffdb-pick-btn:hover { opacity: 0.8; }
+.ffdb-pick-ph { width: 48px; flex-shrink: 0; }
+.ffdb-empty-pool { padding: 20px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.88rem; letter-spacing: 1px; }
+
+.ffdb-right-panel { display: flex; flex-direction: column; gap: 12px; }
+.ffdb-roster-panel, .ffdb-feed-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+
+.ffdb-slot { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.ffdb-slot:last-child { border-bottom: none; }
+.ffdb-slot-label { font-family: 'Barlow Condensed', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; color: var(--muted); width: 32px; flex-shrink: 0; }
+.ffdb-slot-player { font-family: 'Barlow Condensed', sans-serif; font-size: 0.85rem; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ffdb-slot-pos { font-size: 0.7rem; font-weight: 700; margin-right: 3px; }
+.ffdb-slot-empty { font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; color: var(--muted); opacity: 0.35; }
+
+.ffdb-recent-row { display: flex; align-items: center; gap: 7px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.ffdb-recent-row:last-child { border-bottom: none; }
+.ffdb-recent-meta { font-family: 'Barlow Condensed', sans-serif; font-size: 0.7rem; color: var(--muted); width: 34px; flex-shrink: 0; }
+.ffdb-recent-name { font-family: 'Barlow Condensed', sans-serif; font-size: 0.85rem; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ffdb-recent-picker { font-family: 'Barlow Condensed', sans-serif; font-size: 0.7rem; color: var(--muted); max-width: 72px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
