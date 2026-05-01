@@ -463,7 +463,7 @@
     const totalPicks  = draftOrder.length;
 
     if (currentPickIndex >= totalPicks) {
-      container.innerHTML = `<div class="ffd-loading">Draft complete! Clanker's Verdict coming in Phase 4.</div>`;
+      _renderVerdict(data, lobbyId);
       return;
     }
 
@@ -886,4 +886,227 @@
       tx.update(ref, { slotPreferences: prefs });
     });
   };
+
+  // ── Phase 4: Clanker's Verdict ───────────────────────────────────────────────
+  function _gradeTeam(uid, data) {
+    const { draftOrder = [], picks = [], settings = {} } = data;
+    const leagueSize = settings.leagueSize || 10;
+    const allRankings = typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : [];
+    const rankMap = {};
+    allRankings.forEach(p => { rankMap[p.rank] = p; });
+
+    const teamOrder = draftOrder.slice(0, leagueSize);
+    const mySlot    = teamOrder.indexOf(uid);
+    const myPicks   = picks.filter(p => p.uid === uid).sort((a, b) => a.pickIndex - b.pickIndex);
+    if (!myPicks.length) return null;
+
+    // ── Category 1: Positional Balance ──────────────────────────────────────────
+    // Does the roster fill all starter slots with valid players?
+    const slots = _buildRoster(myPicks, uid);
+    const starterSlots = slots.filter(s => s.label !== 'BN');
+    const filledStarters = starterSlots.filter(s => s.filled).length;
+    const balScore = Math.round((filledStarters / starterSlots.length) * 100);
+
+    // ── Category 2: Value / Tier Awareness ──────────────────────────────────────
+    // Compare each pick's rank to the expected rank at that pick number (ADP proxy).
+    // Expected rank ≈ pickIndex + 1 (since FANTASY_RANKINGS is ordered by rank).
+    // Positive value = picked earlier than expected (reach); negative = got value.
+    let totalValue = 0;
+    myPicks.forEach(p => {
+      const expected = p.pickIndex + 1; // rough ADP
+      const diff     = expected - p.playerRank; // positive = value, negative = reach
+      totalValue += diff;
+    });
+    const avgValue = totalValue / myPicks.length;
+    // Normalize: +30 avg value → 100, -30 → 0
+    const valScore = Math.min(100, Math.max(0, Math.round(50 + avgValue * (50 / 30))));
+
+    // ── Category 3: Depth Quality ────────────────────────────────────────────────
+    // Average rank of bench picks (lower rank = better player)
+    const benchPicks = slots.filter(s => s.label === 'BN' && s.filled).map(s => s.filled);
+    let depScore = 50;
+    if (benchPicks.length) {
+      const avgBenchRank = benchPicks.reduce((s, p) => s + p.playerRank, 0) / benchPicks.length;
+      // Rank 1-50 = great depth, 200+ = thin. Normalize to 0-100.
+      depScore = Math.min(100, Math.max(0, Math.round(100 - (avgBenchRank - 1) * (100 / 250))));
+    }
+
+    // ── Category 4: Scarcity Recognition ────────────────────────────────────────
+    // Reward drafting scarce elite positions (TE, QB) in early rounds vs. late.
+    // TE top 5 by rank in first 5 rounds = great; K/DST in first 8 rounds = punished.
+    let scarScore = 60;
+    const earlyPicks = myPicks.filter(p => p.pickIndex < leagueSize * 4); // first 4 rounds
+    const latePicks  = myPicks.filter(p => p.pickIndex >= leagueSize * 12); // last 4 rounds
+    const eliteTE = myPicks.find(p => p.playerPos === 'TE' && p.playerRank <= 30);
+    if (eliteTE) {
+      const round = Math.floor(myPicks.findIndex(x => x === eliteTE) / 1) ;
+      scarScore += eliteTE.pickIndex < leagueSize * 5 ? 20 : 5;
+    }
+    const earlyKDST = earlyPicks.filter(p => p.playerPos === 'K' || p.playerPos === 'DST');
+    scarScore -= earlyKDST.length * 15;
+    const lateKDST = latePicks.filter(p => p.playerPos === 'K' || p.playerPos === 'DST');
+    scarScore += lateKDST.length * 8;
+    scarScore = Math.min(100, Math.max(0, scarScore));
+
+    // ── Category 5: Strategy Coherence ──────────────────────────────────────────
+    // Measure how consistently a strategy was applied (RB heavy, WR heavy, etc.)
+    // Simple: check if top 4 picks cluster into a recognizable pattern.
+    const top4 = myPicks.slice(0, Math.min(4, myPicks.length));
+    const pos4 = top4.map(p => p.playerPos);
+    const rbEarly = pos4.filter(p => p === 'RB').length;
+    const wrEarly = pos4.filter(p => p === 'WR').length;
+    // Reward clear early-round strategy commitment
+    let cohScore = 50;
+    if (rbEarly >= 3) cohScore = 85; // hero RB
+    else if (wrEarly >= 3) cohScore = 80; // zero RB
+    else if (rbEarly >= 2 && wrEarly >= 1) cohScore = 75; // balanced
+    else if (wrEarly >= 2 && rbEarly >= 1) cohScore = 72;
+    else cohScore = 55; // no clear strategy
+
+    // ── Overall score & letter grade ─────────────────────────────────────────────
+    const weights = { bal: 0.25, val: 0.25, dep: 0.20, scar: 0.15, coh: 0.15 };
+    const overall = Math.round(
+      balScore  * weights.bal +
+      valScore  * weights.val +
+      depScore  * weights.dep +
+      scarScore * weights.scar +
+      cohScore  * weights.coh
+    );
+
+    function toGrade(n) {
+      if (n >= 93) return 'A+';
+      if (n >= 87) return 'A';
+      if (n >= 83) return 'A-';
+      if (n >= 80) return 'B+';
+      if (n >= 75) return 'B';
+      if (n >= 70) return 'B-';
+      if (n >= 65) return 'C+';
+      if (n >= 60) return 'C';
+      if (n >= 55) return 'C-';
+      if (n >= 50) return 'D+';
+      if (n >= 45) return 'D';
+      return 'F';
+    }
+
+    // ── Narrative blurb ──────────────────────────────────────────────────────────
+    function _blurb(bal, val, dep, scar, coh, grade, picks) {
+      const pos4 = picks.slice(0, 4).map(p => p.playerPos);
+      const rbH  = pos4.filter(p => p==='RB').length >= 3;
+      const wrH  = pos4.filter(p => p==='WR').length >= 3;
+      const eTE  = picks.find(p => p.playerPos==='TE' && p.playerRank<=20);
+      const earlKDST = picks.slice(0, picks.length * 0.5).some(p => p.playerPos==='K'||p.playerPos==='DST');
+
+      if (grade.startsWith('A')) {
+        if (rbH) return "Hammered RBs early and built a fortress. Clanker approves — this roster bleeds.";
+        if (wrH) return "Zero-RB executed to perfection. Target hog heaven.";
+        if (eTE) return "Locked up an elite TE and let the draft fall to them. Chess, not checkers.";
+        return "Textbook draft. Value at every turn, no panic, no reaches. Respect.";
+      }
+      if (grade.startsWith('B')) {
+        if (val < 50) return "Got a bit reach-y in spots but the bones are solid. Could work.";
+        if (dep < 50) return "Starters pop but the bench is thin. One injury and it's couch szn.";
+        return "A competent, workmanlike draft. Nothing flashy, but it'll compete.";
+      }
+      if (grade.startsWith('C')) {
+        if (earlKDST) return "Burned an early pick on a kicker or DST. Clanker is concerned. Very concerned.";
+        if (bal < 60) return "Starter slots left unfilled. Did you forget how football works?";
+        return "Meh. Some upside buried under a pile of questionable choices.";
+      }
+      if (grade === 'D+' || grade === 'D') {
+        return "Clanker has seen better rosters built by blindfolded golden retrievers.";
+      }
+      return "An absolute catastrophe of a draft. Clanker weeps for you.";
+    }
+
+    const narrative = _blurb(balScore, valScore, depScore, scarScore, cohScore, toGrade(overall), myPicks);
+
+    return {
+      overall, grade: toGrade(overall),
+      cats: {
+        'Positional Balance': balScore,
+        'Value':              valScore,
+        'Bench Depth':        depScore,
+        'Scarcity Awareness': scarScore,
+        'Strategy Coherence': cohScore,
+      },
+      narrative,
+      picks: myPicks,
+    };
+  }
+
+  function _renderVerdict(data, lobbyId) {
+    const container = _panel();
+    if (!container) return;
+    clearInterval(_timerInterval); _timerInterval = null;
+    clearTimeout(_botTimeout);     _botTimeout    = null;
+
+    const { draftOrder = [], participants = {}, settings = {} } = data;
+    const leagueSize  = settings.leagueSize || 10;
+    const teamOrder   = draftOrder.slice(0, leagueSize);
+
+    // Grade every team
+    const grades = teamOrder.map(uid => ({
+      uid,
+      name: (participants[uid] || {}).name || '?',
+      isBot: !!(participants[uid] || {}).isBot,
+      isMe: uid === _myUid,
+      ..._gradeTeam(uid, data),
+    })).filter(g => g.overall !== undefined);
+
+    grades.sort((a, b) => b.overall - a.overall);
+    const winner = grades[0];
+
+    function gradeColor(g) {
+      if (g.startsWith('A')) return '#4caf50';
+      if (g.startsWith('B')) return '#8bc34a';
+      if (g.startsWith('C')) return '#ffb300';
+      if (g.startsWith('D')) return '#ff7043';
+      return '#e53935';
+    }
+
+    const catKeys = Object.keys((grades[0] || {}).cats || {});
+
+    const teamCards = grades.map((g, i) => {
+      const catBars = catKeys.map(k => {
+        const score = g.cats[k];
+        const col   = score >= 75 ? '#4caf50' : score >= 55 ? '#ffb300' : '#e53935';
+        return `<div class="ffcv-cat-row">
+          <span class="ffcv-cat-label">${k}</span>
+          <div class="ffcv-cat-bar-bg"><div class="ffcv-cat-bar" style="width:${score}%;background:${col}"></div></div>
+          <span class="ffcv-cat-score">${score}</span>
+        </div>`;
+      }).join('');
+
+      const crown  = i === 0 ? '<span class="ffcv-crown">👑</span>' : '';
+      const youTag = g.isMe ? '<span class="ffcv-you-tag">YOU</span>' : '';
+      const gColor = gradeColor(g.grade);
+
+      return `<div class="ffcv-card${g.isMe?' ffcv-card-me':''}">
+        <div class="ffcv-card-top">
+          <div class="ffcv-rank">#${i+1}</div>
+          <div class="ffcv-name">${crown}${g.name}${youTag}</div>
+          <div class="ffcv-grade" style="color:${gColor}">${g.grade}</div>
+        </div>
+        <div class="ffcv-narrative">${g.narrative}</div>
+        <div class="ffcv-cats">${catBars}</div>
+        <div class="ffcv-picks-label">DRAFT PICKS</div>
+        <div class="ffcv-picks">${g.picks.map(p =>
+          `<span class="ffcv-pick-chip" style="border-color:${_posColor(p.playerPos)}">
+            <span class="ffcv-chip-pos" style="background:${_posColor(p.playerPos)}">${p.playerPos}</span>${p.playerName}
+          </span>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="ffcv-wrap">
+        <div class="ffcv-header">
+          <div class="ffcv-title">⚖️ Clanker's Verdict</div>
+          <div class="ffcv-subtitle">Winner: <strong>${winner.name}</strong> with a <strong style="color:${gradeColor(winner.grade)}">${winner.grade}</strong></div>
+        </div>
+        <div class="ffcv-cards">${teamCards}</div>
+        <button class="ffcv-new-btn" onclick="renderDraftLobbyTab()">New Draft</button>
+      </div>`;
+  }
+
 })();
