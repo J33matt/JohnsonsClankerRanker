@@ -157,10 +157,8 @@ async function buildPlayerTeamMap() {
         const hits = (data.results || []).flatMap(r => r.contents || []);
         for (const hit of hits) {
           const d = hit.data || hit;
-          const uid = d.uid || '';
-          const athleteId = d.id || uid.split('~a:')?.[1];
+          const athleteId = (d.uid || '').split('~a:')[1] || (d.image?.default || '').match(/\/(\d+)\.png/)?.[1];
           if (!athleteId) continue;
-          // Verify name matches closely enough
           const hitName = _normPTMName(d.displayName || d.name || '');
           const queryKey = _normPTMName(p.name);
           if (hitName === queryKey || hitName.includes(queryKey) || queryKey.includes(hitName)) {
