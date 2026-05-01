@@ -116,7 +116,7 @@ window._playerIdMap   = window._playerIdMap   || {};
 let _ptmPromise = null;
 
 function _normPTMName(n) {
-  return (n || ‘’).toLowerCase().replace(/[.’’’`]/g, ‘’).replace(/\s+/g, ‘ ‘).trim();
+  return (n || '').toLowerCase().replace(/[.\u2018\u2019'`]/g, '').replace(/\s+/g, ' ').trim();
 }
 
 async function buildPlayerTeamMap() {
