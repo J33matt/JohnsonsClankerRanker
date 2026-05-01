@@ -753,16 +753,58 @@
     const scored = available.map(p => {
       let s = 400 - p.rank; // base: higher rank number = lower score
 
-      // Hard need guards — heavily penalise over-drafting a filled position
-      if (p.pos==='QB'  && qb>=1) s *= 0.08;
+      // Hard caps — never draft beyond these counts
+      if (p.pos==='QB'  && qb>=2) s *= 0.02;
+      if (p.pos==='TE'  && te>=2) s *= 0.02;
       if (p.pos==='K'   && (cnt.K||0)>=1)   s *= 0.05;
       if (p.pos==='DST' && (cnt.DST||0)>=1) s *= 0.05;
       if (p.pos==='RB'  && rb>=5) s *= 0.4;
       if (p.pos==='WR'  && wr>=5) s *= 0.4;
-      if (p.pos==='TE'  && te>=2) s *= 0.2;
 
-      // Universal QB urgency: if no QB by round 9, all personalities start hunting one
-      if (p.pos==='QB' && qb===0 && round >= 9) s *= 4.0;
+      // QB backup logic: want exactly 2 QBs; timing depends on starter quality
+      const myQBRank  = myQB ? myQB.playerRank : 999;
+      const eliteQB   = myQBRank <= 15;  // top-5 fantasy QB
+      const mediumQB  = myQBRank <= 50;
+      if (p.pos==='QB' && qb===0) {
+        if (round >= 9) s *= 4.0; // universal urgency: no QB by round 9
+      } else if (p.pos==='QB' && qb===1) {
+        // Suppress backup QB until the right window, then boost it
+        if (eliteQB) {
+          // Got an elite starter — wait until round 13+ for a handcuff
+          if (round < 13)       s *= 0.05;
+          else                  s *= 2.5;
+        } else if (mediumQB) {
+          // Mid-tier starter — pick up backup rounds 10-12
+          if (round < 10)       s *= 0.05;
+          else if (round <= 12) s *= 2.0;
+          else                  s *= 1.5;
+        } else {
+          // Streamer/late QB — get a backup by round 8-10
+          if (round < 8)        s *= 0.05;
+          else if (round <= 10) s *= 2.5;
+          else                  s *= 2.0;
+        }
+      }
+
+      // TE backup logic: same structure as QB
+      const myTE      = myPicks.find(pp => pp.playerPos==='TE');
+      const myTERank  = myTE ? myTE.playerRank : 999;
+      const eliteTE   = myTERank <= 12;
+      const mediumTE  = myTERank <= 40;
+      if (p.pos==='TE' && te===1) {
+        if (eliteTE) {
+          if (round < 13)       s *= 0.05;
+          else                  s *= 2.0;
+        } else if (mediumTE) {
+          if (round < 10)       s *= 0.05;
+          else if (round <= 12) s *= 1.8;
+          else                  s *= 1.4;
+        } else {
+          if (round < 8)        s *= 0.05;
+          else if (round <= 11) s *= 2.0;
+          else                  s *= 1.6;
+        }
+      }
 
       switch (personality) {
 
