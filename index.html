@@ -10391,17 +10391,7 @@ function _faFilterMoves(moves) {
 }
 
 function _faBuildCard(m) {
-  // Build name→2025 finish lookup (cached on first call)
-  if (!_faBuildCard._sznMap) {
-    _faBuildCard._sznMap = {};
-    if (typeof FANTASY_RANKINGS !== 'undefined' && typeof FF_LAST_SEASON !== 'undefined') {
-      for (const p of FANTASY_RANKINGS) {
-        if (FF_LAST_SEASON[p.rank]) _faBuildCard._sznMap[p.name.toLowerCase()] = FF_LAST_SEASON[p.rank];
-      }
-    }
-  }
-
-  const lastSzn   = _faBuildCard._sznMap[m.player.toLowerCase()] || null;
+  const lastSzn   = (typeof FF_LAST_SEASON !== 'undefined') ? (FF_LAST_SEASON[m.player.toLowerCase()] || null) : null;
   const typeClass = m.type === 'trade' ? 'fa-type-trade' : m.type === 'signing' ? 'fa-type-signing' : 'fa-type-acquisition';
   const typeLabel = m.type === 'trade' ? 'Trade' : m.type === 'signing' ? 'Signing' : 'Acquired';
   const toAbbr    = m.toTeam   || '';
@@ -10950,7 +10940,7 @@ function _ffRenderTable() {
     const teamCell = team
       ? `<div class="ff-team-cell"><img class="ff-team-logo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${team.toLowerCase()}.png" onerror="this.style.display='none'"><span class="ff-team-abbr">${team}</span></div>`
       : `<span class="ff-team-abbr" style="color:var(--border)">—</span>`;
-    const lastSzn = (typeof FF_LAST_SEASON !== 'undefined') ? (FF_LAST_SEASON[p.rank] || null) : null;
+    const lastSzn = (typeof FF_LAST_SEASON !== 'undefined') ? (FF_LAST_SEASON[p.name.toLowerCase()] || null) : null;
     const sznCell = lastSzn
       ? `<span class="ff-szn-badge">${lastSzn}</span>`
       : `<span style="color:var(--border)">—</span>`;
