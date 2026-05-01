@@ -152,7 +152,7 @@ async function buildPlayerTeamMap() {
     await Promise.all(missing.map(async p => {
       try {
         const q = encodeURIComponent(p.name);
-        const res = await fetch(`https://site.api.espn.com/apis/search/v2?query=${q}&sport=football&league=nfl&type=athlete&limit=3`);
+        const res = await fetch(`https://site.api.espn.com/apis/search/v2?query=${q}&sport=football&league=nfl&type=player&limit=3`);
         const data = await res.json();
         const hits = (data.results || []).flatMap(r => r.contents || []);
         for (const hit of hits) {
