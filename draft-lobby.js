@@ -857,14 +857,14 @@
             else if (p.pos==='RB') s *= 0.4;
           } else if (round <= 6) {
             if (hasEliteRB) {
-              if (p.pos==='RB')                      s *= 0.15;
-              if (p.pos==='WR'||p.pos==='TE')        s *= 1.5;
+              if (p.pos==='RB')                      s *= 0.3;  // was 0.15
+              if (p.pos==='WR'||p.pos==='TE')        s *= 1.25; // was 1.5
               if (p.pos==='QB' && qb===0)            s *= 1.3;
             } else {
               if (p.pos==='RB') s *= 1.6;
             }
           } else {
-            if (p.pos==='RB' && rb>=2) s *= 0.35;
+            if (p.pos==='RB' && rb>=2) s *= 0.55; // was 0.35
           }
           // Flex tolerance: allow up to 7 RBs/WRs for this build
           if (p.pos==='RB' && rb>=5 && rb<7) s *= 2.0; // undo soft cap partially
@@ -872,11 +872,13 @@
         }
 
         case 'zero-rb': {
-          if (round <= 8) {
-            if (p.pos==='RB')                       s *= 0.04;
-            if (p.pos==='WR' && wr < 3)             s *= 1.25; // capped at 3 WRs with boost
+          if (round <= 5) {
+            if (p.pos==='RB')                       s *= 0.12; // avoids RB early but not completely
+            if (p.pos==='WR' && wr < 3)             s *= 1.2;
             if (p.pos==='QB' && qb===0)             s *= 1.3;
             if (p.pos==='TE' && te===0)             s *= 1.3;
+          } else if (round <= 8) {
+            if (p.pos==='RB')                       s *= 0.35; // softens avoidance mid-draft
           } else {
             if (p.pos==='RB')                       s *= 2.2;
           }
@@ -887,9 +889,9 @@
           if (rb < 3 && round <= 6) {
             if (p.pos==='RB')               s *= 2.4;
           } else if (rb >= 3) {
-            if (p.pos==='RB')               s *= 0.2;
-            if (p.pos==='WR')               s *= 2.1;
-            if (p.pos==='TE' && te===0)     s *= 1.9;
+            if (p.pos==='RB')               s *= 0.4;
+            if (p.pos==='WR')               s *= 1.3; // was 2.1 — too aggressive pivot
+            if (p.pos==='TE' && te===0)     s *= 1.6;
           }
           break;
 
@@ -898,8 +900,7 @@
           if (round <= 6) {
             if (p.pos==='QB')               s *= 0.04;
             if (p.pos==='TE')               s *= 0.08;
-            if (p.pos==='WR')               s *= 1.35;
-            if (p.pos==='RB')               s *= 1.2;
+            // no WR/RB preference — let BPA decide skill position
           } else if (round <= 8) {
             if (p.pos==='QB' && qb===0)     s *= 3.0; // bump urgency a round early
             if (p.pos==='TE' && te===0)     s *= 2.5;
