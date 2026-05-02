@@ -6716,6 +6716,15 @@ if (_savedLeague === 'nfl') {
   if (_tabBtn) showTab(_tabToLoad, _tabBtn);
 }
 
+  // Handle invite link: #lobby=ID auto-navigates to Fantasy Draft tab
+  if (window.location.hash.match(/^#lobby=.+/)) {
+    const _nflBtn = Array.from(document.querySelectorAll('.league-btn'))
+      .find(b => (b.getAttribute('onclick') || '').includes("'nfl'"));
+    if (_nflBtn && localStorage.getItem('activeLeague') !== 'nfl') switchLeague('nfl', _nflBtn);
+    const _ffBtn = document.querySelector('#nfl-tabs button[onclick*="ff-draft"]');
+    if (_ffBtn) showNflTab('ff-draft', _ffBtn);
+  }
+
   // Generate today's picks first so moneylines are in localStorage before scores render
   try { await _predEnsureTodaysPicks(); } catch(e) { console.warn('[init] _predEnsureTodaysPicks failed:', e); }
 

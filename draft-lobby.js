@@ -55,6 +55,7 @@
       _isGuest = identity.isGuest;
 
       _lobbyId = await _draftGetOrCreateLobby();
+      window.location.hash = '#lobby=' + _lobbyId;
       await _draftJoinLobby(_lobbyId);
       _draftSubscribe(_lobbyId);
     } catch (e) {
@@ -121,6 +122,15 @@
 
   // ── Lobby find / create ─────────────────────────────────────────────────────
   async function _draftGetOrCreateLobby() {
+    // Check for invite link hash: #lobby=LOBBYID
+    const hashMatch = window.location.hash.match(/^#lobby=(.+)$/);
+    if (hashMatch) {
+      const inviteId = hashMatch[1];
+      const doc = await _db().collection('ff_draft_lobbies').doc(inviteId).get();
+      if (doc.exists && doc.data().status === 'waiting') return inviteId;
+      // Lobby gone or already started — fall through to normal logic
+    }
+
     const snap = await _db().collection('ff_draft_lobbies')
       .where('status', '==', 'waiting')
       .orderBy('createdAt', 'asc')
@@ -299,6 +309,7 @@
       <div class="ffd-wrap">
         <div class="ffd-topbar">
           <span class="ffd-lobby-code">LOBBY · ${lobbyId.slice(0,8).toUpperCase()}</span>
+          <button class="ffd-invite-btn" onclick="_draftCopyInvite('${lobbyId}', this)">🔗 Copy Invite Link</button>
         </div>
         <div class="ffd-lobby-header">🏈 DRAFT LOBBY</div>
         <div class="ffd-lobby-sub">${count} / ${maxSlots} players joined · ${maxSlots - count > 0 ? (maxSlots-count)+' open slot'+(maxSlots-count!==1?'s':'')+' (bots will fill on start)' : 'lobby full'}</div>
@@ -312,6 +323,16 @@
         ${actionArea}
       </div>`;
   }
+
+  // ── Invite link ──────────────────────────────────────────────────────────────
+  window._draftCopyInvite = function (lobbyId, btn) {
+    const url = window.location.origin + window.location.pathname + '#lobby=' + lobbyId;
+    navigator.clipboard.writeText(url).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 2000);
+    });
+  };
 
   // ── Host actions (global so inline onclick can reach them) ──────────────────
   window._draftGiveHost = async function (lobbyId, newHostId) {
@@ -408,6 +429,7 @@
 
   window._draftLeaveLobby = function () {
     if (_unsubLobby) { _unsubLobby(); _unsubLobby = null; }
+    if (window.location.hash.startsWith('#lobby=')) history.replaceState(null, '', window.location.pathname + window.location.search);
 
     if (_lobbyId && _myUid) {
       const ref = _db().collection('ff_draft_lobbies').doc(_lobbyId);
