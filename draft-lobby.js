@@ -271,7 +271,7 @@
           </div>
           <div class="ffd-settings-row">
             <span class="ffd-settings-label">Bot Speed</span>
-            <div class="ffd-opts">
+            <div class="ffd-opts ffd-opts-nowrap">
               ${['vfast','fast','normal','slow','vslow'].map(spd => {
                 const labels = { vfast:'Very Fast', fast:'Fast', normal:'Normal', slow:'Slow', vslow:'Very Slow' };
                 const cur = settings.botSpeed || 'normal';

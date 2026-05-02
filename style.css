@@ -3587,6 +3587,8 @@
 }
 
 .ffd-opts { display: flex; gap: 6px; flex-wrap: wrap; }
+.ffd-opts-nowrap { flex-wrap: nowrap; }
+.ffd-opts-nowrap .ffd-opt { flex: 1; text-align: center; padding: 5px 4px; font-size: 0.74rem; letter-spacing: 0.5px; white-space: nowrap; }
 
 .ffd-opt {
   font-family: 'Barlow Condensed', sans-serif;
