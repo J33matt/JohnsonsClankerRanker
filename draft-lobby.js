@@ -1154,11 +1154,11 @@
       const myIdx = Number(p.pickIndex);
       const picksBefore = allPicksSorted.filter(q => Number(q.pickIndex) < myIdx);
       const takenStr = new Set(picksBefore.map(q => String(q.playerRank)));
-      const qbsTaken = picksBefore.filter(q => q.playerPos === 'QB').length;
-      const excludeQB = qbsTaken >= leagueSize; // once every team could have a QB1, drop QB from BPA
+      // BPA = best available skill-position player (RB/WR/TE only).
+      // QB, K, DST excluded: QB has its own positional grade and its clustered ranks
+      // (e.g. ranks 65-95 are all QBs nobody wants) would freeze BPA for 30+ picks.
       const bpa = allRankings.find(r => {
-        if (r.pos === 'K' || r.pos === 'DST') return false;
-        if (excludeQB && r.pos === 'QB') return false;
+        if (r.pos === 'K' || r.pos === 'DST' || r.pos === 'QB') return false;
         return !takenStr.has(String(r.rank));
       });
       const bpaRank = bpa ? Number(bpa.rank) : Number(p.playerRank);
