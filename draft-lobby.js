@@ -8,6 +8,8 @@
   let _myName    = null;
   let _isGuest   = false;
   let _unsubLobby = null;
+  let _unsubChat   = null;
+  let _chatMessages = [];
   let _lastDraftData = null;
   let _timerInterval = null;
   let _botTimeout    = null;
@@ -65,6 +67,7 @@
       window.location.hash = '#lobby=' + _lobbyId;
       await _draftJoinLobby(_lobbyId);
       _draftSubscribe(_lobbyId);
+      _draftSubscribeChat(_lobbyId);
     } catch (e) {
       console.error('[Draft] lobby error:', e);
       const c = _panel();
@@ -328,7 +331,17 @@
           ${settingsPanel}
         </div>
         ${actionArea}
+        <div class="ffdb-chat-panel ffd-lobby-chat">
+          <div class="ffdb-panel-title">CHAT</div>
+          <div class="ffdb-chat-msgs" id="ffdb-chat-msgs"></div>
+          <div class="ffdb-chat-input-row">
+            <input class="ffdb-chat-input" id="ffdb-chat-input" placeholder="Message…" maxlength="200"
+                   onkeydown="if(event.key==='Enter')_draftSendChat('${lobbyId}')">
+            <button class="ffdb-chat-send" onclick="_draftSendChat('${lobbyId}')">↑</button>
+          </div>
+        </div>
       </div>`;
+    _renderChatMessages();
   }
 
   // ── Invite link ──────────────────────────────────────────────────────────────
@@ -339,6 +352,52 @@
       btn.textContent = '✓ Copied!';
       setTimeout(() => { btn.textContent = orig; }, 2000);
     });
+  };
+
+  // ── Pick reactions ───────────────────────────────────────────────────────────
+  window._draftReact = async function (lobbyId, pickIndex, emoji) {
+    const key = 'reactions.' + pickIndex + '.' + emoji;
+    await _db().collection('ff_draft_lobbies').doc(lobbyId)
+      .update({ [key]: firebase.firestore.FieldValue.increment(1) });
+  };
+
+  // ── Live chat ────────────────────────────────────────────────────────────────
+  function _draftSubscribeChat(lobbyId) {
+    if (_unsubChat) return;
+    _unsubChat = _db().collection('ff_draft_lobbies').doc(lobbyId)
+      .collection('messages').orderBy('ts')
+      .onSnapshot(snap => {
+        _chatMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _renderChatMessages();
+      }, err => { console.warn('[Chat] snapshot error:', err); });
+  }
+
+  function _renderChatMessages() {
+    const el = document.getElementById('ffdb-chat-msgs');
+    if (!el) return;
+    const prev = el.scrollHeight - el.scrollTop - el.clientHeight;
+    el.innerHTML = _chatMessages.map(m => {
+      const isMe = m.uid === _myUid;
+      const safe = (m.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return `<div class="ffdb-chat-msg${isMe ? ' ffdb-chat-me' : ''}">
+        <span class="ffdb-chat-name">${(m.name||'?').replace(/</g,'&lt;')}</span>
+        <span class="ffdb-chat-text">${safe}</span>
+      </div>`;
+    }).join('');
+    if (prev < 40) el.scrollTop = el.scrollHeight;
+  }
+
+  window._draftSendChat = async function (lobbyId) {
+    const inp = document.getElementById('ffdb-chat-input');
+    if (!inp) return;
+    const text = inp.value.trim();
+    if (!text) return;
+    inp.value = '';
+    await _db().collection('ff_draft_lobbies').doc(lobbyId)
+      .collection('messages').add({
+        uid: _myUid, name: _myName || 'You', text,
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      });
   };
 
   // ── Host actions (global so inline onclick can reach them) ──────────────────
@@ -437,6 +496,7 @@
 
   window._draftLeaveLobby = function () {
     if (_unsubLobby) { _unsubLobby(); _unsubLobby = null; }
+    if (_unsubChat)  { _unsubChat();  _unsubChat  = null; _chatMessages = []; }
     if (window.location.hash.startsWith('#lobby=')) history.replaceState(null, '', window.location.pathname + window.location.search);
 
     if (_lobbyId && _myUid) {
@@ -552,7 +612,8 @@
     window._lastDraftData = data;
 
     const { draftOrder = [], currentPickIndex = 0, picks = [],
-            draftedRanks = [], participants = {}, settings = {}, timerEndsAt } = data;
+            draftedRanks = [], participants = {}, settings = {}, timerEndsAt,
+            reactions = {} } = data;
     const leagueSize  = settings.leagueSize || 10;
     const timerSecs   = settings.timerSeconds || 0;
     const totalPicks  = draftOrder.length;
@@ -670,11 +731,16 @@
     const recentPicks = [...picks].sort((a,b) => b.pickIndex - a.pickIndex).slice(0, 10).map(p => {
       const r  = Math.floor(p.pickIndex / leagueSize) + 1;
       const pk = (p.pickIndex % leagueSize) + 1;
+      const pickReacts = ['🔥','💀','😂'].map(e => {
+        const cnt = ((reactions[p.pickIndex]||{})[e]) || 0;
+        return `<button class="ffdb-react-btn" onclick="_draftReact('${lobbyId}',${p.pickIndex},'${e}')">${e}${cnt>0?`<span class="ffdb-react-cnt">${cnt}</span>`:''}</button>`;
+      }).join('');
       return `<div class="ffdb-recent-row">
         <span class="ffdb-recent-meta">R${r}.${pk}</span>
         <span class="ffdb-pos-badge ffdb-pos-sm" style="background:${_posColor(p.playerPos)}">${p.playerPos}</span>
         <span class="ffdb-recent-name">${p.playerName}</span>
         <span class="ffdb-recent-picker">${(participants[p.uid]||{}).name||'?'}</span>
+        <div class="ffdb-react-row">${pickReacts}</div>
       </div>`;
     }).join('');
 
@@ -745,6 +811,15 @@
               <div class="ffdb-panel-title">RECENT PICKS</div>
               ${recentPicks || '<div class="ffdb-empty-pool">No picks yet.</div>'}
             </div>
+            <div class="ffdb-chat-panel">
+              <div class="ffdb-panel-title">CHAT</div>
+              <div class="ffdb-chat-msgs" id="ffdb-chat-msgs"></div>
+              <div class="ffdb-chat-input-row">
+                <input class="ffdb-chat-input" id="ffdb-chat-input" placeholder="Message…" maxlength="200"
+                       onkeydown="if(event.key==='Enter')_draftSendChat('${lobbyId}')">
+                <button class="ffdb-chat-send" onclick="_draftSendChat('${lobbyId}')">↑</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>`;
@@ -765,6 +840,7 @@
     }
 
     _startTimer(timerEndsAt, timerSecs, lobbyId);
+    _renderChatMessages();
   }
 
   // ── Pick submission ─────────────────────────────────────────────────────────
@@ -1456,6 +1532,97 @@
     };
   }
 
+  // ── Recap stats ──────────────────────────────────────────────────────────────
+  function _computeRecap(data, allRankings) {
+    const { picks = [], participants = {}, settings = {}, draftOrder = [] } = data;
+    const leagueSize = settings.leagueSize || 10;
+    const allSorted  = [...picks].sort((a, b) => Number(a.pickIndex) - Number(b.pickIndex));
+    const awards = [];
+
+    // Top Dog — who drafted the #1 overall ranked player
+    if (allSorted.length) {
+      const top = [...allSorted].sort((a, b) => Number(a.playerRank) - Number(b.playerRank))[0];
+      const name = (participants[top.uid] || {}).name || '?';
+      const rd   = Math.floor(Number(top.pickIndex) / leagueSize) + 1;
+      awards.push({ emoji: '🏆', title: 'Top Dog', desc: `${name} landed ${top.playerName} (overall #${top.playerRank}, Rd ${rd})` });
+    }
+
+    // First QB Off Board
+    const firstQb = allSorted.find(p => p.playerPos === 'QB');
+    if (firstQb) {
+      const name = (participants[firstQb.uid] || {}).name || '?';
+      const rd   = Math.floor(Number(firstQb.pickIndex) / leagueSize) + 1;
+      awards.push({ emoji: '🎯', title: 'First QB Off Board', desc: `${name} — ${firstQb.playerName} in Rd ${rd}` });
+    }
+
+    // Waiting Game — who drafted their first QB latest
+    const firstQbRoundByUid = {};
+    allSorted.filter(p => p.playerPos === 'QB').forEach(p => {
+      const rd = Math.floor(Number(p.pickIndex) / leagueSize) + 1;
+      if (!firstQbRoundByUid[p.uid]) firstQbRoundByUid[p.uid] = { rd, pick: p };
+    });
+    const latestQb = Object.values(firstQbRoundByUid).sort((a, b) => b.rd - a.rd)[0];
+    if (latestQb && latestQb.rd >= 5) {
+      const name = (participants[latestQb.pick.uid] || {}).name || '?';
+      awards.push({ emoji: '⏳', title: 'Waiting Game', desc: `${name} held off until Rd ${latestQb.rd} for ${latestQb.pick.playerName}` });
+    }
+
+    // Backfield Boss — most RBs
+    const rbCount = {};
+    allSorted.filter(p => p.playerPos === 'RB').forEach(p => { rbCount[p.uid] = (rbCount[p.uid] || 0) + 1; });
+    const boss = Object.entries(rbCount).sort((a, b) => b[1] - a[1])[0];
+    if (boss && boss[1] >= 3) {
+      const name = (participants[boss[0]] || {}).name || '?';
+      awards.push({ emoji: '🏃', title: 'Backfield Boss', desc: `${name} stockpiled ${boss[1]} RBs` });
+    }
+
+    // Route Runner — most WRs
+    const wrCount = {};
+    allSorted.filter(p => p.playerPos === 'WR').forEach(p => { wrCount[p.uid] = (wrCount[p.uid] || 0) + 1; });
+    const runner = Object.entries(wrCount).sort((a, b) => b[1] - a[1])[0];
+    if (runner && runner[1] >= 4) {
+      const name = (participants[runner[0]] || {}).name || '?';
+      awards.push({ emoji: '📡', title: 'Route Runner', desc: `${name} loaded up with ${runner[1]} WRs` });
+    }
+
+    // Stack Attack — most players from one NFL team on a single roster
+    const stacks = {};
+    allSorted.forEach(p => {
+      if (!p.playerTeam) return;
+      if (!stacks[p.uid]) stacks[p.uid] = {};
+      stacks[p.uid][p.playerTeam] = (stacks[p.uid][p.playerTeam] || 0) + 1;
+    });
+    let bestStack = null;
+    Object.entries(stacks).forEach(([uid, teams]) => {
+      Object.entries(teams).forEach(([team, cnt]) => {
+        if (!bestStack || cnt > bestStack.cnt) bestStack = { uid, team, cnt };
+      });
+    });
+    if (bestStack && bestStack.cnt >= 3) {
+      const name = (participants[bestStack.uid] || {}).name || '?';
+      awards.push({ emoji: '📦', title: 'Stack Attack', desc: `${name} grabbed ${bestStack.cnt} players from ${bestStack.team}` });
+    }
+
+    // Last Pick Standing — highest pick index that filled a starting slot
+    const lastPick = allSorted[allSorted.length - 1];
+    if (lastPick) {
+      const name = (participants[lastPick.uid] || {}).name || '?';
+      const rd   = Math.floor(Number(lastPick.pickIndex) / leagueSize) + 1;
+      awards.push({ emoji: '🎲', title: 'Final Pick', desc: `${name} — ${lastPick.playerName} with the last pick (Rd ${rd})` });
+    }
+
+    return awards;
+  }
+
+  window._ffcvShowTab = function (tabId, btn) {
+    ['grades', 'recap'].forEach(id => {
+      const p = document.getElementById('ffcv-panel-' + id);
+      if (p) p.style.display = id === tabId ? '' : 'none';
+    });
+    document.querySelectorAll('.ffcv-tab-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+  };
+
   function _renderVerdict(data, lobbyId) {
     const container = _panel();
     if (!container) return;
@@ -1565,13 +1732,32 @@
       </div>`;
     }).join('');
 
+    const allRankingsV = typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : [];
+    const recapItems  = _computeRecap(data, allRankingsV);
+    const recapAwards = recapItems.map(item =>
+      `<div class="ffcv-recap-card">
+        <div class="ffcv-recap-emoji">${item.emoji}</div>
+        <div class="ffcv-recap-title">${item.title}</div>
+        <div class="ffcv-recap-desc">${item.desc}</div>
+      </div>`
+    ).join('');
+
     container.innerHTML = `
       <div class="ffcv-wrap">
         <div class="ffcv-header">
           <div class="ffcv-title">⚖️ Clanker's Verdict</div>
           <div class="ffcv-subtitle">Winner: <strong>${winner.name}</strong> with a <strong style="color:${gradeColor(winner.grade)}">${winner.grade}</strong></div>
         </div>
-        <div class="ffcv-cards">${teamCards}</div>
+        <div class="ffcv-tabs">
+          <button class="ffcv-tab-btn active" onclick="_ffcvShowTab('grades',this)">📊 Grades</button>
+          <button class="ffcv-tab-btn" onclick="_ffcvShowTab('recap',this)">🏆 Recap</button>
+        </div>
+        <div id="ffcv-panel-grades">
+          <div class="ffcv-cards">${teamCards}</div>
+        </div>
+        <div id="ffcv-panel-recap" style="display:none">
+          <div class="ffcv-recap-grid">${recapAwards || '<div class="ffcv-recap-empty">Not enough data yet.</div>'}</div>
+        </div>
         <button class="ffcv-new-btn" onclick="renderDraftLobbyTab()">New Draft</button>
       </div>`;
   }
