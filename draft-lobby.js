@@ -1143,27 +1143,30 @@
     const balScore = Math.round((filledStarters / starterSlots.length) * 100);
 
     // ── Category 2: Value / Tier Awareness ──────────────────────────────────────
-    // For each of my picks, find BPA by checking which players were taken before it.
-    // Uses string coercion to avoid any numeric type mismatches from Firestore.
+    // BPA reconstruction: for each of my picks, find the best available skill-position
+    // player at that moment. K/DST excluded (specialty rounds). QB excluded from BPA
+    // once the league has drafted ≥ leagueSize QBs (teams have their starter; the
+    // remaining QB cluster at ranks 80-100 would otherwise freeze BPA for 60+ picks).
     const allPicksSorted = [...picks].sort((a, b) => Number(a.pickIndex) - Number(b.pickIndex));
 
     let totalReach = 0;
     myPicks.forEach(p => {
       const myIdx = Number(p.pickIndex);
-      // Collect ranks taken by picks that happened strictly before this one
-      const takenStr = new Set(
-        allPicksSorted
-          .filter(q => Number(q.pickIndex) < myIdx)
-          .map(q => String(q.playerRank))
-      );
-      const bpa = allRankings.find(r => !takenStr.has(String(r.rank)));
+      const picksBefore = allPicksSorted.filter(q => Number(q.pickIndex) < myIdx);
+      const takenStr = new Set(picksBefore.map(q => String(q.playerRank)));
+      const qbsTaken = picksBefore.filter(q => q.playerPos === 'QB').length;
+      const excludeQB = qbsTaken >= leagueSize; // once every team could have a QB1, drop QB from BPA
+      const bpa = allRankings.find(r => {
+        if (r.pos === 'K' || r.pos === 'DST') return false;
+        if (excludeQB && r.pos === 'QB') return false;
+        return !takenStr.has(String(r.rank));
+      });
       const bpaRank = bpa ? Number(bpa.rank) : Number(p.playerRank);
       totalReach += Math.max(0, Number(p.playerRank) - bpaRank);
     });
-    console.log('[Verdict] uid=' + uid + ' picks=' + myPicks.length + ' totalReach=' + totalReach + ' avgReach=' + (myPicks.length ? totalReach / myPicks.length : 0));
     const avgReach = myPicks.length ? totalReach / myPicks.length : 0;
-    // Normalize: 0 avg reach → 100 (always took BPA), 20+ avg reach → 0
-    const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 20))));
+    // Normalize: 0 avg reach → 100 (pure BPA drafter), 30+ avg reach → 0
+    const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 30))));
 
     // ── Category 3: Depth Quality ────────────────────────────────────────────────
     // Average rank of bench picks — calibrated to where bench players actually fall.
