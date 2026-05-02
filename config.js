@@ -253,8 +253,8 @@ const BOT_START_BAL = 100;
 
 
 // Season dates
-// 2026 NBA playoffs begin April 19
-const PLAYOFF_START  = '2026-04-19';
+// 2026 NBA playoffs begin April 18 (LAL/HOU Game 1 was 4/18)
+const PLAYOFF_START  = '2026-04-18';
 const PLAYIN_START   = '2026-04-14';
 const PLAYIN_END     = '2026-04-18';
 

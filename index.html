@@ -2705,10 +2705,15 @@ let _playInGameKeys  = new Set();
 // Call after every final game fetch to record play-in game results.
 // Returns true if any new play-in game was recorded.
 function _trackPlayInGames(games) {
+  const _piPool = new Set([
+    PLAYOFF_SEEDS.west[6], PLAYOFF_SEEDS.west[7], PLAYOFF_SEEDS.west[8], PLAYOFF_SEEDS.west[9],
+    PLAYOFF_SEEDS.east[6], PLAYOFF_SEEDS.east[7], PLAYOFF_SEEDS.east[8], PLAYOFF_SEEDS.east[9]
+  ]);
   let hasNew = false;
   (games || []).forEach(g => {
     if (!g.isFinal) return;
     if (g.date < PLAYIN_START || g.date > PLAYIN_END) return;
+    if (!_piPool.has(g.home) || !_piPool.has(g.away)) return;
     const key = g.date + '|' + g.home + '|' + g.away;
     if (_playInGameKeys.has(key)) return;
     _playInGameKeys.add(key);
