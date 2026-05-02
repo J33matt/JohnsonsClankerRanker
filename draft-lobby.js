@@ -1329,7 +1329,7 @@
     // TE1 ≈ rank 22 (McBride), TE2 ≈ 32, TE3-5 ≈ 57-68, TE6-9 ≈ 85-115, TE10+ ≈ 127+
     const te1 = myTEs[0] ? myTEs[0].playerRank : 999;
     const te2 = myTEs[1] ? myTEs[1].playerRank : 999;
-    const teStartScore = te1 <= 22 ? 100 : te1 <= 38 ? 85 : te1 <= 72 ? 68 : te1 <= 115 ? 50 : te1 <= 999 ? 32 : 0;
+    const teStartScore = te1 <= 22 ? 100 : te1 <= 38 ? 90 : te1 <= 72 ? 80 : te1 <= 115 ? 63 : te1 <= 999 ? 42 : 0;
     const teBackScore  = te2 <= 999 ? 10 : 0;
     const tePosScore   = Math.min(100, teStartScore + teBackScore);
     // Position Rank: how many TEs are ranked above yours? TE1=100, TE2=80, TE3-4=60, TE5-6=42, TE7+=22
