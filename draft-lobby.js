@@ -1149,19 +1149,19 @@
     const runningTaken = new Set();
     allPicksSorted.forEach(p => {
       takenBeforePick[p.pickIndex] = new Set(runningTaken);
-      runningTaken.add(p.playerRank);
+      runningTaken.add(Number(p.playerRank));
     });
 
     let totalReach = 0;
     myPicks.forEach(p => {
       const taken = takenBeforePick[p.pickIndex] || new Set();
-      const bpa   = allRankings.find(r => !taken.has(r.rank));
-      const bpaRank = bpa ? bpa.rank : p.playerRank;
-      totalReach += Math.max(0, p.playerRank - bpaRank); // 0 = BPA or better, positive = reach
+      const bpa = allRankings.find(r => !taken.has(Number(r.rank)));
+      const bpaRank = bpa ? Number(bpa.rank) : Number(p.playerRank);
+      totalReach += Math.max(0, Number(p.playerRank) - bpaRank); // 0 = BPA or better, positive = reach
     });
     const avgReach = myPicks.length ? totalReach / myPicks.length : 0;
-    // Normalize: 0 avg reach → 100 (always took BPA), 25+ avg reach → 0
-    const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 25))));
+    // Normalize: 0 avg reach → 100 (always took BPA), 20+ avg reach → 0
+    const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 20))));
 
     // ── Category 3: Depth Quality ────────────────────────────────────────────────
     // Average rank of bench picks — calibrated to where bench players actually fall.
