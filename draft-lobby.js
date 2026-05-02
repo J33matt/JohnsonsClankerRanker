@@ -1122,18 +1122,27 @@
     const balScore = Math.round((filledStarters / starterSlots.length) * 100);
 
     // ── Category 2: Value / Tier Awareness ──────────────────────────────────────
-    // Compare each pick's rank to the expected rank at that pick number (ADP proxy).
-    // Expected rank ≈ pickIndex + 1 (since FANTASY_RANKINGS is ordered by rank).
-    // Positive value = picked earlier than expected (reach); negative = got value.
-    let totalValue = 0;
-    myPicks.forEach(p => {
-      const expected = p.pickIndex + 1; // rough ADP
-      const diff     = expected - p.playerRank; // positive = value, negative = reach
-      totalValue += diff;
+    // Reconstruct BPA at each pick moment from actual draft history, then measure
+    // how far each pick strayed from it. reach=0 means BPA was taken; reach=20
+    // means a player ranked 20 spots worse than BPA was chosen instead.
+    const allPicksSorted = [...picks].sort((a, b) => a.pickIndex - b.pickIndex);
+    const takenBeforePick = {}; // pickIndex → Set of ranks already gone
+    const runningTaken = new Set();
+    allPicksSorted.forEach(p => {
+      takenBeforePick[p.pickIndex] = new Set(runningTaken);
+      runningTaken.add(p.playerRank);
     });
-    const avgValue = totalValue / myPicks.length;
-    // Normalize: +30 avg value → 100, -30 → 0
-    const valScore = Math.min(100, Math.max(0, Math.round(50 + avgValue * (50 / 30))));
+
+    let totalReach = 0;
+    myPicks.forEach(p => {
+      const taken = takenBeforePick[p.pickIndex] || new Set();
+      const bpa   = allRankings.find(r => !taken.has(r.rank));
+      const bpaRank = bpa ? bpa.rank : p.playerRank;
+      totalReach += Math.max(0, p.playerRank - bpaRank); // 0 = BPA or better, positive = reach
+    });
+    const avgReach = myPicks.length ? totalReach / myPicks.length : 0;
+    // Normalize: 0 avg reach → 100 (always took BPA), 25+ avg reach → 0
+    const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 25))));
 
     // ── Category 3: Depth Quality ────────────────────────────────────────────────
     // Average rank of bench picks (lower rank = better player)
