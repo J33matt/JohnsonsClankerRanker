@@ -18,8 +18,15 @@
   function _db() { return firebase.firestore(); }
   function _panel() { return document.getElementById('nfl-ff-draft'); }
 
-  const _BOT_NAMES = ['Alpha Bot','Bravo Bot','Charlie Bot','Delta Bot','Echo Bot',
-    'Foxtrot Bot','Golf Bot','Hotel Bot','India Bot','Juliet Bot','Kilo Bot','Lima Bot'];
+  const _BOT_ADJ = ['Stoic','Erratic','Bold','Cynical','Pragmatic','Wild','Zen','Grumpy','Salty','Hasty','Calculated','Eccentric','Nervous','Aloof','Jovial','Pensive','Chrome','Neon','Static','Digital','Ancient','Vintage','Shiny','Rusty','Lucid','Fractal','Hidden','Radiant','Hollow','Primal','Infinite','Velvet','Scholar','Apprentice','Master','Senior','Junior','Expert','Novice','Rogue','Elite','Stealthy','Prime','Alpha','Omega','Kinetic','Tidal','Bitter','Crimson','Gloom','Sudden','Brisk','Mellow','Vague','Formal','Drastic','Candid','Nimble','Vexed','Heavy'];
+  const _BOT_NOUN = ['Jack','Bo','Zeke','Mack','Duke','Beau','Colt','Knox','Dash','Wyatt','Finn','Silas','Jude','Rhett','Arlo','Milo','Badger','Owl','Fox','Penguin','Mammoth','Gecko','Raven','Beetle','Newt','Lynx','Sloth','Gear','Circuit','Paradox','Vector','Prism','Ledger','Anchor','Signal','Pulse','Ember','Catalyst','Cipher','Echo','Horizon','Architect','Mastermind','Tactician','Coordinator','Strategist','Analyst','Director','Governor','Overseer','Consultant','Administrator','Engineer','Shotcaller','Skipper','Captain','Chief','Boss','Principal','Warden','Sentinel','Monitor','Harbinger','Sovereign','Steward','Chancellor','Dean','Enthusiast','Hobbyist','Lurker','Specialist','Curator','Collector','Hoarder','Visionary','Prophet','Nomad','Voyager','Pilot','Scribe','Merchant','Guard','Scout','Ranger','Smith','Weaver','Baker','Clerk','Judge','Monk','Knight','Baron','Duke','Beer','Drinker','Bob','Rizzler','Goat'];
+  function _botRandomName(usedNames) {
+    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+    let name, attempts = 0;
+    do { name = pick(_BOT_ADJ) + ' ' + pick(_BOT_NOUN); } while (usedNames.has(name) && ++attempts < 50);
+    usedNames.add(name);
+    return name;
+  }
 
   const _ROSTER_SLOTS = [
     {id:'QB',  label:'QB',   pos:['QB']},
@@ -387,10 +394,11 @@
       .map(([uid]) => uid);
 
     let botCount = 0;
+    const _usedBotNames = new Set(Object.values(participants).map(p => p.name));
     while (humanUids.length < leagueSize) {
       const botUid = 'bot_' + Math.random().toString(36).slice(2, 10);
       participants[botUid] = {
-        name: _BOT_NAMES[botCount] || ('Bot ' + (botCount + 1)),
+        name: _botRandomName(_usedBotNames),
         isBot: true,
         botPersonality: 'emergent',
         joinedAt: Date.now() + botCount + 1
