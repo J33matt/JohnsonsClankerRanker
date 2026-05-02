@@ -1248,11 +1248,11 @@
     // QB: starter quality + backup presence + backup quality
     const qbStarter = myQBs[0] ? myQBs[0].playerRank : 999;
     const qbBackup  = myQBs[1] ? myQBs[1].playerRank : 999;
-    const qbStartScore = qbStarter <= 10 ? 95 : qbStarter <= 20 ? 82 : qbStarter <= 40 ? 68 : qbStarter <= 70 ? 54 : 35;
+    const qbStartScore = qbStarter <= 10 ? 100 : qbStarter <= 20 ? 82 : qbStarter <= 40 ? 68 : qbStarter <= 70 ? 54 : 35;
     const qbBackScore  = qbBackup <= 999 ? (qbBackup <= 60 ? 15 : 10) : 0;
     const qbPosScore   = Math.min(100, qbStartScore + qbBackScore);
     const qbFactors = [
-      { label: 'Starter Tier', val: Math.round(qbStartScore / 95 * 100) },
+      { label: 'Starter Tier', val: Math.round(qbStartScore) },
       { label: 'Has Backup',   val: myQBs.length >= 2 ? 100 : 0 },
       { label: 'Backup Value', val: qbBackup <= 999 ? Math.min(100, Math.round(100 - (qbBackup-40)*1.5)) : 0 },
     ];
@@ -1261,7 +1261,7 @@
     const rb1 = myRBs[0] ? myRBs[0].playerRank : 999;
     const rb2 = myRBs[1] ? myRBs[1].playerRank : 999;
     const rbCountBonus = Math.min(15, (myRBs.length - 2) * 5);
-    const rb1Score = rb1 <= 10 ? 95 : rb1 <= 20 ? 83 : rb1 <= 40 ? 68 : rb1 <= 70 ? 50 : rb1 <= 999 ? 32 : 0;
+    const rb1Score = rb1 <= 10 ? 100 : rb1 <= 20 ? 83 : rb1 <= 40 ? 68 : rb1 <= 70 ? 50 : rb1 <= 999 ? 32 : 0;
     const rb2Score = rb2 <= 30 ? 90 : rb2 <= 60 ? 72 : rb2 <= 100 ? 54 : rb2 <= 999 ? 35 : 0;
     const rbPosScore = Math.min(100, rb1Score * 0.55 + rb2Score * 0.35 + rbCountBonus);
     const rbFactors = [
@@ -1274,7 +1274,7 @@
     const wr1 = myWRs[0] ? myWRs[0].playerRank : 999;
     const wr2 = myWRs[1] ? myWRs[1].playerRank : 999;
     const wrCountBonus = Math.min(15, (myWRs.length - 2) * 5);
-    const wr1Score = wr1 <= 8  ? 95 : wr1 <= 20 ? 82 : wr1 <= 40 ? 67 : wr1 <= 70 ? 50 : wr1 <= 999 ? 30 : 0;
+    const wr1Score = wr1 <= 8  ? 100 : wr1 <= 20 ? 82 : wr1 <= 40 ? 67 : wr1 <= 70 ? 50 : wr1 <= 999 ? 30 : 0;
     const wr2Score = wr2 <= 25 ? 90 : wr2 <= 50 ? 72 : wr2 <= 90 ? 54 : wr2 <= 999 ? 35 : 0;
     const wrPosScore = Math.min(100, wr1Score * 0.50 + wr2Score * 0.35 + wrCountBonus);
     const wrFactors = [
