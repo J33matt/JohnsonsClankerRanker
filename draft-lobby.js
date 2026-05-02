@@ -1325,16 +1325,20 @@
       { label: 'Depth Count',val: Math.min(100, myWRs.length * 20) },
     ];
 
-    // TE: starter tier (scarcity makes elite TE very valuable) + backup
+    // TE: thresholds calibrated to actual TE distribution in the overall rankings.
+    // TE1 ≈ rank 22 (McBride), TE2 ≈ 32, TE3-5 ≈ 57-68, TE6-9 ≈ 85-115, TE10+ ≈ 127+
     const te1 = myTEs[0] ? myTEs[0].playerRank : 999;
     const te2 = myTEs[1] ? myTEs[1].playerRank : 999;
-    const teStartScore = te1 <= 8  ? 100 : te1 <= 15 ? 88 : te1 <= 30 ? 70 : te1 <= 60 ? 52 : te1 <= 999 ? 34 : 0;
+    const teStartScore = te1 <= 22 ? 100 : te1 <= 38 ? 85 : te1 <= 72 ? 68 : te1 <= 115 ? 50 : te1 <= 999 ? 32 : 0;
     const teBackScore  = te2 <= 999 ? 10 : 0;
     const tePosScore   = Math.min(100, teStartScore + teBackScore);
+    // Position Rank: how many TEs are ranked above yours? TE1=100, TE2=80, TE3-4=60, TE5-6=42, TE7+=22
+    const tePosRankNum = allRankings.filter(r => r.pos === 'TE' && r.rank <= te1).length;
+    const tePosRankScore = tePosRankNum <= 1 ? 100 : tePosRankNum <= 2 ? 80 : tePosRankNum <= 4 ? 60 : tePosRankNum <= 6 ? 42 : 22;
     const teFactors = [
-      { label: 'Starter Tier', val: Math.round(teStartScore) },
-      { label: 'Scarcity Edge', val: te1 <= 15 ? 100 : te1 <= 30 ? 60 : 25 },
-      { label: 'Has Backup',   val: myTEs.length >= 2 ? 100 : 0 },
+      { label: 'Starter Tier',  val: Math.round(teStartScore) },
+      { label: 'Position Rank', val: tePosRankScore },
+      { label: 'Has Backup',    val: myTEs.length >= 2 ? 100 : 0 },
     ];
 
     // BENCH: avg rank of bench players + best single asset + positional variety
