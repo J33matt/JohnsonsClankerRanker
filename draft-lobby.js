@@ -980,8 +980,10 @@
     if (!currentUid || !data.participants?.[currentUid]?.isBot) return;
 
     if (_botTimeout) { clearTimeout(_botTimeout); _botTimeout = null; }
-    const botDelay = data.currentPickIndex < (data.settings?.leagueSize||10) * 3 ? 3000
-                   : data.currentPickIndex < (data.settings?.leagueSize||10) * 7 ? 2000 : 1000;
+    const _ls = data.settings?.leagueSize || 10;
+    const botDelay = data.currentPickIndex < _ls * 3 ? 3000
+                   : data.currentPickIndex < _ls * 7 ? 2000
+                   : data.currentPickIndex < _ls * 9 ? 1000 : 150;
     _botTimeout = setTimeout(async () => {
       const snap = await _db().collection('ff_draft_lobbies').doc(lobbyId).get();
       if (!snap.exists) return;
