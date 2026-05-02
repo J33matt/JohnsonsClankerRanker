@@ -451,13 +451,15 @@
   }
 
   function _renderRosterBoard(data, leagueSize) {
-    const { draftOrder = [], picks = [], participants = {} } = data;
-    const teamOrder = draftOrder.slice(0, leagueSize);
+    const { draftOrder = [], picks = [], participants = {}, currentPickIndex = 0 } = data;
+    const teamOrder  = draftOrder.slice(0, leagueSize);
+    const currentUid = draftOrder[currentPickIndex];
 
     const headerCells = teamOrder.map(uid => {
-      const isMe = uid === _myUid;
-      const name = (participants[uid] || {}).name || '?';
-      return `<div class="ffdb-bb-th${isMe ? ' ffdb-bb-me-col' : ''}">${name}</div>`;
+      const isMe      = uid === _myUid;
+      const isOnClock = uid === currentUid;
+      const name      = (participants[uid] || {}).name || '?';
+      return `<div class="ffdb-bb-th${isMe ? ' ffdb-bb-me-col' : ''}${isOnClock ? ' ffdb-rv-onclock' : ''}">${isOnClock ? '⏱ ' : ''}${name}</div>`;
     }).join('');
 
     const rosterRows = _ROSTER_SLOTS.map((slot, si) => {
@@ -633,10 +635,6 @@
       <div class="ffdb-wrap">
         <div class="ffdb-topbar">
           <div class="ffdb-round-info">Round ${currentRound} · Pick ${pickInRound} / ${leagueSize}</div>
-          <div class="ffdb-clock${isMyTurn?' ffdb-your-turn':''}">
-            ${isMyTurn ? '⚡ YOUR PICK' : `${currentPicker.name||'?'} is picking…`}
-            ${timerSecs > 0 ? `<span class="ffdb-timer" id="ffdb-timer">--</span>` : ''}
-          </div>
           <div class="ffdb-pick-count">${currentPickIndex} / ${totalPicks} picks made</div>
         </div>
 
@@ -648,6 +646,11 @@
           <div class="ffdb-bb-outer" id="ffdb-bb-outer">
             ${boardInner}
           </div>
+        </div>
+
+        <div class="ffdb-clock${isMyTurn?' ffdb-your-turn':''}">
+          ${isMyTurn ? '⚡ YOUR PICK' : `${currentPicker.name||'?'} is picking…`}
+          ${timerSecs > 0 ? `<span class="ffdb-timer" id="ffdb-timer">--</span>` : ''}
         </div>
 
         <div class="ffdb-main">
@@ -685,15 +688,13 @@
     const poolNew = document.getElementById('ffdb-pool-list');
     if (poolNew) poolNew.scrollTop = savedPoolScroll;
 
-    // Auto-scroll big board: only snap when a new round begins
+    // Auto-scroll big board: snap position updates only on new round,
+    // but scrollTop is always restored since DOM is replaced each render
     const bbNew = document.getElementById('ffdb-bb-scroll');
     if (bbNew && boardView === 'round') {
       const curRound0 = Math.floor(currentPickIndex / leagueSize);
-      if (curRound0 !== _bbLastSnapRound) {
-        _bbLastSnapRound = curRound0;
-        const rowH = 56;
-        bbNew.scrollTop = Math.max(0, curRound0 - 1) * rowH;
-      }
+      if (curRound0 !== _bbLastSnapRound) _bbLastSnapRound = curRound0;
+      bbNew.scrollTop = Math.max(0, _bbLastSnapRound - 1) * 56;
     }
 
     _startTimer(timerEndsAt, timerSecs, lobbyId);
@@ -854,15 +855,13 @@
 
         case 'zero-rb': {
           if (round <= 8) {
-            if (p.pos==='RB')               s *= 0.04;
-            if (p.pos==='WR')               s *= 1.5;
-            if (p.pos==='QB' && qb===0)     s *= 1.3;
-            if (p.pos==='TE' && te===0)     s *= 1.3;
+            if (p.pos==='RB')                       s *= 0.04;
+            if (p.pos==='WR' && wr < 3)             s *= 1.25; // capped at 3 WRs with boost
+            if (p.pos==='QB' && qb===0)             s *= 1.3;
+            if (p.pos==='TE' && te===0)             s *= 1.3;
           } else {
-            if (p.pos==='RB')               s *= 2.2;
+            if (p.pos==='RB')                       s *= 2.2;
           }
-          // Flex tolerance: allow up to 7 WRs for this build
-          if (p.pos==='WR' && wr>=5 && wr<7) s *= 2.0;
           break;
         }
 
@@ -952,11 +951,11 @@
     const key = `${p1}+${p2}`;
     switch (key) {
       case 'RB+RB': return 'robust-rb';
-      case 'RB+WR': return 'hero-rb';
+      case 'RB+WR': return 'hero-rb';   // got RB, now building out
       case 'RB+TE': return 'hero-rb';
-      case 'WR+WR': return 'zero-rb';
-      case 'WR+RB': return 'zero-rb';
-      case 'WR+TE': return 'zero-rb';
+      case 'WR+WR': return 'zero-rb';   // pure zero-rb only if both picks were WR
+      case 'WR+RB': return 'bpa';       // balanced start — no strong lean, go BPA
+      case 'WR+TE': return 'bpa';       // balanced start
       case 'TE+TE': return 'bully-te';
       case 'TE+RB': return 'bully-te';
       case 'TE+WR': return 'bully-te';
@@ -1235,6 +1234,9 @@
     if (!container) return;
     clearInterval(_timerInterval); _timerInterval = null;
     clearTimeout(_botTimeout);     _botTimeout    = null;
+    window._draftQueue    = [];
+    window._ffdbBoardView = 'round';
+    _bbLastSnapRound      = -1;
 
     const { draftOrder = [], participants = {}, settings = {} } = data;
     const leagueSize  = settings.leagueSize || 10;

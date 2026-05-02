@@ -3638,7 +3638,7 @@
   border-radius: 10px; padding: 12px 20px; margin-bottom: 14px;
 }
 .ffdb-round-info { font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; letter-spacing: 1px; color: var(--muted); }
-.ffdb-clock { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 2px; }
+.ffdb-clock { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 2px; text-align: center; padding: 10px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; }
 .ffdb-your-turn { color: #ffaa00; }
 .ffdb-timer { font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; font-weight: 700; margin-left: 10px; letter-spacing: 1px; }
 .ffdb-pick-count { font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; color: var(--muted); letter-spacing: 1px; }
@@ -3701,6 +3701,7 @@
 .ffdb-rv-scroll { overflow-x: auto; min-width: max-content; }
 .ffdb-rv-row { height: var(--bb-rh); }
 .ffdb-rv-bench { background: rgba(255,255,255,0.015); }
+.ffdb-rv-onclock { color: #ffaa00; outline: 2px solid #ffaa00; outline-offset: -2px; }
 .ffdb-rv-label { font-family: 'Bebas Neue', sans-serif; font-size: 0.72rem; letter-spacing: 1px; color: var(--muted); }
 .ffdb-rv-cell { justify-content: center; gap: 4px; }
 .ffdb-bb-outer { overflow-x: auto; width: 100%; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
