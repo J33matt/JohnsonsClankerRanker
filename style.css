@@ -3501,7 +3501,7 @@
 }
 .ffd-participant:last-child { border-bottom: none; }
 .ffd-participant.ffd-me { background: rgba(255,170,0,0.04); border-radius: 6px; padding: 8px 6px; margin: 0 -6px; }
-.ffd-participant.ffd-empty { opacity: 0.35; }
+.ffd-participant.ffd-empty .ffd-p-left { opacity: 0.4; }
 
 .ffd-p-left {
   display: flex;

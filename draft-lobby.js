@@ -319,8 +319,27 @@
   };
 
   window._draftSetSetting = async function (lobbyId, key, val) {
-    await _db().collection('ff_draft_lobbies').doc(lobbyId)
-      .update({ ['settings.' + key]: val });
+    const update = { ['settings.' + key]: val };
+
+    if (key === 'randomizeOrder') {
+      if (val === false) {
+        // Switching to Manual: auto-assign all current participants to slots in join order
+        const doc  = await _db().collection('ff_draft_lobbies').doc(lobbyId).get();
+        const data = doc.data();
+        const participants = data.participants || {};
+        const leagueSize   = data.settings?.leagueSize || 10;
+        const prefs = {};
+        Object.entries(participants)
+          .sort((a, b) => (a[1].joinedAt || 0) - (b[1].joinedAt || 0))
+          .forEach(([uid], i) => { if (i < leagueSize) prefs[uid] = i; });
+        update.slotPreferences = prefs;
+      } else {
+        // Switching back to Random: clear manual slot assignments
+        update.slotPreferences = {};
+      }
+    }
+
+    await _db().collection('ff_draft_lobbies').doc(lobbyId).update(update);
   };
 
   window._draftStartDraft = async function (lobbyId) {
