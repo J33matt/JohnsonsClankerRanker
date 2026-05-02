@@ -269,12 +269,23 @@
               <button class="ffd-opt${!randomize?' active':''}" onclick="_draftSetSetting('${lobbyId}','randomizeOrder',false)">Manual</button>
             </div>
           </div>
+          <div class="ffd-settings-row">
+            <span class="ffd-settings-label">Bot Speed</span>
+            <div class="ffd-opts">
+              ${['vfast','fast','normal','slow','vslow'].map(spd => {
+                const labels = { vfast:'Very Fast', fast:'Fast', normal:'Normal', slow:'Slow', vslow:'Very Slow' };
+                const cur = settings.botSpeed || 'normal';
+                return `<button class="ffd-opt${cur===spd?' active':''}" onclick="_draftSetSetting('${lobbyId}','botSpeed','${spd}')">${labels[spd]}</button>`;
+              }).join('')}
+            </div>
+          </div>
         </div>`
       : `<div class="ffd-settings-panel ffd-settings-ro">
           <div class="ffd-panel-title">LOBBY SETTINGS</div>
           <div class="ffd-settings-row"><span class="ffd-settings-label">League Size</span><span class="ffd-settings-val">${maxSlots} teams</span></div>
           <div class="ffd-settings-row"><span class="ffd-settings-label">Pick Timer</span><span class="ffd-settings-val">${settings.timerSeconds ? settings.timerSeconds+'s' : 'No limit'}</span></div>
           <div class="ffd-settings-row"><span class="ffd-settings-label">Draft Order</span><span class="ffd-settings-val">${randomize ? 'Randomized' : 'Manual'}</span></div>
+          <div class="ffd-settings-row"><span class="ffd-settings-label">Bot Speed</span><span class="ffd-settings-val">${({'vfast':'Very Fast','fast':'Fast','normal':'Normal','slow':'Slow','vslow':'Very Slow'})[settings.botSpeed||'normal']}</span></div>
         </div>`;
 
 
@@ -980,10 +991,16 @@
     if (!currentUid || !data.participants?.[currentUid]?.isBot) return;
 
     if (_botTimeout) { clearTimeout(_botTimeout); _botTimeout = null; }
-    const _ls = data.settings?.leagueSize || 10;
-    const botDelay = data.currentPickIndex < _ls * 3 ? 3000
-                   : data.currentPickIndex < _ls * 7 ? 2000
-                   : data.currentPickIndex < _ls * 9 ? 1000 : 150;
+    const _ls       = data.settings?.leagueSize || 10;
+    const _botSpeed = data.settings?.botSpeed || 'normal';
+    const botDelay  = _botSpeed === 'vfast'  ? 150
+                    : _botSpeed === 'fast'   ? 1000
+                    : _botSpeed === 'slow'   ? 5000
+                    : _botSpeed === 'vslow'  ? 10000
+                    // normal: tiered by round
+                    : data.currentPickIndex < _ls * 3 ? 3000
+                    : data.currentPickIndex < _ls * 7 ? 2000
+                    : data.currentPickIndex < _ls * 9 ? 1000 : 150;
     _botTimeout = setTimeout(async () => {
       const snap = await _db().collection('ff_draft_lobbies').doc(lobbyId).get();
       if (!snap.exists) return;
