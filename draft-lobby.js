@@ -1295,14 +1295,15 @@
       { label: 'Has Backup',   val: myTEs.length >= 2 ? 100 : 0 },
     ];
 
-    // BENCH: avg rank of bench players + filled slots + positional variety
+    // BENCH: avg rank of bench players + best single asset + positional variety
     const avgBR = myBench.length ? myBench.reduce((s,p) => s + p.playerRank, 0) / myBench.length : 200;
-    const benchFilledPct = (myBench.length / 7) * 100;
+    const bestBenchRank = myBench.length ? Math.min(...myBench.map(p => p.playerRank)) : 200;
     const benchAvgScore  = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBR - 60) * (100/140))));
-    const benchPosScore  = Math.round(benchAvgScore * 0.6 + benchFilledPct * 0.4);
+    const bestAssetScore = bestBenchRank <= 40 ? 100 : bestBenchRank <= 70 ? 80 : bestBenchRank <= 100 ? 60 : bestBenchRank <= 140 ? 40 : 20;
+    const benchPosScore  = Math.round(benchAvgScore * 0.5 + bestAssetScore * 0.3 + Math.min(100, new Set(myBench.map(p=>p.playerPos)).size * 20) * 0.2);
     const benchFactors = [
       { label: 'Avg Player Tier', val: benchAvgScore },
-      { label: 'Slots Filled',    val: Math.round(benchFilledPct) },
+      { label: 'Best Asset',      val: bestAssetScore },
       { label: 'Pos Variety',     val: Math.min(100, new Set(myBench.map(p=>p.playerPos)).size * 20) },
     ];
 
