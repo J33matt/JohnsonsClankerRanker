@@ -464,11 +464,12 @@
 
     const rosterRows = _ROSTER_SLOTS.map((slot, si) => {
       const cells = teamOrder.map(uid => {
-        const isMe    = uid === _myUid;
-        const slots   = _buildRoster(picks, uid);
-        const filled  = slots[si] && slots[si].filled;
-        const pc      = filled ? _posColor(filled.playerPos) : '';
-        return `<div class="ffdb-bb-cell ffdb-rv-cell${isMe?' ffdb-bb-me-col':''}${filled?' ffdb-bb-picked':''}">
+        const isMe      = uid === _myUid;
+        const isOnClock = uid === currentUid;
+        const slots     = _buildRoster(picks, uid);
+        const filled    = slots[si] && slots[si].filled;
+        const pc        = filled ? _posColor(filled.playerPos) : '';
+        return `<div class="ffdb-bb-cell ffdb-rv-cell${isMe?' ffdb-bb-me-col':''}${filled?' ffdb-bb-picked':''}${isOnClock?' ffdb-rv-col-active':''}">
           ${filled
             ? `<div class="ffdb-bb-pdot" style="background:${pc}"></div><div class="ffdb-bb-pname">${filled.playerName}</div>`
             : `<span class="ffdb-slot-empty">—</span>`}
@@ -520,9 +521,11 @@
     const draftedSet = new Set(draftedRanks);
     const available  = (typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : [])
       .filter(p => !draftedSet.has(p.rank));
-    const flexSet    = new Set(['QB','RB','WR','TE']);
-    let filtered = posFilter === 'ALL' ? available
-      : posFilter === 'FLEX' ? available.filter(p => flexSet.has(p.pos))
+    const flexSet    = new Set(['RB','WR','TE']);
+    const rookieSet  = (typeof FF_ROOKIES !== 'undefined') ? FF_ROOKIES : new Set();
+    let filtered = posFilter === 'ALL'    ? available
+      : posFilter === 'FLEX'   ? available.filter(p => flexSet.has(p.pos))
+      : posFilter === 'ROOKIE' ? available.filter(p => rookieSet.has((p.name||'').toLowerCase()))
       : available.filter(p => p.pos === posFilter);
     if (forcedMode) filtered = available.filter(p => forcedPos.has(p.pos));
 
@@ -658,7 +661,7 @@
             <div class="ffdb-pool-header">
               <span class="ffdb-panel-title">AVAILABLE · ${filtered.length}</span>
               <div class="ffdb-pos-filters">
-                ${['ALL','FLEX','QB','RB','WR','TE','K','DST'].map(pos =>
+                ${['ALL','FLEX','QB','RB','WR','TE','K','DST','ROOKIE'].map(pos =>
                   `<button class="ffdb-pos-pill${posFilter===pos&&!forcedMode?' active':''}" onclick="_ffdbSetFilter('${pos}')">${pos}</button>`
                 ).join('')}
               </div>
@@ -684,9 +687,11 @@
         </div>
       </div>`;
 
-    // Restore pool scroll
-    const poolNew = document.getElementById('ffdb-pool-list');
-    if (poolNew) poolNew.scrollTop = savedPoolScroll;
+    // Restore pool scroll — defer so browser finishes layout before setting scrollTop
+    requestAnimationFrame(() => {
+      const poolNew = document.getElementById('ffdb-pool-list');
+      if (poolNew) poolNew.scrollTop = savedPoolScroll;
+    });
 
     // Auto-scroll big board: snap position updates only on new round,
     // but scrollTop is always restored since DOM is replaced each render
@@ -975,7 +980,9 @@
     if (!currentUid || !data.participants?.[currentUid]?.isBot) return;
 
     if (_botTimeout) { clearTimeout(_botTimeout); _botTimeout = null; }
-    _botTimeout = setTimeout(async () => {  // 3s bot delay
+    const botDelay = data.currentPickIndex < (data.settings?.leagueSize||10) * 3 ? 3000
+                   : data.currentPickIndex < (data.settings?.leagueSize||10) * 7 ? 2000 : 1000;
+    _botTimeout = setTimeout(async () => {
       const snap = await _db().collection('ff_draft_lobbies').doc(lobbyId).get();
       if (!snap.exists) return;
       const fresh = snap.data();
@@ -983,11 +990,21 @@
 
       const all         = typeof FANTASY_RANKINGS !== 'undefined' ? FANTASY_RANKINGS : [];
       const drafted     = new Set(fresh.draftedRanks || []);
-      const available   = all.filter(p => !drafted.has(p.rank));
+      let   available   = all.filter(p => !drafted.has(p.rank));
       let   personality = fresh.participants?.[currentUid]?.botPersonality || 'bpa';
       const leagueSize  = fresh.settings?.leagueSize || 10;
       const round       = Math.floor(fresh.currentPickIndex / leagueSize) + 1;
       const myPicks     = (fresh.picks || []).filter(p => p.uid === currentUid);
+
+      // Bot forced starter mode: mirror the human logic
+      const totalPicks    = (fresh.draftOrder || []).length;
+      const botRemaining  = (fresh.draftOrder || []).slice(fresh.currentPickIndex).filter(u => u === currentUid).length;
+      const botUnfilled   = _buildRoster(myPicks.map(p => ({ ...p, uid: currentUid })), currentUid)
+                              .filter(s => !s.id.startsWith('BN') && !s.filled);
+      if (botUnfilled.length > 0 && botUnfilled.length >= botRemaining) {
+        const forcedPos = new Set(botUnfilled.flatMap(s => s.pos));
+        available = available.filter(p => forcedPos.has(p.pos));
+      }
 
       // Round 1 emergent: weighted draw from top 3 (70/20/10), bypass scoring
       if (round === 1 && personality === 'emergent') {
@@ -1008,7 +1025,7 @@
 
       const pick = _botPickPlayer(personality, available, myPicks, round);
       if (pick) await window._draftMakePick(lobbyId, pick.rank, currentUid);
-    }, 3000);
+    }, botDelay);
   }
 
   // ── Timer countdown ─────────────────────────────────────────────────────────
@@ -1022,6 +1039,8 @@
       const rem = Math.max(0, Math.ceil((endMs - Date.now()) / 1000));
       el.textContent = rem + 's';
       el.style.color = rem <= 10 ? '#e74c3c' : '';
+      const pool = document.getElementById('ffdb-pool-list');
+      if (pool) pool.classList.toggle('ffdb-pool-urgent', rem <= 5 && rem > 0);
       if (rem <= 0) {
         clearInterval(_timerInterval); _timerInterval = null;
         // Auto-pick BPA for whoever is on the clock
