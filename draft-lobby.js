@@ -1212,37 +1212,155 @@
       return 'F';
     }
 
-    // ── Narrative blurb ──────────────────────────────────────────────────────────
-    function _blurb(bal, val, dep, scar, coh, grade, picks) {
-      const pos4 = picks.slice(0, 4).map(p => p.playerPos);
-      const rbH  = pos4.filter(p => p==='RB').length >= 3;
-      const wrH  = pos4.filter(p => p==='WR').length >= 3;
-      const eTE  = picks.find(p => p.playerPos==='TE' && p.playerRank<=20);
-      const earlKDST = picks.slice(0, picks.length * 0.5).some(p => p.playerPos==='K'||p.playerPos==='DST');
+    // ── Positional grades ─────────────────────────────────────────────────────────
+    const myRBs  = myPicks.filter(p => p.playerPos==='RB').sort((a,b) => a.playerRank - b.playerRank);
+    const myWRs  = myPicks.filter(p => p.playerPos==='WR').sort((a,b) => a.playerRank - b.playerRank);
+    const myQBs  = myPicks.filter(p => p.playerPos==='QB').sort((a,b) => a.playerRank - b.playerRank);
+    const myTEs  = myPicks.filter(p => p.playerPos==='TE').sort((a,b) => a.playerRank - b.playerRank);
+    const myBench = slots.filter(s => s.label==='BN' && s.filled).map(s => s.filled);
 
-      if (grade.startsWith('A')) {
-        if (rbH) return "Hammered RBs early and built a fortress. Clanker approves — this roster bleeds.";
-        if (wrH) return "Zero-RB executed to perfection. Target hog heaven.";
-        if (eTE) return "Locked up an elite TE and let the draft fall to them. Chess, not checkers.";
-        return "Textbook draft. Value at every turn, no panic, no reaches. Respect.";
+    function posGrade(score) { return toGrade(Math.round(score)); }
+
+    // QB: starter quality + backup presence + backup quality
+    const qbStarter = myQBs[0] ? myQBs[0].playerRank : 999;
+    const qbBackup  = myQBs[1] ? myQBs[1].playerRank : 999;
+    const qbStartScore = qbStarter <= 10 ? 95 : qbStarter <= 20 ? 82 : qbStarter <= 40 ? 68 : qbStarter <= 70 ? 54 : 35;
+    const qbBackScore  = qbBackup <= 999 ? (qbBackup <= 60 ? 15 : 10) : 0;
+    const qbPosScore   = Math.min(100, qbStartScore + qbBackScore);
+    const qbFactors = [
+      { label: 'Starter Tier', val: Math.round(qbStartScore / 95 * 100) },
+      { label: 'Has Backup',   val: myQBs.length >= 2 ? 100 : 0 },
+      { label: 'Backup Value', val: qbBackup <= 999 ? Math.min(100, Math.round(100 - (qbBackup-40)*1.5)) : 0 },
+    ];
+
+    // RB: RB1 quality + RB2 quality + depth count
+    const rb1 = myRBs[0] ? myRBs[0].playerRank : 999;
+    const rb2 = myRBs[1] ? myRBs[1].playerRank : 999;
+    const rbCountBonus = Math.min(15, (myRBs.length - 2) * 5);
+    const rb1Score = rb1 <= 10 ? 95 : rb1 <= 20 ? 83 : rb1 <= 40 ? 68 : rb1 <= 70 ? 50 : rb1 <= 999 ? 32 : 0;
+    const rb2Score = rb2 <= 30 ? 90 : rb2 <= 60 ? 72 : rb2 <= 100 ? 54 : rb2 <= 999 ? 35 : 0;
+    const rbPosScore = Math.min(100, rb1Score * 0.55 + rb2Score * 0.35 + rbCountBonus);
+    const rbFactors = [
+      { label: 'RB1 Tier',   val: Math.round(rb1Score) },
+      { label: 'RB2 Tier',   val: myRBs.length >= 2 ? Math.round(rb2Score) : 0 },
+      { label: 'Depth Count',val: Math.min(100, myRBs.length * 20) },
+    ];
+
+    // WR: WR1 quality + WR2 quality + corps depth
+    const wr1 = myWRs[0] ? myWRs[0].playerRank : 999;
+    const wr2 = myWRs[1] ? myWRs[1].playerRank : 999;
+    const wrCountBonus = Math.min(15, (myWRs.length - 2) * 5);
+    const wr1Score = wr1 <= 8  ? 95 : wr1 <= 20 ? 82 : wr1 <= 40 ? 67 : wr1 <= 70 ? 50 : wr1 <= 999 ? 30 : 0;
+    const wr2Score = wr2 <= 25 ? 90 : wr2 <= 50 ? 72 : wr2 <= 90 ? 54 : wr2 <= 999 ? 35 : 0;
+    const wrPosScore = Math.min(100, wr1Score * 0.50 + wr2Score * 0.35 + wrCountBonus);
+    const wrFactors = [
+      { label: 'WR1 Tier',   val: Math.round(wr1Score) },
+      { label: 'WR2 Tier',   val: myWRs.length >= 2 ? Math.round(wr2Score) : 0 },
+      { label: 'Depth Count',val: Math.min(100, myWRs.length * 20) },
+    ];
+
+    // TE: starter tier (scarcity makes elite TE very valuable) + backup
+    const te1 = myTEs[0] ? myTEs[0].playerRank : 999;
+    const te2 = myTEs[1] ? myTEs[1].playerRank : 999;
+    const teStartScore = te1 <= 8  ? 100 : te1 <= 15 ? 88 : te1 <= 30 ? 70 : te1 <= 60 ? 52 : te1 <= 999 ? 34 : 0;
+    const teBackScore  = te2 <= 999 ? 10 : 0;
+    const tePosScore   = Math.min(100, teStartScore + teBackScore);
+    const teFactors = [
+      { label: 'Starter Tier', val: Math.round(teStartScore) },
+      { label: 'Scarcity Edge', val: te1 <= 15 ? 100 : te1 <= 30 ? 60 : 25 },
+      { label: 'Has Backup',   val: myTEs.length >= 2 ? 100 : 0 },
+    ];
+
+    // BENCH: avg rank of bench players + filled slots + positional variety
+    const avgBR = myBench.length ? myBench.reduce((s,p) => s + p.playerRank, 0) / myBench.length : 200;
+    const benchFilledPct = (myBench.length / 7) * 100;
+    const benchAvgScore  = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBR - 60) * (100/140))));
+    const benchPosScore  = Math.round(benchAvgScore * 0.6 + benchFilledPct * 0.4);
+    const benchFactors = [
+      { label: 'Avg Player Tier', val: benchAvgScore },
+      { label: 'Slots Filled',    val: Math.round(benchFilledPct) },
+      { label: 'Pos Variety',     val: Math.min(100, new Set(myBench.map(p=>p.playerPos)).size * 20) },
+    ];
+
+    const posGrades = {
+      QB:    { score: Math.round(qbPosScore),    grade: posGrade(qbPosScore),    factors: qbFactors },
+      RB:    { score: Math.round(rbPosScore),    grade: posGrade(rbPosScore),    factors: rbFactors },
+      WR:    { score: Math.round(wrPosScore),    grade: posGrade(wrPosScore),    factors: wrFactors },
+      TE:    { score: Math.round(tePosScore),    grade: posGrade(tePosScore),    factors: teFactors },
+      BENCH: { score: Math.round(benchPosScore), grade: posGrade(benchPosScore), factors: benchFactors },
+    };
+
+    // ── Narrative blurb ──────────────────────────────────────────────────────────
+    function _blurb(bal, val, dep, scar, coh, overall, grade, picks) {
+      const pos4      = picks.slice(0, 4).map(p => p.playerPos);
+      const pos6      = picks.slice(0, 6).map(p => p.playerPos);
+      const rbEarly   = pos4.filter(p => p==='RB').length;
+      const wrEarly   = pos4.filter(p => p==='WR').length;
+      const hasEliteRB = picks.some(p => p.playerPos==='RB' && p.playerRank<=12);
+      const hasEliteWR = picks.some(p => p.playerPos==='WR' && p.playerRank<=10);
+      const hasEliteTE = picks.some(p => p.playerPos==='TE' && p.playerRank<=10);
+      const hasLateQB  = picks.find(p => p.playerPos==='QB' && picks.indexOf(p) > 8);
+      const hasEarlyQB = picks.find(p => p.playerPos==='QB' && picks.indexOf(p) <= 4);
+      const earlyKDST  = picks.slice(0, Math.floor(picks.length * 0.5)).some(p => p.playerPos==='K'||p.playerPos==='DST');
+      const rbCount    = picks.filter(p => p.playerPos==='RB').length;
+      const wrCount    = picks.filter(p => p.playerPos==='WR').length;
+
+      // A tier
+      if (grade === 'A+') {
+        if (hasEliteRB && rbEarly >= 2) return "Back-to-back RBs to open and never looked back. The room felt that.";
+        if (hasEliteTE) return "Locked up a top TE and turned positional scarcity into a weekly weapon. Clanker bows.";
+        if (hasEliteWR && wrEarly >= 2) return "A receiver room that other managers will nightmare about. Surgical.";
+        if (val >= 85) return "Took value at every single turn. No ego picks, no panic — just clean draft execution.";
+        return "A masterclass. Clanker has reviewed the tape and has no notes.";
       }
-      if (grade.startsWith('B')) {
-        if (val < 50) return "Got a bit reach-y in spots but the bones are solid. Could work.";
-        if (dep < 50) return "Starters pop but the bench is thin. One injury and it's couch szn.";
-        return "A competent, workmanlike draft. Nothing flashy, but it'll compete.";
+      if (grade === 'A') {
+        if (hasEliteRB) return "Built around a stud RB and filled every hole around it. Hard to beat this floor.";
+        if (hasEarlyQB) return "Went QB early and stacked the offense around it. High ceiling, high upside.";
+        if (dep >= 80) return "Starters are strong and the bench can absorb injuries. Dangerous deep into the season.";
+        return "Excellent draft. The kind of roster that wins in October when it matters.";
       }
-      if (grade.startsWith('C')) {
-        if (earlKDST) return "Burned an early pick on a kicker or DST. Clanker is concerned. Very concerned.";
-        if (bal < 60) return "Starter slots left unfilled. Did you forget how football works?";
-        return "Meh. Some upside buried under a pile of questionable choices.";
+      if (grade === 'A-') {
+        if (rbEarly >= 3) return "Heavy RB investment paid off. The Flex is covered six different ways.";
+        if (wrCount >= 5) return "WR-heavy but the talent is there. Survive the injury bug and this is a contender.";
+        return "A really solid haul. A couple of reaches didn't derail the overall vision.";
       }
-      if (grade === 'D+' || grade === 'D') {
-        return "Clanker has seen better rosters built by blindfolded golden retrievers.";
+      // B tier
+      if (grade === 'B+') {
+        if (val < 55) return "Reached in a few spots but the roster has too much talent to ignore. Flawed but formidable.";
+        if (scar >= 75) return "Made the right calls at scarce positions under pressure. That's how you separate from the field.";
+        return "A strong draft. Not perfect, but the kind of roster managers underestimate.";
       }
-      return "An absolute catastrophe of a draft. Clanker weeps for you.";
+      if (grade === 'B') {
+        if (dep < 50) return "Starters look good on paper. Just pray nobody goes on IR because the depth is shaky.";
+        if (bal < 70) return "Some starter gaps could hurt — but there's enough upside here to paper over the cracks.";
+        return "Solid. Won't blow anyone away on draft day but will be competitive week to week.";
+      }
+      if (grade === 'B-') {
+        if (earlyKDST) return "The early K or DST pick stings, but the rest of the roster is serviceable.";
+        return "There's a real team buried in here. A few late-add pickups and this could be dangerous.";
+      }
+      // C tier
+      if (grade === 'C+') {
+        if (rbCount <= 2) return "Too many WRs chasing the same targets, not enough RB insurance. Thin in the backfield.";
+        if (wrCount <= 2) return "The WR corps is going to be a weekly problem. Add early and often on the wire.";
+        return "Average. Will need the waiver wire to work overtime to make the playoffs.";
+      }
+      if (grade === 'C') {
+        if (bal < 65) return "Starter slots sitting empty after 16 rounds. That's not a strategy, that's a mistake.";
+        if (val < 40) return "Reached early, reached late, reached in the middle. The rankings exist for a reason.";
+        return "Clanker has concerns. Multiple concerns. Overlapping concerns.";
+      }
+      if (grade === 'C-') {
+        if (hasLateQB && !hasEliteTE) return "Waited too long on QB *and* TE. Both spots are a problem. Good luck with that.";
+        return "There are two or three good picks in here. The other thirteen are a mystery.";
+      }
+      // D/F tier
+      if (grade === 'D+') return "Clanker tried to find something positive to say. Clanker is still looking.";
+      if (grade === 'D')  return "This roster has the energy of a group project where nobody showed up.";
+      return "A historic collapse across all sixteen rounds. Clanker needs a moment.";
     }
 
-    const narrative = _blurb(balScore, valScore, depScore, scarScore, cohScore, toGrade(overall), myPicks);
+    const narrative = _blurb(balScore, valScore, depScore, scarScore, cohScore, overall, toGrade(overall), myPicks);
 
     return {
       overall, grade: toGrade(overall),
@@ -1253,6 +1371,7 @@
         'Scarcity Awareness': scarScore,
         'Strategy Coherence': cohScore,
       },
+      posGrades,
       narrative,
       picks: myPicks,
     };
@@ -1294,6 +1413,11 @@
     const catKeys = Object.keys((grades[0] || {}).cats || {});
 
     const teamCards = grades.map((g, i) => {
+      const crown  = i === 0 ? '<span class="ffcv-crown">👑</span>' : '';
+      const youTag = g.isMe ? '<span class="ffcv-you-tag">YOU</span>' : '';
+      const gColor = gradeColor(g.grade);
+
+      // Left: category bars
       const catBars = catKeys.map(k => {
         const score = g.cats[k];
         const col   = score >= 75 ? '#4caf50' : score >= 55 ? '#ffb300' : '#e53935';
@@ -1304,9 +1428,39 @@
         </div>`;
       }).join('');
 
-      const crown  = i === 0 ? '<span class="ffcv-crown">👑</span>' : '';
-      const youTag = g.isMe ? '<span class="ffcv-you-tag">YOU</span>' : '';
-      const gColor = gradeColor(g.grade);
+      // Middle: full roster by slot
+      const rosterSlots = _buildRoster(g.picks, g.uid).map(s => {
+        const pc = s.filled ? _posColor(s.filled.playerPos) : '';
+        return `<div class="ffcv-slot">
+          <span class="ffcv-slot-label">${s.label}</span>
+          ${s.filled
+            ? `<span class="ffcv-slot-pos" style="background:${pc}">${s.filled.playerPos}</span>
+               <span class="ffcv-slot-name">${s.filled.playerName}</span>`
+            : `<span class="ffcv-slot-empty">—</span>`}
+        </div>`;
+      }).join('');
+
+      // Right: positional grades
+      const posOrder = ['QB','RB','WR','TE','BENCH'];
+      const posGradeRows = posOrder.map(pos => {
+        const pg = (g.posGrades || {})[pos];
+        if (!pg) return '';
+        const gc = gradeColor(pg.grade);
+        const factorBars = pg.factors.map(f => {
+          const fc = f.val >= 75 ? '#4caf50' : f.val >= 50 ? '#ffb300' : '#e53935';
+          return `<div class="ffcv-pos-factor">
+            <span class="ffcv-pos-flabel">${f.label}</span>
+            <div class="ffcv-cat-bar-bg ffcv-pos-bar-bg"><div class="ffcv-cat-bar" style="width:${f.val}%;background:${fc}"></div></div>
+          </div>`;
+        }).join('');
+        return `<div class="ffcv-pos-block">
+          <div class="ffcv-pos-header">
+            <span class="ffcv-pos-name">${pos}</span>
+            <span class="ffcv-pos-grade" style="color:${gc}">${pg.grade}</span>
+          </div>
+          <div class="ffcv-pos-factors">${factorBars}</div>
+        </div>`;
+      }).join('');
 
       return `<div class="ffcv-card${g.isMe?' ffcv-card-me':''}">
         <div class="ffcv-card-top">
@@ -1315,12 +1469,19 @@
           <div class="ffcv-grade" style="color:${gColor}">${g.grade}</div>
         </div>
         <div class="ffcv-narrative">${g.narrative}</div>
-        <div class="ffcv-cats">${catBars}</div>
-        <div class="ffcv-picks-label">DRAFT PICKS</div>
-        <div class="ffcv-picks">${g.picks.map(p =>
-          `<span class="ffcv-pick-chip" style="border-color:${_posColor(p.playerPos)}">
-            <span class="ffcv-chip-pos" style="background:${_posColor(p.playerPos)}">${p.playerPos}</span>${p.playerName}
-          </span>`).join('')}
+        <div class="ffcv-body">
+          <div class="ffcv-col-left">
+            <div class="ffcv-col-title">RATINGS</div>
+            <div class="ffcv-cats">${catBars}</div>
+          </div>
+          <div class="ffcv-col-mid">
+            <div class="ffcv-col-title">ROSTER</div>
+            <div class="ffcv-roster">${rosterSlots}</div>
+          </div>
+          <div class="ffcv-col-right">
+            <div class="ffcv-col-title">POSITION GRADES</div>
+            ${posGradeRows}
+          </div>
         </div>
       </div>`;
     }).join('');
