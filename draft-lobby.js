@@ -1145,13 +1145,14 @@
     const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 25))));
 
     // ── Category 3: Depth Quality ────────────────────────────────────────────────
-    // Average rank of bench picks (lower rank = better player)
+    // Average rank of bench picks — calibrated to where bench players actually fall.
+    // In a 16-round draft, bench picks (rounds 10-16) are typically rank 90-200.
+    // rank ≤ 60 → 100 (elite stash), rank 200 → 0 (pure filler). Range = 140.
     const benchPicks = slots.filter(s => s.label === 'BN' && s.filled).map(s => s.filled);
     let depScore = 50;
     if (benchPicks.length) {
       const avgBenchRank = benchPicks.reduce((s, p) => s + p.playerRank, 0) / benchPicks.length;
-      // Rank 1-50 = great depth, 200+ = thin. Normalize to 0-100.
-      depScore = Math.min(100, Math.max(0, Math.round(100 - (avgBenchRank - 1) * (100 / 250))));
+      depScore = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBenchRank - 60) * (100 / 140))));
     }
 
     // ── Category 4: Scarcity Recognition ────────────────────────────────────────
