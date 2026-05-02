@@ -499,6 +499,7 @@
     const container = _panel();
     if (!container) return;
     _lastDraftData = data;
+    window._lastDraftData = data;
 
     const { draftOrder = [], currentPickIndex = 0, picks = [],
             draftedRanks = [], participants = {}, settings = {}, timerEndsAt } = data;
