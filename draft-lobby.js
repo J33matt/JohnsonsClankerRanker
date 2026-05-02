@@ -1158,7 +1158,7 @@
       const bpaRank = bpa ? Number(bpa.rank) : Number(p.playerRank);
       totalReach += Math.max(0, Number(p.playerRank) - bpaRank);
     });
-    console.log('[Verdict] uid=%s picks=%d totalReach=%d avgReach=%f', uid, myPicks.length, totalReach, myPicks.length ? totalReach / myPicks.length : 0);
+    console.log('[Verdict] uid=' + uid + ' picks=' + myPicks.length + ' totalReach=' + totalReach + ' avgReach=' + (myPicks.length ? totalReach / myPicks.length : 0));
     const avgReach = myPicks.length ? totalReach / myPicks.length : 0;
     // Normalize: 0 avg reach → 100 (always took BPA), 20+ avg reach → 0
     const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 20))));
