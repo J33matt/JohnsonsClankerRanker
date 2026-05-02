@@ -50,6 +50,7 @@
       const identity = await _draftGetIdentity();
       if (!identity) return;
       _myUid   = identity.uid;
+      window._myUid = identity.uid;
       _myName  = identity.name;
       _isGuest = identity.isGuest;
 
