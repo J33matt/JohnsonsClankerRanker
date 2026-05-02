@@ -1141,24 +1141,24 @@
     const balScore = Math.round((filledStarters / starterSlots.length) * 100);
 
     // ── Category 2: Value / Tier Awareness ──────────────────────────────────────
-    // Reconstruct BPA at each pick moment from actual draft history, then measure
-    // how far each pick strayed from it. reach=0 means BPA was taken; reach=20
-    // means a player ranked 20 spots worse than BPA was chosen instead.
-    const allPicksSorted = [...picks].sort((a, b) => a.pickIndex - b.pickIndex);
-    const takenBeforePick = {}; // pickIndex → Set of ranks already gone
-    const runningTaken = new Set();
-    allPicksSorted.forEach(p => {
-      takenBeforePick[p.pickIndex] = new Set(runningTaken);
-      runningTaken.add(Number(p.playerRank));
-    });
+    // For each of my picks, find BPA by checking which players were taken before it.
+    // Uses string coercion to avoid any numeric type mismatches from Firestore.
+    const allPicksSorted = [...picks].sort((a, b) => Number(a.pickIndex) - Number(b.pickIndex));
 
     let totalReach = 0;
     myPicks.forEach(p => {
-      const taken = takenBeforePick[p.pickIndex] || new Set();
-      const bpa = allRankings.find(r => !taken.has(Number(r.rank)));
+      const myIdx = Number(p.pickIndex);
+      // Collect ranks taken by picks that happened strictly before this one
+      const takenStr = new Set(
+        allPicksSorted
+          .filter(q => Number(q.pickIndex) < myIdx)
+          .map(q => String(q.playerRank))
+      );
+      const bpa = allRankings.find(r => !takenStr.has(String(r.rank)));
       const bpaRank = bpa ? Number(bpa.rank) : Number(p.playerRank);
-      totalReach += Math.max(0, Number(p.playerRank) - bpaRank); // 0 = BPA or better, positive = reach
+      totalReach += Math.max(0, Number(p.playerRank) - bpaRank);
     });
+    console.log('[Verdict] uid=%s picks=%d totalReach=%d avgReach=%f', uid, myPicks.length, totalReach, myPicks.length ? totalReach / myPicks.length : 0);
     const avgReach = myPicks.length ? totalReach / myPicks.length : 0;
     // Normalize: 0 avg reach → 100 (always took BPA), 20+ avg reach → 0
     const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 20))));
