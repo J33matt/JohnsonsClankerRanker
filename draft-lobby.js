@@ -57,6 +57,14 @@
   window.renderDraftLobbyTab = async function () {
     const container = _panel();
     if (!container) return;
+    // Tear down any existing session so chat/subscriptions don't bleed across lobbies
+    if (_unsubLobby) { _unsubLobby(); _unsubLobby = null; }
+    if (_unsubChat)  { _unsubChat();  _unsubChat  = null; _chatMessages = []; }
+    _unmountChatWidget();
+    _wasInLobby    = false;
+    _poolScrollTop = 0;
+    _chatUnread    = 0;
+    _chatLastCount = 0;
     container.innerHTML = `<div class="ffd-loading">Connecting to lobby…</div>`;
 
     try {
@@ -376,7 +384,7 @@
 
   // ── Live chat ────────────────────────────────────────────────────────────────
   function _draftSubscribeChat(lobbyId) {
-    if (_unsubChat) return;
+    if (_unsubChat) { _unsubChat(); _unsubChat = null; _chatMessages = []; }
     // No orderBy — avoids requiring a Firestore composite index.
     // Sort client-side instead; handle null ts (server timestamp not yet set).
     _unsubChat = _db().collection('ff_draft_lobbies').doc(lobbyId)
