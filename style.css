@@ -3958,7 +3958,7 @@
 
 /* ── Verdict dramatic reveal ─────────────────────────────────────────────── */
 @keyframes ffcv-slide-in {
-  from { opacity: 0; transform: translateY(14px); }
+  from { opacity: 0; transform: translateY(-14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .ffcv-reveal-wrap { display: flex; flex-direction: column; align-items: center; padding: 48px 16px 32px; min-height: 400px; font-family: 'Barlow Condensed', sans-serif; }

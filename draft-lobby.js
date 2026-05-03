@@ -1912,12 +1912,13 @@
       const list = document.getElementById('ffcv-reveal-list');
       if (list) {
         list.innerHTML = '';
+        // prepend worst→best so winner ends up on top
         revealOrder.forEach((g, idx) => {
           const isWinner = idx === n - 1;
           const entry = _verdictRevealEntry(g, n - idx, isWinner, gradeColor);
           entry.style.animation = 'none';
           entry.style.opacity   = '1';
-          list.appendChild(entry);
+          list.prepend(entry);
         });
       }
       const btn = document.getElementById('ffcv-reveal-action');
@@ -1943,8 +1944,7 @@
       const t = setTimeout(() => {
         const list = document.getElementById('ffcv-reveal-list');
         if (!list) return;
-        list.appendChild(_verdictRevealEntry(g, n - idx, isWinner, gradeColor));
-        list.scrollTop = list.scrollHeight;
+        list.prepend(_verdictRevealEntry(g, n - idx, isWinner, gradeColor));
 
         if (isWinner) {
           const t2 = setTimeout(() => {
