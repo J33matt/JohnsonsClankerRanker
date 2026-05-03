@@ -7,9 +7,10 @@
   let _myUid     = null;
   let _myName    = null;
   let _isGuest   = false;
-  let _unsubLobby = null;
+  let _unsubLobby  = null;
   let _unsubChat   = null;
   let _chatMessages = [];
+  let _wasInLobby  = false;
   let _lastDraftData = null;
   let _timerInterval = null;
   let _botTimeout    = null;
@@ -192,6 +193,19 @@
       .onSnapshot(snap => {
         if (!snap.exists) return;
         const data = snap.data();
+        // Detect kick: we were in the lobby before but are no longer a participant
+        if (_wasInLobby && data.status === 'waiting' && _myUid && !(data.participants || {})[_myUid]) {
+          if (_unsubLobby) { _unsubLobby(); _unsubLobby = null; }
+          if (_unsubChat)  { _unsubChat();  _unsubChat  = null; _chatMessages = []; }
+          _wasInLobby = false;
+          const c = _panel();
+          if (c) c.innerHTML = `<div class="ffd-kicked-screen">
+            <div class="ffd-kicked-icon">🚫</div>
+            <div class="ffd-kicked-msg">You were removed from the lobby.</div>
+            <button class="ffd-start-btn" onclick="renderDraftLobbyTab()">Find New Lobby</button>
+          </div>`;
+          return;
+        }
         if (data.status === 'drafting') {
           _renderDraftBoard(data, lobbyId);
           _handleBotPick(data, lobbyId);
@@ -208,6 +222,7 @@
 
     const { settings = {}, participants = {}, hostId, slotPreferences = {} } = data;
     const isHost      = hostId === _myUid;
+    if (participants[_myUid]) _wasInLobby = true;
     const maxSlots    = settings.leagueSize || 10;
     const randomize   = settings.randomizeOrder !== false; // default true
     const pList       = Object.entries(participants).sort((a, b) => a[1].joinedAt - b[1].joinedAt);
@@ -233,6 +248,7 @@
             </div>
             <div style="display:flex;gap:6px;align-items:center">
               ${isHost && !isH ? `<button class="ffd-give-host-btn" onclick="_draftGiveHost('${lobbyId}','${claimedUid}')">Give Host</button>` : ''}
+              ${isHost && !isH && !p.isBot ? `<button class="ffd-kick-btn" onclick="_draftKick('${lobbyId}','${claimedUid}')">Kick</button>` : ''}
               ${isMe ? `<button class="ffd-give-host-btn" onclick="_draftClaimSlot('${lobbyId}',null)">Leave</button>` : ''}
             </div>
           </div>`;
@@ -257,7 +273,10 @@
             <span class="ffd-p-name">${p.name}${isMe ? ' <span class="ffd-you-tag">YOU</span>' : ''}</span>
             ${p.isGuest ? '<span class="ffd-guest-tag">GUEST</span>' : ''}
           </div>
-          ${isHost && !isH ? `<button class="ffd-give-host-btn" onclick="_draftGiveHost('${lobbyId}','${uid}')">Give Host</button>` : ''}
+          <div style="display:flex;gap:6px;align-items:center">
+            ${isHost && !isH ? `<button class="ffd-give-host-btn" onclick="_draftGiveHost('${lobbyId}','${uid}')">Give Host</button>` : ''}
+            ${isHost && !isH && !p.isBot ? `<button class="ffd-kick-btn" onclick="_draftKick('${lobbyId}','${uid}')">Kick</button>` : ''}
+          </div>
         </div>`;
       }).join('');
       emptySlots = Array.from({ length: Math.max(0, maxSlots - count) }, (_, i) =>
@@ -405,6 +424,14 @@
     await _db().collection('ff_draft_lobbies').doc(lobbyId).update({ hostId: newHostId });
   };
 
+  window._draftKick = async function (lobbyId, uid) {
+    const update = {
+      ['participants.' + uid]: firebase.firestore.FieldValue.delete(),
+      ['slotPreferences.' + uid]: firebase.firestore.FieldValue.delete(),
+    };
+    await _db().collection('ff_draft_lobbies').doc(lobbyId).update(update);
+  };
+
   window._draftSetSetting = async function (lobbyId, key, val) {
     const update = { ['settings.' + key]: val };
 
@@ -497,6 +524,7 @@
   window._draftLeaveLobby = function () {
     if (_unsubLobby) { _unsubLobby(); _unsubLobby = null; }
     if (_unsubChat)  { _unsubChat();  _unsubChat  = null; _chatMessages = []; }
+    _wasInLobby = false;
     if (window.location.hash.startsWith('#lobby=')) history.replaceState(null, '', window.location.pathname + window.location.search);
 
     if (_lobbyId && _myUid) {

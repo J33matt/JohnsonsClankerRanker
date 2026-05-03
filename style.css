@@ -3824,6 +3824,40 @@
 .ffd-move-here-btn { border-color: #ffaa00 !important; color: #ffaa00 !important; }
 .ffd-move-here-btn:hover { background: #ffaa00 !important; color: #000 !important; }
 
+.ffd-kick-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid #e53935;
+  color: #e53935;
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.ffd-kick-btn:hover { background: #e53935; color: #fff; }
+
+.ffd-kicked-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 24px;
+  text-align: center;
+}
+.ffd-kicked-icon { font-size: 3rem; }
+.ffd-kicked-msg {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #ff6b6b;
+  letter-spacing: 0.04em;
+}
+
 .ffdb-bb-rlabel {
   width: var(--bb-lw);
   flex-shrink: 0;
