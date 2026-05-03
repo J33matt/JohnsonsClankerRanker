@@ -1399,42 +1399,47 @@
 
     function posGrade(score) { return toGrade(Math.round(score)); }
 
-    // QB: starter quality + backup presence + backup quality
-    const qbStarter = myQBs[0] ? myQBs[0].playerRank : 999;
-    const qbBackup  = myQBs[1] ? myQBs[1].playerRank : 999;
-    const qbStartScore = qbStarter <= 10 ? 100 : qbStarter <= 20 ? 82 : qbStarter <= 40 ? 68 : qbStarter <= 70 ? 54 : 35;
-    const qbBackScore  = qbBackup <= 999 ? (qbBackup <= 60 ? 15 : 10) : 0;
+    // QB: use positional rank so QB1 always scores 100 regardless of overall rank
+    const qbStarter    = myQBs[0] ? myQBs[0].playerRank : 999;
+    const qbBackup     = myQBs[1] ? myQBs[1].playerRank : 999;
+    const qbPosRankNum = myQBs[0] ? allRankings.filter(r => r.pos === 'QB' && r.rank <= qbStarter).length : 999;
+    const qbStartScore = qbPosRankNum <= 1 ? 100 : qbPosRankNum <= 3 ? 85 : qbPosRankNum <= 6 ? 70 : qbPosRankNum <= 10 ? 52 : 32;
+    const qbBackScore  = qbBackup < 999 ? (qbPosRankNum <= 6 ? 15 : 10) : 0;
     const qbPosScore   = Math.min(100, qbStartScore + qbBackScore);
     const qbFactors = [
       { label: 'Starter Tier', val: Math.round(qbStartScore) },
       { label: 'Has Backup',   val: myQBs.length >= 2 ? 100 : 0 },
-      { label: 'Backup Value', val: qbBackup <= 999 ? Math.min(100, Math.round(100 - (qbBackup-40)*1.5)) : 0 },
+      { label: 'Backup Value', val: qbBackup < 999 ? Math.min(100, Math.round(100 - (qbBackup - 40) * 1.5)) : 0 },
     ];
 
-    // RB: RB1 quality + RB2 quality + depth count
+    // RB: use positional rank so RB1 always scores 100 regardless of overall rank
     const rb1 = myRBs[0] ? myRBs[0].playerRank : 999;
     const rb2 = myRBs[1] ? myRBs[1].playerRank : 999;
-    const rbCountBonus = Math.min(15, (myRBs.length - 2) * 5);
-    const rb1Score = rb1 <= 10 ? 100 : rb1 <= 20 ? 83 : rb1 <= 40 ? 68 : rb1 <= 70 ? 50 : rb1 <= 999 ? 32 : 0;
-    const rb2Score = rb2 <= 30 ? 90 : rb2 <= 60 ? 72 : rb2 <= 100 ? 54 : rb2 <= 999 ? 35 : 0;
+    const rb1PosRankNum = myRBs[0] ? allRankings.filter(r => r.pos === 'RB' && r.rank <= rb1).length : 999;
+    const rb2PosRankNum = myRBs[1] ? allRankings.filter(r => r.pos === 'RB' && r.rank <= rb2).length : 999;
+    const rbCountBonus  = Math.min(15, (myRBs.length - 2) * 5);
+    const rb1Score = rb1PosRankNum <= 1 ? 100 : rb1PosRankNum <= 4  ? 85 : rb1PosRankNum <= 8  ? 70 : rb1PosRankNum <= 15 ? 52 : 32;
+    const rb2Score = rb2PosRankNum <= 5 ? 90  : rb2PosRankNum <= 10 ? 75 : rb2PosRankNum <= 20 ? 58 : rb2PosRankNum <= 999 ? 38 : 0;
     const rbPosScore = Math.min(100, rb1Score * 0.55 + rb2Score * 0.35 + rbCountBonus);
     const rbFactors = [
-      { label: 'RB1 Tier',   val: Math.round(rb1Score) },
-      { label: 'RB2 Tier',   val: myRBs.length >= 2 ? Math.round(rb2Score) : 0 },
-      { label: 'Depth Count',val: Math.min(100, myRBs.length * 20) },
+      { label: 'RB1 Tier',    val: Math.round(rb1Score) },
+      { label: 'RB2 Tier',    val: myRBs.length >= 2 ? Math.round(rb2Score) : 0 },
+      { label: 'Depth Count', val: Math.min(100, myRBs.length * 20) },
     ];
 
-    // WR: WR1 quality + WR2 quality + corps depth
+    // WR: use positional rank so WR1 always scores 100 regardless of overall rank
     const wr1 = myWRs[0] ? myWRs[0].playerRank : 999;
     const wr2 = myWRs[1] ? myWRs[1].playerRank : 999;
-    const wrCountBonus = Math.min(15, (myWRs.length - 2) * 5);
-    const wr1Score = wr1 <= 8  ? 100 : wr1 <= 20 ? 82 : wr1 <= 40 ? 67 : wr1 <= 70 ? 50 : wr1 <= 999 ? 30 : 0;
-    const wr2Score = wr2 <= 25 ? 90 : wr2 <= 50 ? 72 : wr2 <= 90 ? 54 : wr2 <= 999 ? 35 : 0;
+    const wr1PosRankNum = myWRs[0] ? allRankings.filter(r => r.pos === 'WR' && r.rank <= wr1).length : 999;
+    const wr2PosRankNum = myWRs[1] ? allRankings.filter(r => r.pos === 'WR' && r.rank <= wr2).length : 999;
+    const wrCountBonus  = Math.min(15, (myWRs.length - 2) * 5);
+    const wr1Score = wr1PosRankNum <= 1 ? 100 : wr1PosRankNum <= 4  ? 85 : wr1PosRankNum <= 8  ? 70 : wr1PosRankNum <= 15 ? 52 : 32;
+    const wr2Score = wr2PosRankNum <= 5 ? 90  : wr2PosRankNum <= 10 ? 75 : wr2PosRankNum <= 20 ? 58 : wr2PosRankNum <= 999 ? 38 : 0;
     const wrPosScore = Math.min(100, wr1Score * 0.50 + wr2Score * 0.35 + wrCountBonus);
     const wrFactors = [
-      { label: 'WR1 Tier',   val: Math.round(wr1Score) },
-      { label: 'WR2 Tier',   val: myWRs.length >= 2 ? Math.round(wr2Score) : 0 },
-      { label: 'Depth Count',val: Math.min(100, myWRs.length * 20) },
+      { label: 'WR1 Tier',    val: Math.round(wr1Score) },
+      { label: 'WR2 Tier',    val: myWRs.length >= 2 ? Math.round(wr2Score) : 0 },
+      { label: 'Depth Count', val: Math.min(100, myWRs.length * 20) },
     ];
 
     // TE: thresholds calibrated to actual TE distribution in the overall rankings.
