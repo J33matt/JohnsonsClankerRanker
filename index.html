@@ -25,13 +25,13 @@
     <div class="logo-block">
       <h1>Johnson's Clanker Ranker</h1>
       <div class="league-switcher">
-        <button class="league-btn active" onclick="switchLeague('nba', this)">
-          <img src="https://a.espncdn.com/i/teamlogos/leagues/500/nba.png" style="width:25px; height:25px; object-fit:contain; vertical-align:middle; margin-right:6px;">
-          NBA
-        </button>
-        <button class="league-btn" onclick="switchLeague('nfl', this)">
+        <button class="league-btn active" onclick="switchLeague('nfl', this)">
+          <img src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" style="width:25px; height:25px; object-fit:contain; vertical-align:middle; margin-right:6px;">
           NFL
-          <img src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png" style="width:25px; height:25px; object-fit:contain; vertical-align:middle; margin-left:6px;">
+        </button>
+        <button class="league-btn" onclick="switchLeague('nba', this)">
+          NBA
+          <img src="https://a.espncdn.com/i/teamlogos/leagues/500/nba.png" style="width:25px; height:25px; object-fit:contain; vertical-align:middle; margin-left:6px;">
         </button>
       </div>
       <div class="tagline">Advanced NBA/NFL Power Rankings &amp; Analytics</div>
@@ -55,11 +55,11 @@
 </div>
 
 <div id="nfl-tabs" style="display:none;">
-  <button onclick="showNflTab('big-board', this)" class="tab-btn active">Draft</button>
+  <button class="tab-btn active" onclick="showNflTab('fantasy', this)">Fantasy Rankings</button>
+  <button class="tab-btn" onclick="showNflTab('ff-draft', this)">🏈 Fantasy Draft</button>
+  <button onclick="showNflTab('big-board', this)" class="tab-btn">Draft</button>
   <button class="tab-btn" onclick="showNflTab('lineups', this)">Lineups</button>
   <button class="tab-btn" onclick="showNflTab('free-agency', this)">Free Agency</button>
-  <button class="tab-btn" onclick="showNflTab('fantasy', this)">Fantasy Rankings</button>
-  <button class="tab-btn" onclick="showNflTab('ff-draft', this)">🏈 Fantasy Draft</button>
 </div>
 
 <main>
@@ -566,8 +566,8 @@ function switchLeague(league, btn) {
     });
     const _savedNflTab = localStorage.getItem('activeNflTab');
     window._draftSimPos = localStorage.getItem('draftSimPos') || '';
-    const _validNflTabs = ['big-board', 'draft-order', 'lineups', 'free-agency', 'fantasy'];
-    const _nflTabToLoad = (_savedNflTab && _validNflTabs.includes(_savedNflTab)) ? _savedNflTab : 'big-board';
+    const _validNflTabs = ['fantasy', 'ff-draft', 'big-board', 'draft-order', 'lineups', 'free-agency'];
+    const _nflTabToLoad = (_savedNflTab && _validNflTabs.includes(_savedNflTab)) ? _savedNflTab : 'fantasy';
     const _nflBtnToLoad = document.querySelector(`#nfl-tabs button[onclick*="${_nflTabToLoad}"]`);
     showNflTab(_nflTabToLoad, _nflBtnToLoad || document.querySelector('#nfl-tabs button'));
   }
@@ -6703,18 +6703,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Restore last active tab — must run before any await so a hung promise can't block it
   const _savedLeague = localStorage.getItem('activeLeague');
-if (_savedLeague === 'nfl') {
-  const _nflBtn = Array.from(document.querySelectorAll('.league-btn'))
-    .find(b => (b.getAttribute('onclick') || '').includes("'nfl'"));
-  if (_nflBtn) switchLeague('nfl', _nflBtn);
-} else {
-  const _savedTab = localStorage.getItem('activeTab');
-  const _validTabs = ['rankings','predictions','playoffs','simulations','sportsbook','cards'];
-  const _tabToLoad = (_savedTab && _validTabs.includes(_savedTab)) ? _savedTab : 'rankings';
-  const _tabBtn = Array.from(document.querySelectorAll('.tab-btn'))
-    .find(b => (b.getAttribute('onclick') || '').includes(`'${_tabToLoad}'`));
-  if (_tabBtn) showTab(_tabToLoad, _tabBtn);
-}
+  if (_savedLeague === 'nba') {
+    const _nbaBtn = Array.from(document.querySelectorAll('.league-btn'))
+      .find(b => (b.getAttribute('onclick') || '').includes("'nba'"));
+    if (_nbaBtn) switchLeague('nba', _nbaBtn);
+  } else {
+    // Default to NFL (includes first-time visitors and explicitly saved 'nfl')
+    const _nflBtn = Array.from(document.querySelectorAll('.league-btn'))
+      .find(b => (b.getAttribute('onclick') || '').includes("'nfl'"));
+    if (_nflBtn) switchLeague('nfl', _nflBtn);
+  }
 
   // Handle invite link: #lobby=ID auto-navigates to Fantasy Draft tab
   if (window.location.hash.match(/^#lobby=.+/)) {
@@ -10918,8 +10916,13 @@ function renderFantasyRankings() {
       .ff-page-info { font-size:0.85rem; color:var(--muted); letter-spacing:0.5px; }
     </style>
     <div style="padding: 0 0 24px;">
-      <div class="ff-header">Fantasy Football Rankings</div>
-      <div class="ff-sub">2026 SEASON · AVERAGED ACROSS 3 SOURCES · PRE-DRAFT</div>
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <div>
+          <div class="ff-header">Fantasy Football Rankings</div>
+          <div class="ff-sub">2026 SEASON · AVERAGED ACROSS 3 SOURCES · PRE-DRAFT</div>
+        </div>
+        <button onclick="showNflTab('ff-draft', document.querySelector('#nfl-tabs button[onclick*=\\'ff-draft\\']'))" style="font-family:'Bebas Neue',sans-serif; font-size:0.9rem; letter-spacing:2px; padding:10px 22px; border-radius:8px; border:none; background:#ffaa00; color:#000; cursor:pointer; flex-shrink:0; margin-top:4px; transition:opacity 0.15s;" onmouseover="this.style.opacity='0.82'" onmouseout="this.style.opacity='1'">🏈 JOIN DRAFT</button>
+      </div>
       <div class="ff-filters">
         <button class="ff-pill ${_fantasyPosFilter==='ALL' ?'active':''}" onclick="_ffSetFilter('ALL',this)">All</button>
         <button class="ff-pill ${_fantasyPosFilter==='FLEX'?'active':''}" onclick="_ffSetFilter('FLEX',this)">Flex</button>
