@@ -82,6 +82,16 @@
       await _draftJoinLobby(_lobbyId);
       _draftSubscribe(_lobbyId);
       _draftSubscribeChat(_lobbyId);
+
+      // Kick off roster/ID map load so headshots appear in the player pool.
+      // buildPlayerTeamMap caches its promise, so this is free on repeat calls.
+      // Once resolved, re-subscribe to force one re-render with IDs populated.
+      if (typeof buildPlayerTeamMap === 'function' && Object.keys(window._playerIdMap || {}).length === 0) {
+        const _snapLobbyId = _lobbyId;
+        buildPlayerTeamMap().then(() => {
+          if (_lobbyId === _snapLobbyId && _unsubLobby) _draftSubscribe(_lobbyId);
+        }).catch(() => {});
+      }
     } catch (e) {
       console.error('[Draft] lobby error:', e);
       const c = _panel();
