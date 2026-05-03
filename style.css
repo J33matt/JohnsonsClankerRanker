@@ -3772,13 +3772,13 @@
 .ffdb-rv-label { font-family: 'Bebas Neue', sans-serif; font-size: 0.72rem; letter-spacing: 1px; color: var(--muted); }
 .ffdb-rv-cell { justify-content: center; gap: 4px; }
 .ffdb-bb-outer { overflow-x: auto; width: 100%; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
-.ffdb-bb-header-row { display: flex; min-width: max-content; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 3; }
+.ffdb-bb-header-row { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 3; }
 .ffdb-bb-corner { width: var(--bb-lw); flex-shrink: 0; font-family: 'Bebas Neue', sans-serif; font-size: 0.65rem; letter-spacing: 2px; color: var(--muted); display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--border); }
-.ffdb-bb-th { width: var(--bb-cw); flex-shrink: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; padding: 6px 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-right: 1px solid var(--border); }
+.ffdb-bb-th { flex: 1 1 0; min-width: 72px; font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; padding: 6px 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-right: 1px solid var(--border); }
 .ffdb-bb-th:last-child { border-right: none; }
 .ffdb-bb-me-col { color: #ffaa00; }
 
-.ffdb-bb-scroll { height: calc(var(--bb-rh) * 8); overflow-y: scroll; scroll-snap-type: y mandatory; min-width: max-content; }
+.ffdb-bb-scroll { height: calc(var(--bb-rh) * 8); overflow-y: scroll; scroll-snap-type: y mandatory; }
 .ffdb-bb-scroll::-webkit-scrollbar { width: 4px; }
 .ffdb-bb-scroll::-webkit-scrollbar-track { background: transparent; }
 .ffdb-bb-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -3787,7 +3787,7 @@
 .ffdb-bb-round:last-child { border-bottom: none; }
 .ffdb-bb-cur-round { background: rgba(255,170,0,0.04); }
 
-.ffdb-bb-cell { width: var(--bb-cw); flex-shrink: 0; border-right: 1px solid var(--border); padding: 4px 6px; display: flex; flex-direction: column; justify-content: center; position: relative; min-width: 0; }
+.ffdb-bb-cell { flex: 1 1 0; min-width: 72px; border-right: 1px solid var(--border); padding: 4px 6px; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
 .ffdb-bb-cell:last-child { border-right: none; }
 .ffdb-bb-me-col { background: rgba(255,170,0,0.04); }
 .ffdb-bb-picked { background: rgba(255,255,255,0.03); }
