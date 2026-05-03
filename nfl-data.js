@@ -881,36 +881,28 @@ const FANTASY_RANKINGS = [
   { name:"D'Andre Swift"           , pos:"RB"  , team:"CHI" },
   { name:"Jameson Williams"        , pos:"WR"  , team:"DET" },
   { name:"Chuba Hubbard"           , pos:"RB"  , team:"CAR" },
-  { name:"Trevor Lawrence"         , pos:"QB"  , team:"JAX" },
-  { name:"Justin Herbert"          , pos:"QB"  , team:"LAC" },
   { name:"Carnell Tate"            , pos:"WR"  , team:"TEN" },
   { name:"Harold Fannin Jr."       , pos:"TE"  , team:"CLE" },
   { name:"DJ Moore"                , pos:"WR"  , team:"BUF" },
   { name:"Luther Burden III"       , pos:"WR"  , team:"CHI" },
   { name:"DK Metcalf"              , pos:"WR"  , team:"PIT" },
-  { name:"Matthew Stafford"        , pos:"QB"  , team:"LAR" },
   { name:"Courtland Sutton"        , pos:"WR"  , team:"DEN" },
   { name:"Mike Evans"              , pos:"WR"  , team:"SF" },
   { name:"Michael Pittman Jr."     , pos:"WR"  , team:"PIT" },
   { name:"TreVeyon Henderson"      , pos:"RB"  , team:"NE" },
   { name:"Bhayshul Tuten"          , pos:"RB"  , team:"JAX" },
+  { name:"Trevor Lawrence"         , pos:"QB"  , team:"JAX" },
   { name:"Marvin Harrison Jr."     , pos:"WR"  , team:"ARI" },
   { name:"Alec Pierce"             , pos:"WR"  , team:"IND" },
   { name:"David Montgomery"        , pos:"RB"  , team:"HOU" },
   { name:"Christian Watson"        , pos:"WR"  , team:"GB" },
-  { name:"Kyler Murray"            , pos:"QB"  , team:"ARI" },
-  { name:"Tyler Shough"            , pos:"QB"  , team:"NO" },
   { name:"Jadarian Price"          , pos:"RB"  , team:"SEA" },
   { name:"Kyle Pitts Sr."          , pos:"TE"  , team:"ATL" },
   { name:"Tony Pollard"            , pos:"RB"  , team:"TEN" },
   { name:"Aaron Jones Sr."         , pos:"RB"  , team:"MIN" },
-  { name:"Baker Mayfield"          , pos:"QB"  , team:"TB" },
   { name:"Jakobi Meyers"           , pos:"WR"  , team:"JAX" },
-  { name:"Jared Goff"              , pos:"QB"  , team:"DET" },
-  { name:"Daniel Jones"            , pos:"QB"  , team:"IND" },
   { name:"Sam LaPorta"             , pos:"TE"  , team:"DET" },
-  { name:"Jordan Love"             , pos:"QB"  , team:"GB" },
-  { name:"Malik Willis"            , pos:"QB"  , team:"MIA" },
+  { name:"Justin Herbert"          , pos:"QB"  , team:"LAC" },
   { name:"Jordyn Tyson"            , pos:"WR"  , team:"NO" },
   { name:"Chris Godwin Jr."        , pos:"WR"  , team:"TB" },
   { name:"Rhamondre Stevenson"     , pos:"RB"  , team:"NE" },
@@ -920,21 +912,20 @@ const FANTASY_RANKINGS = [
   { name:"RJ Harvey"               , pos:"RB"  , team:"DEN" },
   { name:"Parker Washington"       , pos:"WR"  , team:"JAX" },
   { name:"Wan'Dale Robinson"       , pos:"WR"  , team:"TEN" },
-  { name:"C.J. Stroud"             , pos:"QB"  , team:"HOU" },
   { name:"Brian Thomas Jr."        , pos:"WR"  , team:"JAX" },
+  { name:"Matthew Stafford"        , pos:"QB"  , team:"LAR" },
   { name:"Rico Dowdle"             , pos:"RB"  , team:"PIT" },
   { name:"Jordan Addison"          , pos:"WR"  , team:"MIN" },
   { name:"Kenneth Gainwell"        , pos:"RB"  , team:"TB" },
   { name:"J.K. Dobbins"            , pos:"RB"  , team:"DEN" },
   { name:"Rachaad White"           , pos:"RB"  , team:"WSH" },
-  { name:"Sam Darnold"             , pos:"QB"  , team:"SEA" },
   { name:"Kyle Monangai"           , pos:"RB"  , team:"CHI" },
   { name:"Travis Kelce"            , pos:"TE"  , team:"KC" },
   { name:"Ricky Pearsall"          , pos:"WR"  , team:"SF" },
-  { name:"Cam Ward"                , pos:"QB"  , team:"TEN" },
   { name:"Khalil Shakir"           , pos:"WR"  , team:"BUF" },
   { name:"Makai Lemon"             , pos:"WR"  , team:"PHI" },
   { name:"Romeo Doubs"             , pos:"WR"  , team:"NE" },
+  { name:"Kyler Murray"            , pos:"QB"  , team:"ARI" },
   { name:"KC Concepcion"           , pos:"WR"  , team:"CLE" },
   { name:"Matthew Golden"          , pos:"WR"  , team:"GB" },
   { name:"Blake Corum"             , pos:"RB"  , team:"LAR" },
@@ -945,6 +936,7 @@ const FANTASY_RANKINGS = [
   { name:"Jake Ferguson"           , pos:"TE"  , team:"DAL" },
   { name:"Quentin Johnston"        , pos:"WR"  , team:"LAC" },
   { name:"Mark Andrews"            , pos:"TE"  , team:"BAL" },
+  { name:"Tyler Shough"            , pos:"QB"  , team:"NO" },
   { name:"Xavier Worthy"           , pos:"WR"  , team:"KC" },
   { name:"Tyjae Spears"            , pos:"RB"  , team:"TEN" },
   { name:"Jacory Croskey-Merritt"  , pos:"RB"  , team:"WSH" },
@@ -955,6 +947,7 @@ const FANTASY_RANKINGS = [
   { name:"Omar Cooper Jr."         , pos:"WR"  , team:"NYJ" },
   { name:"Woody Marks"             , pos:"RB"  , team:"HOU" },
   { name:"Isaiah Likely"           , pos:"TE"  , team:"NYG" },
+  { name:"Baker Mayfield"          , pos:"QB"  , team:"TB" },
   { name:"Cameron Dicker"          , pos:"K"   , team:"LAC" },
   { name:"Alvin Kamara"            , pos:"RB"  , team:"NO" },
   { name:"Jason Myers"             , pos:"K"   , team:"SEA" },
@@ -965,6 +958,7 @@ const FANTASY_RANKINGS = [
   { name:"Ka'imi Fairbairn"        , pos:"K"   , team:"HOU" },
   { name:"Dalton Kincaid"          , pos:"TE"  , team:"BUF" },
   { name:"Justice Hill"            , pos:"RB"  , team:"BAL" },
+  { name:"Jared Goff"              , pos:"QB"  , team:"DET" },
   { name:"Eddy Pineiro"            , pos:"K"   , team:"SF" },
   { name:"Houston Texans"          , pos:"DST" , team:"HOU" },
   { name:"Denver Broncos"          , pos:"DST" , team:"DEN" },
@@ -975,6 +969,7 @@ const FANTASY_RANKINGS = [
   { name:"Seattle Seahawks"        , pos:"DST" , team:"SEA" },
   { name:"Harrison Mevis"          , pos:"K"   , team:"LAR" },
   { name:"Cam Little"              , pos:"K"   , team:"JAX" },
+  { name:"Daniel Jones"            , pos:"QB"  , team:"IND" },
   { name:"Hunter Henry"            , pos:"TE"  , team:"NE" },
   { name:"Rashid Shaheed"          , pos:"WR"  , team:"SEA" },
   { name:"Denzel Boston"           , pos:"WR"  , team:"CLE" },
@@ -985,6 +980,7 @@ const FANTASY_RANKINGS = [
   { name:"New England Patriots"    , pos:"DST" , team:"NE" },
   { name:"Jake Bates"              , pos:"K"   , team:"DET" },
   { name:"Pittsburgh Steelers"     , pos:"DST" , team:"PIT" },
+  { name:"Jordan Love"             , pos:"QB"  , team:"GB" },
   { name:"Tyler Loop"              , pos:"K"   , team:"BAL" },
   { name:"Cairo Santos"            , pos:"K"   , team:"CHI" },
   { name:"Chris Boswell"           , pos:"K"   , team:"PIT" },
@@ -995,6 +991,7 @@ const FANTASY_RANKINGS = [
   { name:"Chase McLaughlin"        , pos:"K"   , team:"TB" },
   { name:"Jason Sanders"           , pos:"K"   , team:"NYG" },
   { name:"Nick Folk"               , pos:"K"   , team:"ATL" },
+  { name:"Malik Willis"            , pos:"QB"  , team:"MIA" },
   { name:"Kenyon Sadiq"            , pos:"TE"  , team:"NYJ" },
   { name:"Brenton Strange"         , pos:"TE"  , team:"JAX" },
   { name:"Minnesota Vikings"       , pos:"DST" , team:"MIN" },
@@ -1005,6 +1002,7 @@ const FANTASY_RANKINGS = [
   { name:"Dalton Schultz"          , pos:"TE"  , team:"HOU" },
   { name:"Pat Freiermuth"          , pos:"TE"  , team:"PIT" },
   { name:"Cleveland Browns"        , pos:"DST" , team:"CLE" },
+  { name:"C.J. Stroud"             , pos:"QB"  , team:"HOU" },
   { name:"Jacksonville Jaguars"    , pos:"DST" , team:"JAX" },
   { name:"Los Angeles Chargers"    , pos:"DST" , team:"LAC" },
   { name:"Chig Okonkwo"            , pos:"TE"  , team:"WSH" },
@@ -1016,20 +1014,18 @@ const FANTASY_RANKINGS = [
   { name:"Indianapolis Colts"      , pos:"DST" , team:"IND" },
   { name:"Buffalo Bills"           , pos:"DST" , team:"BUF" },
   { name:"Chicago Bears"           , pos:"DST" , team:"CHI" },
+  { name:"Sam Darnold"             , pos:"QB"  , team:"SEA" },
   { name:"Carolina Panthers"       , pos:"DST" , team:"CAR" }
-,  { name:"Geno Smith"              , pos:"QB"   }
-,  { name:"Jacoby Brissett"         , pos:"QB"   }
-,  { name:"Bryce Young"             , pos:"QB"   }
 ,  { name:"Stefon Diggs"            , pos:"WR"   }
 ,  { name:"Deebo Samuel Sr."        , pos:"WR"   }
 ,  { name:"Brandon Aiyuk"           , pos:"WR"   }
 ,  { name:"Keaton Mitchell"         , pos:"RB"   }
 ,  { name:"James Conner"            , pos:"RB"   }
 ,  { name:"Jauan Jennings"          , pos:"WR"   }
-,  { name:"Fernando Mendoza"        , pos:"QB"   }
 ,  { name:"Jonah Coleman"           , pos:"RB"   }
 ,  { name:"Dylan Sampson"           , pos:"RB"   }
 ,  { name:"Tyler Bass"              , pos:"K"    }
+  { name:"Cam Ward"                , pos:"QB"  , team:"TEN" },
 ,  { name:"Jake Elliott"            , pos:"K"    }
 ,  { name:"Jalen McMillan"          , pos:"WR"   }
 ,  { name:"Emanuel Wilson"          , pos:"RB"   }
@@ -1040,17 +1036,18 @@ const FANTASY_RANKINGS = [
 ,  { name:"Matt Gay"                , pos:"K"    }
 ,  { name:"Ryan Fitzgerald"         , pos:"K"    }
 ,  { name:"Dontayvion Wicks"        , pos:"WR"   }
+,  { name:"Geno Smith"              , pos:"QB"   }
 ,  { name:"Chris Rodriguez Jr."     , pos:"RB"   }
 ,  { name:"Joey Slye"               , pos:"K"    }
 ,  { name:"Chad Ryland"             , pos:"K"    }
 ,  { name:"Cade York"               , pos:"K"    }
 ,  { name:"Kaytron Allen"           , pos:"RB"   }
 ,  { name:"Andre Szmyt"             , pos:"K"    }
-,  { name:"Deshaun Watson"          , pos:"QB"   }
 ,  { name:"Travis Hunter"           , pos:"WR"   }
 ,  { name:"Tre Harris"              , pos:"WR"   }
 ,  { name:"Braelon Allen"           , pos:"RB"   }
 ,  { name:"Adonai Mitchell"         , pos:"WR"   }
+,  { name:"Jacoby Brissett"         , pos:"QB"   }
 ,  { name:"Wil Lutz"                , pos:"K"    }
 ,  { name:"Sean Tucker"             , pos:"RB"   }
 ,  { name:"Rashod Bateman"          , pos:"WR"   }
@@ -1061,17 +1058,18 @@ const FANTASY_RANKINGS = [
 ,  { name:"Darnell Mooney"          , pos:"WR"   }
 ,  { name:"Trey Benson"             , pos:"RB"   }
 ,  { name:"Ryan Flournoy"           , pos:"WR"   }
+,  { name:"Bryce Young"             , pos:"QB"   }
 ,  { name:"Malik Washington"        , pos:"WR"   }
 ,  { name:"Jalen Tolbert"           , pos:"WR"   }
 ,  { name:"Kimani Vidal"            , pos:"RB"   }
 ,  { name:"Keenan Allen"            , pos:"WR"   }
-,  { name:"Michael Penix Jr."       , pos:"QB"   }
 ,  { name:"Jalen Nailor"            , pos:"WR"   }
 ,  { name:"Dyami Brown"             , pos:"WR"   }
 ,  { name:"Tank Dell"               , pos:"WR"   }
 ,  { name:"Brashard Smith"          , pos:"RB"   }
 ,  { name:"Mike Washington Jr."     , pos:"RB"   }
 ,  { name:"Chris Bell"              , pos:"WR"   }
+,  { name:"Fernando Mendoza"        , pos:"QB"   }
 ,  { name:"Zane Gonzalez"           , pos:"K"    }
 ,  { name:"Isaiah Davis"            , pos:"RB"   }
 ,  { name:"Cade Otton"              , pos:"TE"   }
@@ -1081,13 +1079,11 @@ const FANTASY_RANKINGS = [
 ,  { name:"San Francisco 49ers"     , pos:"DST"  }
 ,  { name:"Cooper Kupp"             , pos:"WR"   }
 ,  { name:"Pat Bryant"              , pos:"WR"   }
-,  { name:"Shedeur Sanders"         , pos:"QB"   }
-,  { name:"Tua Tagovailoa"          , pos:"QB"   }
 ,  { name:"Van Jefferson"           , pos:"WR"   }
+,  { name:"Deshaun Watson"          , pos:"QB"   }
 ,  { name:"Olamide Zaccheaus"       , pos:"WR"   }
 ,  { name:"Evan Engram"             , pos:"TE"   }
 ,  { name:"Demond Claiborne"        , pos:"RB"   }
-,  { name:"Aaron Rodgers"           , pos:"QB"   }
 ,  { name:"Mike Gesicki"            , pos:"TE"   }
 ,  { name:"Greg Dulcich"            , pos:"TE"   }
 ,  { name:"Kendre Miller"           , pos:"RB"   }
@@ -1095,6 +1091,7 @@ const FANTASY_RANKINGS = [
 ,  { name:"Ty Johnson"              , pos:"RB"   }
 ,  { name:"Antonio Williams"        , pos:"WR"   }
 ,  { name:"Mason Taylor"            , pos:"TE"   }
+,  { name:"Michael Penix Jr."       , pos:"QB"   }
 ,  { name:"Tai Felton"              , pos:"WR"   }
 ,  { name:"LeQuint Allen Jr."       , pos:"RB"   }
 ,  { name:"Jaydon Blue"             , pos:"RB"   }
@@ -1106,6 +1103,7 @@ const FANTASY_RANKINGS = [
 ,  { name:"Ja'Tavion Sanders"       , pos:"TE"   }
 ,  { name:"Tory Horton"             , pos:"WR"   }
 ,  { name:"Xavier Legette"          , pos:"WR"   }
+,  { name:"Shedeur Sanders"         , pos:"QB"   }
 ,  { name:"Jack Bech"               , pos:"WR"   }
 ,  { name:"New York Jets"           , pos:"DST"  }
 ,  { name:"Tampa Bay Buccaneers"    , pos:"DST"  }
@@ -1116,6 +1114,7 @@ const FANTASY_RANKINGS = [
 ,  { name:"KaVontae Turpin"         , pos:"WR"   }
 ,  { name:"Tyquan Thornton"         , pos:"WR"   }
 ,  { name:"Andrei Iosivas"          , pos:"WR"   }
+,  { name:"Tua Tagovailoa"          , pos:"QB"   }
 ,  { name:"Dawson Knox"             , pos:"TE"   }
 ,  { name:"Jerome Ford"             , pos:"RB"   }
 ,  { name:"Cincinnati Bengals"      , pos:"DST"  }
@@ -1126,6 +1125,7 @@ const FANTASY_RANKINGS = [
 ,  { name:"Jordan James"            , pos:"RB"   }
 ,  { name:"Kalif Raymond"           , pos:"WR"   }
 ,  { name:"Jake Tonges"             , pos:"TE"   }
+,  { name:"Aaron Rodgers"           , pos:"QB"   }
 ,  { name:"Washington Commanders"   , pos:"DST"  }
 ,  { name:"Jahan Dotson"            , pos:"WR"   }
 ,  { name:"Ja'Kobi Lane"            , pos:"WR"   }
