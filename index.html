@@ -11009,10 +11009,16 @@ function _ffRenderTable() {
       : (p.pos !== 'DST' ? 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png' : '');
 
     // Headshot: lookup by name in _playerIdMap (all positions except DST)
+    // Prefer team-qualified key to resolve name collisions (e.g. two players with the same name)
     let headshotUrl = '';
     if (p.pos !== 'DST') {
       const key = (p.name || '').toLowerCase().replace(/[.'''`]/g, '').replace(/\s+/g, ' ').trim();
-      const athleteId = (window._playerIdMap && (window._playerIdMap[key] || window._playerIdMap[key.replace(/\s+(jr|sr|ii|iii|iv)$/i,'').trim()]));
+      const keyStripped = key.replace(/\s+(jr|sr|ii|iii|iv)$/i,'').trim();
+      const idMap = window._playerIdMap;
+      const athleteId = idMap && (
+        (team && (idMap[key + '|' + team.toLowerCase()] || idMap[keyStripped + '|' + team.toLowerCase()])) ||
+        idMap[key] || idMap[keyStripped]
+      );
       if (athleteId) headshotUrl = `https://a.espncdn.com/i/headshots/nfl/players/full/${athleteId}.png`;
     }
 

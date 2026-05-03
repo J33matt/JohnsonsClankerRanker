@@ -801,11 +801,16 @@
       const _pLogoUrl = _pTeam
         ? `https://a.espncdn.com/i/teamlogos/nfl/500/${_pTeam.toLowerCase()}.png`
         : (p.pos !== 'DST' ? 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png' : '');
-      let _pHeadshotUrl = '';
-      if (p.pos !== 'DST') {
-        const _pKey = (p.name||'').toLowerCase().replace(/[.'’‘`]/g,'').replace(/\s+/g,' ').trim();
-        const _pAthId = window._playerIdMap && (window._playerIdMap[_pKey] ||
-          window._playerIdMap[_pKey.replace(/\s+(jr|sr|ii|iii|iv)$/i,'').trim()]);
+      let _pHeadshotUrl = ‘’;
+      if (p.pos !== ‘DST’) {
+        const _pKey = (p.name||’’).toLowerCase().replace(/[.’’’`]/g,’’).replace(/\s+/g,’ ‘).trim();
+        const _pKeyStripped = _pKey.replace(/\s+(jr|sr|ii|iii|iv)$/i,’’).trim();
+        const idMap = window._playerIdMap;
+        // Prefer team-qualified key to resolve name collisions (e.g. two players named Justin Jefferson)
+        const _pAthId = idMap && (
+          (_pTeam && (idMap[_pKey + ‘|’ + _pTeam.toLowerCase()] || idMap[_pKeyStripped + ‘|’ + _pTeam.toLowerCase()])) ||
+          idMap[_pKey] || idMap[_pKeyStripped]
+        );
         if (_pAthId) _pHeadshotUrl = `https://a.espncdn.com/i/headshots/nfl/players/full/${_pAthId}.png`;
       }
       const _pThumbHTML = `<div class="ffdb-p-thumb">

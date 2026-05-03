@@ -133,7 +133,12 @@ async function buildPlayerTeamMap() {
               window._playerTeamMap[key] = abbr;
               const hrefId = (player.headshot?.href || player.links?.[0]?.href || '').match(/\/(\d+)\.png/)?.[1];
               const athleteId = player.id || hrefId;
-              if (athleteId) window._playerIdMap[key] = athleteId;
+              if (athleteId) {
+                window._playerIdMap[key] = athleteId;
+                // Also store a team-qualified key so name collisions (same name, different teams)
+                // can be resolved precisely when the caller knows the player's team.
+                window._playerIdMap[key + '|' + abbr.toLowerCase()] = athleteId;
+              }
             }
           });
         });
