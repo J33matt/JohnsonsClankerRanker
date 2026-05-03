@@ -11,6 +11,7 @@
   let _unsubChat   = null;
   let _chatMessages = [];
   let _wasInLobby  = false;
+  let _poolScrollTop = 0;
   let _lastDraftData = null;
   let _timerInterval = null;
   let _botTimeout    = null;
@@ -524,7 +525,8 @@
   window._draftLeaveLobby = function () {
     if (_unsubLobby) { _unsubLobby(); _unsubLobby = null; }
     if (_unsubChat)  { _unsubChat();  _unsubChat  = null; _chatMessages = []; }
-    _wasInLobby = false;
+    _wasInLobby    = false;
+    _poolScrollTop = 0;
     if (window.location.hash.startsWith('#lobby=')) history.replaceState(null, '', window.location.pathname + window.location.search);
 
     if (_lobbyId && _myUid) {
@@ -657,9 +659,12 @@
     const currentRound  = Math.floor(currentPickIndex / leagueSize) + 1;
     const pickInRound   = (currentPickIndex % leagueSize) + 1;
 
-    // Save pool scroll position before re-render
+    // Capture scroll from the live element before innerHTML wipes it.
+    // _poolScrollTop is also kept up-to-date by the onscroll handler below,
+    // so even if onSnapshot fires twice (optimistic + server-confirm) the
+    // second render still restores the correct user-intended position.
     const poolOld = document.getElementById('ffdb-pool-list');
-    const savedPoolScroll = poolOld ? poolOld.scrollTop : 0;
+    if (poolOld) _poolScrollTop = poolOld.scrollTop;
 
     // Forced starter mode
     const myRemainingPicks = draftOrder.slice(currentPickIndex).filter(u => u === _myUid).length;
@@ -852,10 +857,15 @@
         </div>
       </div>`;
 
-    // Restore pool scroll — defer so browser finishes layout before setting scrollTop
+    // Restore pool scroll and wire up the persistent scroll tracker.
+    // Double-rAF ensures CSS max-height is applied before we set scrollTop.
     requestAnimationFrame(() => {
-      const poolNew = document.getElementById('ffdb-pool-list');
-      if (poolNew) poolNew.scrollTop = savedPoolScroll;
+      requestAnimationFrame(() => {
+        const poolNew = document.getElementById('ffdb-pool-list');
+        if (!poolNew) return;
+        poolNew.scrollTop = _poolScrollTop;
+        poolNew.onscroll = () => { _poolScrollTop = poolNew.scrollTop; };
+      });
     });
 
     // Auto-scroll big board: snap position updates only on new round,
@@ -1664,6 +1674,7 @@
     window._draftQueue    = [];
     window._ffdbBoardView = 'round';
     _bbLastSnapRound      = -1;
+    _poolScrollTop        = 0;
 
     const { draftOrder = [], participants = {}, settings = {} } = data;
     const leagueSize  = settings.leagueSize || 10;
