@@ -3719,18 +3719,39 @@
 .ffdb-react-btn { background: transparent; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; font-size: 0.75rem; padding: 1px 6px; display: inline-flex; align-items: center; gap: 3px; color: var(--text); transition: background 0.12s, border-color 0.12s; line-height: 1.5; }
 .ffdb-react-btn:hover { background: rgba(255,255,255,0.07); border-color: var(--muted); }
 .ffdb-react-cnt { font-family: 'Barlow Condensed', sans-serif; font-size: 0.7rem; font-weight: 700; color: var(--accent); }
-/* Live chat */
-.ffdb-chat-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
-.ffd-lobby-chat { margin-top: 16px; max-width: 520px; }
-.ffdb-chat-msgs { min-height: 80px; max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+/* Floating chat widget */
+.ffdb-chat-widget {
+  position: fixed; bottom: 0; right: 24px; z-index: 9999;
+  width: 300px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-bottom: none; border-radius: 10px 10px 0 0;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.35);
+  display: flex; flex-direction: column;
+  font-family: 'Barlow Condensed', sans-serif;
+}
+.ffdb-chat-widget-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; cursor: pointer;
+  border-radius: 10px 10px 0 0;
+  user-select: none;
+  background: var(--surface2);
+  transition: background 0.12s;
+}
+.ffdb-chat-widget-header:hover { background: var(--border); }
+.ffdb-chat-widget-title { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text); flex: 1; }
+.ffdb-chat-badge { background: #e53935; color: #fff; font-size: 0.65rem; font-weight: 800; border-radius: 999px; padding: 1px 6px; line-height: 1.5; }
+.ffdb-chat-widget-chevron { font-size: 0.65rem; color: var(--muted); }
+.ffdb-chat-widget-body { display: flex; flex-direction: column; gap: 0; }
+.ffdb-chat-msgs { height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; padding: 10px 14px; }
+.ffdb-chat-msgs::-webkit-scrollbar { width: 4px; }
+.ffdb-chat-msgs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 .ffdb-chat-msg { display: flex; flex-direction: column; gap: 1px; }
-.ffdb-chat-name { font-family: 'Barlow Condensed', sans-serif; font-size: 0.65rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.ffdb-chat-name { font-size: 0.65rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .ffdb-chat-me .ffdb-chat-name { color: var(--accent); }
-.ffdb-chat-text { font-family: 'Barlow Condensed', sans-serif; font-size: 0.85rem; color: var(--text); line-height: 1.3; word-break: break-word; }
-.ffdb-chat-input-row { display: flex; gap: 6px; }
-.ffdb-chat-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-family: 'Barlow Condensed', sans-serif; font-size: 0.85rem; color: var(--text); outline: none; }
-.ffdb-chat-input:focus { border-color: var(--accent); }
-.ffdb-chat-send { background: var(--accent); border: none; border-radius: 6px; color: #000; font-size: 1rem; font-weight: 800; width: 32px; cursor: pointer; flex-shrink: 0; transition: opacity 0.12s; }
+.ffdb-chat-text { font-size: 0.88rem; color: var(--text); line-height: 1.3; word-break: break-word; }
+.ffdb-chat-input-row { display: flex; gap: 0; border-top: 1px solid var(--border); }
+.ffdb-chat-input { flex: 1; background: transparent; border: none; padding: 8px 12px; font-family: 'Barlow Condensed', sans-serif; font-size: 0.88rem; color: var(--text); outline: none; }
+.ffdb-chat-send { background: var(--accent); border: none; color: #000; font-size: 1rem; font-weight: 800; width: 36px; cursor: pointer; flex-shrink: 0; transition: opacity 0.12s; border-radius: 0 0 0 0; }
 .ffdb-chat-send:hover { opacity: 0.8; }
 
 /* ── Draft Board — Big Board ─────────────────────────────────────────────── */

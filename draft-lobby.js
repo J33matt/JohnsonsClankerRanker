@@ -10,8 +10,10 @@
   let _unsubLobby  = null;
   let _unsubChat   = null;
   let _chatMessages = [];
-  let _wasInLobby  = false;
+  let _wasInLobby   = false;
   let _poolScrollTop = 0;
+  let _chatUnread    = 0;
+  let _chatLastCount = 0;
   let _lastDraftData = null;
   let _timerInterval = null;
   let _botTimeout    = null;
@@ -351,17 +353,8 @@
           ${settingsPanel}
         </div>
         ${actionArea}
-        <div class="ffdb-chat-panel ffd-lobby-chat">
-          <div class="ffdb-panel-title">CHAT</div>
-          <div class="ffdb-chat-msgs" id="ffdb-chat-msgs"></div>
-          <div class="ffdb-chat-input-row">
-            <input class="ffdb-chat-input" id="ffdb-chat-input" placeholder="Message…" maxlength="200"
-                   onkeydown="if(event.key==='Enter')_draftSendChat('${lobbyId}')">
-            <button class="ffdb-chat-send" onclick="_draftSendChat('${lobbyId}')">↑</button>
-          </div>
-        </div>
       </div>`;
-    _renderChatMessages();
+    _mountChatWidget(lobbyId);
   }
 
   // ── Invite link ──────────────────────────────────────────────────────────────
@@ -384,10 +377,18 @@
   // ── Live chat ────────────────────────────────────────────────────────────────
   function _draftSubscribeChat(lobbyId) {
     if (_unsubChat) return;
+    // No orderBy — avoids requiring a Firestore composite index.
+    // Sort client-side instead; handle null ts (server timestamp not yet set).
     _unsubChat = _db().collection('ff_draft_lobbies').doc(lobbyId)
-      .collection('messages').orderBy('ts')
+      .collection('messages')
       .onSnapshot(snap => {
-        _chatMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _chatMessages = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => {
+            const ta = a.ts?.toMillis ? a.ts.toMillis() : (a.ts || 0);
+            const tb = b.ts?.toMillis ? b.ts.toMillis() : (b.ts || 0);
+            return ta - tb;
+          });
         _renderChatMessages();
       }, err => { console.warn('[Chat] snapshot error:', err); });
   }
@@ -395,7 +396,7 @@
   function _renderChatMessages() {
     const el = document.getElementById('ffdb-chat-msgs');
     if (!el) return;
-    const prev = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
     el.innerHTML = _chatMessages.map(m => {
       const isMe = m.uid === _myUid;
       const safe = (m.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -404,7 +405,17 @@
         <span class="ffdb-chat-text">${safe}</span>
       </div>`;
     }).join('');
-    if (prev < 40) el.scrollTop = el.scrollHeight;
+    const body  = document.getElementById('ffdb-chat-widget-body');
+    const isOpen = body && body.style.display !== 'none';
+    if (isOpen && atBottom) el.scrollTop = el.scrollHeight;
+    // Unread badge while collapsed
+    const newCount = _chatMessages.length;
+    if (!isOpen && newCount > _chatLastCount) {
+      _chatUnread += newCount - _chatLastCount;
+      const badge = document.getElementById('ffdb-chat-badge');
+      if (badge) { badge.textContent = _chatUnread; badge.style.display = ''; }
+    }
+    _chatLastCount = newCount;
   }
 
   window._draftSendChat = async function (lobbyId) {
@@ -418,6 +429,56 @@
         uid: _myUid, name: _myName || 'You', text,
         ts: firebase.firestore.FieldValue.serverTimestamp()
       });
+  };
+
+  // ── Floating chat widget ─────────────────────────────────────────────────────
+  function _mountChatWidget(lobbyId) {
+    if (document.getElementById('ffdb-chat-widget')) return; // already mounted
+    const w = document.createElement('div');
+    w.id = 'ffdb-chat-widget';
+    w.className = 'ffdb-chat-widget collapsed';
+    w.innerHTML = `
+      <div class="ffdb-chat-widget-header" onclick="_toggleChatWidget()">
+        <span class="ffdb-chat-widget-title">💬 Chat</span>
+        <span class="ffdb-chat-badge" id="ffdb-chat-badge" style="display:none">0</span>
+        <span class="ffdb-chat-widget-chevron" id="ffdb-chat-widget-chevron">▴</span>
+      </div>
+      <div class="ffdb-chat-widget-body" id="ffdb-chat-widget-body" style="display:none">
+        <div class="ffdb-chat-msgs" id="ffdb-chat-msgs"></div>
+        <div class="ffdb-chat-input-row">
+          <input class="ffdb-chat-input" id="ffdb-chat-input" placeholder="Message…" maxlength="200"
+                 onkeydown="if(event.key==='Enter')_draftSendChat('${lobbyId}')">
+          <button class="ffdb-chat-send" onclick="_draftSendChat('${lobbyId}')">↑</button>
+        </div>
+      </div>`;
+    document.body.appendChild(w);
+    _renderChatMessages(); // populate with any messages already received
+  }
+
+  function _unmountChatWidget() {
+    const w = document.getElementById('ffdb-chat-widget');
+    if (w) w.remove();
+    _chatUnread = 0;
+    _chatLastCount = 0;
+  }
+
+  window._toggleChatWidget = function () {
+    const body    = document.getElementById('ffdb-chat-widget-body');
+    const chevron = document.getElementById('ffdb-chat-widget-chevron');
+    const widget  = document.getElementById('ffdb-chat-widget');
+    const badge   = document.getElementById('ffdb-chat-badge');
+    if (!body) return;
+    const opening = body.style.display === 'none';
+    body.style.display = opening ? '' : 'none';
+    if (chevron) chevron.textContent = opening ? '▾' : '▴';
+    if (widget)  widget.classList.toggle('collapsed', !opening);
+    if (opening) {
+      _chatUnread = 0;
+      _chatLastCount = _chatMessages.length;
+      if (badge) badge.style.display = 'none';
+      const msgs = document.getElementById('ffdb-chat-msgs');
+      if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    }
   };
 
   // ── Host actions (global so inline onclick can reach them) ──────────────────
@@ -525,6 +586,7 @@
   window._draftLeaveLobby = function () {
     if (_unsubLobby) { _unsubLobby(); _unsubLobby = null; }
     if (_unsubChat)  { _unsubChat();  _unsubChat  = null; _chatMessages = []; }
+    _unmountChatWidget();
     _wasInLobby    = false;
     _poolScrollTop = 0;
     if (window.location.hash.startsWith('#lobby=')) history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -855,15 +917,6 @@
               <div class="ffdb-panel-title">RECENT PICKS</div>
               ${recentPicks || '<div class="ffdb-empty-pool">No picks yet.</div>'}
             </div>
-            <div class="ffdb-chat-panel">
-              <div class="ffdb-panel-title">CHAT</div>
-              <div class="ffdb-chat-msgs" id="ffdb-chat-msgs"></div>
-              <div class="ffdb-chat-input-row">
-                <input class="ffdb-chat-input" id="ffdb-chat-input" placeholder="Message…" maxlength="200"
-                       onkeydown="if(event.key==='Enter')_draftSendChat('${lobbyId}')">
-                <button class="ffdb-chat-send" onclick="_draftSendChat('${lobbyId}')">↑</button>
-              </div>
-            </div>
           </div>
         </div>
       </div>`;
@@ -889,7 +942,7 @@
     }
 
     _startTimer(timerEndsAt, timerSecs, lobbyId);
-    _renderChatMessages();
+    _mountChatWidget(lobbyId);
   }
 
   // ── Pick submission ─────────────────────────────────────────────────────────
