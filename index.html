@@ -2305,12 +2305,46 @@ function renderRankings() {
     });
   }
 
+  // Separator row injected between active and eliminated teams
+  function elimSeparatorRow() {
+    return `<tr class="elim-separator-row">
+      <td colspan="12">
+        <div class="elim-separator-inner">
+          <span class="elim-separator-line"></span>
+          <span class="elim-separator-label">ELIMINATED</span>
+          <span class="elim-separator-line"></span>
+        </div>
+      </td>
+    </tr>`;
+  }
+
+  // Render a list of teams split by active/eliminated, with a separator between them.
+  // rankOffset: the starting rank number (1 by default)
+  // isTop3Fn: optional fn(localIndex) → bool for top3 styling
+  function renderTeamGroup(teams, rankOffset, isTop3Fn) {
+    const active = teams.filter(t => !elimSet.has(t.abbr));
+    const elim   = teams.filter(t =>  elimSet.has(t.abbr));
+    let out = '';
+    active.forEach((t, i) => {
+      const rank = rankOffset + i;
+      out += teamRow(t, rank, isTop3Fn ? isTop3Fn(i) : false, getRankMovement(t.abbr, baselineRankMap, currentRankMap));
+    });
+    if (elim.length) {
+      if (active.length) out += elimSeparatorRow();
+      elim.forEach((t, i) => {
+        const rank = rankOffset + active.length + i;
+        out += teamRow(t, rank, false, getRankMovement(t.abbr, baselineRankMap, currentRankMap));
+      });
+    }
+    return out;
+  }
+
   let html = '';
 
   if (rankingsView === 'league') {
     const sorted = sortTeams(ENRICHED_DATA);
     html = tableHead();
-    sorted.forEach((t, i) => { html += teamRow(t, i + 1, i < 3, getRankMovement(t.abbr, baselineRankMap, currentRankMap)); });
+    html += renderTeamGroup(sorted, 1, i => i < 3);
     html += `</tbody></table>`;
 
   } else if (rankingsView === 'conference') {
@@ -2320,7 +2354,7 @@ function renderRankings() {
       const teams = sortTeams(ENRICHED_DATA.filter(t => t.conf === conf));
       html += `<div class="rankings-group-header ${cls}">${label}</div>`;
       html += tableHead();
-      teams.forEach((t, i) => { html += teamRow(t, i + 1, i < 3, getRankMovement(t.abbr, baselineRankMap, currentRankMap)); });
+      html += renderTeamGroup(teams, 1, i => i < 3);
       html += `</tbody></table>`;
     });
 
@@ -2335,7 +2369,7 @@ function renderRankings() {
       const confLabel = div.conf === 'WEST' ? 'Western' : 'Eastern';
       html += `<div class="rankings-group-header div">${div.name} Division <span style="font-size:0.7rem;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:2px;margin-left:8px">${confLabel}</span></div>`;
       html += tableHead();
-      teams.forEach((t, i) => { html += teamRow(t, i + 1, i === 0, getRankMovement(t.abbr, baselineRankMap, currentRankMap)); });
+      html += renderTeamGroup(teams, 1, i => i === 0);
       html += `</tbody></table>`;
     });
   }

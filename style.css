@@ -1631,6 +1631,32 @@
     margin-left: 6px;
     vertical-align: middle;
   }
+  /* ── Eliminated separator row ─────────────────────────── */
+  .elim-separator-row td {
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+  .elim-separator-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px 6px;
+  }
+  .elim-separator-line {
+    flex: 1;
+    height: 1px;
+    background: rgba(255,50,50,0.25);
+  }
+  .elim-separator-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    color: rgba(255,60,60,0.55);
+    white-space: nowrap;
+  }
+  /* ─────────────────────────────────────────────────────── */
   .eliminated-record {
     color: var(--muted);
     font-size: 0.85rem;
