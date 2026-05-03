@@ -18,6 +18,7 @@
   let _timerInterval = null;
   let _botTimeout    = null;
   let _bbLastSnapRound = -1;
+  let _verdictShown  = false;
   window._draftQueue    = [];
   window._ffdbBoardView = 'round'; // 'round' | 'roster'
 
@@ -65,6 +66,7 @@
     _poolScrollTop = 0;
     _chatUnread    = 0;
     _chatLastCount = 0;
+    _verdictShown  = false;
     container.innerHTML = `<div class="ffd-loading">Connecting to lobby…</div>`;
 
     try {
@@ -597,6 +599,7 @@
     _unmountChatWidget();
     _wasInLobby    = false;
     _poolScrollTop = 0;
+    _verdictShown  = false;
     if (window.location.hash.startsWith('#lobby=')) history.replaceState(null, '', window.location.pathname + window.location.search);
 
     if (_lobbyId && _myUid) {
@@ -1738,40 +1741,8 @@
     if (btn) btn.classList.add('active');
   };
 
-  function _renderVerdict(data, lobbyId) {
-    const container = _panel();
-    if (!container) return;
-    clearInterval(_timerInterval); _timerInterval = null;
-    clearTimeout(_botTimeout);     _botTimeout    = null;
-    window._draftQueue    = [];
-    window._ffdbBoardView = 'round';
-    _bbLastSnapRound      = -1;
-    _poolScrollTop        = 0;
-
-    const { draftOrder = [], participants = {}, settings = {} } = data;
-    const leagueSize  = settings.leagueSize || 10;
-    const teamOrder   = draftOrder.slice(0, leagueSize);
-
-    // Grade every team
-    const grades = teamOrder.map(uid => ({
-      uid,
-      name: (participants[uid] || {}).name || '?',
-      isBot: !!(participants[uid] || {}).isBot,
-      isMe: uid === _myUid,
-      ..._gradeTeam(uid, data),
-    })).filter(g => g.overall !== undefined);
-
-    grades.sort((a, b) => b.overall - a.overall);
-    const winner = grades[0];
-
-    function gradeColor(g) {
-      if (g.startsWith('A')) return '#4caf50';
-      if (g.startsWith('B')) return '#8bc34a';
-      if (g.startsWith('C')) return '#ffb300';
-      if (g.startsWith('D')) return '#ff7043';
-      return '#e53935';
-    }
-
+  function _buildVerdictFullHTML(grades, gradeColor, data) {
+    const winner  = grades[0];
     const catKeys = Object.keys((grades[0] || {}).cats || {});
 
     const teamCards = grades.map((g, i) => {
@@ -1779,7 +1750,6 @@
       const youTag = g.isMe ? '<span class="ffcv-you-tag">YOU</span>' : '';
       const gColor = gradeColor(g.grade);
 
-      // Left: category bars
       const catBars = catKeys.map(k => {
         const score = g.cats[k];
         const col   = score >= 75 ? '#4caf50' : score >= 55 ? '#ffb300' : '#e53935';
@@ -1790,7 +1760,6 @@
         </div>`;
       }).join('');
 
-      // Middle: full roster by slot
       const rosterSlots = _buildRoster(g.picks, g.uid).map(s => {
         const pc = s.filled ? _posColor(s.filled.playerPos) : '';
         return `<div class="ffcv-slot">
@@ -1802,7 +1771,6 @@
         </div>`;
       }).join('');
 
-      // Right: positional grades
       const posOrder = ['QB','RB','WR','TE','BENCH'];
       const posGradeRows = posOrder.map(pos => {
         const pg = (g.posGrades || {})[pos];
@@ -1858,7 +1826,7 @@
       </div>`
     ).join('');
 
-    container.innerHTML = `
+    return `
       <div class="ffcv-wrap">
         <div class="ffcv-header">
           <div class="ffcv-title">⚖️ Clanker's Verdict</div>
@@ -1876,6 +1844,120 @@
         </div>
         <button class="ffcv-new-btn" onclick="renderDraftLobbyTab()">New Draft</button>
       </div>`;
+  }
+
+  function _verdictRevealEntry(g, rank, isWinner, gradeColor) {
+    const div = document.createElement('div');
+    div.className = 'ffcv-reveal-entry' + (isWinner ? ' ffcv-reveal-winner' : '');
+    const youTag = g.isMe ? ' <span class="ffcv-you-tag">YOU</span>' : '';
+    div.innerHTML = `
+      <span class="ffcv-reveal-rank">#${rank}</span>
+      <span class="ffcv-reveal-name">${isWinner ? '👑 ' : ''}${g.name}${youTag}</span>
+      <span class="ffcv-reveal-grade" style="color:${gradeColor(g.grade)}">${g.grade}</span>`;
+    return div;
+  }
+
+  function _renderVerdict(data, lobbyId) {
+    const container = _panel();
+    if (!container) return;
+    if (_verdictShown) return;
+    _verdictShown = true;
+
+    clearInterval(_timerInterval); _timerInterval = null;
+    clearTimeout(_botTimeout);     _botTimeout    = null;
+    window._draftQueue    = [];
+    window._ffdbBoardView = 'round';
+    _bbLastSnapRound      = -1;
+    _poolScrollTop        = 0;
+
+    const { draftOrder = [], participants = {}, settings = {} } = data;
+    const leagueSize  = settings.leagueSize || 10;
+    const teamOrder   = draftOrder.slice(0, leagueSize);
+
+    const grades = teamOrder.map(uid => ({
+      uid,
+      name: (participants[uid] || {}).name || '?',
+      isBot: !!(participants[uid] || {}).isBot,
+      isMe: uid === _myUid,
+      ..._gradeTeam(uid, data),
+    })).filter(g => g.overall !== undefined);
+
+    grades.sort((a, b) => b.overall - a.overall);
+
+    function gradeColor(g) {
+      if (g.startsWith('A')) return '#4caf50';
+      if (g.startsWith('B')) return '#8bc34a';
+      if (g.startsWith('C')) return '#ffb300';
+      if (g.startsWith('D')) return '#ff7043';
+      return '#e53935';
+    }
+
+    const fullHTML = _buildVerdictFullHTML(grades, gradeColor, data);
+    const n = grades.length;
+    const revealOrder = [...grades].reverse(); // worst → best
+
+    // ── helpers exposed to inline onclick ──────────────────────────────────────
+    window._ffcvRevealTimeouts = [];
+
+    window._ffcvShowFullVerdict = function () {
+      (window._ffcvRevealTimeouts || []).forEach(t => clearTimeout(t));
+      window._ffcvRevealTimeouts = [];
+      const c = _panel();
+      if (c) c.innerHTML = fullHTML;
+    };
+
+    window._ffcvSkipReveal = function () {
+      (window._ffcvRevealTimeouts || []).forEach(t => clearTimeout(t));
+      window._ffcvRevealTimeouts = [];
+      const list = document.getElementById('ffcv-reveal-list');
+      if (list) {
+        list.innerHTML = '';
+        revealOrder.forEach((g, idx) => {
+          const isWinner = idx === n - 1;
+          const entry = _verdictRevealEntry(g, n - idx, isWinner, gradeColor);
+          entry.style.animation = 'none';
+          entry.style.opacity   = '1';
+          list.appendChild(entry);
+        });
+      }
+      const btn = document.getElementById('ffcv-reveal-action');
+      if (btn) { btn.textContent = 'View Full Results →'; btn.className = 'ffcv-reveal-view-btn'; btn.onclick = window._ffcvShowFullVerdict; }
+    };
+
+    // ── render reveal shell ────────────────────────────────────────────────────
+    container.innerHTML = `
+      <div class="ffcv-reveal-wrap">
+        <div class="ffcv-reveal-eyebrow">⚖️ CLANKER'S VERDICT</div>
+        <div class="ffcv-reveal-list" id="ffcv-reveal-list"></div>
+        <div class="ffcv-reveal-actions">
+          <button class="ffcv-reveal-skip" id="ffcv-reveal-action" onclick="_ffcvSkipReveal()">Skip ›</button>
+        </div>
+      </div>`;
+
+    // ── schedule reveals last→first ────────────────────────────────────────────
+    let cum = 700;
+    revealOrder.forEach((g, idx) => {
+      const isWinner = idx === n - 1;
+      if (isWinner) cum += 1100; // dramatic pause before #1
+
+      const t = setTimeout(() => {
+        const list = document.getElementById('ffcv-reveal-list');
+        if (!list) return;
+        list.appendChild(_verdictRevealEntry(g, n - idx, isWinner, gradeColor));
+        list.scrollTop = list.scrollHeight;
+
+        if (isWinner) {
+          const t2 = setTimeout(() => {
+            const btn = document.getElementById('ffcv-reveal-action');
+            if (btn) { btn.textContent = 'View Full Results →'; btn.className = 'ffcv-reveal-view-btn'; btn.onclick = window._ffcvShowFullVerdict; }
+          }, 1600);
+          window._ffcvRevealTimeouts.push(t2);
+        }
+      }, cum);
+
+      window._ffcvRevealTimeouts.push(t);
+      cum += isWinner ? 0 : 850;
+    });
   }
 
 })();
