@@ -787,12 +787,28 @@
       const inQueue = queue.includes(p.rank);
       const _pTeam  = p.team || _teamOf(p.name);
       const _pBye   = (typeof BYE_WEEKS !== 'undefined' && _pTeam) ? BYE_WEEKS[_pTeam] : null;
+      // Headshot / team logo for thumbnail
+      const _pLogoUrl = _pTeam
+        ? `https://a.espncdn.com/i/teamlogos/nfl/500/${_pTeam.toLowerCase()}.png`
+        : (p.pos !== 'DST' ? 'https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png' : '');
+      let _pHeadshotUrl = '';
+      if (p.pos !== 'DST') {
+        const _pKey = (p.name||'').toLowerCase().replace(/[.'’‘`]/g,'').replace(/\s+/g,' ').trim();
+        const _pAthId = window._playerIdMap && (window._playerIdMap[_pKey] ||
+          window._playerIdMap[_pKey.replace(/\s+(jr|sr|ii|iii|iv)$/i,'').trim()]);
+        if (_pAthId) _pHeadshotUrl = `https://a.espncdn.com/i/headshots/nfl/players/full/${_pAthId}.png`;
+      }
+      const _pThumbHTML = `<div class="ffdb-p-thumb">
+        ${_pLogoUrl ? `<img class="ffdb-p-thumb-logo" src="${_pLogoUrl}" onerror="this.style.display='none'" alt="">` : ''}
+        ${_pHeadshotUrl ? `<img class="ffdb-p-thumb-head" src="${_pHeadshotUrl}" onerror="this.style.display='none';var l=this.parentNode.querySelector('.ffdb-p-thumb-logo');if(l)l.style.opacity='0.65';" alt="">` : ''}
+      </div>`;
       poolRows.push(`<div class="ffdb-player-row${inQueue?' ffdb-in-queue':''}">
         <span class="ffdb-p-rank">${p.rank}</span>
         <span class="ffdb-pos-badge" style="background:${_posColor(p.pos)}">${p.pos}</span>
         <span class="ffdb-p-name">${p.name}</span>
         <span class="ffdb-p-team">${_pTeam}</span>
         ${_pBye ? `<span class="ffdb-p-bye">BYE ${_pBye}</span>` : '<span class="ffdb-p-bye"></span>'}
+        ${_pThumbHTML}
         <button class="ffdb-q-pill${inQueue?' ffdb-q-active':''}" onclick="_toggleQueue(${p.rank})">${inQueue?'Queued':'+ Queue'}</button>
         ${isMyTurn && (!forcedMode || forcedPos.has(p.pos))
           ? `<button class="ffdb-pick-btn" onclick="_draftMakePick('${lobbyId}',${p.rank})">DRAFT</button>`
