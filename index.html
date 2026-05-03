@@ -1944,9 +1944,10 @@ STANDINGS_DATA.forEach(t => { STREAK_DATA[t.abbr] = t.streak || 0; });
 // This needs no hardcoded data and is always authoritative.
 async function fetchESPNStreaks() {
   try {
-    // Fetch last 40 days in parallel · covers any realistic NBA streak length
-    // (longest in NBA history is 33 games; 40 days safely exceeds that)
-    const dates = getDateRange(40, 0);
+    // Fetch since play-in start (PLAYIN_START) so elimination state is always seeded correctly,
+    // with a minimum of 40 days to cover the longest possible NBA streak (33 games)
+    const _sincePlayIn = Math.max(40, Math.ceil((Date.now() - new Date(PLAYIN_START + 'T12:00:00')) / 86400000) + 1);
+    const dates = getDateRange(_sincePlayIn, 0);
     const results = await Promise.all(dates.map(d => espnFetchDate(d)));
 
     // Flatten all final games, sort oldest → newest
@@ -2110,8 +2111,9 @@ let _lastScoreData = null;    // cached so GTW badges can be refreshed without r
 
 async function pollAndRefreshAll() {
   const today = localDateStr(new Date());
-  const past21  = getDateRange(21, 0).slice(0, 21);
-  const results = await Promise.all([espnFetchDate(today), ...past21.map(d => espnFetchDate(d))]);
+  const _sincePlayIn = Math.max(1, Math.ceil((Date.now() - new Date(PLAYIN_START + 'T12:00:00')) / 86400000) + 1);
+  const pastDates = getDateRange(_sincePlayIn, 0).slice(0, _sincePlayIn);
+  const results = await Promise.all([espnFetchDate(today), ...pastDates.map(d => espnFetchDate(d))]);
   const todayGames = results[0] || [];
   const allFinal   = [...todayGames, ...results.slice(1).flatMap(r => r || [])].filter(g => g.isFinal);
 
