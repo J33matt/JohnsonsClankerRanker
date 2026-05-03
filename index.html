@@ -1982,6 +1982,11 @@ async function fetchESPNStreaks() {
       updated++;
     });
 
+    // Also seed play-in and playoff elimination state from the same 40-day fetch.
+    // pollAndRefreshAll only looks back 14 days and misses play-in games (Apr 14-18).
+    _trackPlayInGames(allFinal);
+    _trackPlayoffGames(allFinal);
+
     if (updated >= 20) {
       const vals = Object.values(STREAK_DATA);
       _streakBest  = Math.max(...vals);
@@ -2105,8 +2110,8 @@ let _lastScoreData = null;    // cached so GTW badges can be refreshed without r
 
 async function pollAndRefreshAll() {
   const today = localDateStr(new Date());
-  const past14  = getDateRange(14, 0).slice(0, 14);
-  const results = await Promise.all([espnFetchDate(today), ...past14.map(d => espnFetchDate(d))]);
+  const past21  = getDateRange(21, 0).slice(0, 21);
+  const results = await Promise.all([espnFetchDate(today), ...past21.map(d => espnFetchDate(d))]);
   const todayGames = results[0] || [];
   const allFinal   = [...todayGames, ...results.slice(1).flatMap(r => r || [])].filter(g => g.isFinal);
 
