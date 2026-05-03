@@ -1017,6 +1017,125 @@ const FANTASY_RANKINGS = [
   { name:"Buffalo Bills"           , pos:"DST" , team:"BUF" },
   { name:"Chicago Bears"           , pos:"DST" , team:"CHI" },
   { name:"Carolina Panthers"       , pos:"DST" , team:"CAR" }
+,  { name:"Geno Smith"              , pos:"QB"   }
+,  { name:"Jacoby Brissett"         , pos:"QB"   }
+,  { name:"Bryce Young"             , pos:"QB"   }
+,  { name:"Stefon Diggs"            , pos:"WR"   }
+,  { name:"Deebo Samuel Sr."        , pos:"WR"   }
+,  { name:"Brandon Aiyuk"           , pos:"WR"   }
+,  { name:"Keaton Mitchell"         , pos:"RB"   }
+,  { name:"James Conner"            , pos:"RB"   }
+,  { name:"Jauan Jennings"          , pos:"WR"   }
+,  { name:"Fernando Mendoza"        , pos:"QB"   }
+,  { name:"Jonah Coleman"           , pos:"RB"   }
+,  { name:"Dylan Sampson"           , pos:"RB"   }
+,  { name:"Tyler Bass"              , pos:"K"    }
+,  { name:"Jake Elliott"            , pos:"K"    }
+,  { name:"Jalen McMillan"          , pos:"WR"   }
+,  { name:"Emanuel Wilson"          , pos:"RB"   }
+,  { name:"Tre Tucker"              , pos:"WR"   }
+,  { name:"Blake Grupe"             , pos:"K"    }
+,  { name:"Jake Moody"              , pos:"K"    }
+,  { name:"Brian Robinson Jr."      , pos:"RB"   }
+,  { name:"Matt Gay"                , pos:"K"    }
+,  { name:"Ryan Fitzgerald"         , pos:"K"    }
+,  { name:"Dontayvion Wicks"        , pos:"WR"   }
+,  { name:"Chris Rodriguez Jr."     , pos:"RB"   }
+,  { name:"Joey Slye"               , pos:"K"    }
+,  { name:"Chad Ryland"             , pos:"K"    }
+,  { name:"Cade York"               , pos:"K"    }
+,  { name:"Kaytron Allen"           , pos:"RB"   }
+,  { name:"Andre Szmyt"             , pos:"K"    }
+,  { name:"Deshaun Watson"          , pos:"QB"   }
+,  { name:"Travis Hunter"           , pos:"WR"   }
+,  { name:"Tre Harris"              , pos:"WR"   }
+,  { name:"Braelon Allen"           , pos:"RB"   }
+,  { name:"Adonai Mitchell"         , pos:"WR"   }
+,  { name:"Wil Lutz"                , pos:"K"    }
+,  { name:"Sean Tucker"             , pos:"RB"   }
+,  { name:"Rashod Bateman"          , pos:"WR"   }
+,  { name:"Caleb Douglas"           , pos:"WR"   }
+,  { name:"Najee Harris"            , pos:"RB"   }
+,  { name:"AJ Barner"               , pos:"TE"   }
+,  { name:"Germie Bernard"          , pos:"WR"   }
+,  { name:"Darnell Mooney"          , pos:"WR"   }
+,  { name:"Trey Benson"             , pos:"RB"   }
+,  { name:"Ryan Flournoy"           , pos:"WR"   }
+,  { name:"Malik Washington"        , pos:"WR"   }
+,  { name:"Jalen Tolbert"           , pos:"WR"   }
+,  { name:"Kimani Vidal"            , pos:"RB"   }
+,  { name:"Keenan Allen"            , pos:"WR"   }
+,  { name:"Michael Penix Jr."       , pos:"QB"   }
+,  { name:"Jalen Nailor"            , pos:"WR"   }
+,  { name:"Dyami Brown"             , pos:"WR"   }
+,  { name:"Tank Dell"               , pos:"WR"   }
+,  { name:"Brashard Smith"          , pos:"RB"   }
+,  { name:"Mike Washington Jr."     , pos:"RB"   }
+,  { name:"Chris Bell"              , pos:"WR"   }
+,  { name:"Zane Gonzalez"           , pos:"K"    }
+,  { name:"Isaiah Davis"            , pos:"RB"   }
+,  { name:"Cade Otton"              , pos:"TE"   }
+,  { name:"Terrance Ferguson"       , pos:"TE"   }
+,  { name:"Nick Westbrook-Ikhine"   , pos:"WR"   }
+,  { name:"Nicholas Singleton"      , pos:"RB"   }
+,  { name:"San Francisco 49ers"     , pos:"DST"  }
+,  { name:"Cooper Kupp"             , pos:"WR"   }
+,  { name:"Pat Bryant"              , pos:"WR"   }
+,  { name:"Shedeur Sanders"         , pos:"QB"   }
+,  { name:"Tua Tagovailoa"          , pos:"QB"   }
+,  { name:"Van Jefferson"           , pos:"WR"   }
+,  { name:"Olamide Zaccheaus"       , pos:"WR"   }
+,  { name:"Evan Engram"             , pos:"TE"   }
+,  { name:"Demond Claiborne"        , pos:"RB"   }
+,  { name:"Aaron Rodgers"           , pos:"QB"   }
+,  { name:"Mike Gesicki"            , pos:"TE"   }
+,  { name:"Greg Dulcich"            , pos:"TE"   }
+,  { name:"Kendre Miller"           , pos:"RB"   }
+,  { name:"Michael Mayer"           , pos:"TE"   }
+,  { name:"Ty Johnson"              , pos:"RB"   }
+,  { name:"Antonio Williams"        , pos:"WR"   }
+,  { name:"Mason Taylor"            , pos:"TE"   }
+,  { name:"Tai Felton"              , pos:"WR"   }
+,  { name:"LeQuint Allen Jr."       , pos:"RB"   }
+,  { name:"Jaydon Blue"             , pos:"RB"   }
+,  { name:"Savion Williams"         , pos:"WR"   }
+,  { name:"Keon Coleman"            , pos:"WR"   }
+,  { name:"Isaac TeSlaa"            , pos:"WR"   }
+,  { name:"Las Vegas Raiders"       , pos:"DST"  }
+,  { name:"Christian Kirk"          , pos:"WR"   }
+,  { name:"Ja'Tavion Sanders"       , pos:"TE"   }
+,  { name:"Tory Horton"             , pos:"WR"   }
+,  { name:"Xavier Legette"          , pos:"WR"   }
+,  { name:"Jack Bech"               , pos:"WR"   }
+,  { name:"New York Jets"           , pos:"DST"  }
+,  { name:"Tampa Bay Buccaneers"    , pos:"DST"  }
+,  { name:"Colby Parkinson"         , pos:"TE"   }
+,  { name:"Devaughn Vele"           , pos:"WR"   }
+,  { name:"Theo Wease Jr."          , pos:"WR"   }
+,  { name:"De'Zhaun Stribling"      , pos:"WR"   }
+,  { name:"KaVontae Turpin"         , pos:"WR"   }
+,  { name:"Tyquan Thornton"         , pos:"WR"   }
+,  { name:"Andrei Iosivas"          , pos:"WR"   }
+,  { name:"Dawson Knox"             , pos:"TE"   }
+,  { name:"Jerome Ford"             , pos:"RB"   }
+,  { name:"Cincinnati Bengals"      , pos:"DST"  }
+,  { name:"Darius Slayton"          , pos:"WR"   }
+,  { name:"Jaylin Lane"             , pos:"WR"   }
+,  { name:"Darnell Washington"      , pos:"TE"   }
+,  { name:"MarShawn Lloyd"          , pos:"RB"   }
+,  { name:"Jordan James"            , pos:"RB"   }
+,  { name:"Kalif Raymond"           , pos:"WR"   }
+,  { name:"Jake Tonges"             , pos:"TE"   }
+,  { name:"Washington Commanders"   , pos:"DST"  }
+,  { name:"Jahan Dotson"            , pos:"WR"   }
+,  { name:"Ja'Kobi Lane"            , pos:"WR"   }
+,  { name:"Joe Mixon"               , pos:"RB"   }
+,  { name:"Tommy Tremble"           , pos:"TE"   }
+,  { name:"Noah Gray"               , pos:"TE"   }
+,  { name:"DeMario Douglas"         , pos:"WR"   }
+,  { name:"Hollywood Brown"         , pos:"WR"   }
+,  { name:"Elijah Arroyo"           , pos:"TE"   }
+,  { name:"Tennessee Titans"        , pos:"DST"  }
 ].map((p, i) => ({ ...p, rank: i + 1 }));
 
 // Team abbreviation lookup keyed by fantasy rank.
