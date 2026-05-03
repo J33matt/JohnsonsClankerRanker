@@ -785,11 +785,14 @@
         </div>`);
       }
       const inQueue = queue.includes(p.rank);
+      const _pTeam  = p.team || _teamOf(p.name);
+      const _pBye   = (typeof BYE_WEEKS !== 'undefined' && _pTeam) ? BYE_WEEKS[_pTeam] : null;
       poolRows.push(`<div class="ffdb-player-row${inQueue?' ffdb-in-queue':''}">
         <span class="ffdb-p-rank">${p.rank}</span>
         <span class="ffdb-pos-badge" style="background:${_posColor(p.pos)}">${p.pos}</span>
         <span class="ffdb-p-name">${p.name}</span>
-        <span class="ffdb-p-team">${p.team || _teamOf(p.name)}</span>
+        <span class="ffdb-p-team">${_pTeam}</span>
+        ${_pBye ? `<span class="ffdb-p-bye">BYE ${_pBye}</span>` : '<span class="ffdb-p-bye"></span>'}
         <button class="ffdb-q-pill${inQueue?' ffdb-q-active':''}" onclick="_toggleQueue(${p.rank})">${inQueue?'Queued':'+ Queue'}</button>
         ${isMyTurn && (!forcedMode || forcedPos.has(p.pos))
           ? `<button class="ffdb-pick-btn" onclick="_draftMakePick('${lobbyId}',${p.rank})">DRAFT</button>`
