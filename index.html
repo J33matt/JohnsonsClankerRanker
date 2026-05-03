@@ -10963,7 +10963,7 @@ function _ffRenderTable() {
   const wrap = document.getElementById('ff-table-wrap');
   if (!wrap) return;
   const data = (typeof FANTASY_RANKINGS !== 'undefined') ? FANTASY_RANKINGS : [];
-  const _flexPos = new Set(['QB','RB','WR','TE']);
+  const _flexPos = new Set(['RB','WR','TE']);
   const filtered = _fantasyPosFilter === 'ALL' ? data
     : _fantasyPosFilter === 'FLEX' ? data.filter(p => _flexPos.has(p.pos))
     : data.filter(p => p.pos === _fantasyPosFilter);
