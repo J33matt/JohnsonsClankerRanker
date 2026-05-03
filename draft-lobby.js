@@ -786,7 +786,7 @@
         <span class="ffdb-p-rank">${p.rank}</span>
         <span class="ffdb-pos-badge" style="background:${_posColor(p.pos)}">${p.pos}</span>
         <span class="ffdb-p-name">${p.name}</span>
-        <span class="ffdb-p-team">${_teamOf(p.name)}</span>
+        <span class="ffdb-p-team">${p.team || _teamOf(p.name)}</span>
         <button class="ffdb-q-pill${inQueue?' ffdb-q-active':''}" onclick="_toggleQueue(${p.rank})">${inQueue?'Queued':'+ Queue'}</button>
         ${isMyTurn && (!forcedMode || forcedPos.has(p.pos))
           ? `<button class="ffdb-pick-btn" onclick="_draftMakePick('${lobbyId}',${p.rank})">DRAFT</button>`
@@ -968,7 +968,7 @@
       if (!player) return;
 
       const k    = (player.name||'').toLowerCase().replace(/[.'''`]/g,'').replace(/\s+/g,' ').trim();
-      const team = (window._playerTeamMap && (window._playerTeamMap[k] ||
+      const team = player.team || (window._playerTeamMap && (window._playerTeamMap[k] ||
         window._playerTeamMap[k.replace(/\s+(jr|sr|ii|iii|iv)$/i,'').trim()])) || null;
 
       const timerSecs = data.settings?.timerSeconds || 0;

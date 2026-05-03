@@ -827,7 +827,7 @@ const FANTASY_RANKINGS = [
   { name:"Jonathan Taylor",      pos:"RB"  },
   { name:"CeeDee Lamb",          pos:"WR"  },
   { name:"Rashee Rice",          pos:"WR"  },
-  { name:"Justin Jefferson",     pos:"WR"  },
+  { name:"Justin Jefferson",     pos:"WR",  team:"MIN" },
   { name:"Drake London",         pos:"WR"  },
   { name:"Josh Allen",           pos:"QB"  },
   { name:"James Cook III",       pos:"RB"  },
