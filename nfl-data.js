@@ -1025,7 +1025,7 @@ const FANTASY_RANKINGS = [
 ,  { name:"Jonah Coleman"           , pos:"RB"   }
 ,  { name:"Dylan Sampson"           , pos:"RB"   }
 ,  { name:"Tyler Bass"              , pos:"K"    }
-  { name:"Cam Ward"                , pos:"QB"  , team:"TEN" },
+,  { name:"Cam Ward"                , pos:"QB"  , team:"TEN"  }
 ,  { name:"Jake Elliott"            , pos:"K"    }
 ,  { name:"Jalen McMillan"          , pos:"WR"   }
 ,  { name:"Emanuel Wilson"          , pos:"RB"   }
