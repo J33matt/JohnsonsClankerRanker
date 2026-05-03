@@ -643,7 +643,8 @@
 
     const { draftOrder = [], currentPickIndex = 0, picks = [],
             draftedRanks = [], participants = {}, settings = {}, timerEndsAt,
-            reactions = {} } = data;
+            reactions = {}, hostId } = data;
+    const isHost = hostId === _myUid;
     const leagueSize  = settings.leagueSize || 10;
     const timerSecs   = settings.timerSeconds || 0;
     const totalPicks  = draftOrder.length;
@@ -800,6 +801,16 @@
         <div class="ffdb-topbar">
           <div class="ffdb-round-info">Round ${currentRound} · Pick ${pickInRound} / ${leagueSize}</div>
           <div class="ffdb-pick-count">${currentPickIndex} / ${totalPicks} picks made</div>
+          ${isHost ? (() => {
+            const cur = settings.botSpeed || 'normal';
+            const speeds = [['vfast','⚡⚡'],['fast','⚡'],['normal','—'],['slow','🐢'],['vslow','🐢🐢']];
+            return `<div class="ffdb-speed-ctrl">
+              <span class="ffdb-speed-label">Bot speed</span>
+              ${speeds.map(([spd, lbl]) =>
+                `<button class="ffdb-speed-btn${cur===spd?' active':''}" onclick="_draftSetSetting('${lobbyId}','botSpeed','${spd}')" title="${spd}">${lbl}</button>`
+              ).join('')}
+            </div>`;
+          })() : ''}
         </div>
 
         <div class="ffdb-bb-wrap">
