@@ -3752,7 +3752,7 @@
 .ffdb-bb-th:last-child { border-right: none; }
 .ffdb-bb-me-col { color: #ffaa00; }
 
-.ffdb-bb-scroll { height: calc(var(--bb-rh) * 3); overflow-y: scroll; scroll-snap-type: y mandatory; min-width: max-content; }
+.ffdb-bb-scroll { height: calc(var(--bb-rh) * 8); overflow-y: scroll; scroll-snap-type: y mandatory; min-width: max-content; }
 .ffdb-bb-scroll::-webkit-scrollbar { width: 4px; }
 .ffdb-bb-scroll::-webkit-scrollbar-track { background: transparent; }
 .ffdb-bb-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }

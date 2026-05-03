@@ -874,7 +874,7 @@
     if (bbNew && boardView === 'round') {
       const curRound0 = Math.floor(currentPickIndex / leagueSize);
       if (curRound0 !== _bbLastSnapRound) _bbLastSnapRound = curRound0;
-      bbNew.scrollTop = Math.max(0, _bbLastSnapRound - 1) * 56;
+      bbNew.scrollTop = Math.max(0, _bbLastSnapRound) * 56;
     }
 
     _startTimer(timerEndsAt, timerSecs, lobbyId);
