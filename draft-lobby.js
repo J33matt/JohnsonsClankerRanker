@@ -1459,16 +1459,16 @@
     const teBackScore    = te2 <= 999 ? 10 : 0;
     const tePosScore     = Math.min(100, teStartScore + teBackScore);
 
-    // Bench thresholds scaled by league size so an 8-team drafter isn't rewarded
-    // for naturally having higher-ranked bench players than a 12-team drafter.
-    // At 10-team (default): floor=60, range=140, bestFloors=[40,70,100,140] — same as before.
+    // Bench thresholds scaled by league size.
+    // Floor anchored at leagueSize×9 (≈ where bench picks actually start after starters
+    // are filled). At 10-team: floor=90, range=140, bestFloors=[60,90,120,150].
     const _lsScale      = leagueSize / 10;
-    const _benchFloor   = Math.round(60  * _lsScale);
+    const _benchFloor   = Math.round(90  * _lsScale);
     const _benchRange   = Math.round(140 * _lsScale);
-    const _bf1          = Math.round(40  * _lsScale);
-    const _bf2          = Math.round(70  * _lsScale);
-    const _bf3          = Math.round(100 * _lsScale);
-    const _bf4          = Math.round(140 * _lsScale);
+    const _bf1          = Math.round(60  * _lsScale);
+    const _bf2          = Math.round(90  * _lsScale);
+    const _bf3          = Math.round(120 * _lsScale);
+    const _bf4          = Math.round(150 * _lsScale);
 
     const avgBR         = myBench.length ? myBench.reduce((s,p) => s + p.playerRank, 0) / myBench.length : _bf4 * 2;
     const bestBenchRank = myBench.length ? Math.min(...myBench.map(p => p.playerRank)) : _bf4 * 2;
@@ -1508,8 +1508,10 @@
       totalReach += Math.max(0, Number(p.playerRank) - bpaRank);
     });
     const avgReach = myPicks.length ? totalReach / myPicks.length : 0;
-    // Normalize: 0 avg reach → 100 (pure BPA drafter), 30+ avg reach → 0
-    const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 30))));
+    // Normalize: 0 avg reach → 100 (pure BPA drafter), 45+ avg reach → 0.
+    // Ceiling raised from 30 to 45: a reach of ~10 picks is normal fantasy draft
+    // behaviour (positional need, sleeper picks) and should score B, not C+.
+    const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 45))));
 
     // ── Category 3: Depth Quality ────────────────────────────────────────────────
     // Uses myBench, avgBR, and the league-size-scaled thresholds (_benchFloor, _benchRange)
