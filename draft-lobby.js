@@ -1477,7 +1477,7 @@
     const bestBenchRank = myBench.length ? Math.min(...myBench.map(p => p.playerRank)) : _bf4 * 2;
     const benchAvgScore  = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBR - _benchFloor) * (100 / _benchRange))));
     const bestAssetScore = bestBenchRank <= _bf1 ? 100 : bestBenchRank <= _bf2 ? 80 : bestBenchRank <= _bf3 ? 60 : bestBenchRank <= _bf4 ? 40 : 20;
-    const benchPosScore  = Math.round(benchAvgScore * 0.5 + bestAssetScore * 0.3 + Math.min(100, new Set(myBench.map(p=>p.playerPos)).size * 20) * 0.2);
+    const benchPosScore  = Math.round(benchAvgScore * 0.5 + bestAssetScore * 0.3 + Math.min(100, new Set(myBench.map(p=>p.playerPos)).size * 25) * 0.2);
 
     // ── Zero RB detection (used in Cat 1 penalty and badges) ─────────────────────
     const _top4Pos = myPicks.slice(0, 4).map(p => p.playerPos);
@@ -1675,7 +1675,7 @@
     const benchFactors = [
       { label: 'Avg Player Tier', val: benchAvgScore },
       { label: 'Best Asset',      val: bestAssetScore },
-      { label: 'Pos Variety',     val: Math.min(100, new Set(myBench.map(p=>p.playerPos)).size * 20) },
+      { label: 'Pos Variety',     val: Math.min(100, new Set(myBench.map(p=>p.playerPos)).size * 25) },
     ];
 
     const posGrades = {
