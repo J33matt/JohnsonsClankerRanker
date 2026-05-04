@@ -1526,7 +1526,7 @@
       if (p.playerTeam && myQBs[0] && myQBs[0].playerTeam === p.playerTeam) {
         const _isStackablePos =
           (p.playerPos === 'WR' && myWRs.slice(0, 3).some(w => w.playerRank === Number(p.playerRank))) ||
-          (p.playerPos === 'TE' && myTEs[0] && myTEs[0].playerRank === Number(p.playerRank));
+          (p.playerPos === 'TE' && myTEs.slice(0, 2).some(t => t.playerRank === Number(p.playerRank)));
         const _starterQBAlreadyPicked = _isStackablePos && allPicksSorted.some(q =>
           q.uid === uid &&
           Number(q.pickIndex) < myIdx &&
@@ -1594,7 +1594,7 @@
     // WR4+ are pure bench and wouldn't start in a healthy lineup. TE1 only — TE2
     // is a bench handcuff. RBs excluded: QB/RB correlation isn't a meaningful stack.
     const _starterQBTeam  = myQBs[0] ? myQBs[0].playerTeam : null;
-    const _stackableWRTE  = [...myWRs.slice(0, 3), myTEs[0]].filter(Boolean);
+    const _stackableWRTE  = [...myWRs.slice(0, 3), ...myTEs.slice(0, 2)].filter(Boolean);
     const _hasStack       = !!_starterQBTeam && _stackableWRTE.some(p =>
       p.playerTeam === _starterQBTeam
     );
