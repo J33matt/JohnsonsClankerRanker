@@ -1415,12 +1415,61 @@
     const myPicks   = picks.filter(p => p.uid === uid).sort((a, b) => a.pickIndex - b.pickIndex);
     if (!myPicks.length) return null;
 
-    // ── Category 1: Positional Balance ──────────────────────────────────────────
-    // Does the roster fill all starter slots with valid players?
-    const slots = _buildRoster(myPicks, uid);
-    const starterSlots = slots.filter(s => s.label !== 'BN');
-    const filledStarters = starterSlots.filter(s => s.filled).length;
-    const balScore = Math.round((filledStarters / starterSlots.length) * 100);
+    // ── Positional scores (hoisted — used by Category 1 and the grade cards) ─────
+    const slots   = _buildRoster(myPicks, uid);
+    const myRBs   = myPicks.filter(p => p.playerPos==='RB').sort((a,b) => a.playerRank - b.playerRank);
+    const myWRs   = myPicks.filter(p => p.playerPos==='WR').sort((a,b) => a.playerRank - b.playerRank);
+    const myQBs   = myPicks.filter(p => p.playerPos==='QB').sort((a,b) => a.playerRank - b.playerRank);
+    const myTEs   = myPicks.filter(p => p.playerPos==='TE').sort((a,b) => a.playerRank - b.playerRank);
+    const myBench = slots.filter(s => s.label==='BN' && s.filled).map(s => s.filled);
+
+    const qbStarter    = myQBs[0] ? myQBs[0].playerRank : 999;
+    const qbBackup     = myQBs[1] ? myQBs[1].playerRank : 999;
+    const qbPosRankNum = myQBs[0] ? allRankings.filter(r => r.pos === 'QB' && r.rank <= qbStarter).length : 999;
+    const qbStartScore = qbPosRankNum <= 1 ? 100 : qbPosRankNum <= 3 ? 85 : qbPosRankNum <= 6 ? 70 : qbPosRankNum <= 10 ? 52 : 32;
+    const qbBackScore  = qbBackup < 999 ? (qbPosRankNum <= 6 ? 15 : 10) : 0;
+    const qbPosScore   = Math.min(100, qbStartScore + qbBackScore);
+
+    const rb1 = myRBs[0] ? myRBs[0].playerRank : 999;
+    const rb2 = myRBs[1] ? myRBs[1].playerRank : 999;
+    const rb1PosRankNum = myRBs[0] ? allRankings.filter(r => r.pos === 'RB' && r.rank <= rb1).length : 999;
+    const rb2PosRankNum = myRBs[1] ? allRankings.filter(r => r.pos === 'RB' && r.rank <= rb2).length : 999;
+    const rbCountBonus  = Math.min(15, (myRBs.length - 2) * 5);
+    const rb1Score = rb1PosRankNum <= 1 ? 100 : rb1PosRankNum <= 4  ? 85 : rb1PosRankNum <= 8  ? 70 : rb1PosRankNum <= 15 ? 52 : 32;
+    const rb2Score = rb2PosRankNum <= 5 ? 90  : rb2PosRankNum <= 10 ? 75 : rb2PosRankNum <= 20 ? 58 : rb2PosRankNum <= 999 ? 38 : 0;
+    const rbPosScore = Math.min(100, rb1Score * 0.55 + rb2Score * 0.35 + rbCountBonus);
+
+    const wr1 = myWRs[0] ? myWRs[0].playerRank : 999;
+    const wr2 = myWRs[1] ? myWRs[1].playerRank : 999;
+    const wr1PosRankNum = myWRs[0] ? allRankings.filter(r => r.pos === 'WR' && r.rank <= wr1).length : 999;
+    const wr2PosRankNum = myWRs[1] ? allRankings.filter(r => r.pos === 'WR' && r.rank <= wr2).length : 999;
+    const wrCountBonus  = Math.min(15, (myWRs.length - 2) * 5);
+    const wr1Score = wr1PosRankNum <= 1 ? 100 : wr1PosRankNum <= 4  ? 85 : wr1PosRankNum <= 8  ? 70 : wr1PosRankNum <= 15 ? 52 : 32;
+    const wr2Score = wr2PosRankNum <= 5 ? 90  : wr2PosRankNum <= 10 ? 75 : wr2PosRankNum <= 20 ? 58 : wr2PosRankNum <= 999 ? 38 : 0;
+    const wrPosScore = Math.min(100, wr1Score * 0.50 + wr2Score * 0.35 + wrCountBonus);
+
+    const te1 = myTEs[0] ? myTEs[0].playerRank : 999;
+    const te2 = myTEs[1] ? myTEs[1].playerRank : 999;
+    const teStartScore   = te1 <= 22 ? 100 : te1 <= 38 ? 90 : te1 <= 72 ? 80 : te1 <= 115 ? 63 : te1 <= 999 ? 42 : 0;
+    const teBackScore    = te2 <= 999 ? 10 : 0;
+    const tePosScore     = Math.min(100, teStartScore + teBackScore);
+    const tePosRankNum   = allRankings.filter(r => r.pos === 'TE' && r.rank <= te1).length;
+    const tePosRankScore = tePosRankNum <= 1 ? 100 : tePosRankNum <= 2 ? 80 : tePosRankNum <= 4 ? 60 : tePosRankNum <= 6 ? 42 : 22;
+
+    const avgBR         = myBench.length ? myBench.reduce((s,p) => s + p.playerRank, 0) / myBench.length : 200;
+    const bestBenchRank = myBench.length ? Math.min(...myBench.map(p => p.playerRank)) : 200;
+    const benchAvgScore  = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBR - 60) * (100/140))));
+    const bestAssetScore = bestBenchRank <= 40 ? 100 : bestBenchRank <= 70 ? 80 : bestBenchRank <= 100 ? 60 : bestBenchRank <= 140 ? 40 : 20;
+    const benchPosScore  = Math.round(benchAvgScore * 0.5 + bestAssetScore * 0.3 + Math.min(100, new Set(myBench.map(p=>p.playerPos)).size * 20) * 0.2);
+
+    // ── Category 1: Positional Strength ──────────────────────────────────────────
+    // Weighted average of the 5 positional grades, with a penalty for any glaring
+    // weakness. Weights: RB/WR 25% each (core positions), QB/TE 20% each, Bench 10%.
+    // Penalty: −8 per position scoring below 45, −16 if below 30 (broken).
+    const _posBase    = qbPosScore*0.20 + rbPosScore*0.25 + wrPosScore*0.25 + tePosScore*0.20 + benchPosScore*0.10;
+    const _posPenalty = [qbPosScore, rbPosScore, wrPosScore, tePosScore, benchPosScore]
+                          .reduce((pen, s) => pen + (s < 30 ? 16 : s < 45 ? 8 : 0), 0);
+    const posStrScore = Math.min(100, Math.max(0, Math.round(_posBase - _posPenalty)));
 
     // ── Category 2: Value / Tier Awareness ──────────────────────────────────────
     // BPA reconstruction: for each of my picks, find the best available skill-position
@@ -1449,14 +1498,11 @@
     const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 30))));
 
     // ── Category 3: Depth Quality ────────────────────────────────────────────────
-    // Average rank of bench picks — calibrated to where bench players actually fall.
-    // In a 16-round draft, bench picks (rounds 10-16) are typically rank 90-200.
+    // Uses myBench and avgBR already computed above.
     // rank ≤ 60 → 100 (elite stash), rank 200 → 0 (pure filler). Range = 140.
-    const benchPicks = slots.filter(s => s.label === 'BN' && s.filled).map(s => s.filled);
     let depScore = 50;
-    if (benchPicks.length) {
-      const avgBenchRank = benchPicks.reduce((s, p) => s + p.playerRank, 0) / benchPicks.length;
-      depScore = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBenchRank - 60) * (100 / 140))));
+    if (myBench.length) {
+      depScore = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBR - 60) * (100 / 140))));
     }
 
     // ── Category 4: Scarcity Recognition ────────────────────────────────────────
@@ -1492,13 +1538,13 @@
     else cohScore = 55; // no clear strategy
 
     // ── Overall score & letter grade ─────────────────────────────────────────────
-    const weights = { bal: 0.25, val: 0.25, dep: 0.20, scar: 0.15, coh: 0.15 };
+    const weights = { pos: 0.25, val: 0.25, dep: 0.20, scar: 0.15, coh: 0.15 };
     const overall = Math.round(
-      balScore  * weights.bal +
-      valScore  * weights.val +
-      depScore  * weights.dep +
-      scarScore * weights.scar +
-      cohScore  * weights.coh
+      posStrScore * weights.pos +
+      valScore    * weights.val +
+      depScore    * weights.dep +
+      scarScore   * weights.scar +
+      cohScore    * weights.coh
     );
 
     function toGrade(n) {
@@ -1516,80 +1562,30 @@
       return 'F';
     }
 
-    // ── Positional grades ─────────────────────────────────────────────────────────
-    const myRBs  = myPicks.filter(p => p.playerPos==='RB').sort((a,b) => a.playerRank - b.playerRank);
-    const myWRs  = myPicks.filter(p => p.playerPos==='WR').sort((a,b) => a.playerRank - b.playerRank);
-    const myQBs  = myPicks.filter(p => p.playerPos==='QB').sort((a,b) => a.playerRank - b.playerRank);
-    const myTEs  = myPicks.filter(p => p.playerPos==='TE').sort((a,b) => a.playerRank - b.playerRank);
-    const myBench = slots.filter(s => s.label==='BN' && s.filled).map(s => s.filled);
-
+    // ── Positional grade cards (scores already computed above) ───────────────────
     function posGrade(score) { return toGrade(Math.round(score)); }
 
-    // QB: use positional rank so QB1 always scores 100 regardless of overall rank
-    const qbStarter    = myQBs[0] ? myQBs[0].playerRank : 999;
-    const qbBackup     = myQBs[1] ? myQBs[1].playerRank : 999;
-    const qbPosRankNum = myQBs[0] ? allRankings.filter(r => r.pos === 'QB' && r.rank <= qbStarter).length : 999;
-    const qbStartScore = qbPosRankNum <= 1 ? 100 : qbPosRankNum <= 3 ? 85 : qbPosRankNum <= 6 ? 70 : qbPosRankNum <= 10 ? 52 : 32;
-    const qbBackScore  = qbBackup < 999 ? (qbPosRankNum <= 6 ? 15 : 10) : 0;
-    const qbPosScore   = Math.min(100, qbStartScore + qbBackScore);
     const qbFactors = [
       { label: 'Starter Tier', val: Math.round(qbStartScore) },
       { label: 'Has Backup',   val: myQBs.length >= 2 ? 100 : 0 },
       { label: 'Backup Value', val: qbBackup < 999 ? Math.min(100, Math.round(100 - (qbBackup - 40) * 1.5)) : 0 },
     ];
-
-    // RB: use positional rank so RB1 always scores 100 regardless of overall rank
-    const rb1 = myRBs[0] ? myRBs[0].playerRank : 999;
-    const rb2 = myRBs[1] ? myRBs[1].playerRank : 999;
-    const rb1PosRankNum = myRBs[0] ? allRankings.filter(r => r.pos === 'RB' && r.rank <= rb1).length : 999;
-    const rb2PosRankNum = myRBs[1] ? allRankings.filter(r => r.pos === 'RB' && r.rank <= rb2).length : 999;
-    const rbCountBonus  = Math.min(15, (myRBs.length - 2) * 5);
-    const rb1Score = rb1PosRankNum <= 1 ? 100 : rb1PosRankNum <= 4  ? 85 : rb1PosRankNum <= 8  ? 70 : rb1PosRankNum <= 15 ? 52 : 32;
-    const rb2Score = rb2PosRankNum <= 5 ? 90  : rb2PosRankNum <= 10 ? 75 : rb2PosRankNum <= 20 ? 58 : rb2PosRankNum <= 999 ? 38 : 0;
-    const rbPosScore = Math.min(100, rb1Score * 0.55 + rb2Score * 0.35 + rbCountBonus);
     const rbFactors = [
       { label: 'RB1 Tier',    val: Math.round(rb1Score) },
       { label: 'RB2 Tier',    val: myRBs.length >= 2 ? Math.round(rb2Score) : 0 },
       { label: 'Depth Count', val: Math.min(100, myRBs.length * 20) },
     ];
-
-    // WR: use positional rank so WR1 always scores 100 regardless of overall rank
-    const wr1 = myWRs[0] ? myWRs[0].playerRank : 999;
-    const wr2 = myWRs[1] ? myWRs[1].playerRank : 999;
-    const wr1PosRankNum = myWRs[0] ? allRankings.filter(r => r.pos === 'WR' && r.rank <= wr1).length : 999;
-    const wr2PosRankNum = myWRs[1] ? allRankings.filter(r => r.pos === 'WR' && r.rank <= wr2).length : 999;
-    const wrCountBonus  = Math.min(15, (myWRs.length - 2) * 5);
-    const wr1Score = wr1PosRankNum <= 1 ? 100 : wr1PosRankNum <= 4  ? 85 : wr1PosRankNum <= 8  ? 70 : wr1PosRankNum <= 15 ? 52 : 32;
-    const wr2Score = wr2PosRankNum <= 5 ? 90  : wr2PosRankNum <= 10 ? 75 : wr2PosRankNum <= 20 ? 58 : wr2PosRankNum <= 999 ? 38 : 0;
-    const wrPosScore = Math.min(100, wr1Score * 0.50 + wr2Score * 0.35 + wrCountBonus);
     const wrFactors = [
       { label: 'WR1 Tier',    val: Math.round(wr1Score) },
       { label: 'WR2 Tier',    val: myWRs.length >= 2 ? Math.round(wr2Score) : 0 },
       { label: 'Depth Count', val: Math.min(100, myWRs.length * 20) },
     ];
-
-    // TE: thresholds calibrated to actual TE distribution in the overall rankings.
-    // TE1 ≈ rank 22 (McBride), TE2 ≈ 32, TE3-5 ≈ 57-68, TE6-9 ≈ 85-115, TE10+ ≈ 127+
-    const te1 = myTEs[0] ? myTEs[0].playerRank : 999;
-    const te2 = myTEs[1] ? myTEs[1].playerRank : 999;
-    const teStartScore = te1 <= 22 ? 100 : te1 <= 38 ? 90 : te1 <= 72 ? 80 : te1 <= 115 ? 63 : te1 <= 999 ? 42 : 0;
-    const teBackScore  = te2 <= 999 ? 10 : 0;
-    const tePosScore   = Math.min(100, teStartScore + teBackScore);
     // Position Rank: how many TEs are ranked above yours? TE1=100, TE2=80, TE3-4=60, TE5-6=42, TE7+=22
-    const tePosRankNum = allRankings.filter(r => r.pos === 'TE' && r.rank <= te1).length;
-    const tePosRankScore = tePosRankNum <= 1 ? 100 : tePosRankNum <= 2 ? 80 : tePosRankNum <= 4 ? 60 : tePosRankNum <= 6 ? 42 : 22;
     const teFactors = [
       { label: 'Starter Tier',  val: Math.round(teStartScore) },
       { label: 'Position Rank', val: tePosRankScore },
       { label: 'Has Backup',    val: myTEs.length >= 2 ? 100 : 0 },
     ];
-
-    // BENCH: avg rank of bench players + best single asset + positional variety
-    const avgBR = myBench.length ? myBench.reduce((s,p) => s + p.playerRank, 0) / myBench.length : 200;
-    const bestBenchRank = myBench.length ? Math.min(...myBench.map(p => p.playerRank)) : 200;
-    const benchAvgScore  = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBR - 60) * (100/140))));
-    const bestAssetScore = bestBenchRank <= 40 ? 100 : bestBenchRank <= 70 ? 80 : bestBenchRank <= 100 ? 60 : bestBenchRank <= 140 ? 40 : 20;
-    const benchPosScore  = Math.round(benchAvgScore * 0.5 + bestAssetScore * 0.3 + Math.min(100, new Set(myBench.map(p=>p.playerPos)).size * 20) * 0.2);
     const benchFactors = [
       { label: 'Avg Player Tier', val: benchAvgScore },
       { label: 'Best Asset',      val: bestAssetScore },
@@ -1646,7 +1642,7 @@
       }
       if (grade === 'B') {
         if (dep < 50) return "Starters look good on paper. Just pray nobody goes on IR because the depth is shaky.";
-        if (bal < 70) return "Some starter gaps could hurt — but there's enough upside here to paper over the cracks.";
+        if (bal < 70) return "A positional weakness or two could bite — but there's enough upside to paper over the cracks.";
         return "Solid. Won't blow anyone away on draft day but will be competitive week to week.";
       }
       if (grade === 'B-') {
@@ -1660,7 +1656,7 @@
         return "Average. Will need the waiver wire to work overtime to make the playoffs.";
       }
       if (grade === 'C') {
-        if (bal < 65) return "Starter slots sitting empty after 16 rounds. That's not a strategy, that's a mistake.";
+        if (bal < 65) return "Multiple positions are badly underdrafted. This roster has real holes that the wire alone won't fix.";
         if (val < 40) return "Reached early, reached late, reached in the middle. The rankings exist for a reason.";
         return "Clanker has concerns. Multiple concerns. Overlapping concerns.";
       }
@@ -1674,16 +1670,16 @@
       return "A historic collapse across all sixteen rounds. Clanker needs a moment.";
     }
 
-    const narrative = _blurb(balScore, valScore, depScore, scarScore, cohScore, overall, toGrade(overall), myPicks);
+    const narrative = _blurb(posStrScore, valScore, depScore, scarScore, cohScore, overall, toGrade(overall), myPicks);
 
     return {
       overall, grade: toGrade(overall),
       cats: {
-        'Positional Balance': balScore,
-        'Value':              valScore,
-        'Bench Depth':        depScore,
-        'Scarcity Awareness': scarScore,
-        'Strategy Coherence': cohScore,
+        'Positional Strength': posStrScore,
+        'Value':               valScore,
+        'Bench Depth':         depScore,
+        'Scarcity Awareness':  scarScore,
+        'Strategy Coherence':  cohScore,
       },
       posGrades,
       narrative,
