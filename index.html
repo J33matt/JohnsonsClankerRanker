@@ -1590,6 +1590,9 @@ if (tabName === 'ff-draft') renderDraftLobbyTab();
   window._jcrAuth = {
     // Show sign-in modal if not authenticated. Resolves when signed in.
     ensureAuth: function() { return _ensureAuth(); },
+    // Silently wait for Firebase to restore an existing session (resolves even if not signed in).
+    // Call this before reading getUid() on page load to avoid a race on hard refresh.
+    waitForRestore: function() { return _tryRestoreAuth(); },
     // Reset load state so storage re-fetches from Firestore after sign-in
     resetLoad: function() { _loaded = false; _loading = null; },
     // Get current Firebase UID (null if not signed in)

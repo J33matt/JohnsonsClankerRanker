@@ -101,6 +101,12 @@
 
   // ── Identity ────────────────────────────────────────────────────────────────
   async function _draftGetIdentity() {
+    // Wait for Firebase to restore a prior session before reading UID.
+    // Without this, a hard refresh (Ctrl+Shift+R) clears JS state and getUid()
+    // returns null before onAuthStateChanged has fired, triggering a spurious login.
+    if (typeof _jcrAuth !== 'undefined' && _jcrAuth.waitForRestore) {
+      await _jcrAuth.waitForRestore();
+    }
     const uid  = typeof _jcrAuth !== 'undefined' && _jcrAuth.getUid();
     const name = typeof _jcrAuth !== 'undefined' && _jcrAuth.getDisplayName();
     if (uid && name) return { uid, name, isGuest: false };
