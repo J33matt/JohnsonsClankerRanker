@@ -1460,15 +1460,18 @@
     const tePosScore     = Math.min(100, teStartScore + teBackScore);
 
     // Bench thresholds scaled by league size.
-    // Floor anchored at leagueSize×9 (≈ where bench picks actually start after starters
-    // are filled). At 10-team: floor=90, range=140, bestFloors=[60,90,120,150].
+    // Floor anchored at leagueSize×11 (≈ the realistic best-case bench avg rank —
+    // bench picks start at pick ~91 in a 10-team draft, so the actual achievable
+    // minimum average is ~105-110, not 90). At 10-team: floor=110, range=130,
+    // bestFloors=[100,120,140,160] — A+ bench requires rank≤110 avg (elite sleeper
+    // hunting), typical good bench ~125-135 lands B/B+.
     const _lsScale      = leagueSize / 10;
-    const _benchFloor   = Math.round(90  * _lsScale);
-    const _benchRange   = Math.round(140 * _lsScale);
-    const _bf1          = Math.round(60  * _lsScale);
-    const _bf2          = Math.round(90  * _lsScale);
-    const _bf3          = Math.round(120 * _lsScale);
-    const _bf4          = Math.round(150 * _lsScale);
+    const _benchFloor   = Math.round(110 * _lsScale);
+    const _benchRange   = Math.round(130 * _lsScale);
+    const _bf1          = Math.round(100 * _lsScale);
+    const _bf2          = Math.round(120 * _lsScale);
+    const _bf3          = Math.round(140 * _lsScale);
+    const _bf4          = Math.round(165 * _lsScale);
 
     const avgBR         = myBench.length ? myBench.reduce((s,p) => s + p.playerRank, 0) / myBench.length : _bf4 * 2;
     const bestBenchRank = myBench.length ? Math.min(...myBench.map(p => p.playerRank)) : _bf4 * 2;
