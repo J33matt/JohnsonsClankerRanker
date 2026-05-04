@@ -1519,9 +1519,9 @@
       });
       const bpaRank = bpa ? Number(bpa.rank) : Number(p.playerRank);
       // Stack reach waiver: waive up to 10 ranks of reach when a WR/TE is on the
-      // same team as the starting QB (myQBs[0]), but only if that QB was already
-      // drafted before this pick AND this WR/TE is a starter (not on bench).
-      // Bench-on-bench correlation isn't a real stack — it's a coincidence.
+      // same team as the starting QB (myQBs[0]) and that QB was already drafted
+      // before this pick. WR3/bench WRs included — they can be flexed.
+      // RBs excluded: QB/RB correlation isn't a meaningful stack.
       let stackWaiver = 0;
       if ((p.playerPos === 'WR' || p.playerPos === 'TE') && p.playerTeam && myQBs[0]) {
         const _starterQBAlreadyPicked = allPicksSorted.some(q =>
@@ -1529,8 +1529,7 @@
           Number(q.pickIndex) < myIdx &&
           q.playerRank === myQBs[0].playerRank
         );
-        const _isStarterWRTE = !myBench.some(b => b.playerRank === Number(p.playerRank));
-        if (_starterQBAlreadyPicked && myQBs[0].playerTeam === p.playerTeam && _isStarterWRTE) stackWaiver = 10;
+        if (_starterQBAlreadyPicked && myQBs[0].playerTeam === p.playerTeam) stackWaiver = 10;
       }
       totalReach += Math.max(0, Number(p.playerRank) - bpaRank - stackWaiver);
     });
@@ -1588,14 +1587,13 @@
     const wrEarly = pos4.filter(p => p === 'WR').length;
 
     // Stack detection (hoisted — also needed for badges below)
-    // Only counts if the QB is your starter (myQBs[0]) and the correlated WR/TE
-    // is also a starter — a bench QB and his backup WR on the same team isn't a stack.
+    // Requires the QB to be the starter (myQBs[0]). Any WR or TE on the same team
+    // counts regardless of bench status — WR3 can easily be flexed week-to-week.
+    // RBs are intentionally excluded: QB/RB correlation isn't a meaningful stack.
     const _starterQBTeam = myQBs[0] ? myQBs[0].playerTeam : null;
-    const _benchSet      = new Set(myBench.map(p => p.playerRank));
     const _hasStack      = !!_starterQBTeam && myPicks.some(p =>
       (p.playerPos === 'WR' || p.playerPos === 'TE') &&
-      p.playerTeam === _starterQBTeam &&
-      !_benchSet.has(p.playerRank)
+      p.playerTeam === _starterQBTeam
     );
 
     // Bully TE: 2+ TEs drafted before round 6
