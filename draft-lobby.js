@@ -17,7 +17,9 @@
   let _lastDraftData = null;
   let _timerInterval = null;
   let _botTimeout    = null;
-  let _bbLastSnapRound = -1;
+  let _bbLastSnapRound  = -1;
+  let _bbScrollTop      = 0;
+  let _bbUserScrolled   = false;
   let _verdictShown  = false;
   window._draftQueue    = [];
   window._ffdbBoardView = 'round'; // 'round' | 'roster'
@@ -984,13 +986,26 @@
       });
     });
 
-    // Auto-scroll big board: snap position updates only on new round,
-    // but scrollTop is always restored since DOM is replaced each render
+    // Auto-scroll big board: only fires when a new round begins, not every pick.
+    // Current round sits in the second-to-last visible row (6 rows scrolled above it),
+    // so the next round is always visible at the bottom. No scroll needed until
+    // round 8 (index 7) since all 8 rounds fit on screen before that.
+    // If the user has manually scrolled since the last auto-scroll, respect their
+    // position and skip — the flag resets when the next new round begins.
     const bbNew = document.getElementById('ffdb-bb-scroll');
     if (bbNew && boardView === 'round') {
-      const curRound0 = Math.floor(currentPickIndex / leagueSize);
-      if (curRound0 !== _bbLastSnapRound) _bbLastSnapRound = curRound0;
-      bbNew.scrollTop = Math.max(0, _bbLastSnapRound) * 56;
+      const curRound0  = Math.floor(currentPickIndex / leagueSize);
+      const isNewRound = curRound0 !== _bbLastSnapRound;
+      if (isNewRound) {
+        _bbLastSnapRound = curRound0;
+        if (!_bbUserScrolled && curRound0 >= 7) {
+          // (curRound0 - 6) puts current round in the 7th visible slot (2nd from bottom)
+          _bbScrollTop = (curRound0 - 6) * 56;
+        }
+        _bbUserScrolled = false; // reset each round so next round can auto-scroll
+      }
+      bbNew.scrollTop = _bbScrollTop;
+      bbNew.onscroll  = () => { _bbScrollTop = bbNew.scrollTop; _bbUserScrolled = true; };
     }
 
     _startTimer(timerEndsAt, timerSecs, lobbyId);
@@ -2007,6 +2022,8 @@
     window._draftQueue    = [];
     window._ffdbBoardView = 'round';
     _bbLastSnapRound      = -1;
+    _bbScrollTop          = 0;
+    _bbUserScrolled       = false;
     _poolScrollTop        = 0;
 
     const { draftOrder = [], participants = {}, settings = {} } = data;
