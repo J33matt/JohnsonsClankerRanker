@@ -817,7 +817,8 @@
         ${_pLogoUrl ? `<img class="ffdb-p-thumb-logo" src="${_pLogoUrl}" onerror="this.style.display='none'" alt="">` : ''}
         ${_pHeadshotUrl ? `<img class="ffdb-p-thumb-head" src="${_pHeadshotUrl}" onerror="this.style.display='none';var l=this.parentNode.querySelector('.ffdb-p-thumb-logo');if(l)l.style.opacity='0.65';" alt="">` : ''}
       </div>`;
-      poolRows.push(`<div class="ffdb-player-row${inQueue?' ffdb-in-queue':''}">
+      const _posRowColor = _posColor(p.pos);
+      poolRows.push(`<div class="ffdb-player-row${inQueue?' ffdb-in-queue':''}" style="background:${_posRowColor}0f;border-left:2px solid ${_posRowColor}55">
         <span class="ffdb-p-rank">${p.rank}</span>
         <span class="ffdb-pos-badge" style="background:${_posColor(p.pos)}">${p.pos}</span>
         <span class="ffdb-p-name">${p.name}</span>

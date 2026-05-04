@@ -3711,8 +3711,8 @@
 .ffdb-pool-list::-webkit-scrollbar-track { background: var(--surface2); border-radius: 8px; }
 .ffdb-pool-list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 8px; }
 
-.ffdb-player-row { display: flex; align-items: center; gap: 9px; padding: 5px 14px; border-bottom: 1px solid var(--border); min-height: 52px; }
-.ffdb-player-row:hover { background: rgba(255,255,255,0.03); }
+.ffdb-player-row { display: flex; align-items: center; gap: 9px; padding: 5px 14px; border-bottom: 1px solid var(--border); min-height: 52px; border-left: 2px solid transparent; transition: filter 0.1s; }
+.ffdb-player-row:hover { filter: brightness(1.18); }
 .ffdb-player-row:last-child { border-bottom: none; }
 .ffdb-p-rank { font-family: 'Barlow Condensed', sans-serif; font-size: 0.78rem; color: var(--muted); width: 24px; text-align: right; flex-shrink: 0; }
 .ffdb-pos-badge { font-family: 'Bebas Neue', sans-serif; font-size: 0.68rem; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; color: #fff; flex-shrink: 0; }
