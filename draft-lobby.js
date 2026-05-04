@@ -1450,16 +1450,30 @@
 
     const te1 = myTEs[0] ? myTEs[0].playerRank : 999;
     const te2 = myTEs[1] ? myTEs[1].playerRank : 999;
-    const teStartScore   = te1 <= 22 ? 100 : te1 <= 38 ? 90 : te1 <= 72 ? 80 : te1 <= 115 ? 63 : te1 <= 999 ? 42 : 0;
+    // Use positional rank (TE1, TE2…) so the score is league-size independent.
+    // Absolute rank thresholds would inflate scores in shallow leagues where a
+    // top-22 TE is easy to land vs. a 12-team draft where it costs a 2nd-round pick.
+    const tePosRankNum   = myTEs[0] ? allRankings.filter(r => r.pos === 'TE' && r.rank <= te1).length : 999;
+    const tePosRankScore = tePosRankNum <= 1 ? 100 : tePosRankNum <= 2 ? 80 : tePosRankNum <= 4 ? 60 : tePosRankNum <= 6 ? 42 : 22;
+    const teStartScore   = tePosRankNum <= 1 ? 100 : tePosRankNum <= 2 ? 90 : tePosRankNum <= 4 ? 80 : tePosRankNum <= 6 ? 63 : tePosRankNum < 999 ? 42 : 0;
     const teBackScore    = te2 <= 999 ? 10 : 0;
     const tePosScore     = Math.min(100, teStartScore + teBackScore);
-    const tePosRankNum   = allRankings.filter(r => r.pos === 'TE' && r.rank <= te1).length;
-    const tePosRankScore = tePosRankNum <= 1 ? 100 : tePosRankNum <= 2 ? 80 : tePosRankNum <= 4 ? 60 : tePosRankNum <= 6 ? 42 : 22;
 
-    const avgBR         = myBench.length ? myBench.reduce((s,p) => s + p.playerRank, 0) / myBench.length : 200;
-    const bestBenchRank = myBench.length ? Math.min(...myBench.map(p => p.playerRank)) : 200;
-    const benchAvgScore  = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBR - 60) * (100/140))));
-    const bestAssetScore = bestBenchRank <= 40 ? 100 : bestBenchRank <= 70 ? 80 : bestBenchRank <= 100 ? 60 : bestBenchRank <= 140 ? 40 : 20;
+    // Bench thresholds scaled by league size so an 8-team drafter isn't rewarded
+    // for naturally having higher-ranked bench players than a 12-team drafter.
+    // At 10-team (default): floor=60, range=140, bestFloors=[40,70,100,140] — same as before.
+    const _lsScale      = leagueSize / 10;
+    const _benchFloor   = Math.round(60  * _lsScale);
+    const _benchRange   = Math.round(140 * _lsScale);
+    const _bf1          = Math.round(40  * _lsScale);
+    const _bf2          = Math.round(70  * _lsScale);
+    const _bf3          = Math.round(100 * _lsScale);
+    const _bf4          = Math.round(140 * _lsScale);
+
+    const avgBR         = myBench.length ? myBench.reduce((s,p) => s + p.playerRank, 0) / myBench.length : _bf4 * 2;
+    const bestBenchRank = myBench.length ? Math.min(...myBench.map(p => p.playerRank)) : _bf4 * 2;
+    const benchAvgScore  = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBR - _benchFloor) * (100 / _benchRange))));
+    const bestAssetScore = bestBenchRank <= _bf1 ? 100 : bestBenchRank <= _bf2 ? 80 : bestBenchRank <= _bf3 ? 60 : bestBenchRank <= _bf4 ? 40 : 20;
     const benchPosScore  = Math.round(benchAvgScore * 0.5 + bestAssetScore * 0.3 + Math.min(100, new Set(myBench.map(p=>p.playerPos)).size * 20) * 0.2);
 
     // ── Category 1: Positional Strength ──────────────────────────────────────────
@@ -1498,11 +1512,12 @@
     const valScore = Math.min(100, Math.max(0, Math.round(100 - avgReach * (100 / 30))));
 
     // ── Category 3: Depth Quality ────────────────────────────────────────────────
-    // Uses myBench and avgBR already computed above.
-    // rank ≤ 60 → 100 (elite stash), rank 200 → 0 (pure filler). Range = 140.
+    // Uses myBench, avgBR, and the league-size-scaled thresholds (_benchFloor, _benchRange)
+    // already computed above. Scaling ensures an 8-team drafter isn't rewarded simply
+    // for having naturally higher-ranked bench players than a 12-team drafter.
     let depScore = 50;
     if (myBench.length) {
-      depScore = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBR - 60) * (100 / 140))));
+      depScore = Math.min(100, Math.max(0, Math.round(100 - Math.max(0, avgBR - _benchFloor) * (100 / _benchRange))));
     }
 
     // ── Category 4: Scarcity Recognition ────────────────────────────────────────
