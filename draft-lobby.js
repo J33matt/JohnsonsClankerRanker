@@ -1575,19 +1575,46 @@
     scarScore = Math.min(100, Math.max(0, scarScore));
 
     // ── Category 5: Strategy Coherence ──────────────────────────────────────────
-    // Measure how consistently a strategy was applied (RB heavy, WR heavy, etc.)
-    // Simple: check if top 4 picks cluster into a recognizable pattern.
-    const top4 = myPicks.slice(0, Math.min(4, myPicks.length));
-    const pos4 = top4.map(p => p.playerPos);
+    // Reward drafters who committed to a recognizable strategy and executed it
+    // consistently. Checks positional patterns (hero RB, zero RB), team correlation
+    // (stacker), positional hoarding (bully TE), deliberate scarcity deferral
+    // (late QB/TE), and sleeper-heavy builds (rookie fever). Patterns are checked
+    // in priority order — most committed/specific strategy wins.
+    const top4    = myPicks.slice(0, Math.min(4, myPicks.length));
+    const pos4    = top4.map(p => p.playerPos);
     const rbEarly = pos4.filter(p => p === 'RB').length;
     const wrEarly = pos4.filter(p => p === 'WR').length;
-    // Reward clear early-round strategy commitment
+
+    // Stack detection (hoisted — also needed for badges below)
+    const _myQBTeams = new Set(myQBs.map(q => q.playerTeam).filter(Boolean));
+    const _hasStack  = myPicks.some(p =>
+      (p.playerPos === 'WR' || p.playerPos === 'TE') &&
+      p.playerTeam && _myQBTeams.has(p.playerTeam)
+    );
+
+    // Bully TE: 2+ TEs drafted before round 6
+    const _earlyTECnt = myTEs.filter(p => Number(p.pickIndex) < leagueSize * 5).length;
+
+    // Late QB/TE: deliberately deferred both scarce positions — QB round 7+, TE round 6+
+    const _firstQBRound = myQBs.length ? Math.floor(Math.min(...myQBs.map(q => Number(q.pickIndex))) / leagueSize) + 1 : 999;
+    const _firstTERound = myTEs.length ? Math.floor(Math.min(...myTEs.map(t => Number(t.pickIndex))) / leagueSize) + 1 : 999;
+    const _isLateQBTE   = myQBs.length > 0 && myTEs.length > 0 && _firstQBRound >= 7 && _firstTERound >= 6;
+
+    // Rookie fever: 3+ rookies in the pool (requires FF_ROOKIES from nfl-data.js)
+    const _rookieCnt = (typeof FF_ROOKIES !== 'undefined')
+      ? myPicks.filter(p => FF_ROOKIES.has((p.playerName || '').toLowerCase())).length
+      : 0;
+
     let cohScore = 50;
-    if (rbEarly >= 3) cohScore = 85; // hero RB
-    else if (wrEarly >= 3) cohScore = 80; // zero RB
-    else if (rbEarly >= 2 && wrEarly >= 1) cohScore = 75; // balanced
-    else if (wrEarly >= 2 && rbEarly >= 1) cohScore = 72;
-    else cohScore = 55; // no clear strategy
+    if      (rbEarly >= 3)                cohScore = 85; // Hero RB
+    else if (wrEarly >= 3)                cohScore = 80; // Zero RB
+    else if (_hasStack)                   cohScore = 78; // Stacker (QB + same-team WR/TE)
+    else if (_earlyTECnt >= 2)            cohScore = 76; // Bully TE
+    else if (rbEarly >= 2 && wrEarly >= 1) cohScore = 75; // Balanced — RB lean
+    else if (_isLateQBTE)                 cohScore = 73; // Late QB/TE
+    else if (wrEarly >= 2 && rbEarly >= 1) cohScore = 72; // Balanced — WR lean
+    else if (_rookieCnt >= 3)             cohScore = 70; // Rookie Fever
+    else                                  cohScore = 55; // No clear strategy
 
     // ── Overall score & letter grade ─────────────────────────────────────────────
     const weights = { pos: 0.25, val: 0.25, dep: 0.20, scar: 0.15, coh: 0.15 };
@@ -1725,11 +1752,7 @@
     const narrative = _blurb(posStrScore, valScore, depScore, scarScore, cohScore, overall, toGrade(overall), myPicks);
 
     // ── Roster Profile Badges ─────────────────────────────────────────────────────
-    const _myQBTeams  = new Set(myQBs.map(q => q.playerTeam).filter(Boolean));
-    const _hasStack   = myPicks.some(p =>
-      (p.playerPos === 'WR' || p.playerPos === 'TE') &&
-      p.playerTeam && _myQBTeams.has(p.playerTeam)
-    );
+    // (_myQBTeams and _hasStack already computed in Category 5 above)
     const _sleeperCnt = myPicks.filter(p => Number(p.playerRank) > 150).length;
     const badges = [];
     if (valScore > 90)                               badges.push({ label: 'Safe Bet',            emoji: '🛡️' });
