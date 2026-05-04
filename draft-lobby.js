@@ -1520,16 +1520,19 @@
       const bpaRank = bpa ? Number(bpa.rank) : Number(p.playerRank);
       // Stack reach waiver: waive up to 10 ranks of reach when a WR/TE is on the
       // same team as the starting QB (myQBs[0]) and that QB was already drafted
-      // before this pick. WR3/bench WRs included — they can be flexed.
-      // RBs excluded: QB/RB correlation isn't a meaningful stack.
+      // before this pick. WR1-WR3 count (WR3 can flex); WR4+ are pure bench.
+      // TE1 only. RBs excluded: QB/RB correlation isn't a meaningful stack.
       let stackWaiver = 0;
-      if ((p.playerPos === 'WR' || p.playerPos === 'TE') && p.playerTeam && myQBs[0]) {
-        const _starterQBAlreadyPicked = allPicksSorted.some(q =>
+      if (p.playerTeam && myQBs[0] && myQBs[0].playerTeam === p.playerTeam) {
+        const _isStackablePos =
+          (p.playerPos === 'WR' && myWRs.slice(0, 3).some(w => w.playerRank === Number(p.playerRank))) ||
+          (p.playerPos === 'TE' && myTEs[0] && myTEs[0].playerRank === Number(p.playerRank));
+        const _starterQBAlreadyPicked = _isStackablePos && allPicksSorted.some(q =>
           q.uid === uid &&
           Number(q.pickIndex) < myIdx &&
           q.playerRank === myQBs[0].playerRank
         );
-        if (_starterQBAlreadyPicked && myQBs[0].playerTeam === p.playerTeam) stackWaiver = 10;
+        if (_starterQBAlreadyPicked) stackWaiver = 10;
       }
       totalReach += Math.max(0, Number(p.playerRank) - bpaRank - stackWaiver);
     });
@@ -1587,12 +1590,12 @@
     const wrEarly = pos4.filter(p => p === 'WR').length;
 
     // Stack detection (hoisted — also needed for badges below)
-    // Requires the QB to be the starter (myQBs[0]). Any WR or TE on the same team
-    // counts regardless of bench status — WR3 can easily be flexed week-to-week.
-    // RBs are intentionally excluded: QB/RB correlation isn't a meaningful stack.
-    const _starterQBTeam = myQBs[0] ? myQBs[0].playerTeam : null;
-    const _hasStack      = !!_starterQBTeam && myPicks.some(p =>
-      (p.playerPos === 'WR' || p.playerPos === 'TE') &&
+    // Requires the QB to be the starter (myQBs[0]). WR1-WR3 count (WR3 can flex);
+    // WR4+ are pure bench and wouldn't start in a healthy lineup. TE1 only — TE2
+    // is a bench handcuff. RBs excluded: QB/RB correlation isn't a meaningful stack.
+    const _starterQBTeam  = myQBs[0] ? myQBs[0].playerTeam : null;
+    const _stackableWRTE  = [...myWRs.slice(0, 3), myTEs[0]].filter(Boolean);
+    const _hasStack       = !!_starterQBTeam && _stackableWRTE.some(p =>
       p.playerTeam === _starterQBTeam
     );
 
