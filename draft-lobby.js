@@ -1479,13 +1479,23 @@
     const bestAssetScore = bestBenchRank <= _bf1 ? 100 : bestBenchRank <= _bf2 ? 80 : bestBenchRank <= _bf3 ? 60 : bestBenchRank <= _bf4 ? 40 : 20;
     const benchPosScore  = Math.round(benchAvgScore * 0.5 + bestAssetScore * 0.3 + Math.min(100, new Set(myBench.map(p=>p.playerPos)).size * 20) * 0.2);
 
+    // ── Zero RB detection (used in Cat 1 penalty and badges) ─────────────────────
+    const _top4Pos = myPicks.slice(0, 4).map(p => p.playerPos);
+    const isZeroRB = _top4Pos.filter(p => p === 'WR').length >= 3;
+
     // ── Category 1: Positional Strength ──────────────────────────────────────────
     // Weighted average of the 5 positional grades, with a penalty for any glaring
     // weakness. Weights: RB/WR 25% each (core positions), QB/TE 20% each, Bench 10%.
-    // Penalty: −8 per position scoring below 45, −16 if below 30 (broken).
-    const _posBase    = qbPosScore*0.20 + rbPosScore*0.25 + wrPosScore*0.25 + tePosScore*0.20 + benchPosScore*0.10;
-    const _posPenalty = [qbPosScore, rbPosScore, wrPosScore, tePosScore, benchPosScore]
-                          .reduce((pen, s) => pen + (s < 30 ? 16 : s < 45 ? 8 : 0), 0);
+    // Penalty: −8 per position scoring below threshold, −16 if below 30 (broken).
+    // Zero RB curve: if drafter went Zero RB (3+ WRs in top 4) and WR room is elite
+    // (wrPosScore > 85), relax the RB penalty threshold from 45 → 35 — a deliberate
+    // strategy shouldn't be punished the same as an accidental positional hole.
+    const _posBase      = qbPosScore*0.20 + rbPosScore*0.25 + wrPosScore*0.25 + tePosScore*0.20 + benchPosScore*0.10;
+    const _rbPenThresh  = (isZeroRB && wrPosScore > 85) ? 35 : 45;
+    const _posPenalty   = [
+      [qbPosScore, 45], [rbPosScore, _rbPenThresh], [wrPosScore, 45],
+      [tePosScore, 45], [benchPosScore, 45]
+    ].reduce((pen, [s, thr]) => pen + (s < 30 ? 16 : s < thr ? 8 : 0), 0);
     const posStrScore = Math.min(100, Math.max(0, Math.round(_posBase - _posPenalty)));
 
     // ── Category 2: Value / Tier Awareness ──────────────────────────────────────
@@ -1508,7 +1518,19 @@
         return !takenStr.has(String(r.rank));
       });
       const bpaRank = bpa ? Number(bpa.rank) : Number(p.playerRank);
-      totalReach += Math.max(0, Number(p.playerRank) - bpaRank);
+      // Stack reach waiver: if this WR/TE is on the same NFL team as a QB already
+      // drafted by this team, waive up to 10 ranks of reach — stacking a receiver
+      // with your QB is intentional upside-chasing, not a blind reach.
+      let stackWaiver = 0;
+      if ((p.playerPos === 'WR' || p.playerPos === 'TE') && p.playerTeam) {
+        const myQBsBefore = allPicksSorted.filter(q =>
+          q.uid === uid &&
+          Number(q.pickIndex) < myIdx &&
+          q.playerPos === 'QB'
+        );
+        if (myQBsBefore.some(q => q.playerTeam && q.playerTeam === p.playerTeam)) stackWaiver = 10;
+      }
+      totalReach += Math.max(0, Number(p.playerRank) - bpaRank - stackWaiver);
     });
     const avgReach = myPicks.length ? totalReach / myPicks.length : 0;
     // Normalize: 0 avg reach → 100 (pure BPA drafter), 45+ avg reach → 0.
@@ -1540,6 +1562,16 @@
     scarScore -= earlyKDST.length * 15;
     const lateKDST = latePicks.filter(p => p.playerPos === 'K' || p.playerPos === 'DST');
     scarScore += lateKDST.length * 8;
+    // Bye week logjam: if top 3 WRs share a bye, that's a nightmare management week.
+    // If top 2 RBs share a bye, that's a major problem too.
+    if (typeof BYE_WEEKS !== 'undefined') {
+      const _byeOf = p => (p && p.playerTeam ? BYE_WEEKS[p.playerTeam] || null : null);
+      const wrByes = myWRs.slice(0, 3).map(_byeOf).filter(Boolean);
+      const rbByes = myRBs.slice(0, 2).map(_byeOf).filter(Boolean);
+      const _hasDupe = arr => arr.length > 1 && arr.some((b, i) => arr.indexOf(b) !== i);
+      if (_hasDupe(wrByes)) scarScore -= 7;
+      if (_hasDupe(rbByes)) scarScore -= 5;
+    }
     scarScore = Math.min(100, Math.max(0, scarScore));
 
     // ── Category 5: Strategy Coherence ──────────────────────────────────────────
@@ -1692,6 +1724,20 @@
 
     const narrative = _blurb(posStrScore, valScore, depScore, scarScore, cohScore, overall, toGrade(overall), myPicks);
 
+    // ── Roster Profile Badges ─────────────────────────────────────────────────────
+    const _myQBTeams  = new Set(myQBs.map(q => q.playerTeam).filter(Boolean));
+    const _hasStack   = myPicks.some(p =>
+      (p.playerPos === 'WR' || p.playerPos === 'TE') &&
+      p.playerTeam && _myQBTeams.has(p.playerTeam)
+    );
+    const _sleeperCnt = myPicks.filter(p => Number(p.playerRank) > 150).length;
+    const badges = [];
+    if (valScore > 90)                               badges.push({ label: 'Safe Bet',            emoji: '🛡️' });
+    if (_sleeperCnt >= 3)                            badges.push({ label: 'Boom or Bust',         emoji: '💣' });
+    if (_hasStack && cohScore >= 72)                 badges.push({ label: 'Calculated Architect', emoji: '🎯' });
+    if (isZeroRB)                                    badges.push({ label: 'Zero RB',              emoji: '🏃' });
+    if (_top4Pos.filter(p => p === 'RB').length >= 3) badges.push({ label: 'Hero RB',             emoji: '💪' });
+
     return {
       overall, grade: toGrade(overall),
       cats: {
@@ -1703,6 +1749,7 @@
       },
       posGrades,
       narrative,
+      badges,
       picks: myPicks,
     };
   }
@@ -1856,6 +1903,7 @@
           <div class="ffcv-grade" style="color:${gColor}">${g.grade}</div>
         </div>
         <div class="ffcv-narrative">${g.narrative}</div>
+        ${(g.badges && g.badges.length) ? `<div class="ffcv-badges">${g.badges.map(b => `<span class="ffcv-badge">${b.emoji} ${b.label}</span>`).join('')}</div>` : ''}
         <div class="ffcv-body">
           <div class="ffcv-col-left">
             <div class="ffcv-col-title">RATINGS</div>
