@@ -1627,20 +1627,16 @@
       ? myPicks.filter(p => FF_ROOKIES.has((p.playerName || '').toLowerCase())).length
       : 0;
 
-    // All recognized strategies score 100 — no strategy is inherently better than
-    // another. The best strategy depends on draft position and board state, so
-    // ranking Hero RB above Zero RB (or any other ordering) is arbitrary bias.
-    // Differentiation between strategies already shows up in Positional Strength.
+    // Main strategies define positional identity; B-tier enhancers (stack, rookies)
+    // layer on top. Main + enhancer = 100, main alone = 85, enhancer only = 70, none = 55.
+    const _hasMainStrategy = rbEarly >= 3 || wrEarly >= 3 || _earlyTECnt >= 2 ||
+      (rbEarly >= 2 && wrEarly >= 1) || (wrEarly >= 2 && rbEarly >= 1) || _isLateQBTE;
+    const _hasBTier = _hasStack || _rookieCnt >= 3;
     let cohScore;
-    if      (rbEarly >= 3)                 cohScore = 100; // Hero RB
-    else if (wrEarly >= 3)                 cohScore = 100; // Zero RB
-    else if (_hasStack)                    cohScore = 100; // Stacker
-    else if (_earlyTECnt >= 2)             cohScore = 100; // Bully TE
-    else if (rbEarly >= 2 && wrEarly >= 1) cohScore = 100; // Balanced — RB lean
-    else if (_isLateQBTE)                  cohScore = 100; // Late QB/TE
-    else if (wrEarly >= 2 && rbEarly >= 1) cohScore = 100; // Balanced — WR lean
-    else if (_rookieCnt >= 3)              cohScore = 100; // Rookie Fever
-    else                                   cohScore =  55; // No clear strategy
+    if      (_hasMainStrategy && _hasBTier) cohScore = 100; // layered strategy
+    else if (_hasMainStrategy)              cohScore =  85; // main strategy only
+    else if (_hasBTier)                     cohScore =  70; // enhancer, no identity
+    else                                    cohScore =  55; // no clear strategy
 
     // ── Overall score & letter grade ─────────────────────────────────────────────
     const weights = { pos: 0.25, val: 0.25, dep: 0.20, scar: 0.15, coh: 0.15 };
