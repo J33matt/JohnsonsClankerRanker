@@ -1237,6 +1237,8 @@ function setNflView(view, btn) {
 
 function showNflTab(tabName, btn) {
   if (tabName !== 'ff-draft' && typeof _draftLeaveLobby === 'function') _draftLeaveLobby();
+  const _chatW = document.getElementById('ffdb-chat-widget');
+  if (_chatW) _chatW.style.display = tabName === 'ff-draft' ? '' : 'none';
   localStorage.setItem('activeNflTab', tabName);
   document.querySelectorAll('.nfl-panel').forEach(p => { p.style.display = 'none'; p.style.marginLeft = ''; p.style.marginRight = ''; p.style.width = ''; });
   document.querySelectorAll('#nfl-tabs button').forEach(b => b.classList.remove('active'));
