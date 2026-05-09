@@ -6708,6 +6708,8 @@ async function _predAutoGrade() {
 
 function showTab(id, btn) {
   localStorage.setItem('activeTab', id);
+  const _chatW = document.getElementById('ffdb-chat-widget');
+  if (_chatW) _chatW.style.display = 'none';
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + id).classList.add('active');
