@@ -10655,7 +10655,7 @@ async function renderSchedules() {
     // Scoreboard API doesn't have 2026 yet — fetch each team's schedule and dedupe
     const abbrs = Object.keys(NFL_TEAMS);
     const results = await Promise.all(abbrs.map(a =>
-      fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${_localToEspnAbbr[a]||a}/schedule?season=2026`)
+      fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${a}/schedule?season=2026`)
         .then(r=>r.json()).catch(()=>({events:[]}))
     ));
     const seen = new Set();
