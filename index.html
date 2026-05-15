@@ -60,6 +60,7 @@
   <button onclick="showNflTab('big-board', this)" class="tab-btn">NFL Draft</button>
   <button class="tab-btn" onclick="showNflTab('lineups', this)">Lineups</button>
   <button class="tab-btn" onclick="showNflTab('free-agency', this)">Free Agency</button>
+  <button class="tab-btn" onclick="showNflTab('schedule', this)">Schedule</button>
 </div>
 
 <main>
@@ -207,6 +208,7 @@
   <div id="nfl-free-agency" class="nfl-panel panel" style="display:none;"></div>
   <div id="nfl-fantasy" class="nfl-panel panel" style="display:none;"></div>
   <div id="nfl-ff-draft" class="nfl-panel panel" style="display:none;"></div>
+  <div id="nfl-schedule" class="nfl-panel panel" style="display:none;"></div>
 </div>
 
 <!-- Draft pick stats panel (expands as drawer) -->
@@ -566,7 +568,7 @@ function switchLeague(league, btn) {
     });
     const _savedNflTab = localStorage.getItem('activeNflTab');
     window._draftSimPos = localStorage.getItem('draftSimPos') || '';
-    const _validNflTabs = ['fantasy', 'ff-draft', 'big-board', 'draft-order', 'lineups', 'free-agency'];
+    const _validNflTabs = ['fantasy', 'ff-draft', 'big-board', 'draft-order', 'lineups', 'free-agency', 'schedule'];
     const _nflTabToLoad = (_savedNflTab && _validNflTabs.includes(_savedNflTab)) ? _savedNflTab : 'fantasy';
     const _nflBtnToLoad = document.querySelector(`#nfl-tabs button[onclick*="${_nflTabToLoad}"]`);
     showNflTab(_nflTabToLoad, _nflBtnToLoad || document.querySelector('#nfl-tabs button'));
@@ -1253,6 +1255,7 @@ if (tabName === 'lineups') renderLineups();
 if (tabName === 'free-agency') renderFreeAgency();
 if (tabName === 'fantasy') renderFantasyRankings();
 if (tabName === 'ff-draft') renderDraftLobbyTab();
+if (tabName === 'schedule') renderSchedules();
 }
 
 // ── Firebase cloud storage ───────────────────────────────────
@@ -10635,6 +10638,121 @@ function renderFreeAgencyResults() {
 }
 
 // ── END FREE AGENCY TRACKER ──────────────────────────────────────────────────
+
+// ── NFL SCHEDULE ─────────────────────────────────────────────────────────────
+let _nflScheduleCache = null;
+let _scheduleView = 'week';
+let _scheduleWeek = null;
+let _scheduleTeam = null;
+
+async function renderSchedules() {
+  const container = document.getElementById('nfl-schedule');
+  container.innerHTML = `<div style="padding:30px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px">LOADING SCHEDULE…</div>`;
+  if (!_nflScheduleCache) {
+    const fetches = Array.from({length:18},(_,i)=>
+      fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2&week=${i+1}&dates=2025&limit=100`)
+        .then(r=>r.json()).catch(()=>({events:[]}))
+    );
+    const results = await Promise.all(fetches);
+    _nflScheduleCache = {};
+    results.forEach((d,i)=>{ _nflScheduleCache[i+1] = d.events||[]; });
+  }
+  // Default to first week with upcoming or recent games
+  if (!_scheduleWeek) {
+    const now = Date.now();
+    _scheduleWeek = 1;
+    for (let w=1;w<=18;w++) {
+      if ((_nflScheduleCache[w]||[]).some(g=>new Date(g.date).getTime()>now-86400000*4)) { _scheduleWeek=w; break; }
+      _scheduleWeek = w;
+    }
+  }
+  _renderScheduleView(container);
+}
+
+function _renderScheduleView(container) {
+  const allGames = Object.entries(_nflScheduleCache).flatMap(([w,evts])=>evts.map(e=>({...e,weekNum:+w})));
+  const games = _scheduleView==='week'
+    ? (_nflScheduleCache[_scheduleWeek]||[]).map(e=>({...e,weekNum:_scheduleWeek}))
+    : allGames.filter(g=>g.competitions?.[0]?.competitors?.some(c=>_espnToLocalAbbr(c.team.abbreviation)===_scheduleTeam));
+
+  const weekPills = Array.from({length:18},(_,i)=>{
+    const w=i+1, act=_scheduleView==='week'&&_scheduleWeek===w?'active':'';
+    return `<button class="sch-pill ${act}" onclick="_scheduleView='week';_scheduleWeek=${w};_renderScheduleView(document.getElementById('nfl-schedule'))">Week ${w}</button>`;
+  }).join('');
+
+  const teamPills = Object.values(NFL_TEAMS).sort((a,b)=>a.name.localeCompare(b.name)).map(t=>{
+    const act=_scheduleView==='team'&&_scheduleTeam===t.abbr?'active':'';
+    return `<button class="sch-pill sch-team-pill ${act}" title="${t.name}" onclick="_scheduleView='team';_scheduleTeam='${t.abbr}';_renderScheduleView(document.getElementById('nfl-schedule'))">
+      <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${t.abbr.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;display:block;">
+    </button>`;
+  }).join('');
+
+  const gameCards = games.map(g=>{
+    const comp=g.competitions?.[0]; if(!comp) return '';
+    const home=comp.competitors?.find(c=>c.homeAway==='home');
+    const away=comp.competitors?.find(c=>c.homeAway==='away');
+    if(!home||!away) return '';
+    const completed=comp.status?.type?.completed;
+    const statusTxt=comp.status?.type?.shortDetail||'';
+    const date=new Date(g.date);
+    const dateStr=date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    const timeStr=date.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    const broadcast=comp.broadcasts?.[0]?.names?.[0]||'';
+    const venue=comp.venue?.fullName||'';
+    const homeAbbr=_espnToLocalAbbr(home.team.abbreviation);
+    const awayAbbr=_espnToLocalAbbr(away.team.abbreviation);
+    const hs=+home.score, as=+away.score;
+    const scoreHTML=completed
+      ? `<div class="sch-scores"><span class="${as>hs?'sch-win':''}">${away.score}</span><span class="sch-dash"> – </span><span class="${hs>as?'sch-win':''}">${home.score}</span></div>`
+      : `<div class="sch-time">${timeStr}</div>`;
+    return `<div class="sch-card">
+      <div class="sch-wk">WK ${g.weekNum}${broadcast?` · <span class="sch-tv">${broadcast}</span>`:''}</div>
+      <div class="sch-matchup">
+        <div class="sch-team"><img class="sch-logo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${awayAbbr.toLowerCase()}.png"><span class="sch-abbr">${awayAbbr}</span></div>
+        ${scoreHTML}
+        <div class="sch-team sch-home-team"><span class="sch-abbr">${homeAbbr}</span><img class="sch-logo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${homeAbbr.toLowerCase()}.png"></div>
+      </div>
+      <div class="sch-meta">${completed?statusTxt:dateStr}${venue?` · <span style="opacity:0.6">${venue}</span>`:''}</div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <style>
+      .sch-header{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:3px;margin-bottom:4px}
+      .sch-sub{font-size:0.8rem;color:var(--muted);margin-bottom:20px;letter-spacing:1px;text-transform:uppercase}
+      .sch-view-toggle{display:flex;gap:8px;margin-bottom:12px}
+      .sch-view-btn{font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;font-weight:700;letter-spacing:1px;padding:6px 20px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--text);cursor:pointer;text-transform:uppercase;transition:all 0.15s}
+      .sch-view-btn.active{background:var(--accent);border-color:var(--accent);color:#000}
+      .sch-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px}
+      .sch-pill{font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:700;letter-spacing:0.05em;padding:4px 12px;border-radius:16px;border:1.5px solid var(--border);background:transparent;color:var(--text);cursor:pointer;transition:all 0.15s}
+      .sch-pill.active{background:var(--accent);border-color:var(--accent);color:#000}
+      .sch-team-pill{padding:5px 7px}
+      .sch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+      .sch-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+      .sch-wk{font-size:0.65rem;font-weight:800;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;text-transform:uppercase}
+      .sch-tv{color:var(--text);font-weight:800}
+      .sch-matchup{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px}
+      .sch-team{display:flex;align-items:center;gap:6px;flex:1}
+      .sch-home-team{justify-content:flex-end}
+      .sch-logo{width:32px;height:32px;object-fit:contain}
+      .sch-abbr{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:1px}
+      .sch-scores{display:flex;align-items:center;gap:2px;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;min-width:80px;justify-content:center}
+      .sch-win{color:var(--accent)}
+      .sch-dash{color:var(--muted);font-size:1rem}
+      .sch-time{font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;color:var(--muted);font-weight:600;min-width:80px;text-align:center}
+      .sch-meta{font-size:0.7rem;color:var(--muted)}
+    </style>
+    <div class="sch-header">NFL Schedule</div>
+    <div class="sch-sub">2025 Season · ${games.length} game${games.length!==1?'s':''}</div>
+    <div class="sch-view-toggle">
+      <button class="sch-view-btn ${_scheduleView==='week'?'active':''}" onclick="_scheduleView='week';_renderScheduleView(document.getElementById('nfl-schedule'))">By Week</button>
+      <button class="sch-view-btn ${_scheduleView==='team'?'active':''}" onclick="_scheduleView='team';if(!_scheduleTeam)_scheduleTeam='KC';_renderScheduleView(document.getElementById('nfl-schedule'))">By Team</button>
+    </div>
+    <div class="sch-pills">${_scheduleView==='week'?weekPills:teamPills}</div>
+    <div class="sch-grid">${gameCards||'<div style="color:var(--muted);padding:20px">No games found.</div>'}</div>
+  `;
+}
+// ── END NFL SCHEDULE ──────────────────────────────────────────────────────────
 
 
 // ── Draft Stats Panel ────────────────────────────────────────────
