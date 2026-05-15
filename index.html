@@ -10645,17 +10645,31 @@ let _scheduleView = 'week';
 let _scheduleWeek = null;
 let _scheduleTeam = null;
 
+// ESPN abbreviations differ from local for some teams
+const _localToEspnAbbr = {WAS:'WSH',JAX:'JAC',SF:'SFO',NO:'NOR',GB:'GNB',NE:'NWE',KC:'KAN',TB:'TAM',LV:'LVR'};
+
 async function renderSchedules() {
   const container = document.getElementById('nfl-schedule');
   container.innerHTML = `<div style="padding:30px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px">LOADING SCHEDULE…</div>`;
   if (!_nflScheduleCache) {
-    const fetches = Array.from({length:18},(_,i)=>
-      fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2&week=${i+1}&season=2026&limit=100`)
+    // Scoreboard API doesn't have 2026 yet — fetch each team's schedule and dedupe
+    const abbrs = Object.keys(NFL_TEAMS);
+    const results = await Promise.all(abbrs.map(a =>
+      fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${_localToEspnAbbr[a]||a}/schedule?season=2026`)
         .then(r=>r.json()).catch(()=>({events:[]}))
-    );
-    const results = await Promise.all(fetches);
+    ));
+    const seen = new Set();
     _nflScheduleCache = {};
-    results.forEach((d,i)=>{ _nflScheduleCache[i+1] = d.events||[]; });
+    results.forEach(d => {
+      (d.events||[]).forEach(e => {
+        if (seen.has(e.id)) return;
+        seen.add(e.id);
+        const w = e.week?.number;
+        if (!w) return;
+        if (!_nflScheduleCache[w]) _nflScheduleCache[w] = [];
+        _nflScheduleCache[w].push(e);
+      });
+    });
   }
   // Default to first week with upcoming or recent games
   if (!_scheduleWeek) {
@@ -10743,7 +10757,7 @@ function _renderScheduleView(container) {
       .sch-meta{font-size:0.7rem;color:var(--muted)}
     </style>
     <div class="sch-header">NFL Schedule</div>
-    <div class="sch-sub">2026 Season · ${games.length} game${games.length!==1?'s':''}</div>
+    <div class="sch-sub">2026 NFL Season · ${games.length} game${games.length!==1?'s':''}</div>
     <div class="sch-view-toggle">
       <button class="sch-view-btn ${_scheduleView==='week'?'active':''}" onclick="_scheduleView='week';_renderScheduleView(document.getElementById('nfl-schedule'))">By Week</button>
       <button class="sch-view-btn ${_scheduleView==='team'?'active':''}" onclick="_scheduleView='team';if(!_scheduleTeam)_scheduleTeam='KC';_renderScheduleView(document.getElementById('nfl-schedule'))">By Team</button>
