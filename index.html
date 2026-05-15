@@ -10653,9 +10653,10 @@ async function renderSchedules() {
   container.innerHTML = `<div style="padding:30px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px">LOADING SCHEDULE…</div>`;
   if (!_nflScheduleCache) {
     // Scoreboard API doesn't have 2026 yet — fetch each team's schedule and dedupe
+    const _abbrToEspnId = Object.fromEntries(Object.entries(_NFL_ESPN_TEAM_IDS).map(([id,abbr])=>[abbr,id]));
     const abbrs = Object.keys(NFL_TEAMS);
     const results = await Promise.all(abbrs.map(a =>
-      fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${a}/schedule?season=2026`)
+      fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${_abbrToEspnId[a]}/schedule?season=2026`)
         .then(r=>r.json()).catch(()=>({events:[]}))
     ));
     const seen = new Set();
