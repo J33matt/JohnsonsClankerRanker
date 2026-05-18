@@ -10750,6 +10750,8 @@ function _renderScheduleView(container) {
       .sch-view-btn{font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;font-weight:700;letter-spacing:1px;padding:6px 20px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--text);cursor:pointer;text-transform:uppercase;transition:all 0.15s}
       .sch-view-btn.active{background:var(--accent);border-color:var(--accent);color:#000}
       .sch-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px}
+      .sch-pills.sch-pills-teams{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}
+      .sch-pills.sch-pills-teams::-webkit-scrollbar{display:none}
       .sch-pill{font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:700;letter-spacing:0.05em;padding:4px 12px;border-radius:16px;border:1.5px solid var(--border);background:transparent;color:var(--text);cursor:pointer;transition:all 0.15s}
       .sch-pill.active{background:var(--accent);border-color:var(--accent);color:#000}
       .sch-team-pill{padding:5px 7px}
@@ -10781,7 +10783,7 @@ function _renderScheduleView(container) {
       <button class="sch-view-btn ${_scheduleView==='week'?'active':''}" onclick="_scheduleView='week';_renderScheduleView(document.getElementById('nfl-schedule'))">By Week</button>
       <button class="sch-view-btn ${_scheduleView==='team'?'active':''}" onclick="_scheduleView='team';if(!_scheduleTeam)_scheduleTeam='KC';_renderScheduleView(document.getElementById('nfl-schedule'))">By Team</button>
     </div>
-    <div class="sch-pills">${_scheduleView==='week'?weekPills:teamPills}</div>
+    <div class="sch-pills${_scheduleView==='team'?' sch-pills-teams':''}">${_scheduleView==='week'?weekPills:teamPills}</div>
     <div class="sch-grid">${gameCards||'<div style="color:var(--muted);padding:20px">No games found.</div>'}</div>
   `;
 
