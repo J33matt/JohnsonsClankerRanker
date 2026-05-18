@@ -10696,10 +10696,17 @@ function _renderScheduleView(container) {
   }).join('');
 
   const teamPills = Object.values(NFL_TEAMS).sort((a,b)=>a.name.localeCompare(b.name)).map(t=>{
-    const act=_scheduleView==='team'&&_scheduleTeam===t.abbr?'active':'';
-    return `<button class="sch-pill sch-team-pill ${act}" title="${t.name}" onclick="_scheduleView='team';_scheduleTeam='${t.abbr}';_renderScheduleView(document.getElementById('nfl-schedule'))">
-      <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${t.abbr.toLowerCase()}.png" style="width:24px;height:24px;object-fit:contain;display:block;">
-    </button>`;
+    const isActive = _scheduleView==='team' && _scheduleTeam===t.abbr;
+    const color = t.color || '#888';
+    const border = isActive ? `2px solid ${color}` : '2px solid transparent';
+    const bg = isActive ? `${color}1e` : 'transparent';
+    const glow = isActive ? `0 0 6px ${color}66` : 'none';
+    const size = isActive ? '36px' : '28px';
+    const opacity = isActive ? '1' : '0.3';
+    return `<div title="${t.name}" onclick="_scheduleView='team';_scheduleTeam='${t.abbr}';_renderScheduleView(document.getElementById('nfl-schedule'))"
+      style="position:relative;display:flex;align-items:center;justify-content:center;padding:4px;border-radius:8px;border:${border};box-shadow:${glow};background:${bg};cursor:pointer;transition:all 0.15s;flex-shrink:0;">
+      <img src="https://a.espncdn.com/i/teamlogos/nfl/500/${t.abbr.toLowerCase()}.png" style="width:${size};height:${size};object-fit:contain;opacity:${opacity};transition:all 0.15s;">
+    </div>`;
   }).join('');
 
   const gameCards = games.map(g=>{
