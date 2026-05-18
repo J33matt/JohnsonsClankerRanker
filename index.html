@@ -10720,14 +10720,18 @@ function _renderScheduleView(container) {
     const scoreHTML=completed
       ? `<div class="sch-scores"><span class="${as>hs?'sch-win':''}">${away.score}</span><span class="sch-dash"> – </span><span class="${hs>as?'sch-win':''}">${home.score}</span></div>`
       : `<div class="sch-time">${timeStr}</div>`;
-    return `<div class="sch-card">
-      <div class="sch-wk">WK ${g.weekNum}${broadcast?` · <span class="sch-tv">${broadcast}</span>`:''}</div>
+    const venueCity = comp.venue?.address ? `${comp.venue.address.city}, ${comp.venue.address.state}` : venue;
+    return `<div class="sch-card" id="sch-card-${g.id}">
+      <div class="sch-card-top">
+        <span class="sch-wk">WK ${g.weekNum}${broadcast?` · <span class="sch-tv">${broadcast}</span>`:''}</span>
+        <span class="sch-topright">${completed?statusTxt:dateStr}${venueCity?`<br><span class="sch-venue-sm">${venueCity}</span>`:''}</span>
+      </div>
       <div class="sch-matchup">
         <div class="sch-team"><img class="sch-logo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${awayAbbr.toLowerCase()}.png"><span class="sch-abbr">${awayAbbr}</span></div>
         ${scoreHTML}
         <div class="sch-team sch-home-team"><span class="sch-abbr">${homeAbbr}</span><img class="sch-logo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${homeAbbr.toLowerCase()}.png"></div>
       </div>
-      <div class="sch-meta">${completed?statusTxt:dateStr}${venue?` · <span style="opacity:0.6">${venue}</span>`:''}</div>
+      <div class="sch-odds" id="sch-odds-${g.id}"><span style="opacity:0.4;font-size:0.7rem">Loading odds…</span></div>
     </div>`;
   }).join('');
 
@@ -10744,8 +10748,11 @@ function _renderScheduleView(container) {
       .sch-team-pill{padding:5px 7px}
       .sch-grid{display:flex;flex-direction:column;gap:10px}
       .sch-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
-      .sch-wk{font-size:0.65rem;font-weight:800;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;text-transform:uppercase}
+      .sch-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+      .sch-wk{font-size:0.65rem;font-weight:800;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase}
       .sch-tv{color:var(--text);font-weight:800}
+      .sch-topright{font-size:0.7rem;color:var(--muted);text-align:right;line-height:1.4}
+      .sch-venue-sm{font-size:0.65rem;opacity:0.7}
       .sch-matchup{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px;height:72px}
       .sch-team{display:flex;align-items:center;gap:6px;flex:1;height:100%}
       .sch-home-team{justify-content:flex-end}
@@ -10756,6 +10763,10 @@ function _renderScheduleView(container) {
       .sch-dash{color:var(--muted);font-size:1rem}
       .sch-time{font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;color:var(--muted);font-weight:600;min-width:80px;text-align:center}
       .sch-meta{font-size:0.7rem;color:var(--muted)}
+      .sch-odds{font-size:0.75rem;color:var(--muted);margin-top:4px;display:flex;gap:14px;flex-wrap:wrap}
+      .sch-odds-item{display:flex;flex-direction:column;gap:1px}
+      .sch-odds-label{font-size:0.6rem;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;opacity:0.6}
+      .sch-odds-val{font-weight:700;color:var(--text)}
     </style>
     <div class="sch-header">NFL Schedule</div>
     <div class="sch-sub">2026 NFL Season · ${games.length} game${games.length!==1?'s':''}</div>
@@ -10766,6 +10777,31 @@ function _renderScheduleView(container) {
     <div class="sch-pills">${_scheduleView==='week'?weekPills:teamPills}</div>
     <div class="sch-grid">${gameCards||'<div style="color:var(--muted);padding:20px">No games found.</div>'}</div>
   `;
+
+  // Fetch odds for each visible game asynchronously and inject into cards
+  games.forEach(g => {
+    if (!g.id) return;
+    fetch(`https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/${g.id}/competitions/${g.id}/odds`)
+      .then(r=>r.json())
+      .then(data => {
+        const el = document.getElementById(`sch-odds-${g.id}`);
+        if (!el) return;
+        const o = (data.items||[])[0];
+        if (!o) { el.innerHTML = ''; return; }
+        const spread = o.details || '';
+        const ou = o.overUnder != null ? o.overUnder : null;
+        const awayML = o.awayTeamOdds?.moneyLine;
+        const homeML = o.homeTeamOdds?.moneyLine;
+        const fmt = n => n > 0 ? `+${n}` : `${n}`;
+        el.innerHTML = [
+          spread ? `<div class="sch-odds-item"><span class="sch-odds-label">Spread</span><span class="sch-odds-val">${spread}</span></div>` : '',
+          ou != null ? `<div class="sch-odds-item"><span class="sch-odds-label">O/U</span><span class="sch-odds-val">${ou}</span></div>` : '',
+          awayML != null ? `<div class="sch-odds-item"><span class="sch-odds-label">Away ML</span><span class="sch-odds-val">${fmt(awayML)}</span></div>` : '',
+          homeML != null ? `<div class="sch-odds-item"><span class="sch-odds-label">Home ML</span><span class="sch-odds-val">${fmt(homeML)}</span></div>` : '',
+        ].join('') || '';
+      })
+      .catch(()=>{ const el=document.getElementById(`sch-odds-${g.id}`); if(el) el.innerHTML=''; });
+  });
 }
 // ── END NFL SCHEDULE ──────────────────────────────────────────────────────────
 
