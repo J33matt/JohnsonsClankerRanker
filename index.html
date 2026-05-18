@@ -10724,7 +10724,7 @@ function _renderScheduleView(container) {
     return `<div class="sch-card" id="sch-card-${g.id}">
       <div class="sch-card-top">
         <span class="sch-wk">WK ${g.weekNum}${broadcast?` · <span class="sch-tv">${broadcast}</span>`:''}</span>
-        <span class="sch-topright">${completed?statusTxt:dateStr}${venueCity?`<br><span class="sch-venue-sm">${venueCity}</span>`:''}</span>
+        <span class="sch-topright">${completed?statusTxt:dateStr}${venueCity?` · ${venueCity}`:''}</span>
       </div>
       <div class="sch-matchup">
         <div class="sch-team"><img class="sch-logo" src="https://a.espncdn.com/i/teamlogos/nfl/500/${awayAbbr.toLowerCase()}.png"><span class="sch-abbr">${awayAbbr}</span></div>
