@@ -10687,8 +10687,8 @@ async function renderSchedules() {
 function _renderScheduleView(container) {
   const allGames = Object.entries(_nflScheduleCache).flatMap(([w,evts])=>evts.map(e=>({...e,weekNum:+w})));
   const games = _scheduleView==='week'
-    ? (_nflScheduleCache[_scheduleWeek]||[]).map(e=>({...e,weekNum:_scheduleWeek}))
-    : allGames.filter(g=>g.competitions?.[0]?.competitors?.some(c=>_espnToLocalAbbr(c.team.abbreviation)===_scheduleTeam));
+    ? (_nflScheduleCache[_scheduleWeek]||[]).map(e=>({...e,weekNum:_scheduleWeek})).sort((a,b)=>new Date(a.date)-new Date(b.date))
+    : allGames.filter(g=>g.competitions?.[0]?.competitors?.some(c=>_espnToLocalAbbr(c.team.abbreviation)===_scheduleTeam)).sort((a,b)=>new Date(a.date)-new Date(b.date));
 
   const weekPills = Array.from({length:18},(_,i)=>{
     const w=i+1, act=_scheduleView==='week'&&_scheduleWeek===w?'active':'';
