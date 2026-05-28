@@ -7143,29 +7143,42 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   .sb-props-game-pill:hover { border-color: rgba(255,255,255,0.3); color: var(--text); }
   .sb-props-game-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(100,180,255,0.08); }
-  .sb-props-accordions { display: flex; flex-direction: column; gap: 6px; }
+  .sb-props-accordions { display: flex; flex-direction: column; gap: 5px; }
   .sb-prop-acc {
-    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
-    background: var(--surface); transition: border-color 0.15s;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;
+    background: var(--surface2); transition: border-color 0.18s, box-shadow 0.18s;
   }
-  .sb-prop-acc.open { border-color: rgba(255,255,255,0.18); }
+  .sb-prop-acc:hover { border-color: rgba(255,255,255,0.2); }
+  .sb-prop-acc.open {
+    border-color: rgba(255,255,255,0.22);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.35);
+  }
   .sb-prop-acc-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 13px 16px; cursor: pointer; user-select: none;
-    font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; letter-spacing: 1px;
-    transition: background 0.12s;
+    padding: 14px 18px; cursor: pointer; user-select: none;
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, transparent 100%);
+    transition: background 0.15s;
   }
-  .sb-prop-acc-header:hover { background: rgba(255,255,255,0.04); }
+  .sb-prop-acc-header:hover { background: linear-gradient(90deg, rgba(255,255,255,0.08) 0%, transparent 100%); }
+  .sb-prop-acc.open .sb-prop-acc-header { color: var(--text); }
   .sb-prop-acc-chevron {
-    font-size: 0.65rem; color: var(--muted); transition: transform 0.2s; display: inline-block;
+    font-size: 0.7rem; color: var(--muted); transition: transform 0.22s ease; display: inline-block;
   }
-  .sb-prop-acc.open .sb-prop-acc-chevron { transform: rotate(180deg); }
-  .sb-prop-acc-body { display: none; border-top: 1px solid var(--border); }
-  .sb-prop-acc.open .sb-prop-acc-body { display: block; }
+  .sb-prop-acc.open .sb-prop-acc-chevron { transform: rotate(180deg); color: var(--accent); }
+  .sb-prop-acc-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.3s ease;
+    border-top: 0px solid var(--border);
+  }
+  .sb-prop-acc.open .sb-prop-acc-body {
+    max-height: 3000px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+  }
   .sb-props-table { display: flex; flex-direction: column; gap: 0; }
   .sb-prop-row {
-    display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 12px;
-    padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.1s;
+    display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 14px;
+    padding: 11px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.1s;
   }
   .sb-prop-row:last-child { border-bottom: none; }
   .sb-prop-row:hover { background: rgba(255,255,255,0.03); }
@@ -7173,31 +7186,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center;
     justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem;
     font-weight: 700; letter-spacing: 0.5px; color: #fff; flex-shrink: 0;
-    overflow: hidden; background: rgba(255,255,255,0.1);
+    overflow: hidden; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.1);
   }
-  .sb-prop-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .sb-prop-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 50%; }
   .sb-prop-name { font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; letter-spacing: 0.5px; line-height: 1.2; }
   .sb-prop-btns { display: flex; gap: 6px; }
   .sb-prop-btn {
     font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.5px;
-    padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12);
     background: rgba(255,255,255,0.04); cursor: pointer; transition: all 0.15s;
     display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 72px;
   }
-  .sb-prop-btn .prop-ou { font-size: 0.78rem; font-weight: 600; }
+  .sb-prop-btn .prop-ou { font-size: 0.78rem; font-weight: 600; color: var(--text); }
   .sb-prop-btn .prop-odds { font-size: 0.85rem; font-weight: 700; }
-  .sb-prop-btn:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.07); }
-  .sb-prop-btn.over .prop-ou { color: var(--muted); }
   .sb-prop-btn.over .prop-odds { color: var(--green); }
-  .sb-prop-btn.over:hover, .sb-prop-btn.over.selected { background: rgba(0,255,136,0.1); border-color: var(--green); }
-  .sb-prop-btn.over.selected .prop-ou { color: var(--green); }
-  .sb-prop-btn.under .prop-ou { color: var(--muted); }
   .sb-prop-btn.under .prop-odds { color: var(--red); }
-  .sb-prop-btn.under:hover, .sb-prop-btn.under.selected { background: rgba(255,51,85,0.1); border-color: var(--red); }
-  .sb-prop-btn.under.selected .prop-ou { color: var(--red); }
-  .sb-prop-btn.yn .prop-ou { color: var(--muted); }
+  .sb-prop-btn:hover { background: rgba(255,255,255,0.08); }
+  .sb-prop-btn.over:hover, .sb-prop-btn.over.selected { background: rgba(0,255,136,0.1); }
+  .sb-prop-btn.under:hover, .sb-prop-btn.under.selected { background: rgba(255,51,85,0.1); }
   .sb-prop-btn.yn .prop-odds { color: var(--accent2); }
-  .sb-prop-btn.yn.selected { background: rgba(255,170,0,0.1); border-color: var(--accent2); }
+  .sb-prop-btn.yn.selected { background: rgba(255,170,0,0.1); }
   .sb-props-empty { padding: 32px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.82rem; letter-spacing: 2px; }
   .sb-props-loading { padding: 20px 16px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; letter-spacing: 2px; }
 
@@ -7760,6 +7768,64 @@ const _NBA_ODDS_ABBR = {
   'San Antonio Spurs':'SAS','Toronto Raptors':'TOR','Utah Jazz':'UTA',
   'Washington Wizards':'WAS',
 };
+
+const _NBA_TEAM_COLORS = {
+  ATL:'#E03A3E', BOS:'#007A33', BKN:'#AAAAAA', CHA:'#00788C', CHI:'#CE1141',
+  CLE:'#860038', DAL:'#00538C', DEN:'#0E2240', DET:'#C8102E', GSW:'#1D428A',
+  HOU:'#CE1141', IND:'#002D62', LAC:'#C8102E', LAL:'#552583', MEM:'#5D76A9',
+  MIA:'#98002E', MIL:'#00471B', MIN:'#0C2340', NOP:'#0C2340', NYK:'#F58426',
+  OKC:'#007AC1', ORL:'#0077C0', PHI:'#006BB6', PHX:'#E56020', POR:'#E03A3E',
+  SAC:'#5A2D81', SAS:'#C4CED4', TOR:'#CE1141', UTA:'#002B5C', WAS:'#002B5C',
+};
+
+// Cache: player name → { espnId, teamAbbr }
+const _sbPlayerInfoCache = {};
+
+async function _sbPropsLoadEnrichments(bodyEl) {
+  const avatars = [...bodyEl.querySelectorAll('[data-player-name]')];
+  if (!avatars.length) return;
+
+  await Promise.all(avatars.map(async avatarEl => {
+    const name = avatarEl.dataset.playerName;
+    if (!(name in _sbPlayerInfoCache)) {
+      try {
+        const r = await fetch(`https://site.api.espn.com/apis/common/v3/search?query=${encodeURIComponent(name)}&sport=basketball&league=nba&limit=1`);
+        const d = await r.json();
+        const item = d?.results?.[0]?.items?.[0];
+        _sbPlayerInfoCache[name] = item
+          ? { espnId: item.id, teamAbbr: item.team?.abbreviation || null }
+          : null;
+      } catch(e) { _sbPlayerInfoCache[name] = null; }
+    }
+
+    const info = _sbPlayerInfoCache[name];
+    if (!info) return;
+
+    // Update headshot
+    if (info.espnId) {
+      const img = document.createElement('img');
+      img.alt = name;
+      img.src = `https://a.espncdn.com/i/headshots/nba/players/full/${info.espnId}.png`;
+      img.onerror = () => { img.remove(); }; // keep initials fallback if img fails
+      avatarEl.innerHTML = '';
+      avatarEl.appendChild(img);
+    }
+
+    // Update team color on buttons in the same row
+    if (info.teamAbbr) {
+      const color = _NBA_TEAM_COLORS[info.teamAbbr];
+      if (color) {
+        const row = avatarEl.closest('.sb-prop-row');
+        if (row) {
+          row.querySelectorAll('.sb-prop-btn').forEach(btn => {
+            btn.style.borderColor = color + '80'; // 50% alpha
+          });
+          avatarEl.style.borderColor = color;
+        }
+      }
+    }
+  }));
+}
 
 // ── Parlay correlation rules ─────────────────────────────────
 
@@ -8642,7 +8708,7 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
     const safe   = player.replace(/'/g, "\\'");
     const color  = _sbPropAvatarColor(player);
     const initials = _sbPropInitials(player);
-    const avatar = `<div class="sb-prop-avatar" style="background:${color}">${initials}</div>`;
+    const avatar = `<div class="sb-prop-avatar" style="background:${color}" data-player-name="${player.replace(/"/g,'&quot;')}">${initials}</div>`;
 
     if (isBinary) {
       const yes = dirs['yes'] || dirs[Object.keys(dirs)[0]];
@@ -8690,6 +8756,9 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
   }
 
   bodyEl.innerHTML = `<div class="sb-props-table">${rows || '<div class="sb-props-empty">No props found</div>'}</div>`;
+
+  // Async: load headshots + team colors without blocking the render
+  _sbPropsLoadEnrichments(bodyEl);
 }
 
 async function renderSportsbook() {
