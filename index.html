@@ -8698,11 +8698,17 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
     byPlayer[name][o.name.toLowerCase()] = { price: o.price, point: o.point };
   }
 
-  // Sort: highest stat line first (descending); ties → alphabetical
+  // Sort: stat lines descending; binary markets (no line) → implied prob descending
+  const _mlToProb = ml => ml < 0 ? Math.abs(ml) / (Math.abs(ml) + 100) : 100 / ((ml || 100) + 100);
   const sorted = Object.entries(byPlayer).sort(([na, da], [nb, db]) => {
-    const la = (da['over'] || da['under'] || da['yes'] || Object.values(da)[0])?.point ?? -1;
-    const lb = (db['over'] || db['under'] || db['yes'] || Object.values(db)[0])?.point ?? -1;
-    return lb !== la ? lb - la : na.localeCompare(nb);
+    const ea = da['over'] || da['under'] || da['yes'] || Object.values(da)[0];
+    const eb = db['over'] || db['under'] || db['yes'] || Object.values(db)[0];
+    const la = ea?.point ?? null, lb = eb?.point ?? null;
+    if (la !== null && lb !== null) return lb !== la ? lb - la : na.localeCompare(nb);
+    if (la !== null) return -1;
+    if (lb !== null) return 1;
+    // No point line — sort by implied probability (most likely first)
+    return _mlToProb(eb?.price ?? 0) - _mlToProb(ea?.price ?? 0);
   });
 
   let rows = '';
