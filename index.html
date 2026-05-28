@@ -7133,8 +7133,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   .sb-history-empty { padding: 32px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.82rem; letter-spacing: 2px; }
 
   /* Player Props */
+  /* Player Props */
   .sb-props-section { margin: 32px 0 8px; }
-  .sb-props-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .sb-props-game-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
   .sb-props-game-pill {
     font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; letter-spacing: 1px;
     padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
@@ -7142,19 +7143,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   .sb-props-game-pill:hover { border-color: rgba(255,255,255,0.3); color: var(--text); }
   .sb-props-game-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(100,180,255,0.08); }
-  .sb-props-market-sel {
-    font-family: 'Barlow Condensed', sans-serif; font-size: 0.85rem; letter-spacing: 1px;
-    padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface2); color: var(--text); cursor: pointer; flex-shrink: 0;
+  .sb-props-accordions { display: flex; flex-direction: column; gap: 6px; }
+  .sb-prop-acc {
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    background: var(--surface); transition: border-color 0.15s;
   }
-  .sb-props-market-sel:focus { outline: none; border-color: var(--accent); }
-  .sb-props-table { display: flex; flex-direction: column; gap: 4px; }
+  .sb-prop-acc.open { border-color: rgba(255,255,255,0.18); }
+  .sb-prop-acc-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px; cursor: pointer; user-select: none;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; letter-spacing: 1px;
+    transition: background 0.12s;
+  }
+  .sb-prop-acc-header:hover { background: rgba(255,255,255,0.04); }
+  .sb-prop-acc-chevron {
+    font-size: 0.65rem; color: var(--muted); transition: transform 0.2s; display: inline-block;
+  }
+  .sb-prop-acc.open .sb-prop-acc-chevron { transform: rotate(180deg); }
+  .sb-prop-acc-body { display: none; border-top: 1px solid var(--border); }
+  .sb-prop-acc.open .sb-prop-acc-body { display: block; }
+  .sb-props-table { display: flex; flex-direction: column; gap: 0; }
   .sb-prop-row {
     display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px;
-    padding: 10px 14px; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; transition: border-color 0.15s;
+    padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.1s;
   }
-  .sb-prop-row:hover { border-color: rgba(255,255,255,0.15); }
+  .sb-prop-row:last-child { border-bottom: none; }
+  .sb-prop-row:hover { background: rgba(255,255,255,0.03); }
   .sb-prop-name { font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; letter-spacing: 0.5px; }
   .sb-prop-line { font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
   .sb-prop-btn {
@@ -7173,7 +7187,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   .sb-prop-btn.yn { color: var(--accent2); }
   .sb-prop-btn.yn.selected { background: rgba(255,170,0,0.1); border-color: var(--accent2); }
   .sb-props-empty { padding: 32px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.82rem; letter-spacing: 2px; }
-  .sb-props-loading { padding: 24px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; letter-spacing: 2px; }
+  .sb-props-loading { padding: 20px 16px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; letter-spacing: 2px; }
 
   /* Broke banner */
   .sb-broke-banner {
@@ -7704,7 +7718,6 @@ const _ODDS_API_KEY = '81037b065591850bd10fc780590f08e8'; // ← paste your The 
 let _sbPropsEvents   = null;  // cached Odds API event list
 let _sbPropsCache    = {};    // { [eventId_market]: { data, ts } }
 let _sbPropsGameSel  = null;  // selected Odds API event ID
-let _sbPropsMarket   = 'player_points';
 
 const _SB_PROP_MARKETS = [
   { key: 'player_points',                  label: 'Player Points O/U'       },
@@ -8438,6 +8451,8 @@ async function _fetchPredictorWinPcts(games) {
 
 // ── Player Props ──────────────────────────────────────────────
 
+let _sbPropsGameSelAway = null, _sbPropsGameSelHome = null;
+
 async function _sbFetchPropsEvents() {
   if (_sbPropsEvents) return _sbPropsEvents;
   try {
@@ -8462,164 +8477,156 @@ async function _sbFetchPropMarket(eventId, market) {
 
 function _renderSbPropsSection(sbGames) {
   if (!sbGames || !sbGames.length) return '';
-  const marketOpts = _SB_PROP_MARKETS.map(m =>
-    `<option value="${m.key}"${m.key === _sbPropsMarket ? ' selected' : ''}>${m.label}</option>`
-  ).join('');
 
-  // Game pills — use enriched game keys
   const gamePills = sbGames.map(g => {
-    const isActive = _sbPropsGameSel && _sbPropsGameSel === _sbPropsMatchEventId(g);
+    const isActive = _sbPropsGameSelAway === g.away && _sbPropsGameSelHome === g.home;
     return `<button class="sb-props-game-pill${isActive ? ' active' : ''}"
       onclick="_sbPropsPickGame('${g.away}','${g.home}')">${g.away} @ ${g.home}</button>`;
   }).join('');
 
+  const accordions = _SB_PROP_MARKETS.map(m => `
+    <div class="sb-prop-acc" id="sb-prop-acc-${m.key}">
+      <div class="sb-prop-acc-header" onclick="_sbPropsToggleAccordion('${m.key}')">
+        <span>${m.label}</span>
+        <span class="sb-prop-acc-chevron">▼</span>
+      </div>
+      <div class="sb-prop-acc-body" id="sb-prop-acc-body-${m.key}"></div>
+    </div>`).join('');
+
   return `
   <div class="sb-props-section">
     <div class="sb-section-label" style="margin-bottom:14px">🎯 PLAYER PROPS</div>
-    <div class="sb-props-controls">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${gamePills}</div>
-      <select class="sb-props-market-sel" id="sb-props-market-sel" onchange="_sbPropsChangeMarket(this.value)">
-        ${marketOpts}
-      </select>
-    </div>
-    <div id="sb-props-table">
-      <div class="sb-props-empty">Select a game above to load props</div>
-    </div>
+    <div class="sb-props-game-pills">${gamePills}</div>
+    <div class="sb-props-accordions" id="sb-props-accordions">${accordions}</div>
   </div>`;
 }
 
-function _sbPropsMatchEventId(g) {
-  // Match a sportsbook game (abbr-based) to an Odds API event ID stored in _sbPropsEvents
-  if (!_sbPropsEvents) return null;
-  const ev = _sbPropsEvents.find(e => {
-    const ha = _NBA_ODDS_ABBR[e.home_team], aa = _NBA_ODDS_ABBR[e.away_team];
-    return ha === g.home && aa === g.away;
-  });
-  return ev ? ev.id : null;
-}
-
 async function _sbPropsPickGame(awayAbbr, homeAbbr) {
-  // Find the matching event from Odds API
-  const tableEl = document.getElementById('sb-props-table');
-  if (!tableEl) return;
-
-  // Update game pills styling
+  // Update pill styling
   document.querySelectorAll('.sb-props-game-pill').forEach(btn => {
     btn.classList.toggle('active', btn.textContent.trim() === `${awayAbbr} @ ${homeAbbr}`);
   });
 
-  tableEl.innerHTML = `<div class="sb-props-loading">⏳ Loading props…</div>`;
-
+  // Find matching Odds API event
   const events = await _sbFetchPropsEvents();
   const ev = events.find(e => {
     const ha = _NBA_ODDS_ABBR[e.home_team], aa = _NBA_ODDS_ABBR[e.away_team];
     return ha === homeAbbr && aa === awayAbbr;
   });
-  if (!ev) {
-    tableEl.innerHTML = `<div class="sb-props-empty">No props available for this game</div>`;
-    return;
-  }
-  _sbPropsGameSel = ev.id;
+
   _sbPropsGameSelAway = awayAbbr;
   _sbPropsGameSelHome = homeAbbr;
-  await _sbPropsLoadTable(ev.id, awayAbbr, homeAbbr);
+  _sbPropsGameSel = ev ? ev.id : null;
+
+  // Collapse all accordions and clear their bodies (new game = fresh state)
+  document.querySelectorAll('.sb-prop-acc').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.sb-prop-acc-body').forEach(el => { el.innerHTML = ''; });
+
+  if (!ev) {
+    // Show no-data message inside first accordion
+    const first = document.getElementById(`sb-prop-acc-body-${_SB_PROP_MARKETS[0].key}`);
+    if (first) first.innerHTML = `<div class="sb-props-empty">No props available for this game</div>`;
+  }
 }
 
-let _sbPropsGameSelAway = null, _sbPropsGameSelHome = null;
+async function _sbPropsToggleAccordion(market) {
+  if (!_sbPropsGameSel) return; // no game selected yet
+  const acc  = document.getElementById(`sb-prop-acc-${market}`);
+  const body = document.getElementById(`sb-prop-acc-body-${market}`);
+  if (!acc || !body) return;
 
-async function _sbPropsChangeMarket(market) {
-  _sbPropsMarket = market;
-  if (!_sbPropsGameSel) return;
-  const tableEl = document.getElementById('sb-props-table');
-  if (tableEl) tableEl.innerHTML = `<div class="sb-props-loading">⏳ Loading props…</div>`;
-  await _sbPropsLoadTable(_sbPropsGameSel, _sbPropsGameSelAway, _sbPropsGameSelHome);
-}
-
-async function _sbPropsLoadTable(eventId, awayAbbr, homeAbbr) {
-  const tableEl = document.getElementById('sb-props-table');
-  if (!tableEl) return;
-
-  const data = await _sbFetchPropMarket(eventId, _sbPropsMarket);
-  if (!data || !data.bookmakers || !data.bookmakers.length) {
-    tableEl.innerHTML = `<div class="sb-props-empty">No odds available for this market</div>`;
+  const isOpen = acc.classList.contains('open');
+  if (isOpen) {
+    acc.classList.remove('open');
     return;
   }
 
-  // Find FanDuel or best available bookmaker
+  acc.classList.add('open');
+
+  // Only fetch if body is still empty
+  if (!body.innerHTML.trim()) {
+    body.innerHTML = `<div class="sb-props-loading">⏳ Loading…</div>`;
+    await _sbPropsBuildAccordionBody(market, body);
+  }
+}
+
+async function _sbPropsBuildAccordionBody(market, bodyEl) {
+  const eventId  = _sbPropsGameSel;
+  const awayAbbr = _sbPropsGameSelAway;
+  const homeAbbr = _sbPropsGameSelHome;
+
+  const data = await _sbFetchPropMarket(eventId, market);
+  if (!data || !data.bookmakers || !data.bookmakers.length) {
+    bodyEl.innerHTML = `<div class="sb-props-empty">No odds available</div>`; return;
+  }
+
   const bk = data.bookmakers.find(b => b.key === 'fanduel') ||
              data.bookmakers.find(b => b.key === 'draftkings') ||
              data.bookmakers[0];
-  if (!bk) { tableEl.innerHTML = `<div class="sb-props-empty">No odds found</div>`; return; }
+  if (!bk) { bodyEl.innerHTML = `<div class="sb-props-empty">No odds found</div>`; return; }
 
-  const mkt = bk.markets.find(m => m.key === _sbPropsMarket);
+  const mkt = bk.markets.find(m => m.key === market);
   if (!mkt || !mkt.outcomes || !mkt.outcomes.length) {
-    tableEl.innerHTML = `<div class="sb-props-empty">No outcomes for this market</div>`;
-    return;
+    bodyEl.innerHTML = `<div class="sb-props-empty">No outcomes available</div>`; return;
   }
 
-  const isBinary = ['player_double_double','player_triple_double','player_first_basket'].includes(_sbPropsMarket);
+  const isBinary = ['player_double_double','player_triple_double','player_first_basket'].includes(market);
+  const marketLabel = _SB_PROP_MARKETS.find(m => m.key === market)?.label || market;
+  const gameKey = `${awayAbbr}@${homeAbbr}`;
 
-  // Group by player name
+  // Group by player
   const byPlayer = {};
   for (const o of mkt.outcomes) {
     const name = o.description || o.name;
     if (!byPlayer[name]) byPlayer[name] = {};
-    const dir = o.name.toLowerCase(); // 'over' | 'under' | 'yes' | 'no' | player name
-    byPlayer[name][dir] = { price: o.price, point: o.point };
+    byPlayer[name][o.name.toLowerCase()] = { price: o.price, point: o.point };
   }
 
-  const gameKey = `${awayAbbr}@${homeAbbr}`;
   let rows = '';
-  const marketLabel = _SB_PROP_MARKETS.find(m => m.key === _sbPropsMarket)?.label || _sbPropsMarket;
-
   for (const [player, dirs] of Object.entries(byPlayer)) {
-    const safePlayer = player.replace(/'/g, "\\'");
-
+    const safe = player.replace(/'/g, "\\'");
     if (isBinary) {
-      // Yes/No or just a single outcome per player (first basket)
       const yes = dirs['yes'] || dirs[Object.keys(dirs)[0]];
-      const no  = dirs['no']  || null;
-      const yType = `prop_${_sbPropsMarket}_yes_${player.toLowerCase().replace(/\s+/g,'_')}`;
-      const nType = `prop_${_sbPropsMarket}_no_${player.toLowerCase().replace(/\s+/g,'_')}`;
-      const ySelected = _sbSlip.some(l => l.gameKey === gameKey && l.type === yType);
-      const nSelected = no && _sbSlip.some(l => l.gameKey === gameKey && l.type === nType);
+      const no  = dirs['no'] || null;
+      const yT  = `prop_${market}_yes_${player.toLowerCase().replace(/\s+/g,'_')}`;
+      const nT  = `prop_${market}_no_${player.toLowerCase().replace(/\s+/g,'_')}`;
+      const yS  = _sbSlip.some(l => l.gameKey === gameKey && l.type === yT);
+      const nS  = no && _sbSlip.some(l => l.gameKey === gameKey && l.type === nT);
       rows += `<div class="sb-prop-row">
-        <div><div class="sb-prop-name">${player}</div><div class="sb-prop-line">${marketLabel}</div></div>
-        ${yes ? `<button class="sb-prop-btn yn${ySelected?' selected':''}" data-pgk="${gameKey}" data-ptype="${yType}"
-          onclick="_sbToggleLeg('${gameKey}','${yType}','${awayAbbr}','${homeAbbr}',${yes.price},0,'${safePlayer} YES')">
+        <div><div class="sb-prop-name">${player}</div></div>
+        ${yes ? `<button class="sb-prop-btn yn${yS?' selected':''}" data-pgk="${gameKey}" data-ptype="${yT}"
+          onclick="_sbToggleLeg('${gameKey}','${yT}','${awayAbbr}','${homeAbbr}',${yes.price},0,'${safe} YES')">
           <span class="prop-direction">YES</span><span class="prop-odds">${_fmtML(yes.price)}</span>
         </button>` : ''}
-        ${no ? `<button class="sb-prop-btn yn${nSelected?' selected':''}" data-pgk="${gameKey}" data-ptype="${nType}"
-          onclick="_sbToggleLeg('${gameKey}','${nType}','${awayAbbr}','${homeAbbr}',${no.price},0,'${safePlayer} NO')">
+        ${no ? `<button class="sb-prop-btn yn${nS?' selected':''}" data-pgk="${gameKey}" data-ptype="${nT}"
+          onclick="_sbToggleLeg('${gameKey}','${nT}','${awayAbbr}','${homeAbbr}',${no.price},0,'${safe} NO')">
           <span class="prop-direction">NO</span><span class="prop-odds">${_fmtML(no.price)}</span>
         </button>` : '<div></div>'}
       </div>`;
     } else {
-      const ov = dirs['over'];
-      const un = dirs['under'];
+      const ov   = dirs['over'], un = dirs['under'];
       const line = (ov || un)?.point ?? '';
-      const oType = `prop_${_sbPropsMarket}_over_${player.toLowerCase().replace(/\s+/g,'_')}`;
-      const uType = `prop_${_sbPropsMarket}_under_${player.toLowerCase().replace(/\s+/g,'_')}`;
-      const oSel = _sbSlip.some(l => l.gameKey === gameKey && l.type === oType);
-      const uSel = _sbSlip.some(l => l.gameKey === gameKey && l.type === uType);
+      const oT   = `prop_${market}_over_${player.toLowerCase().replace(/\s+/g,'_')}`;
+      const uT   = `prop_${market}_under_${player.toLowerCase().replace(/\s+/g,'_')}`;
+      const oS   = _sbSlip.some(l => l.gameKey === gameKey && l.type === oT);
+      const uS   = _sbSlip.some(l => l.gameKey === gameKey && l.type === uT);
       rows += `<div class="sb-prop-row">
         <div><div class="sb-prop-name">${player}</div><div class="sb-prop-line">${line} ${marketLabel.replace(' O/U','')}</div></div>
-        ${ov ? `<button class="sb-prop-btn over${oSel?' selected':''}" data-pgk="${gameKey}" data-ptype="${oType}"
-          onclick="_sbToggleLeg('${gameKey}','${oType}','${awayAbbr}','${homeAbbr}',${ov.price},${line},'${safePlayer} O ${line}')">
+        ${ov ? `<button class="sb-prop-btn over${oS?' selected':''}" data-pgk="${gameKey}" data-ptype="${oT}"
+          onclick="_sbToggleLeg('${gameKey}','${oT}','${awayAbbr}','${homeAbbr}',${ov.price},${line},'${safe} O ${line}')">
           <span class="prop-direction">OVER</span><span class="prop-odds">${_fmtML(ov.price)}</span>
         </button>` : '<div></div>'}
-        ${un ? `<button class="sb-prop-btn under${uSel?' selected':''}" data-pgk="${gameKey}" data-ptype="${uType}"
-          onclick="_sbToggleLeg('${gameKey}','${uType}','${awayAbbr}','${homeAbbr}',${un.price},${line},'${safePlayer} U ${line}')">
+        ${un ? `<button class="sb-prop-btn under${uS?' selected':''}" data-pgk="${gameKey}" data-ptype="${uT}"
+          onclick="_sbToggleLeg('${gameKey}','${uT}','${awayAbbr}','${homeAbbr}',${un.price},${line},'${safe} U ${line}')">
           <span class="prop-direction">UNDER</span><span class="prop-odds">${_fmtML(un.price)}</span>
         </button>` : '<div></div>'}
       </div>`;
     }
   }
 
-  tableEl.innerHTML = `
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:1px;color:var(--muted);margin-bottom:10px;text-transform:uppercase">
+  bodyEl.innerHTML = `
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;letter-spacing:1px;color:var(--muted);padding:8px 16px 4px;text-transform:uppercase">
       ${bk.title} · ${Object.keys(byPlayer).length} players
-      <span style="opacity:0.5;margin-left:8px">Props do not auto-settle</span>
     </div>
     <div class="sb-props-table">${rows || '<div class="sb-props-empty">No props found</div>'}</div>`;
 }
