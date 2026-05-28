@@ -7132,6 +7132,49 @@ document.addEventListener('DOMContentLoaded', async () => {
   .sb-history-result.pending { color: var(--accent2); font-size: 0.8rem; letter-spacing: 1px; }
   .sb-history-empty { padding: 32px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.82rem; letter-spacing: 2px; }
 
+  /* Player Props */
+  .sb-props-section { margin: 32px 0 8px; }
+  .sb-props-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .sb-props-game-pill {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; letter-spacing: 1px;
+    padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .sb-props-game-pill:hover { border-color: rgba(255,255,255,0.3); color: var(--text); }
+  .sb-props-game-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(100,180,255,0.08); }
+  .sb-props-market-sel {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.85rem; letter-spacing: 1px;
+    padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); cursor: pointer; flex-shrink: 0;
+  }
+  .sb-props-market-sel:focus { outline: none; border-color: var(--accent); }
+  .sb-props-table { display: flex; flex-direction: column; gap: 4px; }
+  .sb-prop-row {
+    display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px;
+    padding: 10px 14px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; transition: border-color 0.15s;
+  }
+  .sb-prop-row:hover { border-color: rgba(255,255,255,0.15); }
+  .sb-prop-name { font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; letter-spacing: 0.5px; }
+  .sb-prop-line { font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
+  .sb-prop-btn {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.78rem; letter-spacing: 1px;
+    padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 64px;
+  }
+  .sb-prop-btn .prop-direction { font-size: 0.7rem; opacity: 0.7; }
+  .sb-prop-btn .prop-odds { font-weight: 700; }
+  .sb-prop-btn:hover { border-color: rgba(255,255,255,0.3); }
+  .sb-prop-btn.over { color: var(--green); }
+  .sb-prop-btn.over:hover, .sb-prop-btn.over.selected { background: rgba(0,255,136,0.1); border-color: var(--green); }
+  .sb-prop-btn.under { color: var(--red); }
+  .sb-prop-btn.under:hover, .sb-prop-btn.under.selected { background: rgba(255,51,85,0.1); border-color: var(--red); }
+  .sb-prop-btn.yn { color: var(--accent2); }
+  .sb-prop-btn.yn.selected { background: rgba(255,170,0,0.1); border-color: var(--accent2); }
+  .sb-props-empty { padding: 32px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.82rem; letter-spacing: 2px; }
+  .sb-props-loading { padding: 24px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; letter-spacing: 2px; }
+
   /* Broke banner */
   .sb-broke-banner {
     background: linear-gradient(135deg, rgba(255,51,85,0.15) 0%, rgba(255,77,0,0.1) 100%);
@@ -7656,6 +7699,43 @@ let _sbEnrichedGamesCache = []; // enriched games with odds + spreads + totals
 let _sbHistoryFilter = 'all'; // 'all' | 'open' | 'settled'
 let _sbLbSort = { col: 'bankroll', dir: -1 }; // active leaderboard sort column + direction
 
+// ── Player Props State ────────────────────────────────────────
+const _ODDS_API_KEY = 'YOUR_KEY_HERE'; // ← paste your The Odds API key here
+let _sbPropsEvents   = null;  // cached Odds API event list
+let _sbPropsCache    = {};    // { [eventId_market]: { data, ts } }
+let _sbPropsGameSel  = null;  // selected Odds API event ID
+let _sbPropsMarket   = 'player_points';
+
+const _SB_PROP_MARKETS = [
+  { key: 'player_points',                  label: 'Player Points O/U'       },
+  { key: 'player_rebounds',                label: 'Player Rebounds O/U'     },
+  { key: 'player_assists',                 label: 'Player Assists O/U'      },
+  { key: 'player_threes',                  label: 'Player Threes O/U'       },
+  { key: 'player_blocks',                  label: 'Player Blocks O/U'       },
+  { key: 'player_steals',                  label: 'Player Steals O/U'       },
+  { key: 'player_points_rebounds',         label: 'Points + Rebounds O/U'   },
+  { key: 'player_points_assists',          label: 'Points + Assists O/U'    },
+  { key: 'player_rebounds_assists',        label: 'Rebounds + Assists O/U'  },
+  { key: 'player_points_rebounds_assists', label: 'Pts + Reb + Ast O/U'     },
+  { key: 'player_double_double',           label: 'Double-Double'           },
+  { key: 'player_triple_double',           label: 'Triple-Double'           },
+  { key: 'player_first_basket',            label: 'First Basket Scorer'     },
+];
+
+const _NBA_ODDS_ABBR = {
+  'Atlanta Hawks':'ATL','Boston Celtics':'BOS','Brooklyn Nets':'BKN',
+  'Charlotte Hornets':'CHA','Chicago Bulls':'CHI','Cleveland Cavaliers':'CLE',
+  'Dallas Mavericks':'DAL','Denver Nuggets':'DEN','Detroit Pistons':'DET',
+  'Golden State Warriors':'GSW','Houston Rockets':'HOU','Indiana Pacers':'IND',
+  'LA Clippers':'LAC','Los Angeles Clippers':'LAC','Los Angeles Lakers':'LAL',
+  'Memphis Grizzlies':'MEM','Miami Heat':'MIA','Milwaukee Bucks':'MIL',
+  'Minnesota Timberwolves':'MIN','New Orleans Pelicans':'NOP','New York Knicks':'NYK',
+  'Oklahoma City Thunder':'OKC','Orlando Magic':'ORL','Philadelphia 76ers':'PHI',
+  'Phoenix Suns':'PHX','Portland Trail Blazers':'POR','Sacramento Kings':'SAC',
+  'San Antonio Spurs':'SAS','Toronto Raptors':'TOR','Utah Jazz':'UTA',
+  'Washington Wizards':'WAS',
+};
+
 // ── Parlay correlation rules ─────────────────────────────────
 
 // ── American odds → parlay combined decimal odds ─────────────
@@ -8143,6 +8223,7 @@ function _sbToggleLeg(gameKey, type, awayAbbr, homeAbbr, ml, line, label) {
   }
   _renderSbSlip();
   _renderSbGameButtons();
+  _sbRenderPropButtons();
 }
 
 // ── Render slip ───────────────────────────────────────────────
@@ -8249,6 +8330,7 @@ function _sbRemoveLeg(gameKey, type) {
   if (!_sbSlip.length) _sbSlipMode = 'single';
   _renderSbSlip();
   _renderSbGameButtons();
+  _sbRenderPropButtons();
 }
 
 function _sbSetMode(mode) {
@@ -8265,6 +8347,14 @@ function _sbSetMode(mode) {
   _sbSlipMode = mode;
   _renderSbSlip();
   _renderSbGameButtons();
+}
+
+function _sbRenderPropButtons() {
+  document.querySelectorAll('.sb-prop-btn[data-pgk]').forEach(btn => {
+    const gk = btn.dataset.pgk, type = btn.dataset.ptype;
+    const isSel = _sbSlip.some(l => l.gameKey === gk && l.type === type);
+    btn.classList.toggle('selected', isSel);
+  });
 }
 
 function _renderSbGameButtons() {
@@ -8344,6 +8434,194 @@ async function _fetchPredictorWinPcts(games) {
     } catch(e) {}
   }));
   return result;
+}
+
+// ── Player Props ──────────────────────────────────────────────
+
+async function _sbFetchPropsEvents() {
+  if (_sbPropsEvents) return _sbPropsEvents;
+  try {
+    const r = await fetch(`https://api.the-odds-api.com/v4/sports/basketball_nba/events?apiKey=${_ODDS_API_KEY}&dateFormat=iso`);
+    const data = await r.json();
+    _sbPropsEvents = Array.isArray(data) ? data : [];
+  } catch(e) { _sbPropsEvents = []; }
+  return _sbPropsEvents;
+}
+
+async function _sbFetchPropMarket(eventId, market) {
+  const cacheKey = `${eventId}_${market}`;
+  const cached = _sbPropsCache[cacheKey];
+  if (cached && (Date.now() - cached.ts) < 30 * 60 * 1000) return cached.data;
+  try {
+    const r = await fetch(`https://api.the-odds-api.com/v4/sports/basketball_nba/events/${eventId}/odds?apiKey=${_ODDS_API_KEY}&regions=us&markets=${market}&oddsFormat=american`);
+    const data = await r.json();
+    _sbPropsCache[cacheKey] = { data, ts: Date.now() };
+    return data;
+  } catch(e) { return null; }
+}
+
+function _renderSbPropsSection(sbGames) {
+  if (!sbGames || !sbGames.length) return '';
+  const marketOpts = _SB_PROP_MARKETS.map(m =>
+    `<option value="${m.key}"${m.key === _sbPropsMarket ? ' selected' : ''}>${m.label}</option>`
+  ).join('');
+
+  // Game pills — use enriched game keys
+  const gamePills = sbGames.map(g => {
+    const isActive = _sbPropsGameSel && _sbPropsGameSel === _sbPropsMatchEventId(g);
+    return `<button class="sb-props-game-pill${isActive ? ' active' : ''}"
+      onclick="_sbPropsPickGame('${g.away}','${g.home}')">${g.away} @ ${g.home}</button>`;
+  }).join('');
+
+  return `
+  <div class="sb-props-section">
+    <div class="sb-section-label" style="margin-bottom:14px">🎯 PLAYER PROPS</div>
+    <div class="sb-props-controls">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${gamePills}</div>
+      <select class="sb-props-market-sel" id="sb-props-market-sel" onchange="_sbPropsChangeMarket(this.value)">
+        ${marketOpts}
+      </select>
+    </div>
+    <div id="sb-props-table">
+      <div class="sb-props-empty">Select a game above to load props</div>
+    </div>
+  </div>`;
+}
+
+function _sbPropsMatchEventId(g) {
+  // Match a sportsbook game (abbr-based) to an Odds API event ID stored in _sbPropsEvents
+  if (!_sbPropsEvents) return null;
+  const ev = _sbPropsEvents.find(e => {
+    const ha = _NBA_ODDS_ABBR[e.home_team], aa = _NBA_ODDS_ABBR[e.away_team];
+    return ha === g.home && aa === g.away;
+  });
+  return ev ? ev.id : null;
+}
+
+async function _sbPropsPickGame(awayAbbr, homeAbbr) {
+  // Find the matching event from Odds API
+  const tableEl = document.getElementById('sb-props-table');
+  if (!tableEl) return;
+
+  // Update game pills styling
+  document.querySelectorAll('.sb-props-game-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === `${awayAbbr} @ ${homeAbbr}`);
+  });
+
+  tableEl.innerHTML = `<div class="sb-props-loading">⏳ Loading props…</div>`;
+
+  const events = await _sbFetchPropsEvents();
+  const ev = events.find(e => {
+    const ha = _NBA_ODDS_ABBR[e.home_team], aa = _NBA_ODDS_ABBR[e.away_team];
+    return ha === homeAbbr && aa === awayAbbr;
+  });
+  if (!ev) {
+    tableEl.innerHTML = `<div class="sb-props-empty">No props available for this game</div>`;
+    return;
+  }
+  _sbPropsGameSel = ev.id;
+  _sbPropsGameSelAway = awayAbbr;
+  _sbPropsGameSelHome = homeAbbr;
+  await _sbPropsLoadTable(ev.id, awayAbbr, homeAbbr);
+}
+
+let _sbPropsGameSelAway = null, _sbPropsGameSelHome = null;
+
+async function _sbPropsChangeMarket(market) {
+  _sbPropsMarket = market;
+  if (!_sbPropsGameSel) return;
+  const tableEl = document.getElementById('sb-props-table');
+  if (tableEl) tableEl.innerHTML = `<div class="sb-props-loading">⏳ Loading props…</div>`;
+  await _sbPropsLoadTable(_sbPropsGameSel, _sbPropsGameSelAway, _sbPropsGameSelHome);
+}
+
+async function _sbPropsLoadTable(eventId, awayAbbr, homeAbbr) {
+  const tableEl = document.getElementById('sb-props-table');
+  if (!tableEl) return;
+
+  const data = await _sbFetchPropMarket(eventId, _sbPropsMarket);
+  if (!data || !data.bookmakers || !data.bookmakers.length) {
+    tableEl.innerHTML = `<div class="sb-props-empty">No odds available for this market</div>`;
+    return;
+  }
+
+  // Find FanDuel or best available bookmaker
+  const bk = data.bookmakers.find(b => b.key === 'fanduel') ||
+             data.bookmakers.find(b => b.key === 'draftkings') ||
+             data.bookmakers[0];
+  if (!bk) { tableEl.innerHTML = `<div class="sb-props-empty">No odds found</div>`; return; }
+
+  const mkt = bk.markets.find(m => m.key === _sbPropsMarket);
+  if (!mkt || !mkt.outcomes || !mkt.outcomes.length) {
+    tableEl.innerHTML = `<div class="sb-props-empty">No outcomes for this market</div>`;
+    return;
+  }
+
+  const isBinary = ['player_double_double','player_triple_double','player_first_basket'].includes(_sbPropsMarket);
+
+  // Group by player name
+  const byPlayer = {};
+  for (const o of mkt.outcomes) {
+    const name = o.description || o.name;
+    if (!byPlayer[name]) byPlayer[name] = {};
+    const dir = o.name.toLowerCase(); // 'over' | 'under' | 'yes' | 'no' | player name
+    byPlayer[name][dir] = { price: o.price, point: o.point };
+  }
+
+  const gameKey = `${awayAbbr}@${homeAbbr}`;
+  let rows = '';
+  const marketLabel = _SB_PROP_MARKETS.find(m => m.key === _sbPropsMarket)?.label || _sbPropsMarket;
+
+  for (const [player, dirs] of Object.entries(byPlayer)) {
+    const safePlayer = player.replace(/'/g, "\\'");
+
+    if (isBinary) {
+      // Yes/No or just a single outcome per player (first basket)
+      const yes = dirs['yes'] || dirs[Object.keys(dirs)[0]];
+      const no  = dirs['no']  || null;
+      const yType = `prop_${_sbPropsMarket}_yes_${player.toLowerCase().replace(/\s+/g,'_')}`;
+      const nType = `prop_${_sbPropsMarket}_no_${player.toLowerCase().replace(/\s+/g,'_')}`;
+      const ySelected = _sbSlip.some(l => l.gameKey === gameKey && l.type === yType);
+      const nSelected = no && _sbSlip.some(l => l.gameKey === gameKey && l.type === nType);
+      rows += `<div class="sb-prop-row">
+        <div><div class="sb-prop-name">${player}</div><div class="sb-prop-line">${marketLabel}</div></div>
+        ${yes ? `<button class="sb-prop-btn yn${ySelected?' selected':''}" data-pgk="${gameKey}" data-ptype="${yType}"
+          onclick="_sbToggleLeg('${gameKey}','${yType}','${awayAbbr}','${homeAbbr}',${yes.price},0,'${safePlayer} YES')">
+          <span class="prop-direction">YES</span><span class="prop-odds">${_fmtML(yes.price)}</span>
+        </button>` : ''}
+        ${no ? `<button class="sb-prop-btn yn${nSelected?' selected':''}" data-pgk="${gameKey}" data-ptype="${nType}"
+          onclick="_sbToggleLeg('${gameKey}','${nType}','${awayAbbr}','${homeAbbr}',${no.price},0,'${safePlayer} NO')">
+          <span class="prop-direction">NO</span><span class="prop-odds">${_fmtML(no.price)}</span>
+        </button>` : '<div></div>'}
+      </div>`;
+    } else {
+      const ov = dirs['over'];
+      const un = dirs['under'];
+      const line = (ov || un)?.point ?? '';
+      const oType = `prop_${_sbPropsMarket}_over_${player.toLowerCase().replace(/\s+/g,'_')}`;
+      const uType = `prop_${_sbPropsMarket}_under_${player.toLowerCase().replace(/\s+/g,'_')}`;
+      const oSel = _sbSlip.some(l => l.gameKey === gameKey && l.type === oType);
+      const uSel = _sbSlip.some(l => l.gameKey === gameKey && l.type === uType);
+      rows += `<div class="sb-prop-row">
+        <div><div class="sb-prop-name">${player}</div><div class="sb-prop-line">${line} ${marketLabel.replace(' O/U','')}</div></div>
+        ${ov ? `<button class="sb-prop-btn over${oSel?' selected':''}" data-pgk="${gameKey}" data-ptype="${oType}"
+          onclick="_sbToggleLeg('${gameKey}','${oType}','${awayAbbr}','${homeAbbr}',${ov.price},${line},'${safePlayer} O ${line}')">
+          <span class="prop-direction">OVER</span><span class="prop-odds">${_fmtML(ov.price)}</span>
+        </button>` : '<div></div>'}
+        ${un ? `<button class="sb-prop-btn under${uSel?' selected':''}" data-pgk="${gameKey}" data-ptype="${uType}"
+          onclick="_sbToggleLeg('${gameKey}','${uType}','${awayAbbr}','${homeAbbr}',${un.price},${line},'${safePlayer} U ${line}')">
+          <span class="prop-direction">UNDER</span><span class="prop-odds">${_fmtML(un.price)}</span>
+        </button>` : '<div></div>'}
+      </div>`;
+    }
+  }
+
+  tableEl.innerHTML = `
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:1px;color:var(--muted);margin-bottom:10px;text-transform:uppercase">
+      ${bk.title} · ${Object.keys(byPlayer).length} players
+      <span style="opacity:0.5;margin-left:8px">Props do not auto-settle</span>
+    </div>
+    <div class="sb-props-table">${rows || '<div class="sb-props-empty">No props found</div>'}</div>`;
 }
 
 async function renderSportsbook() {
@@ -8632,6 +8910,9 @@ async function renderSportsbook() {
         html += `</div>`;
       }
     }
+
+    // Player props
+    html += _renderSbPropsSection(enrichedGames.filter(g => !g.isFinal));
 
     // Settled bet history — shown below games, above Clanker's picks
     // Clanker's picks — shown above user's bet history
