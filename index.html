@@ -7107,8 +7107,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   .sb-history-header {
     display: flex; align-items: center; gap: 14px; padding: 14px 20px;
-    border-bottom: 1px solid var(--border); background: var(--surface2);
+    background: var(--surface2); transition: background 0.15s;
   }
+  .sb-history-header:hover { background: rgba(255,255,255,0.06); }
   .sb-history-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 2px; color: var(--text); }
   .sb-history-row {
     display: grid; grid-template-columns: 90px 1fr auto auto auto;
@@ -7732,6 +7733,7 @@ let _sbGamesDate = '';     // date of games currently displayed
 let _sbEnrichedGamesCache = []; // enriched games with odds + spreads + totals
 let _sbHistoryFilter = 'all'; // 'all' | 'open' | 'settled'
 let _sbLbSort = { col: 'bankroll', dir: -1 }; // active leaderboard sort column + direction
+let _sbHistoryOpen = false; // collapsed by default
 
 // ── Player Props State ────────────────────────────────────────
 const _ODDS_API_KEY = '81037b065591850bd10fc780590f08e8'; // ← paste your The Odds API key here
@@ -9055,8 +9057,6 @@ async function renderSportsbook() {
     // Clanker's picks — shown above user's bet history
     html += _renderBotPicks(botBets, enrichedGames);
 
-    html += _renderSbHistory(bets);
-
     html += `</div>`;
 
     // Right column: slip on top, open bets below
@@ -9107,6 +9107,9 @@ async function renderSportsbook() {
   if (isBroke) {
     html += _renderBotPicks(botBets, enrichedGames);
   }
+
+  // Bet history — always below both columns so it's at the bottom on mobile too
+  html += _renderSbHistory(bets);
 
   container.innerHTML = html;
 
@@ -9943,10 +9946,21 @@ function _renderSbOpenBets(openBets) {
     </div>`;
 }
 
+function _sbToggleHistory() {
+  _sbHistoryOpen = !_sbHistoryOpen;
+  const body    = document.getElementById('sb-history-body');
+  const chevron = document.getElementById('sb-history-chevron');
+  const card    = document.getElementById('sb-history-card');
+  if (!body) return;
+  body.style.maxHeight      = _sbHistoryOpen ? '4000px' : '0';
+  body.style.borderTopWidth = _sbHistoryOpen ? '1px'   : '0';
+  if (chevron) chevron.style.transform = _sbHistoryOpen ? 'rotate(180deg)' : '';
+  if (card)    card.classList.toggle('open', _sbHistoryOpen);
+}
+
 function _renderSbHistory(bets) {
   if (!bets.length) return '';
   const settled = [...bets].filter(b => b.status !== 'open').sort((a, b) => b.id - a.id);
-
   if (!settled.length) return '';
 
   const wins     = settled.filter(b => b.result === 'win').length;
@@ -9965,17 +9979,24 @@ function _renderSbHistory(bets) {
     return divider + _renderSbBetCard(b);
   }).join('');
 
+  const bodyMaxH   = _sbHistoryOpen ? '4000px' : '0';
+  const bodyBorder = _sbHistoryOpen ? '1px' : '0';
+  const chevronRot = _sbHistoryOpen ? 'transform:rotate(180deg)' : '';
+
   return `
-    <div class="sb-history-card" style="margin-top:32px">
-      <div class="sb-history-header">
+    <div class="sb-history-card${_sbHistoryOpen ? ' open' : ''}" id="sb-history-card" style="margin-top:32px">
+      <div class="sb-history-header" style="cursor:pointer;user-select:none" onclick="_sbToggleHistory()">
         <span class="sb-history-title">Bet History</span>
         <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;color:var(--muted);margin-left:auto;display:flex;gap:12px;align-items:center">
           <span>${wins}W–${losses}L</span>
           <span style="color:${netColor};font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px">${netStr}</span>
+          <span id="sb-history-chevron" style="font-size:0.7rem;color:var(--muted);transition:transform 0.22s ease;${chevronRot}">▼</span>
         </span>
       </div>
-      <div style="padding:16px 0 4px">
-        ${cards || '<div class="sb-history-empty">No settled bets yet</div>'}
+      <div id="sb-history-body" style="max-height:${bodyMaxH};overflow:hidden;transition:max-height 0.3s ease;border-top-width:${bodyBorder};border-top-style:solid;border-top-color:var(--border);">
+        <div style="padding:16px 0 4px">
+          ${cards || '<div class="sb-history-empty">No settled bets yet</div>'}
+        </div>
       </div>
     </div>`;
 }
