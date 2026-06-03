@@ -8140,6 +8140,38 @@ async function _sbMigrateEarnings() {
   } catch(e) { console.warn('[SB] Earnings migration failed:', e); }
 }
 
+// ── One-time migration: fix prop bet labels (YES/NO → market name) ──────────
+async function _sbFixPropLabels() {
+  try {
+    const bets = await _sbLoadBets();
+    if (!bets || !bets.length) return;
+    let changed = false;
+    for (const bet of bets) {
+      if (!bet.legs) continue;
+      for (const leg of bet.legs) {
+        if (!leg.type || !leg.type.startsWith('prop_')) continue;
+        // type format: prop_{market}_{yes|no}_{player_slug}
+        const parts = leg.type.split('_');
+        // find market key: everything between 'prop_' and the direction (_yes_ or _no_)
+        const dirIdx = parts.findIndex((p, i) => i > 0 && (p === 'yes' || p === 'no'));
+        if (dirIdx < 2) continue;
+        const marketKey = parts.slice(1, dirIdx).join('_');
+        const marketLabel = _SB_PROP_MARKETS.find(m => m.key === marketKey)?.label;
+        if (!marketLabel) continue;
+        // Only fix labels that still end with bare " YES" or " NO"
+        if (!leg.label || (!/\s+YES$/.test(leg.label) && !/\s+NO$/.test(leg.label))) continue;
+        const dir = parts[dirIdx]; // 'yes' or 'no'
+        const playerName = leg.label.replace(/\s+(YES|NO)$/, '');
+        leg.label = dir === 'no'
+          ? `${playerName} NO - ${marketLabel}`
+          : `${playerName} - ${marketLabel}`;
+        changed = true;
+      }
+    }
+    if (changed) await _sbSaveBets(bets);
+  } catch(e) {}
+}
+
 // ── Auto-settle open bets ─────────────────────────────────────
 async function _sbAutoSettle() {
   const bets = await _sbLoadBets();
@@ -8877,6 +8909,7 @@ async function renderSportsbook() {
   if (_sbProfile) {
     await _sbAutoSettle();
     await _sbMigrateEarnings(); // one-time: rebuild allTimeEarned/allTimeLost from history
+    await _sbFixPropLabels();   // one-time: fix "YES"/"NO" prop labels to include market name
   }
 
   // Auto-create sportsbook profile using Firebase username (no onboarding prompt)
