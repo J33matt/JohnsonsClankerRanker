@@ -12429,11 +12429,11 @@ function _pgaScoreCell(strokes, par, scoreType) {
   else if (st === 'PAR' || diff === 0)
     style += 'color:rgba(255,255,255,0.55);';
   else if (st === 'BOGEY' || diff === 1)
-    style += 'border:1.5px solid rgba(245,158,11,0.7);color:#f59e0b;border-radius:2px;';
+    style += 'background:rgba(245,158,11,0.2);border:1.5px solid #f59e0b;color:#f59e0b;border-radius:2px;';
   else if (st.includes('DOUBLE') || diff === 2)
-    style += 'border:1.5px solid #ef4444;color:#ef4444;border-radius:2px;box-shadow:0 0 0 2px rgba(239,68,68,0.3);';
+    style += 'background:rgba(99,102,241,0.2);border:1.5px solid #818cf8;color:#818cf8;border-radius:2px;';
   else
-    style += 'background:#7f1d1d;color:#fca5a5;border-radius:2px;';
+    style += 'background:rgba(99,102,241,0.35);border:1.5px solid #6366f1;color:#c7d2fe;border-radius:2px;';
   return `<span style="${style}">${strokes}</span>`;
 }
 
