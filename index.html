@@ -9263,8 +9263,12 @@ async function renderSportsbook() {
 
       if (upcomingGames.length) {
         if (liveGames.length) html += `<hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:20px 0 16px">`;
+        const _upcomingDate = upcomingGames[0]?.date || _sbGamesDate;
+        const _upcomingLabel = _upcomingDate === today
+          ? '🕐 UPCOMING'
+          : (() => { const [y,m,d] = _upcomingDate.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}); })();
         html += `<div style="display:flex;align-items:center;gap:10px;margin:${liveGames.length ? '0px' : '0px'} 0 12px">
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;color:var(--text)">🕐 UPCOMING</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:3px;color:var(--text)">${_upcomingLabel}</span>
         </div>`;
         html += `<div class="sb-games-grid">`;
         upcomingGames.forEach(g => { html += _renderSbGameCard(g, openBets); });
