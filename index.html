@@ -12452,12 +12452,13 @@ async function _pgaRenderRankings() {
   el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Loading FedEx Cup standings<br><small style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;">Fetching top 50 athlete profiles…</small></div>';
   try {
     // Step 1: standings (athlete $refs + stats per player)
-    const sRes = await fetch('https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/seasons/2026/types/2/standings/0?limit=50');
+    const sRes = await fetch('https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/seasons/2026/types/2/standings/0?limit=200');
     const standings = await sRes.json();
-    const items = (standings.items || []).slice(0, 50);
+    // API returns standings as an object with numeric keys, not an array
+    const items = Object.values(standings.standings || {});
 
     // Step 2: batch-resolve athlete names from $refs
-    const resolved = await Promise.all(items.map(async (item, idx) => {
+    const resolved = await Promise.all(items.map(async (item) => {
       const athleteRef = (item.athlete?.$ref || '').replace(/^http:/, 'https:');
       let name = '', shortName = '', country = '';
       if (athleteRef) {
@@ -12470,10 +12471,17 @@ async function _pgaRenderRankings() {
         } catch {}
       }
       const stats = _pgaParseStandingsStats(item);
-      return { rank: idx + 1, name, shortName, country, ...stats };
+      return { name, shortName, country, ...stats };
     }));
 
-    _pgaRankingsCache = resolved.filter(r => r.name);
+    // Sort by FedExCup points descending, assign ranks
+    const sorted = resolved
+      .filter(r => r.name)
+      .sort((a, b) => (parseFloat(b.cupPts) || 0) - (parseFloat(a.cupPts) || 0))
+      .slice(0, 50)
+      .map((r, i) => ({ ...r, rank: i + 1 }));
+
+    _pgaRankingsCache = sorted;
     _pgaBuildRankings(el, _pgaRankingsCache);
   } catch(e) {
     el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;">Error: ${e.message}</div>`;
@@ -12481,21 +12489,16 @@ async function _pgaRenderRankings() {
 }
 
 function _pgaParseStandingsStats(item) {
-  const out = { cupPts: null, earnings: null, scoringAvg: null, cutsMade: null, tournamentsPlayed: null };
-  const tryParse = (s) => {
-    const name = (s.name || s.shortDisplayName || s.abbreviation || '').toLowerCase();
-    const val = s.displayValue ?? s.value ?? null;
-    if (!val && val !== 0) return;
-    if (name.includes('cup') || name === 'cuppts' || name.includes('fedex')) out.cupPts = val;
-    if (name.includes('earn') || name === 'money') out.earnings = val;
-    if (name.includes('scoring') || name === 'avg' || name === 'sa') out.scoringAvg = val;
-    if (name.includes('cuts made') || name === 'cm' || name === 'cutsm') out.cutsMade = val;
-    if (name.includes('tournament') || name === 'tp' || name === 'events') out.tournamentsPlayed = val;
+  const out = { cupPts: null, scoringAvg: null, cutsMade: null, tournamentsPlayed: null };
+  const statMap = {
+    cupPoints:         v => out.cupPts            = v,
+    scoringAverage:    v => out.scoringAvg         = v,
+    cutsMade:          v => out.cutsMade           = v,
+    tournamentsPlayed: v => out.tournamentsPlayed  = v,
   };
-  // Try records[].stats[]
-  (item.records || []).forEach(r => (r.stats || []).forEach(tryParse));
-  // Try direct stats[]
-  (item.stats || []).forEach(tryParse);
+  (item.records || []).forEach(r =>
+    (r.stats || []).forEach(s => statMap[s.name]?.(s.displayValue ?? s.value))
+  );
   return out;
 }
 
@@ -12514,12 +12517,12 @@ function _pgaBuildRankings(el, players) {
       <div class="pga-event-meta">Season-long points race · Resets at FedEx playoffs in August · Top 70 advance</div>
     </div>`;
 
-  const gridCols = '44px 1fr 50px 90px 110px 76px';
+  const gridCols = '44px 1fr 50px 90px 60px 76px';
   let tableHtml = `
     <div class="pga-rankings-wrap">
       <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:7px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03);font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">
         <span>#</span><span>PLAYER</span><span style="text-align:right">CTY</span>
-        <span style="text-align:right">FEDEX PTS</span><span style="text-align:right">EARNINGS</span><span style="text-align:right">SCR AVG</span>
+        <span style="text-align:right">FEDEX PTS</span><span style="text-align:right">EVENTS</span><span style="text-align:right">SCR AVG</span>
       </div>`;
 
   players.forEach((p, idx) => {
@@ -12530,7 +12533,7 @@ function _pgaBuildRankings(el, players) {
         <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.shortName || p.name}</span>
         <span class="pga-rankings-stat">${p.country || '—'}</span>
         <span class="pga-rankings-stat pts">${p.cupPts != null ? p.cupPts : '—'}</span>
-        <span class="pga-rankings-stat">${p.earnings != null ? p.earnings : '—'}</span>
+        <span class="pga-rankings-stat">${p.tournamentsPlayed != null ? p.tournamentsPlayed : '—'}</span>
         <span class="pga-rankings-stat">${p.scoringAvg != null ? p.scoringAvg : '—'}</span>
       </div>`;
   });
