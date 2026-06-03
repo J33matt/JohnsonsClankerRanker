@@ -7199,26 +7199,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     overflow: hidden;
   }
   .sb-prop-team-badge img { width: 16px; height: 16px; object-fit: contain; }
-  .sb-prop-name { font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; letter-spacing: 0.5px; line-height: 1.2; }
+  .sb-prop-name { font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.5px; line-height: 1.2; }
   .sb-prop-l5 { font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 1px; text-align: right; white-space: nowrap; }
   .sb-l5-label { color: rgba(255,255,255,0.45); }
   .sb-l5-val { color: var(--text); }
   .sb-prop-btns { display: flex; gap: 6px; }
   .sb-prop-btn {
     font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.5px;
-    padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12);
+    padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,170,0,0.4);
     background: rgba(255,255,255,0.04); cursor: pointer; transition: all 0.15s;
     display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 72px;
   }
-  .sb-prop-btn .prop-ou { font-size: 0.78rem; font-weight: 600; color: var(--text); }
-  .sb-prop-btn .prop-odds { font-size: 0.85rem; font-weight: 700; }
-  .sb-prop-btn.over .prop-odds { color: var(--green); }
-  .sb-prop-btn.under .prop-odds { color: var(--red); }
-  .sb-prop-btn:hover { background: rgba(255,255,255,0.08); }
-  .sb-prop-btn.over:hover, .sb-prop-btn.over.selected { background: rgba(0,255,136,0.1); }
-  .sb-prop-btn.under:hover, .sb-prop-btn.under.selected { background: rgba(255,51,85,0.1); }
-  .sb-prop-btn.yn .prop-odds { color: var(--accent2); }
-  .sb-prop-btn.yn.selected { background: rgba(255,170,0,0.1); }
+  .sb-prop-btn .prop-ou { font-size: 0.92rem; font-weight: 700; color: var(--text); }
+  .sb-prop-btn .prop-odds { font-size: 1rem; font-weight: 700; color: var(--accent2); }
+  .sb-prop-btn:hover { background: rgba(255,170,0,0.08); border-color: var(--accent2); }
+  .sb-prop-btn.selected, .sb-prop-btn.over.selected, .sb-prop-btn.under.selected, .sb-prop-btn.yn.selected { background: rgba(255,170,0,0.15); border-color: var(--accent2); }
   .sb-props-empty { padding: 32px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.82rem; letter-spacing: 2px; }
   .sb-props-loading { padding: 20px 16px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; letter-spacing: 2px; }
 
@@ -7898,7 +7893,6 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
     if (color) {
       const row = avatarEl.closest('.sb-prop-row');
       if (row) {
-        row.querySelectorAll('.sb-prop-btn').forEach(btn => { btn.style.borderColor = color + '80'; });
         avatarEl.style.borderColor = color;
       }
     }
