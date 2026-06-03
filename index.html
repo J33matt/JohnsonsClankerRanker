@@ -7929,9 +7929,7 @@ async function _sbFetchPlayerL5Binary(espnId, teamAbbr, market) {
     if (!eventIds.length) return (_sbPlayerL5BinaryCache[key] = null);
     const summaries = await Promise.all(eventIds.map(_sbFetchGameSummary));
     const results = summaries
-      .map(m => m[espnId])
-      .filter(Boolean)
-      .map(stats => checker(stats));
+      .map(m => m[espnId] ? checker(m[espnId]) : false);
     if (!results.length) return (_sbPlayerL5BinaryCache[key] = null);
     return (_sbPlayerL5BinaryCache[key] = {
       results,
