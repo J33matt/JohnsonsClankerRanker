@@ -7780,53 +7780,63 @@ const _NBA_TEAM_COLORS = {
   SAC:'#5A2D81', SAS:'#C4CED4', TOR:'#CE1141', UTA:'#002B5C', WAS:'#002B5C',
 };
 
-// Cache: player name → { espnId, teamAbbr }
-const _sbPlayerInfoCache = {};
+// Cache: teamAbbr → { playerName: { headshotUrl, teamAbbr } }
+const _sbRosterCache = {};
+
+async function _sbFetchRoster(abbr) {
+  if (_sbRosterCache[abbr]) return _sbRosterCache[abbr];
+  try {
+    const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/${abbr.toLowerCase()}/roster`);
+    const d = await r.json();
+    const map = {};
+    // Athletes is grouped by position: [ { items: [player, ...] }, ... ]
+    (d.athletes || []).forEach(group => {
+      (group.items || [group]).forEach(p => {
+        if (p.fullName) map[p.fullName] = {
+          headshotUrl: p.headshot?.href || null,
+          teamAbbr: abbr,
+        };
+      });
+    });
+    _sbRosterCache[abbr] = map;
+    return map;
+  } catch(e) { _sbRosterCache[abbr] = {}; return {}; }
+}
 
 async function _sbPropsLoadEnrichments(bodyEl) {
   const avatars = [...bodyEl.querySelectorAll('[data-player-name]')];
   if (!avatars.length) return;
 
-  await Promise.all(avatars.map(async avatarEl => {
-    const name = avatarEl.dataset.playerName;
-    if (!(name in _sbPlayerInfoCache)) {
-      try {
-        const r = await fetch(`https://site.api.espn.com/apis/common/v3/search?query=${encodeURIComponent(name)}&sport=basketball&league=nba&limit=1`);
-        const d = await r.json();
-        const item = d?.results?.[0]?.items?.[0];
-        _sbPlayerInfoCache[name] = item
-          ? { espnId: item.id, teamAbbr: item.team?.abbreviation || null }
-          : null;
-      } catch(e) { _sbPlayerInfoCache[name] = null; }
-    }
+  // Fetch both team rosters in parallel (2 requests total, not 1 per player)
+  const [awayMap, homeMap] = await Promise.all([
+    _sbFetchRoster(_sbPropsGameSelAway || ''),
+    _sbFetchRoster(_sbPropsGameSelHome || ''),
+  ]);
+  const rosterMap = { ...awayMap, ...homeMap };
 
-    const info = _sbPlayerInfoCache[name];
+  avatars.forEach(avatarEl => {
+    const name = avatarEl.dataset.playerName;
+    const info = rosterMap[name];
     if (!info) return;
 
-    // Update headshot
-    if (info.espnId) {
+    if (info.headshotUrl) {
       const img = document.createElement('img');
       img.alt = name;
-      img.src = `https://a.espncdn.com/i/headshots/nba/players/full/${info.espnId}.png`;
-      img.onerror = () => { img.remove(); }; // keep initials fallback if img fails
+      img.src = info.headshotUrl;
+      img.onerror = () => img.remove();
       avatarEl.innerHTML = '';
       avatarEl.appendChild(img);
     }
 
-    // Update team color on buttons in the same row
-    if (info.teamAbbr) {
-      const color = _NBA_TEAM_COLORS[info.teamAbbr];
-      if (color) {
-        const row = avatarEl.closest('.sb-prop-row');
-        if (row) {
-          row.querySelectorAll('.sb-prop-btn').forEach(btn => {
-            btn.style.borderColor = color + '80'; // 50% alpha
-          });
-          avatarEl.style.borderColor = color;
-        }
+    const color = _NBA_TEAM_COLORS[info.teamAbbr];
+    if (color) {
+      const row = avatarEl.closest('.sb-prop-row');
+      if (row) {
+        row.querySelectorAll('.sb-prop-btn').forEach(btn => { btn.style.borderColor = color + '80'; });
+        avatarEl.style.borderColor = color;
       }
     }
-  }));
+  });
 }
 
 // ── Parlay correlation rules ─────────────────────────────────
