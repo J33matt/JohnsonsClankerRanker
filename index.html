@@ -7191,6 +7191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   .sb-prop-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 50%; }
   .sb-prop-name { font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; letter-spacing: 0.5px; line-height: 1.2; }
+  .sb-prop-l5 { font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; color: var(--accent2); letter-spacing: 0.5px; margin-top: 2px; min-height: 1em; }
   .sb-prop-btns { display: flex; gap: 6px; }
   .sb-prop-btn {
     font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.5px;
@@ -7795,6 +7796,7 @@ async function _sbFetchRoster(abbr) {
         if (p.fullName) map[p.fullName] = {
           headshotUrl: p.headshot?.href || null,
           teamAbbr: abbr,
+          espnId: p.id || null,
         };
       });
     });
@@ -7803,17 +7805,60 @@ async function _sbFetchRoster(abbr) {
   } catch(e) { _sbRosterCache[abbr] = {}; return {}; }
 }
 
-async function _sbPropsLoadEnrichments(bodyEl) {
+// Market → ESPN stat name(s) to sum per game
+const _SB_MARKET_STATS = {
+  player_points:                  ['points'],
+  player_rebounds:                ['rebounds'],
+  player_assists:                 ['assists'],
+  player_threes:                  ['threePointersMade'],
+  player_blocks:                  ['blocks'],
+  player_steals:                  ['steals'],
+  player_points_rebounds:         ['points','rebounds'],
+  player_points_assists:          ['points','assists'],
+  player_rebounds_assists:        ['rebounds','assists'],
+  player_points_rebounds_assists: ['points','rebounds','assists'],
+};
+const _sbPlayerL5Cache = {}; // `${espnId}_${market}` → avg or null
+
+function _sbStatFromSplits(splits, name) {
+  for (const cat of splits?.categories || [])
+    for (const s of cat.stats || [])
+      if (s.name === name) return s.value ?? null;
+  return null;
+}
+
+async function _sbFetchPlayerL5(espnId, market) {
+  const key = `${espnId}_${market}`;
+  if (key in _sbPlayerL5Cache) return _sbPlayerL5Cache[key];
+  const statNames = _SB_MARKET_STATS[market];
+  if (!statNames) return (_sbPlayerL5Cache[key] = null);
+  try {
+    const r  = await fetch(`https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/athletes/${espnId}/eventlog?limit=8`);
+    const d  = await r.json();
+    const entries = (d.events?.items || []).filter(e => e.played && e.statistics?.$ref).slice(0, 5);
+    if (!entries.length) return (_sbPlayerL5Cache[key] = null);
+    const vals = await Promise.all(entries.map(async e => {
+      const url = e.statistics.$ref.replace('espn.pvt','espn.com').replace(/^http:/,'https:');
+      const sd  = await (await fetch(url)).json();
+      return statNames.reduce((sum, n) => sum + (_sbStatFromSplits(sd.splits, n) ?? 0), 0);
+    }));
+    const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
+    return (_sbPlayerL5Cache[key] = Math.round(avg * 10) / 10);
+  } catch(e) { return (_sbPlayerL5Cache[key] = null); }
+}
+
+async function _sbPropsLoadEnrichments(bodyEl, market) {
   const avatars = [...bodyEl.querySelectorAll('[data-player-name]')];
   if (!avatars.length) return;
 
-  // Fetch both team rosters in parallel (2 requests total, not 1 per player)
   const [awayMap, homeMap] = await Promise.all([
     _sbFetchRoster(_sbPropsGameSelAway || ''),
     _sbFetchRoster(_sbPropsGameSelHome || ''),
   ]);
   const rosterMap = { ...awayMap, ...homeMap };
+  const hasL5 = !!_SB_MARKET_STATS[market];
 
+  // Apply headshots + team colors immediately, then fire L5 fetches in parallel
   avatars.forEach(avatarEl => {
     const name = avatarEl.dataset.playerName;
     const info = rosterMap[name];
@@ -7821,11 +7866,9 @@ async function _sbPropsLoadEnrichments(bodyEl) {
 
     if (info.headshotUrl) {
       const img = document.createElement('img');
-      img.alt = name;
-      img.src = info.headshotUrl;
+      img.alt = name; img.src = info.headshotUrl;
       img.onerror = () => img.remove();
-      avatarEl.innerHTML = '';
-      avatarEl.appendChild(img);
+      avatarEl.innerHTML = ''; avatarEl.appendChild(img);
     }
 
     const color = _NBA_TEAM_COLORS[info.teamAbbr];
@@ -7835,6 +7878,15 @@ async function _sbPropsLoadEnrichments(bodyEl) {
         row.querySelectorAll('.sb-prop-btn').forEach(btn => { btn.style.borderColor = color + '80'; });
         avatarEl.style.borderColor = color;
       }
+    }
+
+    // Fire L5 fetch — updates span when ready
+    if (hasL5 && info.espnId) {
+      const slug = name.toLowerCase().replace(/\s+/g,'_');
+      _sbFetchPlayerL5(info.espnId, market).then(avg => {
+        const el = document.getElementById(`sb-l5-${slug}`);
+        if (el && avg !== null) el.textContent = `L5: ${avg}`;
+      });
     }
   });
 }
@@ -8736,7 +8788,7 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
       const nS  = no && _sbSlip.some(l => l.gameKey === gameKey && l.type === nT);
       rows += `<div class="sb-prop-row">
         ${avatar}
-        <div><div class="sb-prop-name">${player}</div></div>
+        <div><div class="sb-prop-name">${player}</div><div class="sb-prop-l5" id="sb-l5-${player.toLowerCase().replace(/\s+/g,'_')}"></div></div>
         <div class="sb-prop-btns">
           ${yes ? `<button class="sb-prop-btn yn${yS?' selected':''}" data-pgk="${gameKey}" data-ptype="${yT}"
             onclick="_sbToggleLeg('${gameKey}','${yT}','${awayAbbr}','${homeAbbr}',${yes.price},0,'${safe} YES')">
@@ -8757,7 +8809,7 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
       const uS   = _sbSlip.some(l => l.gameKey === gameKey && l.type === uT);
       rows += `<div class="sb-prop-row">
         ${avatar}
-        <div><div class="sb-prop-name">${player}</div></div>
+        <div><div class="sb-prop-name">${player}</div><div class="sb-prop-l5" id="sb-l5-${player.toLowerCase().replace(/\s+/g,'_')}"></div></div>
         <div class="sb-prop-btns">
           ${ov ? `<button class="sb-prop-btn over${oS?' selected':''}" data-pgk="${gameKey}" data-ptype="${oT}"
             onclick="_sbToggleLeg('${gameKey}','${oT}','${awayAbbr}','${homeAbbr}',${ov.price},${line},'${safe} O ${line}')">
@@ -8775,7 +8827,7 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
   bodyEl.innerHTML = `<div class="sb-props-table">${rows || '<div class="sb-props-empty">No props found</div>'}</div>`;
 
   // Async: load headshots + team colors without blocking the render
-  _sbPropsLoadEnrichments(bodyEl);
+  _sbPropsLoadEnrichments(bodyEl, market);
 }
 
 async function renderSportsbook() {
