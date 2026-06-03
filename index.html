@@ -12460,7 +12460,7 @@ async function _pgaRenderRankings() {
     // Step 2: batch-resolve athlete names from $refs
     const resolved = await Promise.all(items.map(async (item) => {
       const athleteRef = (item.athlete?.$ref || '').replace(/^http:/, 'https:');
-      let name = '', shortName = '', country = '';
+      let name = '', shortName = '', country = '', flagHref = '', headshot = '';
       if (athleteRef) {
         try {
           const ar = await fetch(athleteRef);
@@ -12468,10 +12468,12 @@ async function _pgaRenderRankings() {
           name = a.displayName || '';
           shortName = a.shortName || name;
           country = a.flag?.alt || a.citizenship || '';
+          flagHref = a.flag?.href || '';
+          headshot = a.headshot?.href || '';
         } catch {}
       }
       const stats = _pgaParseStandingsStats(item);
-      return { name, shortName, country, ...stats };
+      return { name, shortName, country, flagHref, headshot, ...stats };
     }));
 
     // Sort by FedExCup points descending, assign ranks
@@ -12517,21 +12519,30 @@ function _pgaBuildRankings(el, players) {
       <div class="pga-event-meta">Season-long points race · Resets at FedEx playoffs in August · Top 70 advance</div>
     </div>`;
 
-  const gridCols = '44px 1fr 50px 90px 60px 76px';
+  const gridCols = '44px 56px 1fr 90px 60px 76px';
   let tableHtml = `
     <div class="pga-rankings-wrap">
-      <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:7px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03);font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">
-        <span>#</span><span>PLAYER</span><span style="text-align:right">CTY</span>
+      <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03);font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">
+        <span>#</span><span></span><span style="padding-left:10px;">PLAYER</span>
         <span style="text-align:right">FEDEX PTS</span><span style="text-align:right">EVENTS</span><span style="text-align:right">SCR AVG</span>
       </div>`;
 
   players.forEach((p, idx) => {
     const isTop10 = idx < 10;
+    const flagImg = p.flagHref
+      ? `<img src="${p.flagHref}" style="width:18px;height:12px;object-fit:cover;border-radius:2px;vertical-align:middle;" title="${p.country}">`
+      : `<span style="font-size:0.7rem;color:var(--muted);">${p.country}</span>`;
+    const headshotHtml = p.headshot
+      ? `<img src="${p.headshot}" loading="lazy" onerror="this.style.visibility='hidden'" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,0.1);">`
+      : `<div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>`;
     tableHtml += `
-      <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);${idx%2===1?'background:rgba(255,255,255,0.01)':''}">
+      <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:5px 14px;border-bottom:1px solid rgba(255,255,255,0.04);${idx%2===1?'background:rgba(255,255,255,0.01)':''}">
         <span class="pga-rank-num ${isTop10?'top10':''}">${p.rank}</span>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.shortName || p.name}</span>
-        <span class="pga-rankings-stat">${p.country || '—'}</span>
+        ${headshotHtml}
+        <span style="display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;padding-left:10px;">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.shortName || p.name}</span>
+          <span>${flagImg}</span>
+        </span>
         <span class="pga-rankings-stat pts">${p.cupPts != null ? p.cupPts : '—'}</span>
         <span class="pga-rankings-stat">${p.tournamentsPlayed != null ? p.tournamentsPlayed : '—'}</span>
         <span class="pga-rankings-stat">${p.scoringAvg != null ? p.scoringAvg : '—'}</span>
