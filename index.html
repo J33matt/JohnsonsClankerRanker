@@ -7831,7 +7831,7 @@ const _SB_MARKET_STATS = {
   player_points:                  ['points'],
   player_rebounds:                ['rebounds'],
   player_assists:                 ['assists'],
-  player_threes:                  ['threePointersMade'],
+  player_threes:                  ['threePointFieldGoalsMade'],
   player_blocks:                  ['blocks'],
   player_steals:                  ['steals'],
   player_points_rebounds:         ['points','rebounds'],
@@ -7854,9 +7854,9 @@ async function _sbFetchPlayerL5(espnId, market) {
   const statNames = _SB_MARKET_STATS[market];
   if (!statNames) return (_sbPlayerL5Cache[key] = null);
   try {
-    const r  = await fetch(`https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/athletes/${espnId}/eventlog?limit=8`);
+    const r  = await fetch(`https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/athletes/${espnId}/eventlog?limit=120`);
     const d  = await r.json();
-    const entries = (d.events?.items || []).filter(e => e.played && e.statistics?.$ref).slice(0, 5);
+    const entries = (d.events?.items || []).filter(e => e.played && e.statistics?.$ref).slice(-5);
     if (!entries.length) return (_sbPlayerL5Cache[key] = null);
     const vals = await Promise.all(entries.map(async e => {
       const url = e.statistics.$ref.replace('espn.pvt','espn.com').replace(/^http:/,'https:');
