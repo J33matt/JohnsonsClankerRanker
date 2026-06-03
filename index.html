@@ -8809,11 +8809,11 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
         <div class="sb-prop-l5" id="sb-l5-${player.toLowerCase().replace(/\s+/g,'_')}"></div>
         <div class="sb-prop-btns">
           ${yes ? `<button class="sb-prop-btn yn${yS?' selected':''}" data-pgk="${gameKey}" data-ptype="${yT}"
-            onclick="_sbToggleLeg('${gameKey}','${yT}','${awayAbbr}','${homeAbbr}',${yes.price},0,'${safe} YES')">
+            onclick="_sbToggleLeg('${gameKey}','${yT}','${awayAbbr}','${homeAbbr}',${yes.price},0,'${safe} - ${marketLabel}')">
             ${no ? `<span class="prop-ou">YES</span>` : ''}<span class="prop-odds">${_fmtML(yes.price)}</span>
           </button>` : ''}
           ${no ? `<button class="sb-prop-btn yn${nS?' selected':''}" data-pgk="${gameKey}" data-ptype="${nT}"
-            onclick="_sbToggleLeg('${gameKey}','${nT}','${awayAbbr}','${homeAbbr}',${no.price},0,'${safe} NO')">
+            onclick="_sbToggleLeg('${gameKey}','${nT}','${awayAbbr}','${homeAbbr}',${no.price},0,'${safe} NO - ${marketLabel}')">
             <span class="prop-ou">NO</span><span class="prop-odds">${_fmtML(no.price)}</span>
           </button>` : ''}
         </div>
