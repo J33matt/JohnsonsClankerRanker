@@ -1187,27 +1187,64 @@ function _botKellyFraction(prob, ml) {
   return Math.max(0, kelly);
 }
 
+// Helper: parse a prop type string → { market, dir, player } or null
+function _sbParsePropType(type) {
+  if (!type || !type.startsWith('prop_')) return null;
+  const inner = type.slice(5); // strip leading 'prop_'
+  for (const dir of ['_over_', '_under_', '_yes_', '_no_']) {
+    const idx = inner.indexOf(dir);
+    if (idx !== -1) return {
+      market: inner.slice(0, idx),
+      dir:    dir.slice(1, -1),           // 'over' | 'under' | 'yes' | 'no'
+      player: inner.slice(idx + dir.length)
+    };
+  }
+  return null;
+}
+
 // _sbCorrelationBlocked
 function _sbCorrelationBlocked(newLeg, existingLegs) {
-  // Can't parlay ML + Spread from the SAME team in the SAME game
   for (const leg of existingLegs) {
-    if (leg.gameKey !== newLeg.gameKey) continue; // different game, fine
-    // Same game legs — check specific restrictions
-    const newType  = newLeg.type;   // 'ml_away'|'ml_home'|'spread_away'|'spread_home'|'ou_over'|'ou_under'
-    const legType  = leg.type;
-    // ML + Spread of same team = blocked
-    if ((newType === 'ml_away'    && legType === 'spread_away') ||
-        (newType === 'spread_away'&& legType === 'ml_away')    ||
-        (newType === 'ml_home'    && legType === 'spread_home') ||
-        (newType === 'spread_home'&& legType === 'ml_home'))    return { blocked: true, reason: 'Cannot parlay a team\'s ML + Spread in the same game.' };
-    // ML + Spread of opposite teams = also blocked
-    if ((newType === 'ml_away'    && legType === 'spread_home') ||
-        (newType === 'spread_home'&& legType === 'ml_away')    ||
-        (newType === 'ml_home'    && legType === 'spread_away') ||
-        (newType === 'spread_away'&& legType === 'ml_home'))    return { blocked: true, reason: 'Cannot parlay ML + Spread on opposite teams in the same game.' };
-    // Same type (duplicate) = blocked
-    if (newType === legType) return { blocked: true, reason: 'That bet is already on your slip.' };
-    // Large spread favorite + over is technically allowed (just a warning) — allow it
+    if (leg.gameKey !== newLeg.gameKey) continue; // different game — always fine
+    const n = newLeg.type;
+    const e = leg.type;
+
+    // Exact duplicate
+    if (n === e)
+      return { blocked: true, reason: 'That bet is already on your slip.' };
+
+    // Both sides of moneyline
+    if ((n === 'ml_away' && e === 'ml_home') || (n === 'ml_home' && e === 'ml_away'))
+      return { blocked: true, reason: "Can't parlay both moneylines in the same game." };
+
+    // Both sides of spread
+    if ((n === 'spread_away' && e === 'spread_home') || (n === 'spread_home' && e === 'spread_away'))
+      return { blocked: true, reason: "Can't parlay both spread sides in the same game." };
+
+    // Both sides of over/under
+    if ((n === 'ou_over' && e === 'ou_under') || (n === 'ou_under' && e === 'ou_over'))
+      return { blocked: true, reason: "Can't parlay the Over and Under in the same game." };
+
+    // ML + Spread same team
+    if ((n === 'ml_away'    && e === 'spread_away') || (n === 'spread_away' && e === 'ml_away') ||
+        (n === 'ml_home'    && e === 'spread_home') || (n === 'spread_home' && e === 'ml_home'))
+      return { blocked: true, reason: "Can't parlay a team's ML + Spread in the same game." };
+
+    // ML + Spread opposite teams
+    if ((n === 'ml_away'    && e === 'spread_home') || (n === 'spread_home' && e === 'ml_away') ||
+        (n === 'ml_home'    && e === 'spread_away') || (n === 'spread_away' && e === 'ml_home'))
+      return { blocked: true, reason: "Can't parlay ML + Spread on opposite teams in the same game." };
+
+    // Player prop: same player, same market, opposite direction (O+U or YES+NO)
+    if (n.startsWith('prop_') && e.startsWith('prop_')) {
+      const np = _sbParsePropType(n);
+      const ep = _sbParsePropType(e);
+      if (np && ep && np.market === ep.market && np.player === ep.player) {
+        const flip = { over: 'under', under: 'over', yes: 'no', no: 'yes' };
+        if (np.dir === flip[ep.dir])
+          return { blocked: true, reason: "Can't bet both sides of the same player prop." };
+      }
+    }
   }
   return { blocked: false };
 }
