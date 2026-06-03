@@ -12316,7 +12316,8 @@ function _pgaBuildLeaderboard(el, data) {
     return;
   }
 
-  // Active / Final
+  // Active / Final — clickable rows with expandable scorecards
+  const eventId = event.id;
   const gridCols = '52px 56px 1fr 44px 44px 44px 44px 56px 62px';
   let html = `<div class="pga-ldr-wrap">
     <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03);font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">
@@ -12326,20 +12327,24 @@ function _pgaBuildLeaderboard(el, data) {
     </div>`;
 
   sorted.forEach((c, idx) => {
-    const pos = c.status?.position?.displayValue || '—';
+    const pos = c.status?.position?.displayName || c.status?.position?.displayValue || '—';
     const name = c.athlete?.displayName || '';
     const country = c.athlete?.flag?.alt || '';
     const flagHref2 = c.athlete?.flag?.href || '';
     const flagHtml2 = flagHref2 ? `<img src="${flagHref2}" style="width:18px;height:12px;object-fit:cover;border-radius:2px;vertical-align:middle;" title="${country}">` : (country ? `<span class="pga-player-country">${country}</span>` : '');
     const headshot = c.athlete?.headshot?.href || '';
+    const athleteId = c.athlete?.id || '';
     const scoreDisp = c.score?.displayValue || 'E';
     const scoreVal = c.score?.value ?? 0;
     const scoreClass = scoreVal < 0 ? 'pga-score-under' : scoreVal > 0 ? 'pga-score-over' : 'pga-score-even';
     const isTop3 = idx < 3;
 
     const rdScores = Array.from({length: maxRounds}, (_, i) => {
-      const v = c.linescores?.[i]?.displayValue || '—';
-      return `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--muted);text-align:center;">${v}</span>`;
+      const ls = c.linescores?.[i];
+      const v = ls?.displayValue || '—';
+      const rdVal = parseFloat(ls?.value ?? '');
+      const rdColor = !isNaN(rdVal) && rdVal < 70 ? '#22c55e' : !isNaN(rdVal) && rdVal > 72 ? '#ef4444' : 'var(--muted)';
+      return `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:${rdColor};text-align:center;">${v}</span>`;
     }).join('');
 
     const totalStrokes = (c.linescores || []).reduce((sum, ls) => {
@@ -12347,25 +12352,161 @@ function _pgaBuildLeaderboard(el, data) {
       return isNaN(v) ? sum : sum + v;
     }, 0);
     const totalDisp = totalStrokes > 0 ? totalStrokes : '—';
+    const scId = `pga-sc-${athleteId}`;
 
     html += `
-      <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:5px 14px;border-bottom:1px solid rgba(255,255,255,0.035);${isTop3?'background:rgba(34,197,94,0.04);':idx%2===1?'background:rgba(255,255,255,0.01)':''}">
-        <span class="pga-ldr-pos" style="${isTop3?'color:#22c55e':''}">${pos}</span>
-        ${headshot
-          ? `<img src="${headshot}" loading="lazy" onerror="this.style.visibility='hidden'" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,0.1);">`
-          : `<div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>`}
-        <span style="display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;padding-left:10px;">
-          <span class="pga-player-name">${name}</span>
-          ${flagHtml2}
-        </span>
-        ${rdScores}
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--muted);text-align:center;">${totalDisp}</span>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.05rem;font-weight:800;text-align:right;" class="${scoreClass}">${scoreDisp}</span>
+      <div style="border-bottom:1px solid rgba(255,255,255,0.035);">
+        <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:5px 14px;cursor:pointer;transition:background 0.15s;${isTop3?'background:rgba(34,197,94,0.04);':idx%2===1?'background:rgba(255,255,255,0.01)':''}"
+             onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='${isTop3?'rgba(34,197,94,0.04)':idx%2===1?'rgba(255,255,255,0.01)':'transparent'}'"
+             onclick="_pgaToggleScorecard('${eventId}','${athleteId}','${scId}',this)">
+          <span class="pga-ldr-pos" style="${isTop3?'color:#22c55e':''}">${pos}</span>
+          ${headshot
+            ? `<img src="${headshot}" loading="lazy" onerror="this.style.visibility='hidden'" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,0.1);">`
+            : `<div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>`}
+          <span style="display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;padding-left:10px;">
+            <span class="pga-player-name">${name}</span>
+            ${flagHtml2}
+          </span>
+          ${rdScores}
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--muted);text-align:center;">${totalDisp}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.05rem;font-weight:800;text-align:right;" class="${scoreClass}">${scoreDisp}</span>
+        </div>
+        <div id="${scId}" style="display:none;"></div>
       </div>`;
   });
 
   html += '</div>';
   el.innerHTML = headerHtml + html;
+}
+
+// ── SCORECARD ─────────────────────────────────────────────────
+const _pgaScorecardCache = {};
+let _pgaOpenScorecard = null;
+
+async function _pgaToggleScorecard(eventId, athleteId, scId, row) {
+  const panel = document.getElementById(scId);
+  if (!panel) return;
+
+  // Close if already open
+  if (_pgaOpenScorecard === scId) {
+    panel.style.display = 'none';
+    _pgaOpenScorecard = null;
+    return;
+  }
+  // Close any other open scorecard
+  if (_pgaOpenScorecard) {
+    const prev = document.getElementById(_pgaOpenScorecard);
+    if (prev) prev.style.display = 'none';
+  }
+  _pgaOpenScorecard = scId;
+  panel.style.display = 'block';
+
+  if (panel.dataset.loaded) return; // already rendered
+  panel.innerHTML = '<div style="padding:16px 20px;font-family:\'Barlow Condensed\',sans-serif;color:var(--muted);font-size:0.85rem;">Loading scorecard…</div>';
+
+  try {
+    const key = `${eventId}_${athleteId}`;
+    if (!_pgaScorecardCache[key]) {
+      const res = await fetch(`https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}/competitors/${athleteId}/linescores`);
+      _pgaScorecardCache[key] = await res.json();
+    }
+    panel.innerHTML = _pgaBuildScorecardHtml(_pgaScorecardCache[key]);
+    panel.dataset.loaded = '1';
+  } catch(e) {
+    panel.innerHTML = `<div style="padding:16px 20px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;">Could not load scorecard.</div>`;
+  }
+}
+
+function _pgaScoreCell(strokes, par, scoreType) {
+  if (!strokes || strokes === '—') return `<span style="color:rgba(255,255,255,0.2);font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;">—</span>`;
+  const diff = strokes - par;
+  let style = 'display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;font-family:\'Barlow Condensed\',sans-serif;font-size:0.85rem;font-weight:700;';
+  const st = (scoreType || '').toUpperCase();
+  if (st.includes('EAGLE') || diff <= -2)
+    style += 'border-radius:50%;background:#f59e0b;color:#000;box-shadow:0 0 0 2px #f59e0b,0 0 0 4px rgba(245,158,11,0.3);';
+  else if (st === 'BIRDIE' || diff === -1)
+    style += 'border-radius:50%;background:rgba(34,197,94,0.2);border:1.5px solid #22c55e;color:#22c55e;';
+  else if (st === 'PAR' || diff === 0)
+    style += 'color:rgba(255,255,255,0.55);';
+  else if (st === 'BOGEY' || diff === 1)
+    style += 'border:1.5px solid rgba(245,158,11,0.7);color:#f59e0b;border-radius:2px;';
+  else if (st.includes('DOUBLE') || diff === 2)
+    style += 'border:1.5px solid #ef4444;color:#ef4444;border-radius:2px;box-shadow:0 0 0 2px rgba(239,68,68,0.3);';
+  else
+    style += 'background:#7f1d1d;color:#fca5a5;border-radius:2px;';
+  return `<span style="${style}">${strokes}</span>`;
+}
+
+function _pgaBuildScorecardHtml(data) {
+  // data may be { items: [...] } or an array-like object
+  const rounds = Object.values(data.items || data).filter(r => r.period && r.linescores);
+  if (!rounds.length) return '<div style="padding:16px 20px;color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;">No scorecard data available.</div>';
+
+  const holePars = {};
+  // Pull par from any round that has it
+  rounds.forEach(rd => {
+    (rd.linescores || []).forEach(h => { if (h.par) holePars[h.period] = h.par; });
+  });
+
+  const holes = Array.from({length: 18}, (_, i) => i + 1);
+  const front = holes.slice(0, 9), back = holes.slice(9);
+  const frontPar = front.reduce((s, h) => s + (holePars[h] || 4), 0);
+  const backPar  = back.reduce((s, h)  => s + (holePars[h] || 4), 0);
+
+  const cell = (txt, muted) =>
+    `<td style="text-align:center;padding:4px 2px;font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:${muted?'var(--muted)':'var(--text)'};white-space:nowrap;">${txt}</td>`;
+
+  let html = `<div style="overflow-x:auto;padding:0 14px 14px;">
+    <table style="border-collapse:collapse;width:100%;min-width:640px;margin-top:4px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          ${cell('HOLE',true)}
+          ${front.map(h => cell(h,true)).join('')}
+          ${cell('OUT',true)}
+          ${back.map(h => cell(h,true)).join('')}
+          ${cell('IN',true)}
+          ${cell('TOT',true)}
+        </tr>
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+          ${cell('PAR',true)}
+          ${front.map(h => cell(holePars[h]||'—',true)).join('')}
+          ${cell(frontPar,true)}
+          ${back.map(h => cell(holePars[h]||'—',true)).join('')}
+          ${cell(backPar,true)}
+          ${cell(frontPar+backPar,true)}
+        </tr>
+      </thead>
+      <tbody>`;
+
+  rounds.sort((a,b) => a.period - b.period).forEach(rd => {
+    const holeMap = {};
+    (rd.linescores || []).forEach(h => { holeMap[h.period] = h; });
+    const frontTotal = rd.outScore || front.reduce((s,h) => s + (holeMap[h]?.value || 0), 0);
+    const backTotal  = rd.inScore  || back.reduce((s,h)  => s + (holeMap[h]?.value || 0), 0);
+    const total = rd.value || (frontTotal + backTotal);
+    const rdVsPar = rd.displayValue || '—';
+    const rdColor = rdVsPar.startsWith('-') ? '#22c55e' : rdVsPar.startsWith('+') ? '#ef4444' : 'var(--text)';
+
+    html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+      <td style="padding:4px 2px;font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;font-weight:700;color:var(--muted);text-align:center;">
+        R${rd.period} <span style="color:${rdColor};font-size:0.72rem;">${rdVsPar}</span>
+      </td>
+      ${front.map(h => {
+        const hole = holeMap[h];
+        return `<td style="text-align:center;padding:3px 2px;">${_pgaScoreCell(hole?.value, holePars[h]||4, hole?.scoreType)}</td>`;
+      }).join('')}
+      <td style="text-align:center;padding:4px 2px;font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;font-weight:700;color:var(--text);">${frontTotal}</td>
+      ${back.map(h => {
+        const hole = holeMap[h];
+        return `<td style="text-align:center;padding:3px 2px;">${_pgaScoreCell(hole?.value, holePars[h]||4, hole?.scoreType)}</td>`;
+      }).join('')}
+      <td style="text-align:center;padding:4px 2px;font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;font-weight:700;color:var(--text);">${backTotal}</td>
+      <td style="text-align:center;padding:4px 2px;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;font-weight:800;color:var(--text);">${total}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table></div>';
+  return html;
 }
 
 // ── SCHEDULE ──────────────────────────────────────────────────
