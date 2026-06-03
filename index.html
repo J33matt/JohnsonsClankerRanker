@@ -9427,13 +9427,18 @@ function _renderSbGameCard(g, openBets) {
   }
   const homeBarColor = isHex(homeColors.bg) ? homeColors.bg : 'var(--accent)';
   const probBar = g.isFinal ? '' : `
-    <div style="display:flex;align-items:center;gap:8px;padding:0 14px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:1px">
-      <span style="color:var(--muted);width:32px;text-align:right">${awayPct}%</span>
-      <div style="flex:1;height:5px;border-radius:3px;background:var(--surface2);overflow:hidden;display:flex">
-        <div style="width:${awayPct}%;background:${awayBarColor};opacity:0.75;border-radius:3px 0 0 3px"></div>
-        <div style="width:${homePct}%;background:${homeBarColor};opacity:0.75;border-radius:0 3px 3px 0"></div>
+    <div style="padding:4px 20px 14px;font-family:'Barlow Condensed',sans-serif;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;font-size:0.72rem;letter-spacing:1.5px;">
+        <span><span style="color:${awayBarColor};font-weight:700;">${g.away}</span><span style="color:var(--muted);"> ${awayPct}%</span></span>
+        <span><span style="color:var(--muted);">${homePct}% </span><span style="color:${homeBarColor};font-weight:700;">${g.home}</span></span>
       </div>
-      <span style="color:var(--muted);width:32px">${homePct}%</span>
+      <div style="position:relative;">
+        <div style="height:12px;border-radius:8px;background:rgba(255,255,255,0.06);overflow:hidden;display:flex;">
+          <div style="width:${awayPct}%;background:${awayBarColor};opacity:0.75;"></div>
+          <div style="flex:1;background:${homeBarColor};opacity:0.75;"></div>
+        </div>
+        <div style="position:absolute;left:50%;top:0;height:12px;width:2px;background:rgba(0,0,0,0.45);transform:translateX(-50%);"></div>
+      </div>
     </div>`;
 
   // Score display
