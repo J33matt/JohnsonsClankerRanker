@@ -7178,7 +7178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   .sb-props-table { display: flex; flex-direction: column; gap: 0; }
   .sb-prop-row {
-    display: grid; grid-template-columns: 72px 1fr auto; align-items: center; gap: 14px;
+    display: grid; grid-template-columns: 72px 1fr auto auto; align-items: center; gap: 14px;
     padding: 8px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.1s;
   }
   .sb-prop-row:last-child { border-bottom: none; }
@@ -7191,7 +7191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   .sb-prop-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 50%; }
   .sb-prop-name { font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; letter-spacing: 0.5px; line-height: 1.2; }
-  .sb-prop-l5 { font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; color: var(--accent2); letter-spacing: 0.5px; margin-top: 2px; min-height: 1em; }
+  .sb-prop-l5 { font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; color: var(--accent2); letter-spacing: 1px; text-align: right; white-space: nowrap; }
   .sb-prop-btns { display: flex; gap: 6px; }
   .sb-prop-btn {
     font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.5px;
@@ -7885,7 +7885,7 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
       const slug = name.toLowerCase().replace(/\s+/g,'_');
       _sbFetchPlayerL5(info.espnId, market).then(avg => {
         const el = document.getElementById(`sb-l5-${slug}`);
-        if (el && avg !== null) el.textContent = `L5: ${avg}`;
+        if (el && avg !== null) el.textContent = `LAST 5 AVG: ${avg}`;
       });
     }
   });
@@ -8788,7 +8788,8 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
       const nS  = no && _sbSlip.some(l => l.gameKey === gameKey && l.type === nT);
       rows += `<div class="sb-prop-row">
         ${avatar}
-        <div><div class="sb-prop-name">${player}</div><div class="sb-prop-l5" id="sb-l5-${player.toLowerCase().replace(/\s+/g,'_')}"></div></div>
+        <div><div class="sb-prop-name">${player}</div></div>
+        <div class="sb-prop-l5" id="sb-l5-${player.toLowerCase().replace(/\s+/g,'_')}"></div>
         <div class="sb-prop-btns">
           ${yes ? `<button class="sb-prop-btn yn${yS?' selected':''}" data-pgk="${gameKey}" data-ptype="${yT}"
             onclick="_sbToggleLeg('${gameKey}','${yT}','${awayAbbr}','${homeAbbr}',${yes.price},0,'${safe} YES')">
@@ -8809,7 +8810,8 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
       const uS   = _sbSlip.some(l => l.gameKey === gameKey && l.type === uT);
       rows += `<div class="sb-prop-row">
         ${avatar}
-        <div><div class="sb-prop-name">${player}</div><div class="sb-prop-l5" id="sb-l5-${player.toLowerCase().replace(/\s+/g,'_')}"></div></div>
+        <div><div class="sb-prop-name">${player}</div></div>
+        <div class="sb-prop-l5" id="sb-l5-${player.toLowerCase().replace(/\s+/g,'_')}"></div>
         <div class="sb-prop-btns">
           ${ov ? `<button class="sb-prop-btn over${oS?' selected':''}" data-pgk="${gameKey}" data-ptype="${oT}"
             onclick="_sbToggleLeg('${gameKey}','${oT}','${awayAbbr}','${homeAbbr}',${ov.price},${line},'${safe} O ${line}')">
