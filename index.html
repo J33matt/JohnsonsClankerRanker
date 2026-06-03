@@ -12279,10 +12279,10 @@ function _pgaBuildLeaderboard(el, data) {
       </div>
     </div>`;
 
-  const competitors = event.competitors || [];
+  const competitors = event.competitions?.[0]?.competitors || event.competitors || [];
 
   // Sort: if pre, by tee time order; otherwise by leaderboard position (order field)
-  const sorted = [...competitors].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  const sorted = [...competitors].sort((a, b) => (a.sortOrder ?? a.order ?? 999) - (b.sortOrder ?? b.order ?? 999));
 
   const maxRounds = 4;
 
