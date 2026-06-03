@@ -8700,7 +8700,7 @@ async function _sbRefreshBets() {
   const panel = document.getElementById('sb-mybets-panel');
   if (!panel) return;
   const openBets = bets.filter(b => b.status === 'open');
-  panel.innerHTML = (openBets.length ? _renderSbOpenBets(openBets) : '') + _renderSbHistory(bets);
+  panel.innerHTML = openBets.length ? _renderSbOpenBets(openBets) : '';
   // Update balance display if it changed
   if (_sbProfile && _sbProfile.bankroll !== prevBankroll) {
     const balEl = document.querySelector('.sb-bankroll-val');
