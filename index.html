@@ -12293,6 +12293,8 @@ function _pgaBuildLeaderboard(el, data) {
     sorted.forEach((c, idx) => {
       const name = c.athlete?.displayName || '';
       const country = c.athlete?.flag?.alt || '';
+      const flagHref = c.athlete?.flag?.href || '';
+      const flagHtml = flagHref ? `<img src="${flagHref}" style="width:18px;height:12px;object-fit:cover;border-radius:2px;vertical-align:middle;" title="${country}">` : (country ? `<span class="pga-player-country">${country}</span>` : '');
       const headshot = c.athlete?.headshot?.href || '';
       const teeTime = c.status?.detail || '—';
       const hole = c.status?.startHole > 1 ? ` · Hole ${c.status.startHole}` : '';
@@ -12302,9 +12304,9 @@ function _pgaBuildLeaderboard(el, data) {
           ${headshot
             ? `<img src="${headshot}" loading="lazy" onerror="this.style.visibility='hidden'" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,0.1);">`
             : `<div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>`}
-          <span style="display:flex;flex-direction:column;justify-content:center;gap:1px;min-width:0;padding-left:10px;">
+          <span style="display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;padding-left:10px;">
             <span class="pga-player-name">${name}</span>
-            ${country ? `<span class="pga-player-country">${country}</span>` : ''}
+            ${flagHtml}
           </span>
           <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;font-weight:700;color:var(--accent2);text-align:right;">${teeTime}${hole}</span>
         </div>`;
@@ -12327,6 +12329,8 @@ function _pgaBuildLeaderboard(el, data) {
     const pos = c.status?.position?.displayValue || '—';
     const name = c.athlete?.displayName || '';
     const country = c.athlete?.flag?.alt || '';
+    const flagHref2 = c.athlete?.flag?.href || '';
+    const flagHtml2 = flagHref2 ? `<img src="${flagHref2}" style="width:18px;height:12px;object-fit:cover;border-radius:2px;vertical-align:middle;" title="${country}">` : (country ? `<span class="pga-player-country">${country}</span>` : '');
     const headshot = c.athlete?.headshot?.href || '';
     const scoreDisp = c.score?.displayValue || 'E';
     const scoreVal = c.score?.value ?? 0;
@@ -12350,9 +12354,9 @@ function _pgaBuildLeaderboard(el, data) {
         ${headshot
           ? `<img src="${headshot}" loading="lazy" onerror="this.style.visibility='hidden'" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,0.1);">`
           : `<div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>`}
-        <span style="display:flex;flex-direction:column;justify-content:center;gap:1px;min-width:0;padding-left:10px;">
+        <span style="display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;padding-left:10px;">
           <span class="pga-player-name">${name}</span>
-          ${country ? `<span class="pga-player-country">${country}</span>` : ''}
+          ${flagHtml2}
         </span>
         ${rdScores}
         <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--muted);text-align:center;">${totalDisp}</span>
