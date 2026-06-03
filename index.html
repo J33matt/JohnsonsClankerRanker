@@ -7997,7 +7997,7 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
           const dots = data.results.map(y =>
             `<span class="sb-l5-dot ${y ? 'yes' : 'no'}">${y ? 'Y' : 'N'}</span>`
           ).join('');
-          el.innerHTML = `<span class="sb-l5-label">${data.count}/${data.total}</span> <span class="sb-l5-dots">${dots}</span>`;
+          el.innerHTML = `<span class="sb-l5-label">LAST 5:</span> <span class="sb-l5-label">${data.count}/${data.total}</span> <span class="sb-l5-dots">${dots}</span>`;
         });
       } else if (hasL5) {
         // Numeric market: show average
