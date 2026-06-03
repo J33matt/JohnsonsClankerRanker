@@ -7780,19 +7780,19 @@ let _sbPropsCache    = {};    // { [eventId_market]: { data, ts } }
 let _sbPropsGameSel  = null;  // selected Odds API event ID
 
 const _SB_PROP_MARKETS = [
-  { key: 'player_points',                  label: 'Player Points O/U'       },
-  { key: 'player_rebounds',                label: 'Player Rebounds O/U'     },
-  { key: 'player_assists',                 label: 'Player Assists O/U'      },
-  { key: 'player_threes',                  label: 'Player Threes O/U'       },
-  { key: 'player_blocks',                  label: 'Player Blocks O/U'       },
-  { key: 'player_steals',                  label: 'Player Steals O/U'       },
-  { key: 'player_points_rebounds',         label: 'Points + Rebounds O/U'   },
-  { key: 'player_points_assists',          label: 'Points + Assists O/U'    },
-  { key: 'player_rebounds_assists',        label: 'Rebounds + Assists O/U'  },
-  { key: 'player_points_rebounds_assists', label: 'Pts + Reb + Ast O/U'     },
-  { key: 'player_double_double',           label: 'Double-Double'           },
-  { key: 'player_triple_double',           label: 'Triple-Double'           },
-  { key: 'player_first_basket',            label: 'First Basket Scorer'     },
+  { key: 'player_points',                  label: 'Player Points O/U',      stat: 'Points'       },
+  { key: 'player_rebounds',                label: 'Player Rebounds O/U',    stat: 'Rebounds'     },
+  { key: 'player_assists',                 label: 'Player Assists O/U',     stat: 'Assists'      },
+  { key: 'player_threes',                  label: 'Player Threes O/U',      stat: '3-Pointers'   },
+  { key: 'player_blocks',                  label: 'Player Blocks O/U',      stat: 'Blocks'       },
+  { key: 'player_steals',                  label: 'Player Steals O/U',      stat: 'Steals'       },
+  { key: 'player_points_rebounds',         label: 'Points + Rebounds O/U',  stat: 'Pts+Reb'      },
+  { key: 'player_points_assists',          label: 'Points + Assists O/U',   stat: 'Pts+Ast'      },
+  { key: 'player_rebounds_assists',        label: 'Rebounds + Assists O/U', stat: 'Reb+Ast'      },
+  { key: 'player_points_rebounds_assists', label: 'Pts + Reb + Ast O/U',   stat: 'Pts+Reb+Ast'  },
+  { key: 'player_double_double',           label: 'Double-Double'                                },
+  { key: 'player_triple_double',           label: 'Triple-Double'                                },
+  { key: 'player_first_basket',            label: 'First Basket Scorer'                          },
 ];
 
 const _NBA_ODDS_ABBR = {
@@ -8910,7 +8910,9 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
   }
 
   const isBinary = ['player_double_double','player_triple_double','player_first_basket'].includes(market);
-  const marketLabel = _SB_PROP_MARKETS.find(m => m.key === market)?.label || market;
+  const _marketDef = _SB_PROP_MARKETS.find(m => m.key === market);
+  const marketLabel = _marketDef?.label || market;
+  const statName = _marketDef?.stat || '';
   const gameKey = `${awayAbbr}@${homeAbbr}`;
 
   // Group by player
@@ -8975,11 +8977,11 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
         <div class="sb-prop-l5" id="sb-l5-${market}_${player.toLowerCase().replace(/\s+/g,'_')}"></div>
         <div class="sb-prop-btns">
           ${ov ? `<button class="sb-prop-btn over${oS?' selected':''}" data-pgk="${gameKey}" data-ptype="${oT}"
-            onclick="_sbToggleLeg('${gameKey}','${oT}','${awayAbbr}','${homeAbbr}',${ov.price},${line},'${safe} O ${line}')">
+            onclick="_sbToggleLeg('${gameKey}','${oT}','${awayAbbr}','${homeAbbr}',${ov.price},${line},'${safe} O ${line}${statName ? ' ' + statName : ''}')">
             <span class="prop-ou">O ${line}</span><span class="prop-odds">${_fmtML(ov.price)}</span>
           </button>` : ''}
           ${un ? `<button class="sb-prop-btn under${uS?' selected':''}" data-pgk="${gameKey}" data-ptype="${uT}"
-            onclick="_sbToggleLeg('${gameKey}','${uT}','${awayAbbr}','${homeAbbr}',${un.price},${line},'${safe} U ${line}')">
+            onclick="_sbToggleLeg('${gameKey}','${uT}','${awayAbbr}','${homeAbbr}',${un.price},${line},'${safe} U ${line}${statName ? ' ' + statName : ''}')">
             <span class="prop-ou">U ${line}</span><span class="prop-odds">${_fmtML(un.price)}</span>
           </button>` : ''}
         </div>
