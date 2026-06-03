@@ -6945,9 +6945,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   .sb-game-card.locked { opacity: 0.65; pointer-events: none; }
   .sb-game-card:hover:not(.locked) { border-color: rgba(255,170,0,0.3); }
   .sb-game-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 14px 0; font-family: 'Barlow Condensed', sans-serif;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    padding: 10px 14px 8px; font-family: 'Barlow Condensed', sans-serif;
     font-size: 0.68rem; letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
+  }
+  .sb-game-header > :last-child { text-align: right; justify-self: end; }
+  .sb-game-series {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; font-weight: 700;
+    letter-spacing: 2px; color: var(--text); text-align: center; white-space: nowrap;
   }
   .sb-game-status-live { color: var(--accent); font-weight: 700; font-size: 0.78rem; animation: pulse 1.5s infinite; }
   .sb-game-status-final { color: var(--muted); }
@@ -6955,10 +6960,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* New horizontal card layout */
   .sb-game-body { display: flex; align-items: stretch; }
   .sb-gc-teams {
-    flex: 0 0 210px; display: flex; flex-direction: column; justify-content: center;
-    gap: 10px; padding: 14px 16px;
+    flex: 0 0 210px; display: flex; flex-direction: column; justify-content: flex-start;
+    gap: 5px; padding: 6px 16px;
   }
-  .sb-gc-team-row { display: flex; align-items: center; gap: 10px; }
+  /* Invisible spacer that exactly matches .sb-bet-col-header height so team rows line up with buttons */
+  .sb-gc-header-spacer { font-size: 0.68rem; letter-spacing: 2px; padding: 4px 0 6px; visibility: hidden; user-select: none; flex-shrink: 0; }
+  .sb-gc-team-row { display: flex; align-items: center; gap: 10px; flex: 1; }
   .sb-gc-logo { width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
   .sb-gc-name-block { flex: 1; }
   .sb-gc-abbr { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 2px; line-height: 1; }
@@ -6992,18 +6999,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     column-gap: 0; background: var(--surface2); border-left: 1px solid var(--border);
     padding: 0 6px;
   }
-  .sb-bet-col { background: transparent; display: flex; flex-direction: column; gap: 0; padding: 6px 4px; }
+  .sb-bet-col { background: transparent; display: flex; flex-direction: column; gap: 5px; padding: 6px 4px; }
   .sb-bet-col-header {
     font-family: 'Barlow Condensed', sans-serif; font-size: 0.68rem; letter-spacing: 2px;
     text-transform: uppercase; color: var(--muted); text-align: center; padding: 4px 0 6px;
+    flex-shrink: 0;
   }
   .sb-bet-btn {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 12px 6px; background: rgba(255,255,255,0.04); cursor: pointer;
-    border: 1px solid rgba(255,170,0,0.4); border-radius: 6px; margin-bottom: 5px;
-    transition: background 0.15s, border-color 0.15s; min-height: 54px; gap: 2px;
+    padding: 4px 6px; background: rgba(255,255,255,0.04); cursor: pointer;
+    border: 1px solid rgba(255,170,0,0.4); border-radius: 6px;
+    transition: background 0.15s, border-color 0.15s; min-height: 54px; flex: 1; gap: 2px;
   }
-  .sb-bet-btn:last-child { margin-bottom: 0; }
   .sb-bet-btn:hover { background: rgba(255,170,0,0.08); border-color: var(--accent2); }
   .sb-bet-btn.selected { background: rgba(255,170,0,0.18); border-color: var(--accent2); border-width: 1.5px; }
   .sb-bet-btn.in-parlay { background: rgba(51,153,255,0.15); border-color: rgba(51,153,255,0.55); }
@@ -9377,13 +9384,13 @@ function _renderSbGameCard(g, openBets) {
   // Playoff detection + series score
   const _playoffPool = new Set([...PLAYOFF_SEEDS.west, ...PLAYOFF_SEEDS.east]);
   const isPlayoffGame = g.date >= PLAYOFF_START && _playoffPool.has(g.away) && _playoffPool.has(g.home);
-  let seriesStr = '';
+  let seriesText = '';
   if (isPlayoffGame) {
     const sk = [g.home, g.away].sort().join('|');
     const sw = _playoffSeries[sk];
     const aw = sw ? (sw[g.away] || 0) : 0;
     const hw = sw ? (sw[g.home] || 0) : 0;
-    seriesStr = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:1px;color:var(--muted);text-align:center;margin-top:3px">${g.away} ${aw}\u2013${hw} ${g.home}</div>`;
+    seriesText = `${g.away} ${aw}\u2013${hw} ${g.home}`;
   }
 
   const awayLogo = getLogoUrl(g.away);
@@ -9438,11 +9445,9 @@ function _renderSbGameCard(g, openBets) {
       <span class="${!aWon && g.isFinal ? 'losing' : ''}">${g.awayScore ?? '\u2014'}</span>
       <span style="color:var(--muted);font-size:1.2rem"> \u2013 </span>
       <span class="${!hWon && g.isFinal ? 'losing' : ''}">${g.homeScore ?? '\u2014'}</span>
-    </div>
-    ${seriesStr}`;
+    </div>`;
   } else {
-    scoreCenter = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:2px;color:var(--muted);line-height:1.2;text-align:center">VS<br><span style="font-size:0.65rem;color:var(--green)">${g.tipDisplay || ''}</span></div>
-    ${seriesStr}`;
+    scoreCenter = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:2px;color:var(--muted);line-height:1.2;text-align:center">VS<br><span style="font-size:0.65rem;color:var(--green)">${g.tipDisplay || ''}</span></div>`;
   }
 
 // Bet button factory — slipLabel goes to bet slip; btnPrimary is displayed in the button above odds
@@ -9480,10 +9485,12 @@ function _renderSbGameCard(g, openBets) {
   <div class="sb-game-card${isLocked ? ' locked' : ''}${g.isLive ? ' is-live' : ''}">
     <div class="sb-game-header">
       <span>${g.away} @ ${g.home} ${betBadge}</span>
+      <span class="sb-game-series">${seriesText}</span>
       <span class="${statusCls}">${statusLabel}</span>
     </div>
     <div class="sb-game-body">
       <div class="sb-gc-teams">
+        <div class="sb-gc-header-spacer">&nbsp;</div>
         <div class="sb-gc-team-row">
           ${awayLogo ? `<img src="${awayLogo}" class="sb-gc-logo" style="filter:drop-shadow(0 0 6px ${awayGlow}66)" onerror="this.style.display='none'">` : ''}
           <div class="sb-gc-name-block">
@@ -9500,7 +9507,6 @@ function _renderSbGameCard(g, openBets) {
           </div>
           ${g.isLive || g.isFinal ? `<div class="sb-gc-score${!homeLeading && g.isFinal ? ' losing' : ''}">${g.homeScore ?? '—'}</div>` : ''}
         </div>
-        ${seriesStr}
       </div>
       <div class="sb-bet-grid">
         <div class="sb-bet-col">
