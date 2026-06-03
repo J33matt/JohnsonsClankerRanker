@@ -33,6 +33,9 @@
           NBA
           <img src="https://a.espncdn.com/i/teamlogos/leagues/500/nba.png" style="width:25px; height:25px; object-fit:contain; vertical-align:middle; margin-left:6px;">
         </button>
+        <button class="league-btn" onclick="switchLeague('pga', this)">
+          ⛳ PGA
+        </button>
       </div>
       <div class="tagline">Advanced NBA/NFL Power Rankings &amp; Analytics</div>
     </div>
@@ -52,6 +55,12 @@
     <button class="tab-btn" onclick="showTab('sportsbook', this)">🎰 Sportsbook</button>
     <button class="tab-btn" onclick="showTab('cards', this)">The Locker</button>
   </div>
+</div>
+
+<div id="pga-tabs" style="display:none;">
+  <button class="tab-btn active" onclick="showPgaTab('leaderboard', this)">⛳ Leaderboard</button>
+  <button class="tab-btn" onclick="showPgaTab('schedule', this)">📅 Schedule</button>
+  <button class="tab-btn" onclick="showPgaTab('rankings', this)">🏆 FedEx Cup</button>
 </div>
 
 <div id="nfl-tabs" style="display:none;">
@@ -222,6 +231,18 @@
   <span id="draft-tab-chevron" style="color:rgba(255,255,255,0.9);font-size:1.5rem;line-height:1;pointer-events:none;">›</span>
 </div>
 </main>
+
+<div id="pga-panels" style="display:none; padding:16px; max-width:1100px; margin:0 auto;">
+  <div id="pga-panel-leaderboard" class="pga-panel">
+    <div class="loading-spinner"><div class="spinner"></div>Loading leaderboard...</div>
+  </div>
+  <div id="pga-panel-schedule" class="pga-panel" style="display:none;">
+    <div class="loading-spinner"><div class="spinner"></div>Loading schedule...</div>
+  </div>
+  <div id="pga-panel-rankings" class="pga-panel" style="display:none;">
+    <div class="loading-spinner"><div class="spinner"></div>Loading FedEx Cup standings...</div>
+  </div>
+</div>
 
 <script>
 let _prospectPage = 1;
@@ -531,41 +552,40 @@ function switchLeague(league, btn) {
   const nbaTabs = document.querySelector('.nav-tabs');
   const nflTabs = document.getElementById('nfl-tabs');
   const nflPanels = document.getElementById('nfl-panels');
-  
+  const pgaTabs = document.getElementById('pga-tabs');
+  const pgaPanels = document.getElementById('pga-panels');
+
   // This selects all your NBA sections
   const nbaPanels = document.querySelectorAll('#panel-rankings, #panel-playoffs, #panel-simulations, #panel-predictions, #panel-sportsbook, #panel-cards');
 
+  // Hide everything first
+  if (nbaTabs) nbaTabs.style.display = 'none';
+  if (nflTabs) nflTabs.style.display = 'none';
+  if (nflPanels) nflPanels.style.display = 'none';
+  if (pgaTabs) pgaTabs.style.display = 'none';
+  if (pgaPanels) pgaPanels.style.display = 'none';
+  nbaPanels.forEach(p => { p.style.display = ''; p.classList.remove('active'); });
+
   if (league === 'nba') {
-    // 1. Show NBA navigation and hide NFL
     if (nbaTabs) nbaTabs.style.display = 'flex';
-    if (nflTabs) nflTabs.style.display = 'none';
-    if (nflPanels) nflPanels.style.display = 'none';
-
-    // 2. Hide all NBA panels first
-    nbaPanels.forEach(p => {
-    p.style.display = '';
-    p.classList.remove('active');
-  });
-
-    // 3. Restore the last active NBA tab
     const _savedTab = localStorage.getItem('activeTab');
     const _validTabs = ['rankings','predictions','playoffs','simulations','sportsbook','cards'];
     const _tabToLoad = (_savedTab && _validTabs.includes(_savedTab)) ? _savedTab : 'rankings';
-    const _tabBtn = Array.from(document.querySelectorAll('.tab-btn'))
+    const _tabBtn = Array.from(document.querySelectorAll('.nav-tabs .tab-btn'))
       .find(b => (b.getAttribute('onclick') || '').includes(`'${_tabToLoad}'`));
     if (_tabBtn) showTab(_tabToLoad, _tabBtn);
 
+  } else if (league === 'pga') {
+    if (pgaTabs) pgaTabs.style.display = 'flex';
+    if (pgaPanels) pgaPanels.style.display = 'block';
+    const _savedPgaTab = localStorage.getItem('activePgaTab') || 'leaderboard';
+    const _pgaBtnToLoad = document.querySelector(`#pga-tabs button[onclick*="${_savedPgaTab}"]`);
+    showPgaTab(_savedPgaTab, _pgaBtnToLoad || document.querySelector('#pga-tabs button'));
+
   } else {
-    // 1. Hide NBA navigation and show NFL
-    if (nbaTabs) nbaTabs.style.display = 'none';
+    // NFL
     if (nflTabs) nflTabs.style.display = 'flex';
     if (nflPanels) nflPanels.style.display = 'block';
-
-    // 2. Hide NBA panels and show the NFL Big Board
-    nbaPanels.forEach(p => {
-      p.style.display = '';
-      p.classList.remove('active');
-    });
     const _savedNflTab = localStorage.getItem('activeNflTab');
     window._draftSimPos = localStorage.getItem('draftSimPos') || '';
     const _validNflTabs = ['fantasy', 'ff-draft', 'big-board', 'draft-order', 'lineups', 'free-agency', 'schedule'];
@@ -6758,6 +6778,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const _nbaBtn = Array.from(document.querySelectorAll('.league-btn'))
       .find(b => (b.getAttribute('onclick') || '').includes("'nba'"));
     if (_nbaBtn) switchLeague('nba', _nbaBtn);
+  } else if (_savedLeague === 'pga') {
+    const _pgaBtn = Array.from(document.querySelectorAll('.league-btn'))
+      .find(b => (b.getAttribute('onclick') || '').includes("'pga'"));
+    if (_pgaBtn) switchLeague('pga', _pgaBtn);
   } else {
     // Default to NFL (includes first-time visitors and explicitly saved 'nfl')
     const _nflBtn = Array.from(document.querySelectorAll('.league-btn'))
@@ -12005,6 +12029,516 @@ function _ffRenderTable() {
   wrap.innerHTML = pagination + cards + pagination.replace('ff-pagination', 'ff-pagination ff-pagination-bottom');
 }
 </script>
+
+<!-- ============================================================
+     PGA TOUR
+     ============================================================ -->
+<script>
+// ── CSS ──────────────────────────────────────────────────────
+(function() {
+  const css = `
+  #pga-panels { box-sizing: border-box; }
+  .pga-panel { }
+
+  /* Event Header */
+  .pga-event-hdr {
+    background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(16,163,74,0.05) 100%);
+    border: 1px solid rgba(34,197,94,0.25);
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .pga-event-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.55rem;
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+  .pga-event-meta {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.82rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .pga-event-meta .pga-dot { opacity: 0.4; }
+  .pga-status-badge {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    width: fit-content;
+  }
+  .pga-status-badge.live   { background: rgba(239,68,68,0.15);  color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+  .pga-status-badge.final  { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+  .pga-status-badge.pre    { background: rgba(34,197,94,0.1);   color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
+
+  /* Leaderboard */
+  .pga-ldr-wrap {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .pga-headshot {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .pga-player-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pga-player-country {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.7rem;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .pga-ldr-pos {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .pga-score-under { color: #22c55e !important; }
+  .pga-score-over  { color: #ef4444 !important; }
+  .pga-score-even  { color: var(--text) !important; }
+
+  /* Schedule */
+  .pga-schedule-section { margin-bottom: 28px; }
+  .pga-schedule-section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    padding-left: 2px;
+  }
+  .pga-schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 10px;
+  }
+  .pga-tourn-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 15px;
+  }
+  .pga-tourn-card.current {
+    border-color: rgba(34,197,94,0.45);
+    background: linear-gradient(135deg, rgba(34,197,94,0.07) 0%, rgba(16,163,74,0.02) 100%);
+  }
+  .pga-tourn-card.major { border-color: rgba(245,158,11,0.3); }
+  .pga-tourn-card.major.current { border-color: rgba(245,158,11,0.55); background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.02) 100%); }
+  .pga-tourn-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+    margin-bottom: 3px;
+  }
+  .pga-tourn-dates {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+  .pga-tourn-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+  .pga-badge {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+  .pga-badge.major       { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+  .pga-badge.current     { background: rgba(34,197,94,0.15);  color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+  .pga-badge.past        { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+  .pga-badge.team-event  { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); }
+
+  /* Rankings */
+  .pga-rankings-wrap {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .pga-rank-num { font-family: 'Barlow Condensed', sans-serif; font-size: 0.9rem; font-weight: 700; color: var(--muted); }
+  .pga-rank-num.top10 { color: #22c55e; }
+  .pga-rankings-stat { font-family: 'Barlow Condensed', sans-serif; font-size: 0.88rem; color: var(--muted); text-align: right; }
+  .pga-rankings-stat.pts { color: #f59e0b; font-weight: 700; font-size: 0.95rem; }
+  `;
+  const s = document.createElement('style');
+  s.textContent = css;
+  document.head.appendChild(s);
+})();
+
+// ── Caches ───────────────────────────────────────────────────
+let _pgaLeaderboardCache = null;
+let _pgaScheduleCache = null;
+let _pgaRankingsCache = null;
+
+// ── Helpers ──────────────────────────────────────────────────
+function _pgaFmtDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+function _pgaFmtDateRange(start, end) {
+  const s = new Date(start), e = new Date(end);
+  const sm = s.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+  const em = e.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+  const sd = s.getUTCDate(), ed = e.getUTCDate();
+  return sm === em ? `${sm} ${sd}–${ed}` : `${sm} ${sd} – ${em} ${ed}`;
+}
+const _PGA_MAJOR_NAMES = ['masters tournament', 'pga championship', 'u.s. open', 'the open', 'players championship'];
+function _pgaIsMajor(name) {
+  const n = (name || '').toLowerCase();
+  return _PGA_MAJOR_NAMES.some(m => n.includes(m));
+}
+
+// ── Tab management ───────────────────────────────────────────
+function showPgaTab(tab, btn) {
+  localStorage.setItem('activePgaTab', tab);
+  document.querySelectorAll('#pga-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.pga-panel').forEach(p => p.style.display = 'none');
+  const panel = document.getElementById('pga-panel-' + tab);
+  if (panel) panel.style.display = 'block';
+
+  if (tab === 'leaderboard') _pgaRenderLeaderboard();
+  else if (tab === 'schedule')   _pgaRenderSchedule();
+  else if (tab === 'rankings')   _pgaRenderRankings();
+}
+
+// ── LEADERBOARD ──────────────────────────────────────────────
+async function _pgaRenderLeaderboard() {
+  const el = document.getElementById('pga-panel-leaderboard');
+  if (_pgaLeaderboardCache) { _pgaBuildLeaderboard(el, _pgaLeaderboardCache); return; }
+  el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Loading leaderboard...</div>';
+  try {
+    const res = await fetch('https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga');
+    _pgaLeaderboardCache = await res.json();
+    _pgaBuildLeaderboard(el, _pgaLeaderboardCache);
+  } catch(e) {
+    el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;">Error loading leaderboard: ${e.message}</div>`;
+  }
+}
+
+function _pgaBuildLeaderboard(el, data) {
+  const event = data.events?.[0];
+  if (!event) {
+    el.innerHTML = '<div style="padding:24px;color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;">No active tournament found.</div>';
+    return;
+  }
+
+  const state = event.status?.type?.state || 'pre';
+  const isLive = state === 'in';
+  const isFinal = state === 'post';
+  const isPre = state === 'pre';
+
+  const defending = event.defendingChampion?.athlete?.displayName;
+  const purse = event.displayPurse;
+
+  const statusBadge = isLive
+    ? `<span class="pga-status-badge live">🔴 LIVE</span>`
+    : isFinal
+    ? `<span class="pga-status-badge final">FINAL</span>`
+    : `<span class="pga-status-badge pre">Starts ${_pgaFmtDate(event.date)}</span>`;
+
+  const headerHtml = `
+    <div class="pga-event-hdr">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div class="pga-event-name">${event.name || ''}</div>
+        ${statusBadge}
+      </div>
+      <div class="pga-event-meta">
+        <span>${_pgaFmtDateRange(event.date, event.endDate)}</span>
+        ${purse ? `<span class="pga-dot">·</span><span>${purse} Purse</span>` : ''}
+        ${defending ? `<span class="pga-dot">·</span><span>Defending: ${defending}</span>` : ''}
+      </div>
+    </div>`;
+
+  const competitors = event.competitors || [];
+
+  // Sort: if pre, by tee time order; otherwise by leaderboard position (order field)
+  const sorted = [...competitors].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+
+  const maxRounds = 4;
+
+  // Pre-tournament: 3-col grid (pos, player, tee time)
+  // Active/final: 8-col grid (pos, player, R1-R4, total, score)
+  if (isPre) {
+    const gridCols = '40px 1fr 100px';
+    let html = `<div class="pga-ldr-wrap">
+      <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:7px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03);font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">
+        <span>#</span><span>PLAYER</span><span style="text-align:right">TEE TIME</span>
+      </div>`;
+    sorted.forEach((c, idx) => {
+      const name = c.athlete?.shortName || c.athlete?.displayName || '';
+      const country = c.athlete?.flag?.alt || '';
+      const headshot = c.athlete?.headshot?.href || '';
+      const teeTime = c.status?.detail || '—';
+      html += `
+        <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:7px 14px;border-bottom:1px solid rgba(255,255,255,0.035);${idx%2===1?'background:rgba(255,255,255,0.01)':''}" >
+          <span class="pga-ldr-pos">${idx+1}</span>
+          <span style="display:flex;align-items:center;gap:7px;min-width:0;">
+            ${headshot ? `<img class="pga-headshot" src="${headshot}" loading="lazy" onerror="this.style.display='none'">` : ''}
+            <span class="pga-player-name">${name}</span>
+            ${country ? `<span class="pga-player-country">${country}</span>` : ''}
+          </span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;color:var(--muted);text-align:right;">${teeTime}</span>
+        </div>`;
+    });
+    html += '</div>';
+    el.innerHTML = headerHtml + html;
+    return;
+  }
+
+  // Active/Final leaderboard
+  const gridCols = '44px 1fr 40px 40px 40px 40px 52px 58px';
+  let html = `<div class="pga-ldr-wrap">
+    <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:7px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03);font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">
+      <span>POS</span><span>PLAYER</span>
+      <span style="text-align:center">R1</span><span style="text-align:center">R2</span><span style="text-align:center">R3</span><span style="text-align:center">R4</span>
+      <span style="text-align:center">TOT</span><span style="text-align:right">SCORE</span>
+    </div>`;
+
+  sorted.forEach((c, idx) => {
+    const pos = c.status?.position?.displayValue || (c.status?.detail?.match(/^[T]?\d+/) || ['-'])[0];
+    const name = c.athlete?.shortName || c.athlete?.displayName || '';
+    const country = c.athlete?.flag?.alt || '';
+    const headshot = c.athlete?.headshot?.href || '';
+    const scoreDisp = c.score?.displayValue || 'E';
+    const scoreVal = c.score?.value ?? 0;
+    const scoreClass = scoreVal < 0 ? 'pga-score-under' : scoreVal > 0 ? 'pga-score-over' : 'pga-score-even';
+    const isTop3 = idx < 3;
+
+    const rdScores = Array.from({length: maxRounds}, (_, i) => {
+      const v = c.linescores?.[i]?.displayValue || '—';
+      return `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--muted);text-align:center;">${v}</span>`;
+    }).join('');
+
+    const totalStrokes = (c.linescores || []).reduce((sum, ls) => {
+      const v = parseFloat(ls?.value ?? '');
+      return isNaN(v) ? sum : sum + v;
+    }, 0);
+    const totalDisp = totalStrokes > 0 ? totalStrokes : '—';
+
+    html += `
+      <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:7px 14px;border-bottom:1px solid rgba(255,255,255,0.035);${isTop3?'background:rgba(34,197,94,0.04);':idx%2===1?'background:rgba(255,255,255,0.01)':''}">
+        <span class="pga-ldr-pos" style="${isTop3?'color:#22c55e':''}">${pos}</span>
+        <span style="display:flex;align-items:center;gap:7px;min-width:0;">
+          ${headshot ? `<img class="pga-headshot" src="${headshot}" loading="lazy" onerror="this.style.display='none'">` : ''}
+          <span class="pga-player-name">${name}</span>
+          ${country ? `<span class="pga-player-country">${country}</span>` : ''}
+        </span>
+        ${rdScores}
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--muted);text-align:center;">${totalDisp}</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:800;text-align:right;" class="${scoreClass}">${scoreDisp}</span>
+      </div>`;
+  });
+
+  html += '</div>';
+  el.innerHTML = headerHtml + html;
+}
+
+// ── SCHEDULE ──────────────────────────────────────────────────
+async function _pgaRenderSchedule() {
+  const el = document.getElementById('pga-panel-schedule');
+  if (_pgaScheduleCache) { _pgaBuildSchedule(el, _pgaScheduleCache); return; }
+  el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Loading schedule...</div>';
+  try {
+    const res = await fetch('https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?calendar=whitelist');
+    const json = await res.json();
+    _pgaScheduleCache = json.leagues?.[0]?.calendar || [];
+    _pgaBuildSchedule(el, _pgaScheduleCache);
+  } catch(e) {
+    el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;">Error loading schedule: ${e.message}</div>`;
+  }
+}
+
+function _pgaBuildSchedule(el, calendar) {
+  const todayUTC = new Date();
+  todayUTC.setUTCHours(0, 0, 0, 0);
+
+  const events = calendar.map(ev => {
+    const name = ev.value || ev.label || ev.name || 'Unknown';
+    // Dates from calendar are UTC midnight strings
+    const start = new Date(ev.date || ev.startDate || '');
+    const end = new Date(ev.endDate || '');
+    end.setUTCHours(23, 59, 59, 999);
+    const isCurrent = todayUTC >= start && todayUTC <= end;
+    const isPast = end < todayUTC;
+    const isMajor = _pgaIsMajor(name);
+    const isTeamEvent = name.toLowerCase().includes('presidents cup') || name.toLowerCase().includes('ryder');
+    return { name, start, end, isCurrent, isPast, isMajor, isTeamEvent, id: ev.id };
+  });
+
+  function buildCard(ev) {
+    const cls = ['pga-tourn-card', ev.isCurrent ? 'current' : '', ev.isMajor ? 'major' : ''].filter(Boolean).join(' ');
+    const badges = [];
+    if (ev.isMajor)     badges.push(`<span class="pga-badge major">⭐ Major</span>`);
+    if (ev.isTeamEvent) badges.push(`<span class="pga-badge team-event">Team Event</span>`);
+    if (ev.isCurrent)   badges.push(`<span class="pga-badge current">▶ In Progress</span>`);
+    else if (ev.isPast) badges.push(`<span class="pga-badge past">Completed</span>`);
+    return `
+      <div class="${cls}">
+        <div class="pga-tourn-name">${ev.name}</div>
+        <div class="pga-tourn-dates">${_pgaFmtDateRange(ev.start, ev.end)}</div>
+        ${badges.length ? `<div class="pga-tourn-badges">${badges.join('')}</div>` : ''}
+      </div>`;
+  }
+
+  const current  = events.filter(e => e.isCurrent);
+  const upcoming = events.filter(e => !e.isPast && !e.isCurrent);
+  const past     = [...events.filter(e => e.isPast)].reverse();
+
+  let html = '';
+  if (current.length) {
+    html += `<div class="pga-schedule-section">
+      <div class="pga-schedule-section-title">This Week</div>
+      <div class="pga-schedule-grid">${current.map(buildCard).join('')}</div>
+    </div>`;
+  }
+  if (upcoming.length) {
+    const next = upcoming.slice(0, 8), rest = upcoming.slice(8);
+    html += `<div class="pga-schedule-section">
+      <div class="pga-schedule-section-title">Coming Up</div>
+      <div class="pga-schedule-grid">${next.map(buildCard).join('')}</div>
+    </div>`;
+    if (rest.length) {
+      html += `<div class="pga-schedule-section">
+        <div class="pga-schedule-section-title">Later in 2026</div>
+        <div class="pga-schedule-grid">${rest.map(buildCard).join('')}</div>
+      </div>`;
+    }
+  }
+  if (past.length) {
+    html += `<div class="pga-schedule-section">
+      <div class="pga-schedule-section-title">Completed (${past.length})</div>
+      <div class="pga-schedule-grid">${past.map(buildCard).join('')}</div>
+    </div>`;
+  }
+
+  el.innerHTML = html || '<div style="padding:24px;color:var(--muted);">No schedule data.</div>';
+}
+
+// ── RANKINGS (FedExCup) ───────────────────────────────────────
+async function _pgaRenderRankings() {
+  const el = document.getElementById('pga-panel-rankings');
+  if (_pgaRankingsCache) { _pgaBuildRankings(el, _pgaRankingsCache); return; }
+  el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Loading FedEx Cup standings<br><small style="color:var(--muted);font-family:\'Barlow Condensed\',sans-serif;">Fetching top 50 athlete profiles…</small></div>';
+  try {
+    // Step 1: standings (athlete $refs + stats per player)
+    const sRes = await fetch('https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/seasons/2026/types/2/standings/0?limit=50');
+    const standings = await sRes.json();
+    const items = (standings.items || []).slice(0, 50);
+
+    // Step 2: batch-resolve athlete names from $refs
+    const resolved = await Promise.all(items.map(async (item, idx) => {
+      const athleteRef = (item.athlete?.$ref || '').replace(/^http:/, 'https:');
+      let name = '', shortName = '', country = '';
+      if (athleteRef) {
+        try {
+          const ar = await fetch(athleteRef);
+          const a = await ar.json();
+          name = a.displayName || '';
+          shortName = a.shortName || name;
+          country = a.flag?.alt || a.citizenship || '';
+        } catch {}
+      }
+      const stats = _pgaParseStandingsStats(item);
+      return { rank: idx + 1, name, shortName, country, ...stats };
+    }));
+
+    _pgaRankingsCache = resolved.filter(r => r.name);
+    _pgaBuildRankings(el, _pgaRankingsCache);
+  } catch(e) {
+    el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;">Error: ${e.message}</div>`;
+  }
+}
+
+function _pgaParseStandingsStats(item) {
+  const out = { cupPts: null, earnings: null, scoringAvg: null, cutsMade: null, tournamentsPlayed: null };
+  const tryParse = (s) => {
+    const name = (s.name || s.shortDisplayName || s.abbreviation || '').toLowerCase();
+    const val = s.displayValue ?? s.value ?? null;
+    if (!val && val !== 0) return;
+    if (name.includes('cup') || name === 'cuppts' || name.includes('fedex')) out.cupPts = val;
+    if (name.includes('earn') || name === 'money') out.earnings = val;
+    if (name.includes('scoring') || name === 'avg' || name === 'sa') out.scoringAvg = val;
+    if (name.includes('cuts made') || name === 'cm' || name === 'cutsm') out.cutsMade = val;
+    if (name.includes('tournament') || name === 'tp' || name === 'events') out.tournamentsPlayed = val;
+  };
+  // Try records[].stats[]
+  (item.records || []).forEach(r => (r.stats || []).forEach(tryParse));
+  // Try direct stats[]
+  (item.stats || []).forEach(tryParse);
+  return out;
+}
+
+function _pgaBuildRankings(el, players) {
+  if (!players.length) {
+    el.innerHTML = '<div style="padding:24px;color:var(--muted);">No rankings data available.</div>';
+    return;
+  }
+
+  const headerHtml = `
+    <div class="pga-event-hdr" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+        <div class="pga-event-name">FedEx Cup Standings</div>
+        <span class="pga-status-badge pre">2026 Season · Top ${players.length}</span>
+      </div>
+      <div class="pga-event-meta">Season-long points race · Resets at FedEx playoffs in August · Top 70 advance</div>
+    </div>`;
+
+  const gridCols = '44px 1fr 50px 90px 110px 76px';
+  let tableHtml = `
+    <div class="pga-rankings-wrap">
+      <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:7px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03);font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">
+        <span>#</span><span>PLAYER</span><span style="text-align:right">CTY</span>
+        <span style="text-align:right">FEDEX PTS</span><span style="text-align:right">EARNINGS</span><span style="text-align:right">SCR AVG</span>
+      </div>`;
+
+  players.forEach((p, idx) => {
+    const isTop10 = idx < 10;
+    tableHtml += `
+      <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);${idx%2===1?'background:rgba(255,255,255,0.01)':''}">
+        <span class="pga-rank-num ${isTop10?'top10':''}">${p.rank}</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.shortName || p.name}</span>
+        <span class="pga-rankings-stat">${p.country || '—'}</span>
+        <span class="pga-rankings-stat pts">${p.cupPts != null ? p.cupPts : '—'}</span>
+        <span class="pga-rankings-stat">${p.earnings != null ? p.earnings : '—'}</span>
+        <span class="pga-rankings-stat">${p.scoringAvg != null ? p.scoringAvg : '—'}</span>
+      </div>`;
+  });
+
+  tableHtml += '</div>';
+  el.innerHTML = headerHtml + tableHtml;
+}
+</script>
+
 <script src="cards-data.js"></script>
 <script src="cards-logic.js"></script>
 <script src="draft-lobby.js"></script>
