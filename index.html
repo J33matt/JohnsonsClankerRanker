@@ -12283,73 +12283,85 @@ function _pgaBuildLeaderboard(el, data) {
   const sorted = [...competitors].sort((a, b) => (a.sortOrder ?? a.order ?? 999) - (b.sortOrder ?? b.order ?? 999));
   const maxRounds = 4;
 
-  // ── Card grid layout (headshot-first) ────────────────────────
-  const PLACEHOLDER = `<div style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:1.6rem;">⛳</div>`;
-
-  function posColor(idx) {
-    if (idx === 0) return '#f59e0b'; // gold
-    if (idx === 1) return '#94a3b8'; // silver
-    if (idx === 2) return '#cd7c4a'; // bronze
-    return 'rgba(255,255,255,0.18)';
-  }
-
-  let cards = '';
-  sorted.forEach((c, idx) => {
-    const name = c.athlete?.displayName || '';
-    const shortName = c.athlete?.shortName || name;
-    const country = c.athlete?.flag?.alt || '';
-    const headshot = c.athlete?.headshot?.href || '';
-
-    // Position badge
-    const posBadgeColor = posColor(idx);
-    const posLabel = isPre
-      ? `${idx + 1}`
-      : (c.status?.position?.displayValue || '—');
-
-    // Bottom stat line
-    let statLine = '';
-    if (isPre) {
+  // ── Row layout with large headshots ─────────────────────────
+  if (isPre) {
+    const gridCols = '52px 56px 1fr 110px';
+    let html = `<div class="pga-ldr-wrap">
+      <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03);font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">
+        <span>#</span><span></span><span>PLAYER</span><span style="text-align:right">TEE TIME</span>
+      </div>`;
+    sorted.forEach((c, idx) => {
+      const name = c.athlete?.displayName || '';
+      const country = c.athlete?.flag?.alt || '';
+      const headshot = c.athlete?.headshot?.href || '';
       const teeTime = c.status?.detail || '—';
       const hole = c.status?.startHole > 1 ? ` · Hole ${c.status.startHole}` : '';
-      statLine = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;color:var(--accent2);font-weight:700;margin-top:4px;">${teeTime}${hole}</div>`;
-    } else {
-      const scoreDisp = c.score?.displayValue || 'E';
-      const scoreVal = c.score?.value ?? 0;
-      const scoreColor = scoreVal < 0 ? '#22c55e' : scoreVal > 0 ? '#ef4444' : 'var(--text)';
-      const rdLabels = Array.from({length: maxRounds}, (_, i) => {
-        const v = c.linescores?.[i]?.displayValue;
-        return v && v !== '-' ? v : '—';
-      });
-      const rdHtml = rdLabels.map((v, i) => `<span style="color:var(--muted)">${v}</span>`).join('<span style="color:rgba(255,255,255,0.15);margin:0 2px">·</span>');
-      statLine = `
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.3rem;font-weight:900;color:${scoreColor};line-height:1;">${scoreDisp}</div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted);margin-top:3px;letter-spacing:0.5px;">${rdHtml}</div>`;
-    }
+      html += `
+        <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:5px 14px;border-bottom:1px solid rgba(255,255,255,0.035);${idx%2===1?'background:rgba(255,255,255,0.01)':''}">
+          <span class="pga-ldr-pos">${idx+1}</span>
+          ${headshot
+            ? `<img src="${headshot}" loading="lazy" onerror="this.style.visibility='hidden'" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,0.1);">`
+            : `<div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>`}
+          <span style="display:flex;flex-direction:column;justify-content:center;gap:1px;min-width:0;padding-left:10px;">
+            <span class="pga-player-name">${name}</span>
+            ${country ? `<span class="pga-player-country">${country}</span>` : ''}
+          </span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;font-weight:700;color:var(--accent2);text-align:right;">${teeTime}${hole}</span>
+        </div>`;
+    });
+    html += '</div>';
+    el.innerHTML = headerHtml + html;
+    return;
+  }
 
-    const headshotImg = headshot
-      ? `<img src="${headshot}" loading="lazy" onerror="this.replaceWith(this.nextElementSibling)"
-           style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1);display:block;">${PLACEHOLDER}`
-      : PLACEHOLDER;
+  // Active / Final
+  const gridCols = '52px 56px 1fr 44px 44px 44px 44px 56px 62px';
+  let html = `<div class="pga-ldr-wrap">
+    <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03);font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">
+      <span>POS</span><span></span><span style="padding-left:10px;">PLAYER</span>
+      <span style="text-align:center">R1</span><span style="text-align:center">R2</span><span style="text-align:center">R3</span><span style="text-align:center">R4</span>
+      <span style="text-align:center">TOT</span><span style="text-align:right">SCORE</span>
+    </div>`;
 
-    cards += `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 12px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;transition:border-color 0.15s;"
-           onmouseover="this.style.borderColor='rgba(34,197,94,0.3)'" onmouseout="this.style.borderColor='var(--border)'">
-        <!-- position badge -->
-        <div style="position:absolute;top:9px;left:9px;min-width:26px;height:22px;border-radius:5px;background:${posBadgeColor};display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;font-weight:800;color:${idx < 3 ? '#000' : 'rgba(255,255,255,0.85)'};padding:0 5px;">${posLabel}</div>
-        <!-- headshot -->
-        <div style="position:relative;margin-top:6px;">${headshotImg}</div>
-        <!-- name -->
-        <div style="text-align:center;min-width:0;width:100%;">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.92rem;font-weight:700;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${shortName}</div>
-          ${country ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:var(--muted);margin-top:1px;">${country}</div>` : ''}
-        </div>
-        <!-- stat -->
-        <div style="text-align:center;">${statLine}</div>
+  sorted.forEach((c, idx) => {
+    const pos = c.status?.position?.displayValue || '—';
+    const name = c.athlete?.displayName || '';
+    const country = c.athlete?.flag?.alt || '';
+    const headshot = c.athlete?.headshot?.href || '';
+    const scoreDisp = c.score?.displayValue || 'E';
+    const scoreVal = c.score?.value ?? 0;
+    const scoreClass = scoreVal < 0 ? 'pga-score-under' : scoreVal > 0 ? 'pga-score-over' : 'pga-score-even';
+    const isTop3 = idx < 3;
+
+    const rdScores = Array.from({length: maxRounds}, (_, i) => {
+      const v = c.linescores?.[i]?.displayValue || '—';
+      return `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--muted);text-align:center;">${v}</span>`;
+    }).join('');
+
+    const totalStrokes = (c.linescores || []).reduce((sum, ls) => {
+      const v = parseFloat(ls?.value ?? '');
+      return isNaN(v) ? sum : sum + v;
+    }, 0);
+    const totalDisp = totalStrokes > 0 ? totalStrokes : '—';
+
+    html += `
+      <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:5px 14px;border-bottom:1px solid rgba(255,255,255,0.035);${isTop3?'background:rgba(34,197,94,0.04);':idx%2===1?'background:rgba(255,255,255,0.01)':''}">
+        <span class="pga-ldr-pos" style="${isTop3?'color:#22c55e':''}">${pos}</span>
+        ${headshot
+          ? `<img src="${headshot}" loading="lazy" onerror="this.style.visibility='hidden'" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,0.1);">`
+          : `<div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>`}
+        <span style="display:flex;flex-direction:column;justify-content:center;gap:1px;min-width:0;padding-left:10px;">
+          <span class="pga-player-name">${name}</span>
+          ${country ? `<span class="pga-player-country">${country}</span>` : ''}
+        </span>
+        ${rdScores}
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--muted);text-align:center;">${totalDisp}</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.05rem;font-weight:800;text-align:right;" class="${scoreClass}">${scoreDisp}</span>
       </div>`;
   });
 
-  const grid = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;">${cards}</div>`;
-  el.innerHTML = headerHtml + grid;
+  html += '</div>';
+  el.innerHTML = headerHtml + html;
 }
 
 // ── SCHEDULE ──────────────────────────────────────────────────
