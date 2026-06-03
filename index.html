@@ -8418,8 +8418,11 @@ async function _sbAutoSettle() {
 function _sbComputePayout() {
   if (!_sbSlip.length) return 0;
   if (_sbSlipMode === 'parlay') {
-    const combined = _sbSlip.reduce((acc, l) => acc * _mlToDecimal(l.ml), 1);
-    return Math.round(_sbStake * combined * 100) / 100;
+    const sgp = _sbCalculateSGPOdds(_sbSlip);
+    const effectiveML = sgp
+      ? sgp.ml
+      : _parlayOddsToML(_sbSlip.reduce((acc, l) => acc * _mlToDecimal(l.ml), 1));
+    return Math.round((_sbStake + _mlPayout(effectiveML, _sbStake)) * 100) / 100;
   } else {
     // Single mode: total payout = sum of each individual bet's payout
     return _sbSlip.reduce((sum, leg) => {
@@ -8461,8 +8464,9 @@ async function _sbPlaceBet() {
     }
   } else {
     // Parlay
-    const combined = _sbSlip.reduce((acc, l) => acc * _mlToDecimal(l.ml), 1);
-    const parlayML = _parlayOddsToML(combined);
+    const _sgpResult  = _sbCalculateSGPOdds(_sbSlip);
+    const _rawCombined = _sbSlip.reduce((acc, l) => acc * _mlToDecimal(l.ml), 1);
+    const parlayML    = _sgpResult ? _sgpResult.ml : _parlayOddsToML(_rawCombined);
     const bet = {
       id: Date.now() + Math.random(),
       date: today,
@@ -8471,6 +8475,8 @@ async function _sbPlaceBet() {
       legs: [..._sbSlip],
       stake: _sbStake,
       parlayML,
+      isSGP:          _sgpResult ? true : false,
+      sgpAdjustments: _sgpResult ? _sgpResult.adjustments : [],
       potentialPayout: _sbStake + _mlPayout(parlayML, _sbStake),
       result: null, payout: null, net: null
     };
@@ -8564,7 +8570,9 @@ function _renderSbSlip() {
   let html = '';
   // Mode label (informational only — mode is automatic)
   if (_sbSlip.length >= 2) {
-    html += `<div style="padding:6px 14px;font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:2px;color:var(--accent2);text-transform:uppercase;border-bottom:1px solid var(--border)">🎰 Parlay</div>`;
+    const _slipSGP = _sbCalculateSGPOdds(_sbSlip);
+    const _modeLabel = _slipSGP ? '⚡ Same-Game Parlay' : '🎰 Parlay';
+    html += `<div style="padding:6px 14px;font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:2px;color:var(--accent2);text-transform:uppercase;border-bottom:1px solid var(--border)">${_modeLabel}</div>`;
   }
 
   html += _sbSlip.map(leg => `
@@ -8581,11 +8589,25 @@ function _renderSbSlip() {
 
   // Parlay summary
   if (_sbSlipMode === 'parlay' && _sbSlip.length >= 2) {
-    const combined = _sbSlip.reduce((acc, l) => acc * _mlToDecimal(l.ml), 1);
-    const parlayML = _parlayOddsToML(combined);
-    html += `<div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-top:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:var(--muted)">
-      ${_sbSlip.length}-Leg Parlay · Combined odds <span style="color:var(--accent2);font-weight:700">${_fmtML(parlayML)}</span>
-    </div>`;
+    const sgp = _sbCalculateSGPOdds(_sbSlip);
+    if (sgp) {
+      const adjLabels = sgp.adjustments
+        .map(k => (_SGP_ADJ_LABELS && _SGP_ADJ_LABELS[k]) || k)
+        .slice(0, 3).join(' · ');
+      html += `<div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-top:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;">
+        <div style="font-size:0.78rem;color:var(--muted)">
+          ${_sbSlip.length}-Leg SGP · <span style="color:var(--accent2);font-weight:700">${_fmtML(sgp.ml)}</span>
+          <span style="color:rgba(255,255,255,0.25);font-size:0.7rem;margin-left:6px">raw ${_fmtML(sgp.rawML)}</span>
+        </div>
+        ${adjLabels ? `<div style="font-size:0.65rem;color:rgba(255,255,255,0.3);margin-top:3px;letter-spacing:0.5px">${adjLabels}</div>` : ''}
+      </div>`;
+    } else {
+      const combined = _sbSlip.reduce((acc, l) => acc * _mlToDecimal(l.ml), 1);
+      const parlayML = _parlayOddsToML(combined);
+      html += `<div style="padding:10px 14px;background:rgba(255,255,255,0.03);border-top:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:var(--muted)">
+        ${_sbSlip.length}-Leg Parlay · Combined odds <span style="color:var(--accent2);font-weight:700">${_fmtML(parlayML)}</span>
+      </div>`;
+    }
   }
 
   el.innerHTML = html;
@@ -8632,7 +8654,8 @@ function _renderSbSlip() {
     const balance = _sbProfile?.bankroll || 0;
     pbtn.disabled = !_sbProfile || _sbStake <= 0 || totalStake > balance;
     if (_sbSlipMode === 'parlay') {
-      pbtn.textContent = `Place ${_sbSlip.length}-Leg Parlay · $${_sbStake.toFixed(2)}`;
+      const _isSGP = !!_sbCalculateSGPOdds(_sbSlip);
+      pbtn.textContent = `Place ${_sbSlip.length}-Leg ${_isSGP ? 'SGP' : 'Parlay'} · $${_sbStake.toFixed(2)}`;
     } else if (_sbSlip.length > 1) {
       pbtn.textContent = `Place ${_sbSlip.length} Singles · $${totalStake.toFixed(2)} total`;
     } else {

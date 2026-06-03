@@ -1249,6 +1249,177 @@ function _sbCorrelationBlocked(newLeg, existingLegs) {
   return { blocked: false };
 }
 
+// ── SGP (Same-Game Parlay) Odds Engine ──────────────────────────────────────
+// All coefficients live here — adjust to tune margins without touching logic.
+const _SGP_CONFIG = {
+  // Positive correlation: inflate joint P → lower payout
+  POS_PLAYER_TEAM_ML:       1.15,  // player stat over  + same team ML win
+  POS_PLAYER_TEAM_SPREAD:   1.12,  // player stat over  + same team spread cover
+  POS_PLAYER_GAME_OVER:     1.10,  // player pts over   + game total over
+  POS_TEAMMATE_OVER:        1.06,  // two same-team players both hitting overs
+
+  // Negative correlation: deflate joint P → higher payout
+  NEG_PLAYER_OPP_ML:        0.80,  // player stat over  + opposing team ML win
+  NEG_PLAYER_OPP_SPREAD:    0.83,  // player stat over  + opposing team spread
+  NEG_PLAYER_GAME_UNDER:    0.88,  // player pts over   + game total under
+
+  // Double-dip penalty: same player, overlapping stat markets
+  DOUBLE_DIP_FULL:          1.30,  // all indices of smaller market exist in larger
+  DOUBLE_DIP_PARTIAL:       1.18,  // partial index overlap
+
+  // Synthetic hold applied after all correlation adjustments (house edge)
+  SYNTHETIC_HOLD:           0.17,  // 17% additional probability inflation
+};
+
+// Human-readable labels for the transparency display
+const _SGP_ADJ_LABELS = {
+  'PLAYER_OVER_+_TEAM_ML':       'player over + team wins',
+  'PLAYER_OVER_+_TEAM_SPREAD':   'player over + team covers',
+  'PLAYER_OVER_+_OPP_ML':        'player over + opp. wins ↑',
+  'PLAYER_OVER_+_OPP_SPREAD':    'player over + opp. covers ↑',
+  'PLAYER_PTS_OVER_+_GAME_OVER': 'pts over + game over',
+  'PLAYER_PTS_OVER_+_GAME_UNDER':'pts over + game under ↑',
+  'TEAMMATE_OVERS':              'teammate overs',
+  'DOUBLE_DIP_SAME_PLAYER':      'overlapping player markets',
+};
+
+// Resolve player slug → team abbreviation via the loaded roster cache
+function _sgpGetPlayerTeam(playerSlug) {
+  if (typeof _sbRosterCache === 'undefined') return null;
+  const name = playerSlug.split('_')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  for (const players of Object.values(_sbRosterCache)) {
+    if (players && players[name]) return players[name].teamAbbr || null;
+  }
+  return null;
+}
+
+// Returns indices that appear in both stat markets (for double-dip detection)
+function _sgpStatOverlap(m1, m2) {
+  if (typeof _SB_MARKET_STAT_INDICES === 'undefined') return [];
+  const i1 = _SB_MARKET_STAT_INDICES[m1] || [];
+  const i2 = _SB_MARKET_STAT_INDICES[m2] || [];
+  return i1.filter(i => i2.includes(i));
+}
+
+// American odds → implied probability
+function _sgpImpliedProb(ml) {
+  if (!ml) return 0.5238; // -110 default
+  return ml < 0 ? Math.abs(ml) / (Math.abs(ml) + 100)
+                : 100 / (ml + 100);
+}
+
+// Implied probability → American odds
+function _sgpProbToML(p) {
+  p = Math.max(0.02, Math.min(0.98, p));
+  return p >= 0.5 ? -Math.round(p / (1 - p) * 100)
+                  :  Math.round((1 - p) / p * 100);
+}
+
+// Stat markets where a player over is meaningful for correlation purposes
+const _SGP_STAT_MARKETS = new Set([
+  'player_points','player_rebounds','player_assists','player_threes',
+  'player_blocks','player_steals','player_points_rebounds',
+  'player_points_assists','player_rebounds_assists','player_points_rebounds_assists',
+]);
+const _SGP_PTS_MARKETS = new Set([
+  'player_points','player_points_rebounds','player_points_assists','player_points_rebounds_assists',
+]);
+
+/**
+ * Calculate SGP-adjusted odds for a slip.
+ * Returns null when legs span multiple games (caller uses standard multiplication).
+ *
+ * @param  {Array}  legs  — _sbSlip leg objects
+ * @returns {{ ml:number, isSGP:boolean, adjustments:string[], rawML:number } | null}
+ */
+function _sbCalculateSGPOdds(legs) {
+  if (!legs || legs.length < 2) return null;
+  const gameKey = legs[0].gameKey;
+  if (!legs.every(l => l.gameKey === gameKey)) return null; // cross-game → standard path
+
+  const away = legs[0].awayAbbr;
+  const home = legs[0].homeAbbr;
+  const C    = _SGP_CONFIG;
+  const hits = [];
+
+  // Baseline: product of implied probabilities
+  let P = legs.reduce((acc, l) => acc * _sgpImpliedProb(l.ml), 1);
+
+  // Pre-parse each leg
+  const parsed = legs.map(l => {
+    const prop       = _sbParsePropType(l.type);
+    const playerTeam = prop ? _sgpGetPlayerTeam(prop.player) : null;
+    return { leg: l, prop, playerTeam };
+  });
+
+  // Pairwise correlation scan
+  for (let i = 0; i < parsed.length; i++) {
+    for (let j = i + 1; j < parsed.length; j++) {
+      const a = parsed[i], b = parsed[j];
+
+      // Helper: apply prop-vs-game-market correlation
+      const applyPropVsGame = (propParsed, gameType) => {
+        if (!propParsed.prop || !propParsed.playerTeam) return;
+        if (propParsed.prop.dir !== 'over') return;
+        if (!_SGP_STAT_MARKETS.has(propParsed.prop.market)) return;
+        const t = propParsed.playerTeam;
+        const gt = gameType;
+        // Same-team win
+        if ((gt === 'ml_away'     && t === away) || (gt === 'ml_home'     && t === home)) { P *= C.POS_PLAYER_TEAM_ML;     hits.push('PLAYER_OVER_+_TEAM_ML');     return; }
+        if ((gt === 'spread_away' && t === away) || (gt === 'spread_home' && t === home)) { P *= C.POS_PLAYER_TEAM_SPREAD; hits.push('PLAYER_OVER_+_TEAM_SPREAD'); return; }
+        // Opposing team win
+        if ((gt === 'ml_away'     && t === home) || (gt === 'ml_home'     && t === away)) { P *= C.NEG_PLAYER_OPP_ML;     hits.push('PLAYER_OVER_+_OPP_ML');     return; }
+        if ((gt === 'spread_away' && t === home) || (gt === 'spread_home' && t === away)) { P *= C.NEG_PLAYER_OPP_SPREAD; hits.push('PLAYER_OVER_+_OPP_SPREAD'); return; }
+        // Game total
+        if (gt === 'ou_over'  && _SGP_PTS_MARKETS.has(propParsed.prop.market)) { P *= C.POS_PLAYER_GAME_OVER;  hits.push('PLAYER_PTS_OVER_+_GAME_OVER');  return; }
+        if (gt === 'ou_under' && _SGP_PTS_MARKETS.has(propParsed.prop.market)) { P *= C.NEG_PLAYER_GAME_UNDER; hits.push('PLAYER_PTS_OVER_+_GAME_UNDER'); return; }
+      };
+
+      if (a.prop && !b.prop)  applyPropVsGame(a, b.leg.type);
+      if (b.prop && !a.prop)  applyPropVsGame(b, a.leg.type);
+
+      // Teammate overs
+      if (a.prop && b.prop &&
+          a.playerTeam && b.playerTeam && a.playerTeam === b.playerTeam &&
+          a.prop.dir === 'over' && b.prop.dir === 'over' &&
+          a.prop.player !== b.prop.player) {
+        P *= C.POS_TEAMMATE_OVER;
+        hits.push('TEAMMATE_OVERS');
+      }
+
+      // Double-dip: same player, overlapping stat markets, both over
+      if (a.prop && b.prop &&
+          a.prop.player === b.prop.player &&
+          a.prop.dir === 'over' && b.prop.dir === 'over' &&
+          a.prop.market !== b.prop.market) {
+        const overlap = _sgpStatOverlap(a.prop.market, b.prop.market);
+        if (overlap.length > 0) {
+          const minLen = Math.min(
+            (_SB_MARKET_STAT_INDICES[a.prop.market] || []).length,
+            (_SB_MARKET_STAT_INDICES[b.prop.market] || []).length,
+          );
+          P *= overlap.length >= minLen ? C.DOUBLE_DIP_FULL : C.DOUBLE_DIP_PARTIAL;
+          hits.push('DOUBLE_DIP_SAME_PLAYER');
+        }
+      }
+    }
+  }
+
+  // Synthetic hold (house edge on top of all correlation adjustments)
+  P *= (1 + C.SYNTHETIC_HOLD);
+  P  = Math.min(P, 0.97);
+
+  const rawCombined = legs.reduce((acc, l) => acc * _mlToDecimal(l.ml), 1);
+
+  return {
+    ml:          _sgpProbToML(P),
+    rawML:       _parlayOddsToML(rawCombined),
+    isSGP:       true,
+    adjustments: [...new Set(hits)],
+  };
+}
+
 // _mlToDecimal
 function _mlToDecimal(ml) {
   if (!ml || ml === 0) return 1.909; // -110 default
