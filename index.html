@@ -7218,6 +7218,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   .sb-prop-l5 { font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 1px; text-align: right; white-space: nowrap; }
   .sb-l5-label { color: rgba(255,255,255,0.45); }
   .sb-l5-val { color: var(--text); }
+  .sb-l5-dots { display: inline-flex; gap: 3px; align-items: center; }
+  .sb-l5-dot { font-size: 0.72rem; font-weight: 800; padding: 1px 4px; border-radius: 3px; letter-spacing: 0; }
+  .sb-l5-dot.yes { color: var(--accent2); background: rgba(255,170,0,0.15); }
+  .sb-l5-dot.no  { color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.06); }
   .sb-prop-btns { display: flex; gap: 6px; }
   .sb-prop-btn {
     font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.5px;
@@ -7843,6 +7847,20 @@ const _SB_MARKET_STAT_INDICES = {
 // Keep alias for binary-market check elsewhere
 const _SB_MARKET_STATS = _SB_MARKET_STAT_INDICES;
 
+// Binary markets that support L5 Y/N tracking
+// checker(stats[]) → boolean
+const _SB_MARKET_BINARY_L5 = {
+  player_double_double: stats => {
+    // indices: pts=1, reb=5, ast=6, stl=8, blk=9
+    const cats = [1,5,6,8,9].filter(i => _sbParseStatVal(stats[i]) >= 10);
+    return cats.length >= 2;
+  },
+  player_triple_double: stats => {
+    const cats = [1,5,6,8,9].filter(i => _sbParseStatVal(stats[i]) >= 10);
+    return cats.length >= 3;
+  },
+};
+
 const _sbPlayerL5Cache    = {}; // `${espnId}_${market}` → avg or null
 const _sbTeamScheduleCache = {}; // teamAbbr → [eventId, ...]
 const _sbGameSummaryCache  = {}; // eventId → { playerId: statsArray }
@@ -7899,6 +7917,30 @@ async function _sbFetchPlayerL5(espnId, teamAbbr, market) {
   } catch(e) { return (_sbPlayerL5Cache[key] = null); }
 }
 
+const _sbPlayerL5BinaryCache = {}; // `${espnId}_${market}` → {results:[bool,...], count, total} or null
+
+async function _sbFetchPlayerL5Binary(espnId, teamAbbr, market) {
+  const key = `${espnId}_${market}`;
+  if (key in _sbPlayerL5BinaryCache) return _sbPlayerL5BinaryCache[key];
+  const checker = _SB_MARKET_BINARY_L5[market];
+  if (!checker) return (_sbPlayerL5BinaryCache[key] = null);
+  try {
+    const eventIds = await _sbFetchTeamSchedule(teamAbbr);
+    if (!eventIds.length) return (_sbPlayerL5BinaryCache[key] = null);
+    const summaries = await Promise.all(eventIds.map(_sbFetchGameSummary));
+    const results = summaries
+      .map(m => m[espnId])
+      .filter(Boolean)
+      .map(stats => checker(stats));
+    if (!results.length) return (_sbPlayerL5BinaryCache[key] = null);
+    return (_sbPlayerL5BinaryCache[key] = {
+      results,
+      count: results.filter(Boolean).length,
+      total: results.length,
+    });
+  } catch(e) { return (_sbPlayerL5BinaryCache[key] = null); }
+}
+
 async function _sbPropsLoadEnrichments(bodyEl, market) {
   const avatars = [...bodyEl.querySelectorAll('[data-player-name]')];
   if (!avatars.length) return;
@@ -7908,7 +7950,7 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
     _sbFetchRoster(_sbPropsGameSelHome || ''),
   ]);
   const rosterMap = { ...awayMap, ...homeMap };
-  const hasL5 = !!_SB_MARKET_STATS[market];
+  const hasL5 = !!_SB_MARKET_STATS[market] || !!_SB_MARKET_BINARY_L5[market];
 
   // Apply headshots + team colors immediately, then fire L5 fetches in parallel
   avatars.forEach(avatarEl => {
@@ -7944,12 +7986,26 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
     }
 
     // Fire L5 fetch — updates span when ready
-    if (hasL5 && info.espnId) {
+    if (info.espnId) {
       const slug = name.toLowerCase().replace(/\s+/g,'_');
-      _sbFetchPlayerL5(info.espnId, info.teamAbbr, market).then(avg => {
-        const el = document.getElementById(`sb-l5-${market}_${slug}`);
-        if (el && avg !== null) el.innerHTML = `<span class="sb-l5-label">LAST 5 AVG:</span> <span class="sb-l5-val">${avg}</span>`;
-      });
+      const elId = `sb-l5-${market}_${slug}`;
+      if (_SB_MARKET_BINARY_L5[market]) {
+        // Binary market: show Y/N sequence + count
+        _sbFetchPlayerL5Binary(info.espnId, info.teamAbbr, market).then(data => {
+          const el = document.getElementById(elId);
+          if (!el || !data) return;
+          const dots = data.results.map(y =>
+            `<span class="sb-l5-dot ${y ? 'yes' : 'no'}">${y ? 'Y' : 'N'}</span>`
+          ).join('');
+          el.innerHTML = `<span class="sb-l5-label">${data.count}/${data.total}</span> <span class="sb-l5-dots">${dots}</span>`;
+        });
+      } else if (hasL5) {
+        // Numeric market: show average
+        _sbFetchPlayerL5(info.espnId, info.teamAbbr, market).then(avg => {
+          const el = document.getElementById(elId);
+          if (el && avg !== null) el.innerHTML = `<span class="sb-l5-label">LAST 5 AVG:</span> <span class="sb-l5-val">${avg}</span>`;
+        });
+      }
     }
   });
 }
