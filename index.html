@@ -7826,43 +7826,74 @@ async function _sbFetchRoster(abbr) {
   } catch(e) { _sbRosterCache[abbr] = {}; return {}; }
 }
 
-// Market → ESPN stat name(s) to sum per game
-const _SB_MARKET_STATS = {
-  player_points:                  ['points'],
-  player_rebounds:                ['rebounds'],
-  player_assists:                 ['assists'],
-  player_threes:                  ['threePointFieldGoalsMade'],
-  player_blocks:                  ['blocks'],
-  player_steals:                  ['steals'],
-  player_points_rebounds:         ['points','rebounds'],
-  player_points_assists:          ['points','assists'],
-  player_rebounds_assists:        ['rebounds','assists'],
-  player_points_rebounds_assists: ['points','rebounds','assists'],
+// Market → box score stat array indices
+// Keys: ["minutes","points","FGM-A","3PM-A","FTM-A","rebounds","assists","turnovers","steals","blocks","OREB","DREB","fouls","plusMinus"]
+const _SB_MARKET_STAT_INDICES = {
+  player_points:                  [1],
+  player_rebounds:                [5],
+  player_assists:                 [6],
+  player_threes:                  [3],  // "4-8" → take made (first number)
+  player_blocks:                  [9],
+  player_steals:                  [8],
+  player_points_rebounds:         [1, 5],
+  player_points_assists:          [1, 6],
+  player_rebounds_assists:        [5, 6],
+  player_points_rebounds_assists: [1, 5, 6],
 };
-const _sbPlayerL5Cache = {}; // `${espnId}_${market}` → avg or null
+// Keep alias for binary-market check elsewhere
+const _SB_MARKET_STATS = _SB_MARKET_STAT_INDICES;
 
-function _sbStatFromSplits(splits, name) {
-  for (const cat of splits?.categories || [])
-    for (const s of cat.stats || [])
-      if (s.name === name) return s.value ?? null;
-  return null;
+const _sbPlayerL5Cache    = {}; // `${espnId}_${market}` → avg or null
+const _sbTeamScheduleCache = {}; // teamAbbr → [eventId, ...]
+const _sbGameSummaryCache  = {}; // eventId → { playerId: statsArray }
+
+async function _sbFetchTeamSchedule(teamAbbr) {
+  if (_sbTeamScheduleCache[teamAbbr]) return _sbTeamScheduleCache[teamAbbr];
+  try {
+    const d = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/${teamAbbr.toLowerCase()}/schedule`)
+      .then(r => r.json());
+    const ids = (d.events || [])
+      .filter(e => e.competitions?.[0]?.status?.type?.completed)
+      .slice(-5).map(e => e.id);
+    return (_sbTeamScheduleCache[teamAbbr] = ids);
+  } catch(e) { return (_sbTeamScheduleCache[teamAbbr] = []); }
 }
 
-async function _sbFetchPlayerL5(espnId, market) {
+async function _sbFetchGameSummary(eventId) {
+  if (_sbGameSummaryCache[eventId]) return _sbGameSummaryCache[eventId];
+  try {
+    const d = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${eventId}`)
+      .then(r => r.json());
+    const map = {};
+    for (const team of d.boxscore?.players || [])
+      for (const grp of team.statistics || [])
+        for (const a of grp.athletes || [])
+          if (a.athlete?.id) map[a.athlete.id] = a.stats || [];
+    return (_sbGameSummaryCache[eventId] = map);
+  } catch(e) { return (_sbGameSummaryCache[eventId] = {}); }
+}
+
+function _sbParseStatVal(val) {
+  if (!val || val === '--') return 0;
+  // Handle "made-attempted" format — take the made number
+  const s = String(val);
+  return parseFloat(s.includes('-') ? s.split('-')[0] : s) || 0;
+}
+
+async function _sbFetchPlayerL5(espnId, teamAbbr, market) {
   const key = `${espnId}_${market}`;
   if (key in _sbPlayerL5Cache) return _sbPlayerL5Cache[key];
-  const statNames = _SB_MARKET_STATS[market];
-  if (!statNames) return (_sbPlayerL5Cache[key] = null);
+  const indices = _SB_MARKET_STAT_INDICES[market];
+  if (!indices) return (_sbPlayerL5Cache[key] = null);
   try {
-    const r  = await fetch(`https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/athletes/${espnId}/eventlog?limit=120`);
-    const d  = await r.json();
-    const entries = (d.events?.items || []).filter(e => e.played && e.statistics?.$ref).slice(-5);
-    if (!entries.length) return (_sbPlayerL5Cache[key] = null);
-    const vals = await Promise.all(entries.map(async e => {
-      const url = e.statistics.$ref.replace('espn.pvt','espn.com').replace(/^http:/,'https:');
-      const sd  = await (await fetch(url)).json();
-      return statNames.reduce((sum, n) => sum + (_sbStatFromSplits(sd.splits, n) ?? 0), 0);
-    }));
+    const eventIds = await _sbFetchTeamSchedule(teamAbbr);
+    if (!eventIds.length) return (_sbPlayerL5Cache[key] = null);
+    const summaries = await Promise.all(eventIds.map(_sbFetchGameSummary));
+    const vals = summaries
+      .map(m => m[espnId])
+      .filter(Boolean)
+      .map(stats => indices.reduce((sum, i) => sum + _sbParseStatVal(stats[i]), 0));
+    if (!vals.length) return (_sbPlayerL5Cache[key] = null);
     const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
     return (_sbPlayerL5Cache[key] = Math.round(avg * 10) / 10);
   } catch(e) { return (_sbPlayerL5Cache[key] = null); }
@@ -7915,7 +7946,7 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
     // Fire L5 fetch — updates span when ready
     if (hasL5 && info.espnId) {
       const slug = name.toLowerCase().replace(/\s+/g,'_');
-      _sbFetchPlayerL5(info.espnId, market).then(avg => {
+      _sbFetchPlayerL5(info.espnId, info.teamAbbr, market).then(avg => {
         const el = document.getElementById(`sb-l5-${slug}`);
         if (el && avg !== null) el.innerHTML = `<span class="sb-l5-label">LAST 5 AVG:</span> <span class="sb-l5-val">${avg}</span>`;
       });
