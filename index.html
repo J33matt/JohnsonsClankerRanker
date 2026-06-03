@@ -6986,24 +6986,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   .sb-bet-btn {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 7px 4px; background: rgba(255,255,255,0.04); cursor: pointer;
-    border: 1px solid rgba(255,255,255,0.13); border-radius: 6px; margin-bottom: 4px;
-    transition: background 0.15s, border-color 0.15s; min-height: 50px; gap: 2px;
+    padding: 8px 4px; background: rgba(255,255,255,0.04); cursor: pointer;
+    border: 1px solid rgba(255,170,0,0.4); border-radius: 6px; margin-bottom: 4px;
+    transition: background 0.15s, border-color 0.15s; min-height: 52px; gap: 3px;
   }
   .sb-bet-btn:last-child { margin-bottom: 0; }
-  .sb-bet-btn:hover { background: rgba(255,170,0,0.1); border-color: rgba(255,170,0,0.45); }
-  .sb-bet-btn.selected { background: rgba(255,170,0,0.22); border-color: #ffaa00; border-width: 1.5px; }
+  .sb-bet-btn:hover { background: rgba(255,170,0,0.08); border-color: var(--accent2); }
+  .sb-bet-btn.selected { background: rgba(255,170,0,0.18); border-color: var(--accent2); border-width: 1.5px; }
   .sb-bet-btn.in-parlay { background: rgba(51,153,255,0.15); border-color: rgba(51,153,255,0.55); }
   .sb-bet-btn.blocked { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
   .sb-bet-label {
-    font-family: 'Bebas Neue', sans-serif; font-size: 0.9rem; letter-spacing: 1px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.92rem; font-weight: 700; letter-spacing: 0.5px;
     color: var(--text); line-height: 1;
   }
   .sb-bet-odds {
-    font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 1px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.5px;
+    color: var(--accent2);
   }
-  .sb-bet-odds.fav { color: var(--green); }
-  .sb-bet-odds.dog { color: var(--accent2); }
+  .sb-bet-odds.fav, .sb-bet-odds.dog, .sb-bet-odds.even { color: var(--accent2); }
   .sb-bet-odds.even { color: var(--muted); }
 
   /* Bet slip sidebar */
