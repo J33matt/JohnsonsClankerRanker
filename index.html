@@ -9209,6 +9209,9 @@ async function renderSportsbook() {
   _renderSbSlip();
   _renderSbGameButtons();
 
+  // Auto-open Player Points O/U to show accordions are expandable
+  _sbPropsToggleAccordion('player_points');
+
   // Live refresh: settle + update bets panel every 2 minutes
   if (_sbLiveRefreshTimer) clearInterval(_sbLiveRefreshTimer);
   _sbLiveRefreshTimer = setInterval(() => { _sbRefreshBets().catch(() => {}); }, 2 * 60 * 1000);
