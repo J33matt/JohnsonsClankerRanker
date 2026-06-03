@@ -6956,7 +6956,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   .sb-game-body { display: flex; align-items: stretch; }
   .sb-gc-teams {
     flex: 0 0 210px; display: flex; flex-direction: column; justify-content: center;
-    gap: 8px; padding: 14px 16px;
+    gap: 10px; padding: 14px 16px;
   }
   .sb-gc-team-row { display: flex; align-items: center; gap: 10px; }
   .sb-gc-logo { width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
@@ -6989,19 +6989,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* Bet buttons grid */
   .sb-bet-grid {
     display: grid; grid-template-columns: 1fr 1fr 1fr; flex: 1;
-    gap: 0; background: var(--surface2); border-left: 1px solid var(--border);
+    column-gap: 0; background: var(--surface2); border-left: 1px solid var(--border);
+    padding: 0 6px;
   }
-  .sb-bet-col { background: var(--surface2); display: flex; flex-direction: column; gap: 0; padding: 6px 5px; border-right: 1px solid var(--border); }
-  .sb-bet-col:last-child { border-right: none; }
+  .sb-bet-col { background: transparent; display: flex; flex-direction: column; gap: 0; padding: 6px 4px; }
   .sb-bet-col-header {
     font-family: 'Barlow Condensed', sans-serif; font-size: 0.68rem; letter-spacing: 2px;
     text-transform: uppercase; color: var(--muted); text-align: center; padding: 4px 0 6px;
   }
   .sb-bet-btn {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 8px 4px; background: rgba(255,255,255,0.04); cursor: pointer;
-    border: 1px solid rgba(255,170,0,0.4); border-radius: 6px; margin-bottom: 4px;
-    transition: background 0.15s, border-color 0.15s; min-height: 52px; gap: 3px;
+    padding: 12px 6px; background: rgba(255,255,255,0.04); cursor: pointer;
+    border: 1px solid rgba(255,170,0,0.4); border-radius: 6px; margin-bottom: 5px;
+    transition: background 0.15s, border-color 0.15s; min-height: 54px; gap: 2px;
   }
   .sb-bet-btn:last-child { margin-bottom: 0; }
   .sb-bet-btn:hover { background: rgba(255,170,0,0.08); border-color: var(--accent2); }
@@ -7009,13 +7009,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   .sb-bet-btn.in-parlay { background: rgba(51,153,255,0.15); border-color: rgba(51,153,255,0.55); }
   .sb-bet-btn.blocked { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
   .sb-bet-label {
-    font-family: 'Barlow Condensed', sans-serif; font-size: 0.92rem; font-weight: 700; letter-spacing: 0.5px;
-    color: var(--text); line-height: 1;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.5px;
+    color: rgba(255,255,255,0.55); line-height: 1;
+  }
+  .sb-bet-primary {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.88rem; font-weight: 700; letter-spacing: 0.5px;
+    color: rgba(255,255,255,0.65); line-height: 1;
   }
   .sb-bet-odds {
-    font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.5px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 1.05rem; font-weight: 700; letter-spacing: 0.5px;
     color: var(--accent2);
   }
+  .sb-bet-odds.hero { font-size: 1.35rem; }
   .sb-bet-odds.fav, .sb-bet-odds.dog, .sb-bet-odds.even { color: var(--accent2); }
   .sb-bet-odds.even { color: var(--muted); }
 
@@ -9440,21 +9445,23 @@ function _renderSbGameCard(g, openBets) {
     ${seriesStr}`;
   }
 
-// Bet button factory
-  const btn = (type, label, ml, line) => {
+// Bet button factory — slipLabel goes to bet slip; btnPrimary is displayed in the button above odds
+  // Pass btnPrimary=null for ML (odds become the hero, no sub-label needed)
+  const btn = (type, slipLabel, ml, line, btnPrimary) => {
     if (ml === null || ml === undefined) {
       return `<button class="sb-bet-btn" disabled style="opacity:0.4;cursor:not-allowed">
-        <span class="sb-bet-label">${label}</span>
+        ${btnPrimary != null ? `<span class="sb-bet-primary">${btnPrimary}</span>` : ''}
         <span class="sb-bet-odds" style="color:var(--muted);font-size:0.7rem">TBA</span>
       </button>`;
     }
     const isSelected = _sbSlip.some(l => l.gameKey === g.key && l.type === type);
     const mlFmt = _fmtML(ml);
     const mlCls = ml < 0 ? 'fav' : ml > 0 ? 'dog' : 'even';
+    const heroClass = btnPrimary == null ? ' hero' : '';
     return `<button class="sb-bet-btn${isSelected ? ' selected' : ''}" data-gk="${g.key}" data-type="${type}"
-      onclick="_sbToggleLeg('${g.key}','${type}','${g.away}','${g.home}',${ml},${line || 0},'${label.replace(/'/g,"\\'")}')">
-      <span class="sb-bet-label">${label}</span>
-      <span class="sb-bet-odds ${mlCls}">${mlFmt}</span>
+      onclick="_sbToggleLeg('${g.key}','${type}','${g.away}','${g.home}',${ml},${line || 0},'${slipLabel.replace(/'/g,"\\'")}')">
+      ${btnPrimary != null ? `<span class="sb-bet-primary">${btnPrimary}</span>` : ''}
+      <span class="sb-bet-odds ${mlCls}${heroClass}">${mlFmt}</span>
     </button>`;
   };
 
@@ -9485,7 +9492,6 @@ function _renderSbGameCard(g, openBets) {
           </div>
           ${g.isLive || g.isFinal ? `<div class="sb-gc-score${!awayLeading && g.isFinal ? ' losing' : ''}">${g.awayScore ?? '—'}</div>` : ''}
         </div>
-        ${!(g.isLive || g.isFinal) ? `<div class="sb-gc-vs">vs &middot; ${g.tipDisplay || ''}</div>` : ''}
         <div class="sb-gc-team-row">
           ${homeLogo ? `<img src="${homeLogo}" class="sb-gc-logo" style="filter:drop-shadow(0 0 6px ${homeGlow}66)" onerror="this.style.display='none'">` : ''}
           <div class="sb-gc-name-block">
@@ -9499,18 +9505,18 @@ function _renderSbGameCard(g, openBets) {
       <div class="sb-bet-grid">
         <div class="sb-bet-col">
           <div class="sb-bet-col-header">Moneyline</div>
-          ${btn('ml_away', g.away + ' ML', g.awayML ?? null, 0)}
-          ${btn('ml_home', g.home + ' ML', g.homeML ?? null, 0)}
+          ${btn('ml_away',     `${g.away} ML`,           g.awayML      ?? null, 0,            null)}
+          ${btn('ml_home',     `${g.home} ML`,           g.homeML      ?? null, 0,            null)}
         </div>
         <div class="sb-bet-col">
           <div class="sb-bet-col-header">Spread</div>
-          ${btn('spread_away', `${g.away} ${g.awaySpread}`, g.awaySpreadML ?? null, -g.spreadLine)}
-          ${btn('spread_home', `${g.home} ${g.homeSpread}`, g.homeSpreadML ?? null, g.spreadLine)}
+          ${btn('spread_away', `${g.away} ${g.awaySpread}`, g.awaySpreadML ?? null, -g.spreadLine, g.awaySpread || '—')}
+          ${btn('spread_home', `${g.home} ${g.homeSpread}`, g.homeSpreadML ?? null,  g.spreadLine, g.homeSpread || '—')}
         </div>
         <div class="sb-bet-col">
           <div class="sb-bet-col-header">Over/Under</div>
-          ${btn('ou_over',  `Over ${g.total}`,  g.overML  ?? null, g.total)}
-          ${btn('ou_under', `Under ${g.total}`, g.underML ?? null, g.total)}
+          ${btn('ou_over',  `Over ${g.total}`,  g.overML  ?? null, g.total, `O ${g.total || '—'}`)}
+          ${btn('ou_under', `Under ${g.total}`, g.underML ?? null, g.total, `U ${g.total || '—'}`)}
         </div>
       </div>
     </div>
