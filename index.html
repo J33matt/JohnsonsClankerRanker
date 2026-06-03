@@ -7947,7 +7947,7 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
     if (hasL5 && info.espnId) {
       const slug = name.toLowerCase().replace(/\s+/g,'_');
       _sbFetchPlayerL5(info.espnId, info.teamAbbr, market).then(avg => {
-        const el = document.getElementById(`sb-l5-${slug}`);
+        const el = document.getElementById(`sb-l5-${market}_${slug}`);
         if (el && avg !== null) el.innerHTML = `<span class="sb-l5-label">LAST 5 AVG:</span> <span class="sb-l5-val">${avg}</span>`;
       });
     }
@@ -8884,7 +8884,7 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
       rows += `<div class="sb-prop-row">
         ${avatar}
         <div><div class="sb-prop-name">${player}</div></div>
-        <div class="sb-prop-l5" id="sb-l5-${player.toLowerCase().replace(/\s+/g,'_')}"></div>
+        <div class="sb-prop-l5" id="sb-l5-${market}_${player.toLowerCase().replace(/\s+/g,'_')}"></div>
         <div class="sb-prop-btns">
           ${yes ? `<button class="sb-prop-btn yn${yS?' selected':''}" data-pgk="${gameKey}" data-ptype="${yT}"
             onclick="_sbToggleLeg('${gameKey}','${yT}','${awayAbbr}','${homeAbbr}',${yes.price},0,'${safe} - ${marketLabel}')">
@@ -8906,7 +8906,7 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
       rows += `<div class="sb-prop-row">
         ${avatar}
         <div><div class="sb-prop-name">${player}</div></div>
-        <div class="sb-prop-l5" id="sb-l5-${player.toLowerCase().replace(/\s+/g,'_')}"></div>
+        <div class="sb-prop-l5" id="sb-l5-${market}_${player.toLowerCase().replace(/\s+/g,'_')}"></div>
         <div class="sb-prop-btns">
           ${ov ? `<button class="sb-prop-btn over${oS?' selected':''}" data-pgk="${gameKey}" data-ptype="${oT}"
             onclick="_sbToggleLeg('${gameKey}','${oT}','${awayAbbr}','${homeAbbr}',${ov.price},${line},'${safe} O ${line}')">
