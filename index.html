@@ -12198,6 +12198,13 @@ function _ffRenderTable() {
 let _pgaLeaderboardCache = null;
 let _pgaScheduleCache = null;
 let _pgaRankingsCache = null;
+let _pgaLdrSort = 'pos'; // 'pos' | 'score' | 'r1' | 'r2' | 'r3' | 'r4'
+
+function _pgaSortLeaderboard(col) {
+  _pgaLdrSort = col;
+  const el = document.getElementById('pga-panel-leaderboard');
+  if (el && _pgaLeaderboardCache) _pgaBuildLeaderboard(el, _pgaLeaderboardCache);
+}
 
 // ── Helpers ──────────────────────────────────────────────────
 function _pgaFmtDate(dateStr) {
@@ -12320,14 +12327,30 @@ function _pgaBuildLeaderboard(el, data) {
   const eventId = event.id;
   // Columns: POS | headshot | PLAYER | SCORE | R1 | R2 | R3 | R4
   const gridCols = '52px 56px 1fr 70px 48px 48px 48px 48px';
+
+  // Sort competitors
+  const sortedActive = [...sorted].sort((a, b) => {
+    if (_pgaLdrSort === 'score') return (a.score?.value ?? 999) - (b.score?.value ?? 999);
+    if (_pgaLdrSort === 'r1') return (a.linescores?.[0]?.value || 999) - (b.linescores?.[0]?.value || 999);
+    if (_pgaLdrSort === 'r2') return (a.linescores?.[1]?.value || 999) - (b.linescores?.[1]?.value || 999);
+    if (_pgaLdrSort === 'r3') return (a.linescores?.[2]?.value || 999) - (b.linescores?.[2]?.value || 999);
+    if (_pgaLdrSort === 'r4') return (a.linescores?.[3]?.value || 999) - (b.linescores?.[3]?.value || 999);
+    return 0; // 'pos' — already sorted by sortOrder
+  });
+
+  const hdr = (label, col, center) => {
+    const active = _pgaLdrSort === col;
+    return `<span onclick="_pgaSortLeaderboard('${col}')" style="cursor:pointer;text-align:${center?'center':'left'};transition:color 0.15s;${active?'color:var(--text);':''}user-select:none;" title="Sort by ${label}">${label}${active?' ↑':''}</span>`;
+  };
+
   let html = `<div class="pga-ldr-wrap">
     <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03);font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">
       <span>POS</span><span></span><span style="padding-left:10px;">PLAYER</span>
-      <span style="text-align:center">SCORE</span>
-      <span style="text-align:center">R1</span><span style="text-align:center">R2</span><span style="text-align:center">R3</span><span style="text-align:center">R4</span>
+      ${hdr('SCORE','score',true)}
+      ${hdr('R1','r1',true)}${hdr('R2','r2',true)}${hdr('R3','r3',true)}${hdr('R4','r4',true)}
     </div>`;
 
-  sorted.forEach((c, idx) => {
+  sortedActive.forEach((c, idx) => {
     const pos = c.status?.position?.displayName || c.status?.position?.displayValue || '—';
     const name = c.athlete?.displayName || '';
     const country = c.athlete?.flag?.alt || '';
@@ -12338,7 +12361,7 @@ function _pgaBuildLeaderboard(el, data) {
     const scoreDisp = c.score?.displayValue || 'E';
     const scoreVal = c.score?.value ?? 0;
     const scoreColor = scoreVal < 0 ? '#22c55e' : scoreVal > 0 ? '#ef4444' : 'var(--text)';
-    const isTop3 = idx < 3;
+    const rowBg = idx % 2 === 1 ? 'rgba(255,255,255,0.01)' : 'transparent';
 
     // Round scores: show total strokes only when round is complete (value >= 60)
     const rdScores = Array.from({length: maxRounds}, (_, i) => {
@@ -12346,16 +12369,19 @@ function _pgaBuildLeaderboard(el, data) {
       const strokes = ls?.value ?? 0;
       const complete = strokes >= 60;
       const disp = complete ? strokes : '—';
+      const isActiveSort = _pgaLdrSort === `r${i+1}`;
       const color = complete ? (strokes <= 70 ? '#22c55e' : strokes >= 73 ? '#ef4444' : 'var(--muted)') : 'rgba(255,255,255,0.18)';
-      return `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;font-weight:600;color:${color};text-align:center;">${disp}</span>`;
+      const bg = isActiveSort ? 'background:rgba(255,255,255,0.05);border-radius:4px;padding:2px 4px;' : '';
+      return `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;font-weight:600;color:${color};text-align:center;${bg}">${disp}</span>`;
     }).join('');
 
     const scId = `pga-sc-${athleteId}`;
+    const scoreColBg = _pgaLdrSort === 'score' ? 'background:rgba(255,255,255,0.05);border-radius:4px;' : '';
 
     html += `
       <div style="border-bottom:1px solid rgba(255,255,255,0.035);">
-        <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:5px 14px;cursor:pointer;transition:background 0.15s;${isTop3?'background:rgba(34,197,94,0.04);':idx%2===1?'background:rgba(255,255,255,0.01)':''}"
-             onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='${isTop3?'rgba(34,197,94,0.04)':idx%2===1?'rgba(255,255,255,0.01)':'transparent'}'"
+        <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:5px 14px;cursor:pointer;transition:background 0.15s;background:${rowBg};"
+             onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='${rowBg}'"
              onclick="_pgaToggleScorecard('${eventId}','${athleteId}','${scId}',this)">
           <span class="pga-ldr-pos" style="${isTop3?'color:#22c55e':''}">${pos}</span>
           ${headshot
@@ -12365,7 +12391,7 @@ function _pgaBuildLeaderboard(el, data) {
             <span class="pga-player-name">${name}</span>
             ${flagHtml2}
           </span>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.2rem;font-weight:900;color:${scoreColor};text-align:center;">${scoreDisp}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.2rem;font-weight:900;color:${scoreColor};text-align:center;${scoreColBg}">${scoreDisp}</span>
           ${rdScores}
         </div>
         <div id="${scId}" style="display:none;"></div>
