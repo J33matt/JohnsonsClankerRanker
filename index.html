@@ -12199,9 +12199,15 @@ let _pgaLeaderboardCache = null;
 let _pgaScheduleCache = null;
 let _pgaRankingsCache = null;
 let _pgaLdrSort = 'pos'; // 'pos' | 'score' | 'r1' | 'r2' | 'r3' | 'r4'
+let _pgaLdrSortDir = 'asc';
 
 function _pgaSortLeaderboard(col) {
-  _pgaLdrSort = col;
+  if (_pgaLdrSort === col) {
+    _pgaLdrSortDir = _pgaLdrSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _pgaLdrSort = col;
+    _pgaLdrSortDir = 'asc';
+  }
   const el = document.getElementById('pga-panel-leaderboard');
   if (el && _pgaLeaderboardCache) _pgaBuildLeaderboard(el, _pgaLeaderboardCache);
 }
@@ -12328,19 +12334,30 @@ function _pgaBuildLeaderboard(el, data) {
   // Columns: POS | headshot | PLAYER | SCORE | R1 | R2 | R3 | R4
   const gridCols = '52px 56px 1fr 70px 48px 48px 48px 48px';
 
-  // Sort competitors
+  // Detect inactive players (WD, CUT, DQ, MDF) — always sort to bottom
+  const _pgaInactiveNames = new Set(['WD','CUT','DQ','MDF','W/D']);
+  const isInactive = c => {
+    const pos = (c.status?.position?.displayName || '').toUpperCase();
+    const typeName = (c.status?.type?.name || '').toUpperCase();
+    return _pgaInactiveNames.has(pos) || typeName.includes('WITHDRAWN') || typeName.includes('CUT') || typeName.includes('DISQUALIF');
+  };
+
+  const dir = _pgaLdrSortDir === 'asc' ? 1 : -1;
   const sortedActive = [...sorted].sort((a, b) => {
-    if (_pgaLdrSort === 'score') return (a.score?.value ?? 999) - (b.score?.value ?? 999);
-    if (_pgaLdrSort === 'r1') return (a.linescores?.[0]?.value || 999) - (b.linescores?.[0]?.value || 999);
-    if (_pgaLdrSort === 'r2') return (a.linescores?.[1]?.value || 999) - (b.linescores?.[1]?.value || 999);
-    if (_pgaLdrSort === 'r3') return (a.linescores?.[2]?.value || 999) - (b.linescores?.[2]?.value || 999);
-    if (_pgaLdrSort === 'r4') return (a.linescores?.[3]?.value || 999) - (b.linescores?.[3]?.value || 999);
+    const aOut = isInactive(a), bOut = isInactive(b);
+    if (aOut !== bOut) return aOut ? 1 : -1; // inactive always last
+    if (_pgaLdrSort === 'score') return ((a.score?.value ?? 999) - (b.score?.value ?? 999)) * dir;
+    if (_pgaLdrSort === 'r1') return ((a.linescores?.[0]?.value || 999) - (b.linescores?.[0]?.value || 999)) * dir;
+    if (_pgaLdrSort === 'r2') return ((a.linescores?.[1]?.value || 999) - (b.linescores?.[1]?.value || 999)) * dir;
+    if (_pgaLdrSort === 'r3') return ((a.linescores?.[2]?.value || 999) - (b.linescores?.[2]?.value || 999)) * dir;
+    if (_pgaLdrSort === 'r4') return ((a.linescores?.[3]?.value || 999) - (b.linescores?.[3]?.value || 999)) * dir;
     return 0; // 'pos' — already sorted by sortOrder
   });
 
   const hdr = (label, col, center) => {
     const active = _pgaLdrSort === col;
-    return `<span onclick="_pgaSortLeaderboard('${col}')" style="cursor:pointer;text-align:${center?'center':'left'};transition:color 0.15s;${active?'color:var(--text);':''}user-select:none;" title="Sort by ${label}">${label}${active?' ↑':''}</span>`;
+    const arrow = active ? (_pgaLdrSortDir === 'asc' ? ' ↑' : ' ↓') : '';
+    return `<span onclick="_pgaSortLeaderboard('${col}')" style="cursor:pointer;text-align:${center?'center':'left'};transition:color 0.15s;${active?'color:var(--text);':''}user-select:none;" title="Sort by ${label}">${label}${arrow}</span>`;
   };
 
   let html = `<div class="pga-ldr-wrap">
