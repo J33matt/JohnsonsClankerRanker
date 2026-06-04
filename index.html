@@ -12318,12 +12318,13 @@ function _pgaBuildLeaderboard(el, data) {
 
   // Active / Final — clickable rows with expandable scorecards
   const eventId = event.id;
-  const gridCols = '52px 56px 1fr 44px 44px 44px 44px 56px 62px';
+  // Columns: POS | headshot | PLAYER | SCORE | R1 | R2 | R3 | R4
+  const gridCols = '52px 56px 1fr 70px 48px 48px 48px 48px';
   let html = `<div class="pga-ldr-wrap">
     <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.03);font-family:'Barlow Condensed',sans-serif;font-size:0.67rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">
       <span>POS</span><span></span><span style="padding-left:10px;">PLAYER</span>
+      <span style="text-align:center">SCORE</span>
       <span style="text-align:center">R1</span><span style="text-align:center">R2</span><span style="text-align:center">R3</span><span style="text-align:center">R4</span>
-      <span style="text-align:center">TOT</span><span style="text-align:right">SCORE</span>
     </div>`;
 
   sorted.forEach((c, idx) => {
@@ -12336,22 +12337,19 @@ function _pgaBuildLeaderboard(el, data) {
     const athleteId = c.athlete?.id || '';
     const scoreDisp = c.score?.displayValue || 'E';
     const scoreVal = c.score?.value ?? 0;
-    const scoreClass = scoreVal < 0 ? 'pga-score-under' : scoreVal > 0 ? 'pga-score-over' : 'pga-score-even';
+    const scoreColor = scoreVal < 0 ? '#22c55e' : scoreVal > 0 ? '#ef4444' : 'var(--text)';
     const isTop3 = idx < 3;
 
+    // Round scores: show total strokes only when round is complete (value >= 60)
     const rdScores = Array.from({length: maxRounds}, (_, i) => {
       const ls = c.linescores?.[i];
-      const v = ls?.displayValue || '—';
-      const rdVal = parseFloat(ls?.value ?? '');
-      const rdColor = !isNaN(rdVal) && rdVal < 70 ? '#22c55e' : !isNaN(rdVal) && rdVal > 72 ? '#ef4444' : 'var(--muted)';
-      return `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:${rdColor};text-align:center;">${v}</span>`;
+      const strokes = ls?.value ?? 0;
+      const complete = strokes >= 60;
+      const disp = complete ? strokes : '—';
+      const color = complete ? (strokes <= 70 ? '#22c55e' : strokes >= 73 ? '#ef4444' : 'var(--muted)') : 'rgba(255,255,255,0.18)';
+      return `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;font-weight:600;color:${color};text-align:center;">${disp}</span>`;
     }).join('');
 
-    const totalStrokes = (c.linescores || []).reduce((sum, ls) => {
-      const v = parseFloat(ls?.value ?? '');
-      return isNaN(v) ? sum : sum + v;
-    }, 0);
-    const totalDisp = totalStrokes > 0 ? totalStrokes : '—';
     const scId = `pga-sc-${athleteId}`;
 
     html += `
@@ -12367,9 +12365,8 @@ function _pgaBuildLeaderboard(el, data) {
             <span class="pga-player-name">${name}</span>
             ${flagHtml2}
           </span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.2rem;font-weight:900;color:${scoreColor};text-align:center;">${scoreDisp}</span>
           ${rdScores}
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--muted);text-align:center;">${totalDisp}</span>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.05rem;font-weight:800;text-align:right;" class="${scoreClass}">${scoreDisp}</span>
         </div>
         <div id="${scId}" style="display:none;"></div>
       </div>`;
