@@ -12383,7 +12383,7 @@ function _pgaBuildLeaderboard(el, data) {
         <div style="display:grid;grid-template-columns:${gridCols};align-items:center;padding:5px 14px;cursor:pointer;transition:background 0.15s;background:${rowBg};"
              onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='${rowBg}'"
              onclick="_pgaToggleScorecard('${eventId}','${athleteId}','${scId}',this)">
-          <span class="pga-ldr-pos" style="${isTop3?'color:#22c55e':''}">${pos}</span>
+          <span class="pga-ldr-pos">${pos}</span>
           ${headshot
             ? `<img src="${headshot}" loading="lazy" onerror="this.style.visibility='hidden'" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,0.1);">`
             : `<div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>`}
