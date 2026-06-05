@@ -7953,6 +7953,59 @@ async function _sbFetchPlayerL5(espnId, teamAbbr, market) {
   } catch(e) { return (_sbPlayerL5Cache[key] = null); }
 }
 
+// ── Prop settlement helpers ───────────────────────────────────
+// statsMap keyed by player name slug (for use in _sbGradePropLeg)
+const _sbPropStatsMapCache = {};
+async function _sbGetPropStatsMap(eventId) {
+  if (!eventId) return {};
+  if (_sbPropStatsMapCache[eventId]) return _sbPropStatsMapCache[eventId];
+  try {
+    const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${eventId}`);
+    const d = await res.json();
+    const map = {};
+    for (const team of d.boxscore?.players || [])
+      for (const grp of team.statistics || [])
+        for (const a of grp.athletes || []) {
+          const name = a.athlete?.displayName || '';
+          if (!name || !a.stats?.length) continue;
+          // Normalize to match prop type slug: lowercase, strip diacritics, spaces→underscores
+          const slug = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_');
+          map[slug] = a.stats;
+        }
+    return (_sbPropStatsMapCache[eventId] = map);
+  } catch(e) { return (_sbPropStatsMapCache[eventId] = {}); }
+}
+
+// Grade a prop leg given a slug→statsArray map
+function _sbGradePropLeg(leg, statsMap) {
+  if (!leg.type?.startsWith('prop_')) return null;
+  const rest = leg.type.slice(5); // drop "prop_"
+  const m = rest.match(/^(.+?)_(over|under|yes|no)_(.+)$/);
+  if (!m) return null;
+  const [, market, direction, playerSlug] = m;
+  // Try exact slug first, then fall back to stripping non-alphanumeric
+  const stats = statsMap[playerSlug] ||
+    Object.entries(statsMap).find(([k]) =>
+      k.replace(/[^a-z0-9]/g, '') === playerSlug.replace(/[^a-z0-9]/g, '')
+    )?.[1];
+  if (!stats) return null;
+
+  // Binary markets (double-double / triple-double)
+  if (_SB_MARKET_BINARY_L5[market]) {
+    const hit = _SB_MARKET_BINARY_L5[market](stats);
+    return direction === 'yes' ? (hit ? 'win' : 'loss') : (hit ? 'loss' : 'win');
+  }
+  if (market === 'player_first_basket') return null; // unresolvable from box score
+
+  const indices = _SB_MARKET_STAT_INDICES[market];
+  if (!indices) return null;
+  const statValue = indices.reduce((sum, i) => sum + _sbParseStatVal(stats[i]), 0);
+  const line = leg.line;
+  if (direction === 'over')  return statValue > line ? 'win' : statValue < line ? 'loss' : 'push';
+  if (direction === 'under') return statValue < line ? 'win' : statValue > line ? 'loss' : 'push';
+  return null;
+}
+
 const _sbPlayerL5BinaryCache = {}; // `${espnId}_${market}` → {results:[bool,...], count, total} or null
 
 async function _sbFetchPlayerL5Binary(espnId, teamAbbr, market) {
@@ -8351,8 +8404,15 @@ async function _sbAutoSettle() {
         (g.home === leg.awayAbbr && g.away === leg.homeAbbr)
       );
       if (!game) continue;
-      finalResult = _sbGradeLeg(leg, game);
-      if (finalResult === null) continue;
+      if (leg.type?.startsWith('prop_')) {
+        if (!game.isFinal) continue;
+        const sm = await _sbGetPropStatsMap(game.eventId);
+        finalResult = _sbGradePropLeg(leg, sm);
+        if (finalResult === null) continue;
+      } else {
+        finalResult = _sbGradeLeg(leg, game);
+        if (finalResult === null) continue;
+      }
       if (finalResult === 'win') payout = bet.stake + _mlPayout(leg.ml, bet.stake);
       else if (finalResult === 'push') payout = bet.stake;
       else payout = 0;
@@ -8362,19 +8422,53 @@ async function _sbAutoSettle() {
         const adj = new Date(bet.date + 'T12:00:00'); adj.setDate(adj.getDate() + offset);
         return acc.concat(allGames[localDateStr(adj)] || []);
       }, [...games]);
-      const { result } = _sbGradeParlay(bet.legs, searchGames2);
-      if (result === 'pending') continue;
-      finalResult = result;
+      // Pre-fetch prop stats maps for any final games in this parlay
+      const _parlayPropMaps = {};
+      for (const l of bet.legs) {
+        if (!l.type?.startsWith('prop_')) continue;
+        const g = searchGames2.find(g =>
+          (g.home === l.homeAbbr && g.away === l.awayAbbr) ||
+          (g.home === l.awayAbbr && g.away === l.homeAbbr)
+        );
+        if (g?.isFinal && g.eventId && !_parlayPropMaps[g.eventId])
+          _parlayPropMaps[g.eventId] = await _sbGetPropStatsMap(g.eventId);
+      }
+      const _hasPropLegs = bet.legs.some(l => l.type?.startsWith('prop_'));
+      if (!_hasPropLegs) {
+        const { result } = _sbGradeParlay(bet.legs, searchGames2);
+        if (result === 'pending') continue;
+        finalResult = result;
+      } else {
+        let _anyPending = false, _hasLoss = false, _hasPush = false;
+        for (const l of bet.legs) {
+          const g = searchGames2.find(g =>
+            (g.home === l.homeAbbr && g.away === l.awayAbbr) ||
+            (g.home === l.awayAbbr && g.away === l.homeAbbr)
+          );
+          if (!g) { _anyPending = true; continue; }
+          const r = l.type?.startsWith('prop_')
+            ? (!g.isFinal ? null : _sbGradePropLeg(l, _parlayPropMaps[g.eventId] || {}))
+            : _sbGradeLeg(l, g);
+          if (r === null) { _anyPending = true; continue; }
+          if (r === 'loss') { _hasLoss = true; break; }
+          if (r === 'push') _hasPush = true;
+        }
+        if (_hasLoss) finalResult = 'loss';
+        else if (_anyPending) continue;
+        else finalResult = _hasPush ? 'push' : 'win';
+      }
       if (finalResult === 'win') payout = bet.stake + _mlPayout(bet.parlayML, bet.stake);
       else if (finalResult === 'push') payout = bet.stake;
       else payout = 0;
-      // Store per-leg results so circles fill in correctly for all legs,
-      // including legs after a losing leg (parlay is dead but results are still shown)
+      // Store per-leg results so circles fill in correctly
       bet.legResults = bet.legs.map(l => {
-        const g = searchGames2.find(g => g.home === l.homeAbbr && g.away === l.awayAbbr);
-        if (g && g.isFinal) return _sbGradeLeg(l, g);
-        if (finalResult === 'win') return 'win';
-        return null; // game not yet final — show empty dot
+        const g = searchGames2.find(g =>
+          (g.home === l.homeAbbr && g.away === l.awayAbbr) ||
+          (g.home === l.awayAbbr && g.away === l.homeAbbr)
+        );
+        if (!g?.isFinal) return finalResult === 'win' ? 'win' : null;
+        if (l.type?.startsWith('prop_')) return _sbGradePropLeg(l, _parlayPropMaps[g.eventId] || {});
+        return _sbGradeLeg(l, g);
       });
     }
 
