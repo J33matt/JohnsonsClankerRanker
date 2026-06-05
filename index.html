@@ -7995,7 +7995,7 @@ function _sbGradePropLeg(leg, statsMap) {
     const hit = _SB_MARKET_BINARY_L5[market](stats);
     return direction === 'yes' ? (hit ? 'win' : 'loss') : (hit ? 'loss' : 'win');
   }
-  if (market === 'player_first_basket') return null; // unresolvable from box score
+  if (market === 'player_first_basket') return 'push'; // can't determine from box score — void/return stake
 
   const indices = _SB_MARKET_STAT_INDICES[market];
   if (!indices) return null;
