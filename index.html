@@ -35,6 +35,9 @@
         <button class="league-btn" onclick="switchLeague('pga', this)">
           <img src="https://a3.espncdn.com/combiner/i?img=%2Fi%2Fteamlogos%2Fleagues%2F500%2Fpgatour.png&w=80&h=80&scale=crop&cquality=80&location=origin" style="height:22px;width:22px;object-fit:contain;vertical-align:middle;margin-right:5px;">PGA
         </button>
+        <button class="league-btn" onclick="switchLeague('sportsbook', this)">
+          🎰 Sportsbook
+        </button>
       </div>
       <div class="tagline">Advanced NBA/NFL Power Rankings &amp; Analytics</div>
     </div>
@@ -51,7 +54,6 @@
     <button class="tab-btn" onclick="showTab('predictions', this)">Picks</button>
     <button class="tab-btn" onclick="showTab('playoffs', this)">Playoffs</button>
     <button class="tab-btn" onclick="showTab('simulations', this)">Draft</button>
-    <button class="tab-btn" onclick="showTab('sportsbook', this)">🎰 Sportsbook</button>
     <button class="tab-btn" onclick="showTab('cards', this)">The Locker</button>
   </div>
 </div>
@@ -556,6 +558,7 @@ function switchLeague(league, btn) {
 
   // This selects all your NBA sections
   const nbaPanels = document.querySelectorAll('#panel-rankings, #panel-playoffs, #panel-simulations, #panel-predictions, #panel-sportsbook, #panel-cards');
+  const sbPanel   = document.getElementById('panel-sportsbook');
 
   // Hide everything first
   if (nbaTabs) nbaTabs.style.display = 'none';
@@ -568,7 +571,7 @@ function switchLeague(league, btn) {
   if (league === 'nba') {
     if (nbaTabs) nbaTabs.style.display = 'flex';
     const _savedTab = localStorage.getItem('activeTab');
-    const _validTabs = ['rankings','predictions','playoffs','simulations','sportsbook','cards'];
+    const _validTabs = ['rankings','predictions','playoffs','simulations','cards'];
     const _tabToLoad = (_savedTab && _validTabs.includes(_savedTab)) ? _savedTab : 'rankings';
     const _tabBtn = Array.from(document.querySelectorAll('.nav-tabs .tab-btn'))
       .find(b => (b.getAttribute('onclick') || '').includes(`'${_tabToLoad}'`));
@@ -580,6 +583,12 @@ function switchLeague(league, btn) {
     const _savedPgaTab = localStorage.getItem('activePgaTab') || 'leaderboard';
     const _pgaBtnToLoad = document.querySelector(`#pga-tabs button[onclick*="${_savedPgaTab}"]`);
     showPgaTab(_savedPgaTab, _pgaBtnToLoad || document.querySelector('#pga-tabs button'));
+
+  } else if (league === 'sportsbook') {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    if (sbPanel) sbPanel.classList.add('active');
+    renderSportsbook();
 
   } else {
     // NFL
@@ -6781,6 +6790,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const _pgaBtn = Array.from(document.querySelectorAll('.league-btn'))
       .find(b => (b.getAttribute('onclick') || '').includes("'pga'"));
     if (_pgaBtn) switchLeague('pga', _pgaBtn);
+  } else if (_savedLeague === 'sportsbook') {
+    const _sbBtn = Array.from(document.querySelectorAll('.league-btn'))
+      .find(b => (b.getAttribute('onclick') || '').includes("'sportsbook'"));
+    if (_sbBtn) switchLeague('sportsbook', _sbBtn);
   } else {
     // Default to NFL (includes first-time visitors and explicitly saved 'nfl')
     const _nflBtn = Array.from(document.querySelectorAll('.league-btn'))
