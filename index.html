@@ -7976,8 +7976,25 @@ async function _sbGetPropStatsMap(eventId) {
   } catch(e) { return (_sbPropStatsMapCache[eventId] = {}); }
 }
 
+const _sbFirstScorerCache = {}; // eventId → playerSlug or null
+async function _sbFetchFirstScorer(eventId) {
+  if (!eventId) return null;
+  if (eventId in _sbFirstScorerCache) return _sbFirstScorerCache[eventId];
+  try {
+    const d = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/playbyplay?event=${eventId}`)
+      .then(r => r.json());
+    const plays = d.plays || d.items || [];
+    const first = plays.find(p => (parseInt(p.homeScore)||0) + (parseInt(p.awayScore)||0) > 0);
+    const name = first?.participants?.[0]?.athlete?.displayName
+              || first?.athletes?.[0]?.displayName
+              || null;
+    const slug = name ? name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_') : null;
+    return (_sbFirstScorerCache[eventId] = slug);
+  } catch(e) { return (_sbFirstScorerCache[eventId] = null); }
+}
+
 // Grade a prop leg given a slug→statsArray map
-function _sbGradePropLeg(leg, statsMap) {
+function _sbGradePropLeg(leg, statsMap, firstScorer = null) {
   if (!leg.type?.startsWith('prop_')) return null;
   const rest = leg.type.slice(5); // drop "prop_"
   const m = rest.match(/^(.+?)_(over|under|yes|no)_(.+)$/);
@@ -7995,7 +8012,12 @@ function _sbGradePropLeg(leg, statsMap) {
     const hit = _SB_MARKET_BINARY_L5[market](stats);
     return direction === 'yes' ? (hit ? 'win' : 'loss') : (hit ? 'loss' : 'win');
   }
-  if (market === 'player_first_basket') return 'push'; // can't determine from box score — void/return stake
+  if (market === 'player_first_basket') {
+    if (!firstScorer) return 'push'; // play-by-play unavailable — void
+    const hit = firstScorer === playerSlug ||
+      firstScorer.replace(/[^a-z0-9]/g,'') === playerSlug.replace(/[^a-z0-9]/g,'');
+    return hit ? 'win' : 'loss';
+  }
 
   const indices = _SB_MARKET_STAT_INDICES[market];
   if (!indices) return null;
@@ -8407,7 +8429,8 @@ async function _sbAutoSettle() {
       if (leg.type?.startsWith('prop_')) {
         if (!game.isFinal) continue;
         const sm = await _sbGetPropStatsMap(game.eventId);
-        finalResult = _sbGradePropLeg(leg, sm);
+        const fs = leg.type.includes('first_basket') ? await _sbFetchFirstScorer(game.eventId) : null;
+        finalResult = _sbGradePropLeg(leg, sm, fs);
         if (finalResult === null) continue;
       } else {
         finalResult = _sbGradeLeg(leg, game);
@@ -8430,8 +8453,11 @@ async function _sbAutoSettle() {
           (g.home === l.homeAbbr && g.away === l.awayAbbr) ||
           (g.home === l.awayAbbr && g.away === l.homeAbbr)
         );
-        if (g?.isFinal && g.eventId && !_parlayPropMaps[g.eventId])
+        if (g?.isFinal && g.eventId && !_parlayPropMaps[g.eventId]) {
           _parlayPropMaps[g.eventId] = await _sbGetPropStatsMap(g.eventId);
+          if (l.type.includes('first_basket'))
+            _parlayPropMaps[g.eventId + '_fs'] = await _sbFetchFirstScorer(g.eventId);
+        }
       }
       const _hasPropLegs = bet.legs.some(l => l.type?.startsWith('prop_'));
       if (!_hasPropLegs) {
@@ -8447,7 +8473,7 @@ async function _sbAutoSettle() {
           );
           if (!g) { _anyPending = true; continue; }
           const r = l.type?.startsWith('prop_')
-            ? (!g.isFinal ? null : _sbGradePropLeg(l, _parlayPropMaps[g.eventId] || {}))
+            ? (!g.isFinal ? null : _sbGradePropLeg(l, _parlayPropMaps[g.eventId] || {}, _parlayPropMaps[g.eventId + '_fs'] || null))
             : _sbGradeLeg(l, g);
           if (r === null) { _anyPending = true; continue; }
           if (r === 'loss') { _hasLoss = true; break; }
@@ -8467,7 +8493,7 @@ async function _sbAutoSettle() {
           (g.home === l.awayAbbr && g.away === l.homeAbbr)
         );
         if (!g?.isFinal) return finalResult === 'win' ? 'win' : null;
-        if (l.type?.startsWith('prop_')) return _sbGradePropLeg(l, _parlayPropMaps[g.eventId] || {});
+        if (l.type?.startsWith('prop_')) return _sbGradePropLeg(l, _parlayPropMaps[g.eventId] || {}, _parlayPropMaps[g.eventId + '_fs'] || null);
         return _sbGradeLeg(l, g);
       });
     }
