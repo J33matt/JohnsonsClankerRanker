@@ -8033,11 +8033,15 @@ function _sbRenderPropBars(games, line) {
       <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:rgba(255,255,255,0.28);white-space:nowrap;">${g.date}</span>
     </div>`).join('');
 
-  return `<div style="display:flex;align-items:flex-end;height:${chartH}px;gap:5px;position:relative;">
-      <div style="position:absolute;left:0;right:0;bottom:${linePct}%;border-top:1.5px dashed var(--accent2);pointer-events:none;opacity:0.9;"></div>
+  // 40px left gutter for the O/U label; bars inset 8px each side so line overhangs
+  return `<div style="padding-left:40px;position:relative;">
+    <div style="position:relative;display:flex;align-items:flex-end;height:${chartH}px;padding:0 8px;gap:5px;overflow:visible;">
+      <div style="position:absolute;left:-48px;right:-8px;bottom:${linePct}%;border-top:1.5px dashed var(--accent2);pointer-events:none;opacity:0.9;"></div>
+      <div style="position:absolute;left:-48px;bottom:calc(${linePct}% - 9px);background:var(--accent2);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;font-weight:800;padding:2px 5px;border-radius:3px;line-height:1;white-space:nowrap;z-index:2;">${line}</div>
       ${bars}
     </div>
-    <div style="display:flex;gap:5px;margin-top:5px;">${meta}</div>`;
+    <div style="display:flex;gap:5px;margin-top:5px;padding:0 8px;">${meta}</div>
+  </div>`;
 }
 
 // ── Prop settlement helpers ───────────────────────────────────
@@ -8202,7 +8206,7 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
           const barsEl = document.getElementById(`sb-bars-${market}_${slug}`);
           if (!games) return;
           const avg = Math.round(games.reduce((s, g) => s + g.val, 0) / games.length * 10) / 10;
-          if (el) el.innerHTML = `<span class="sb-l5-label">AVG:</span> <span class="sb-l5-val">${avg}</span>`;
+          if (el) el.innerHTML = `<span class="sb-l5-label">L5 AVG:</span> <span class="sb-l5-val">${avg}</span>`;
           if (barsEl) {
             const line = parseFloat(barsEl.dataset.line) || 0;
             if (line > 0) barsEl.innerHTML = _sbRenderPropBars(games, line);
