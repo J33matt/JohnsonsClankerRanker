@@ -8034,8 +8034,8 @@ function _sbRenderPropBars(games, line) {
     </div>`).join('');
 
   return `<div style="display:flex;align-items:flex-end;height:${chartH}px;gap:5px;position:relative;">
+      <div style="position:absolute;left:0;right:0;bottom:${linePct}%;border-top:1.5px dashed var(--accent2);pointer-events:none;opacity:0.9;"></div>
       ${bars}
-      <div style="position:absolute;left:0;right:0;bottom:${linePct}%;border-top:1.5px dashed var(--accent);pointer-events:none;opacity:0.85;z-index:1;"></div>
     </div>
     <div style="display:flex;gap:5px;margin-top:5px;">${meta}</div>`;
 }
