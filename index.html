@@ -8029,17 +8029,14 @@ async function _sbFetchPlayerBinaryGames(espnId, teamAbbr, market) {
   } catch(e) { return (_sbPlayerL5GamesCache[key] = null); }
 }
 
-// Bar chart for binary markets — full green bar = YES, short gray bar = NO
+// Bar chart for binary markets — all bars same height, green = YES, gray = NO
 function _sbRenderBinaryBars(games) {
   if (!games?.length) return '';
-  const count = games.filter(g => g.hit).length;
-  const total = games.length;
 
   const bars = games.map(g => {
-    const pct = g.hit ? 88 : 22;
-    const bg  = g.hit ? '#22c55e' : 'rgba(255,255,255,0.14)';
-    return `<div style="flex:1;height:${pct}%;background:${bg};border-radius:3px 3px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:2px;min-height:16px;box-sizing:border-box;position:relative;z-index:1;">
-      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.92rem;font-weight:700;color:#fff;line-height:1;">${g.hit ? 'Y' : 'N'}</span>
+    const bg = g.hit ? '#22c55e' : 'rgba(255,255,255,0.14)';
+    return `<div style="flex:1;height:48px;background:${bg};border-radius:3px 3px 0 0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.92rem;font-weight:700;color:#fff;line-height:1;">${g.hit ? 'YES' : 'NO'}</span>
     </div>`;
   }).join('');
 
@@ -8050,12 +8047,9 @@ function _sbRenderBinaryBars(games) {
       <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:rgba(255,255,255,0.28);white-space:nowrap;">${g.date}</span>
     </div>`).join('');
 
-  return `<div style="padding-left:44px;position:relative;">
-    <div style="position:relative;display:flex;align-items:flex-end;height:68px;padding:0 8px;gap:5px;overflow:visible;">
-      <div style="position:absolute;left:-52px;bottom:calc(50% - 11px);background:var(--accent2);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:800;padding:3px 6px;border-radius:3px;line-height:1;white-space:nowrap;z-index:2;">${count}/${total}</div>
-      ${bars}
-    </div>
-    <div style="display:flex;gap:5px;margin-top:5px;padding:0 8px;">${meta}</div>
+  return `<div style="padding:0 8px;">
+    <div style="display:flex;align-items:flex-end;gap:5px;">${bars}</div>
+    <div style="display:flex;gap:5px;margin-top:5px;">${meta}</div>
   </div>`;
 }
 
@@ -8265,10 +8259,7 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
           const barsEl = document.getElementById(`sb-bars-${market}_${slug}`);
           if (!games) return;
           const count = games.filter(g => g.hit).length;
-          const dots = games.map(g =>
-            `<span class="sb-l5-dot ${g.hit ? 'yes' : 'no'}">${g.hit ? 'Y' : 'N'}</span>`
-          ).join('');
-          if (el) el.innerHTML = `<span class="sb-l5-label">L5:</span> <span class="sb-l5-label">${count}/${games.length}</span> <span class="sb-l5-dots">${dots}</span>`;
+          if (el) el.innerHTML = `<span class="sb-l5-label">L5:</span> <span class="sb-l5-val">${count}/${games.length}</span>`;
           if (barsEl) barsEl.innerHTML = _sbRenderBinaryBars(games);
         });
       } else if (hasL5) {
@@ -8299,10 +8290,7 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
             homeAway: g.homeAway, oppAbbr: g.oppAbbr, date: g.date
           }));
           const count = games.filter(g => g.hit).length;
-          const dots = games.map(g =>
-            `<span class="sb-l5-dot ${g.hit ? 'yes' : 'no'}">${g.hit ? 'Y' : 'N'}</span>`
-          ).join('');
-          if (el) el.innerHTML = `<span class="sb-l5-label">L5:</span> <span class="sb-l5-label">${count}/${games.length}</span> <span class="sb-l5-dots">${dots}</span>`;
+          if (el) el.innerHTML = `<span class="sb-l5-label">L5:</span> <span class="sb-l5-val">${count}/${games.length}</span>`;
           if (barsEl) barsEl.innerHTML = _sbRenderBinaryBars(games);
         });
       }
