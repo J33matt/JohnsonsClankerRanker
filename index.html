@@ -8010,6 +8010,55 @@ async function _sbFetchPlayerL5Games(espnId, teamAbbr, market) {
   } catch(e) { return (_sbPlayerL5GamesCache[key] = null); }
 }
 
+// Per-game hit/miss data for binary markets (double-double, triple-double, etc.)
+async function _sbFetchPlayerBinaryGames(espnId, teamAbbr, market) {
+  const key = `${espnId}_bin_${market}`;
+  if (key in _sbPlayerL5GamesCache) return _sbPlayerL5GamesCache[key];
+  const checker = _SB_MARKET_BINARY_L5[market];
+  if (!checker) return (_sbPlayerL5GamesCache[key] = null);
+  try {
+    const games = await _sbFetchTeamGames(teamAbbr);
+    if (!games.length) return (_sbPlayerL5GamesCache[key] = null);
+    const summaries = await Promise.all(games.map(g => _sbFetchGameSummary(g.id)));
+    const result = games.map((g, i) => {
+      const stats = summaries[i]?.[espnId];
+      if (!stats) return null;
+      return { hit: checker(stats), homeAway: g.homeAway, oppAbbr: g.oppAbbr, date: g.date };
+    }).filter(Boolean);
+    return (_sbPlayerL5GamesCache[key] = result.length ? result : null);
+  } catch(e) { return (_sbPlayerL5GamesCache[key] = null); }
+}
+
+// Bar chart for binary markets — full green bar = YES, short gray bar = NO
+function _sbRenderBinaryBars(games) {
+  if (!games?.length) return '';
+  const count = games.filter(g => g.hit).length;
+  const total = games.length;
+
+  const bars = games.map(g => {
+    const pct = g.hit ? 88 : 22;
+    const bg  = g.hit ? '#22c55e' : 'rgba(255,255,255,0.14)';
+    return `<div style="flex:1;height:${pct}%;background:${bg};border-radius:3px 3px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:2px;min-height:16px;box-sizing:border-box;position:relative;z-index:1;">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.92rem;font-weight:700;color:#fff;line-height:1;">${g.hit ? 'Y' : 'N'}</span>
+    </div>`;
+  }).join('');
+
+  const meta = games.map(g => `
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;">
+      <img src="https://a.espncdn.com/i/teamlogos/nba/500/${g.oppAbbr.toLowerCase()}.png" style="width:18px;height:18px;object-fit:contain;" onerror="this.style.display='none'">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.63rem;color:var(--muted);white-space:nowrap;">${g.homeAway} ${g.oppAbbr}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:rgba(255,255,255,0.28);white-space:nowrap;">${g.date}</span>
+    </div>`).join('');
+
+  return `<div style="padding-left:44px;position:relative;">
+    <div style="position:relative;display:flex;align-items:flex-end;height:68px;padding:0 8px;gap:5px;overflow:visible;">
+      <div style="position:absolute;left:-52px;bottom:calc(50% - 11px);background:var(--accent2);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:800;padding:3px 6px;border-radius:3px;line-height:1;white-space:nowrap;z-index:2;">${count}/${total}</div>
+      ${bars}
+    </div>
+    <div style="display:flex;gap:5px;margin-top:5px;padding:0 8px;">${meta}</div>
+  </div>`;
+}
+
 // Build bar chart HTML given per-game data and the O/U line
 function _sbRenderPropBars(games, line) {
   if (!games?.length || !line) return '';
@@ -8196,14 +8245,17 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
       const slug = name.toLowerCase().replace(/\s+/g,'_');
       const elId = `sb-l5-${market}_${slug}`;
       if (_SB_MARKET_BINARY_L5[market]) {
-        // Binary market: show Y/N sequence + count
-        _sbFetchPlayerL5Binary(info.espnId, info.teamAbbr, market).then(data => {
+        // Binary market: show Y/N dots under name + bar chart
+        _sbFetchPlayerBinaryGames(info.espnId, info.teamAbbr, market).then(games => {
           const el = document.getElementById(elId);
-          if (!el || !data) return;
-          const dots = data.results.map(y =>
-            `<span class="sb-l5-dot ${y ? 'yes' : 'no'}">${y ? 'Y' : 'N'}</span>`
+          const barsEl = document.getElementById(`sb-bars-${market}_${slug}`);
+          if (!games) return;
+          const count = games.filter(g => g.hit).length;
+          const dots = games.map(g =>
+            `<span class="sb-l5-dot ${g.hit ? 'yes' : 'no'}">${g.hit ? 'Y' : 'N'}</span>`
           ).join('');
-          el.innerHTML = `<span class="sb-l5-label">L5:</span> <span class="sb-l5-label">${data.count}/${data.total}</span> <span class="sb-l5-dots">${dots}</span>`;
+          if (el) el.innerHTML = `<span class="sb-l5-label">L5:</span> <span class="sb-l5-label">${count}/${games.length}</span> <span class="sb-l5-dots">${dots}</span>`;
+          if (barsEl) barsEl.innerHTML = _sbRenderBinaryBars(games);
         });
       } else if (hasL5) {
         // Numeric market: show avg + per-game bar chart
@@ -9226,7 +9278,7 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
           <div class="sb-prop-name">${player}</div>
           <div class="sb-prop-l5" id="sb-l5-${market}_${player.toLowerCase().replace(/\s+/g,'_')}"></div>
         </div>
-        <div></div>
+        <div id="sb-bars-${market}_${player.toLowerCase().replace(/\s+/g,'_')}" style="padding:0 6px;"></div>
         <div class="sb-prop-btns">
           ${yes ? `<button class="sb-prop-btn yn${yS?' selected':''}" data-pgk="${gameKey}" data-ptype="${yT}"
             onclick="_sbToggleLeg('${gameKey}','${yT}','${awayAbbr}','${homeAbbr}',${yes.price},0,'${safe} - ${marketLabel}')">
