@@ -8121,13 +8121,11 @@ async function _sbFetchFirstScorer(eventId) {
   if (!eventId) return null;
   if (eventId in _sbFirstScorerCache) return _sbFirstScorerCache[eventId];
   try {
-    const d = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/playbyplay?event=${eventId}`)
+    const d = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${eventId}`)
       .then(r => r.json());
-    const plays = d.plays || d.items || [];
-    const first = plays.find(p => (parseInt(p.homeScore)||0) + (parseInt(p.awayScore)||0) > 0);
-    const name = first?.participants?.[0]?.athlete?.displayName
-              || first?.athletes?.[0]?.displayName
-              || null;
+    const first = (d.plays || []).find(p => p.scoringPlay === true);
+    const nameMatch = first?.text?.match(/^(.+?)\s+makes\b/i);
+    const name = nameMatch?.[1] || null;
     const slug = name ? name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_') : null;
     return (_sbFirstScorerCache[eventId] = slug);
   } catch(e) { return (_sbFirstScorerCache[eventId] = null); }
