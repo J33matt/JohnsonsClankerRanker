@@ -8139,6 +8139,20 @@ async function _sbFetchFirstScorer(eventId) {
   } catch(e) { return (_sbFirstScorerCache[eventId] = null); }
 }
 
+// Last 5 games with first-scorer slug + opponent metadata (for bar chart)
+const _sbFirstScorerGamesCache = {};
+async function _sbFetchFirstScorerGames(teamAbbr) {
+  if (_sbFirstScorerGamesCache[teamAbbr]) return _sbFirstScorerGamesCache[teamAbbr];
+  try {
+    const games = await _sbFetchTeamGames(teamAbbr);
+    const result = await Promise.all(games.map(async g => ({
+      firstScorerSlug: await _sbFetchFirstScorer(g.id),
+      homeAway: g.homeAway, oppAbbr: g.oppAbbr, date: g.date
+    })));
+    return (_sbFirstScorerGamesCache[teamAbbr] = result);
+  } catch(e) { return (_sbFirstScorerGamesCache[teamAbbr] = []); }
+}
+
 // Grade a prop leg given a slug→statsArray map
 function _sbGradePropLeg(leg, statsMap, firstScorer = null) {
   if (!leg.type?.startsWith('prop_')) return null;
@@ -8269,6 +8283,27 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
             const line = parseFloat(barsEl.dataset.line) || 0;
             if (line > 0) barsEl.innerHTML = _sbRenderPropBars(games, line);
           }
+        });
+      } else if (market === 'player_first_basket') {
+        // First basket: use play-by-play to check who scored first each game
+        _sbFetchFirstScorerGames(info.teamAbbr).then(scorerGames => {
+          const el = document.getElementById(elId);
+          const barsEl = document.getElementById(`sb-bars-${market}_${slug}`);
+          if (!scorerGames?.length) return;
+          const playerNorm = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_');
+          const games = scorerGames.map(g => ({
+            hit: !!(g.firstScorerSlug && (
+              g.firstScorerSlug === playerNorm ||
+              g.firstScorerSlug.replace(/[^a-z0-9]/g,'') === playerNorm.replace(/[^a-z0-9]/g,'')
+            )),
+            homeAway: g.homeAway, oppAbbr: g.oppAbbr, date: g.date
+          }));
+          const count = games.filter(g => g.hit).length;
+          const dots = games.map(g =>
+            `<span class="sb-l5-dot ${g.hit ? 'yes' : 'no'}">${g.hit ? 'Y' : 'N'}</span>`
+          ).join('');
+          if (el) el.innerHTML = `<span class="sb-l5-label">L5:</span> <span class="sb-l5-label">${count}/${games.length}</span> <span class="sb-l5-dots">${dots}</span>`;
+          if (barsEl) barsEl.innerHTML = _sbRenderBinaryBars(games);
         });
       }
     }
