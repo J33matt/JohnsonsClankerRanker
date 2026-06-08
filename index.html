@@ -8016,12 +8016,18 @@ function _sbRenderPropBars(games, line) {
   const maxVal = Math.max(...games.map(g => g.val), line) * 1.3;
   const chartH = 68;
   const linePct = Math.min((line / maxVal) * 100, 96);
+  const minGap = 9; // minimum % gap from dashed line so over/under is always visually clear
 
   const bars = games.map(g => {
-    const pct = Math.max((g.val / maxVal) * 100, 5);
+    const rawPct = (g.val / maxVal) * 100;
     const over = g.val >= line;
+    // Enforce a minimum visual gap from the line so close values are still clearly above/below
+    const pct = over
+      ? Math.max(rawPct, linePct + minGap, 5)
+      : Math.min(Math.max(rawPct, 5), linePct - minGap);
     const bg = over ? 'rgba(34,197,94,0.82)' : 'rgba(255,255,255,0.14)';
-    return `<div style="flex:1;height:${pct}%;background:${bg};border-radius:3px 3px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:2px;min-height:16px;box-sizing:border-box;">
+    // Bars get position:relative + z-index:1 so they render above the absolute dashed line
+    return `<div style="flex:1;height:${pct}%;background:${bg};border-radius:3px 3px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:2px;min-height:16px;box-sizing:border-box;position:relative;z-index:1;">
       <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;font-weight:700;color:#fff;line-height:1;">${g.val}</span>
     </div>`;
   }).join('');
@@ -8033,11 +8039,11 @@ function _sbRenderPropBars(games, line) {
       <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:rgba(255,255,255,0.28);white-space:nowrap;">${g.date}</span>
     </div>`).join('');
 
-  // 40px left gutter for the O/U label; bars inset 8px each side so line overhangs
-  return `<div style="padding-left:40px;position:relative;">
+  // 44px left gutter for the O/U label; bars inset 8px each side so line overhangs
+  return `<div style="padding-left:44px;position:relative;">
     <div style="position:relative;display:flex;align-items:flex-end;height:${chartH}px;padding:0 8px;gap:5px;overflow:visible;">
-      <div style="position:absolute;left:-48px;right:-8px;bottom:${linePct}%;border-top:1.5px dashed var(--accent2);pointer-events:none;opacity:0.9;"></div>
-      <div style="position:absolute;left:-48px;bottom:calc(${linePct}% - 9px);background:var(--accent2);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;font-weight:800;padding:2px 5px;border-radius:3px;line-height:1;white-space:nowrap;z-index:2;">${line}</div>
+      <div style="position:absolute;left:-52px;right:-8px;bottom:${linePct}%;border-top:1.5px dashed var(--accent2);pointer-events:none;opacity:0.9;z-index:0;"></div>
+      <div style="position:absolute;left:-52px;bottom:calc(${linePct}% - 11px);background:var(--accent2);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;font-weight:800;padding:3px 6px;border-radius:3px;line-height:1;white-space:nowrap;z-index:2;">${line}</div>
       ${bars}
     </div>
     <div style="display:flex;gap:5px;margin-top:5px;padding:0 8px;">${meta}</div>
