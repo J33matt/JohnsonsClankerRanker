@@ -7912,6 +7912,8 @@ const _SB_MARKET_BINARY_L5 = {
 const _sbPlayerL5Cache    = {}; // `${espnId}_${market}` → avg or null
 const _sbTeamScheduleCache = {}; // teamAbbr → [eventId, ...]
 const _sbGameSummaryCache  = {}; // eventId → { playerId: statsArray }
+const _sbTeamGamesCache    = {}; // teamAbbr → [{id, homeAway, oppAbbr, date}, ...]
+const _sbPlayerL5GamesCache = {}; // `${espnId}_${market}` → [{val, homeAway, oppAbbr, date}, ...]
 
 async function _sbFetchTeamSchedule(teamAbbr) {
   if (_sbTeamScheduleCache[teamAbbr]) return _sbTeamScheduleCache[teamAbbr];
@@ -7963,6 +7965,79 @@ async function _sbFetchPlayerL5(espnId, teamAbbr, market) {
     const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
     return (_sbPlayerL5Cache[key] = Math.round(avg * 10) / 10);
   } catch(e) { return (_sbPlayerL5Cache[key] = null); }
+}
+
+// Rich team schedule — last 5 completed games with opp/date metadata
+async function _sbFetchTeamGames(teamAbbr) {
+  if (_sbTeamGamesCache[teamAbbr]) return _sbTeamGamesCache[teamAbbr];
+  try {
+    const d = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/${teamAbbr.toLowerCase()}/schedule`)
+      .then(r => r.json());
+    const result = (d.events || [])
+      .filter(e => e.competitions?.[0]?.status?.type?.completed)
+      .slice(-5)
+      .map(e => {
+        const comp = e.competitions[0];
+        const home = comp.competitors?.find(c => c.homeAway === 'home');
+        const away = comp.competitors?.find(c => c.homeAway === 'away');
+        const isHome = normAbbr(home?.team?.abbreviation || '') === normAbbr(teamAbbr);
+        const opp = isHome ? away : home;
+        const oppAbbr = normAbbr(opp?.team?.abbreviation || '');
+        const dt = new Date(e.date);
+        return { id: e.id, homeAway: isHome ? 'vs' : '@', oppAbbr, date: `${dt.getMonth()+1}/${dt.getDate()}` };
+      });
+    return (_sbTeamGamesCache[teamAbbr] = result);
+  } catch(e) { return (_sbTeamGamesCache[teamAbbr] = []); }
+}
+
+// Per-game stat values for bar chart
+async function _sbFetchPlayerL5Games(espnId, teamAbbr, market) {
+  const key = `${espnId}_${market}`;
+  if (key in _sbPlayerL5GamesCache) return _sbPlayerL5GamesCache[key];
+  const indices = _SB_MARKET_STAT_INDICES[market];
+  if (!indices) return (_sbPlayerL5GamesCache[key] = null);
+  try {
+    const games = await _sbFetchTeamGames(teamAbbr);
+    if (!games.length) return (_sbPlayerL5GamesCache[key] = null);
+    const summaries = await Promise.all(games.map(g => _sbFetchGameSummary(g.id)));
+    const result = games.map((g, i) => {
+      const stats = summaries[i]?.[espnId];
+      if (!stats) return null;
+      const val = Math.round(indices.reduce((s, idx) => s + _sbParseStatVal(stats[idx]), 0) * 10) / 10;
+      return { val, homeAway: g.homeAway, oppAbbr: g.oppAbbr, date: g.date };
+    }).filter(Boolean);
+    return (_sbPlayerL5GamesCache[key] = result.length ? result : null);
+  } catch(e) { return (_sbPlayerL5GamesCache[key] = null); }
+}
+
+// Build bar chart HTML given per-game data and the O/U line
+function _sbRenderPropBars(games, line) {
+  if (!games?.length || !line) return '';
+  const maxVal = Math.max(...games.map(g => g.val), line) * 1.3;
+  const chartH = 68;
+  const linePct = Math.min((line / maxVal) * 100, 96);
+
+  const bars = games.map(g => {
+    const pct = Math.max((g.val / maxVal) * 100, 5);
+    const over = g.val >= line;
+    const bg = over ? 'rgba(34,197,94,0.82)' : 'rgba(255,255,255,0.14)';
+    return `<div style="flex:1;height:${pct}%;background:${bg};border-radius:3px 3px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:2px;min-height:16px;box-sizing:border-box;">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;font-weight:700;color:#fff;line-height:1;">${g.val}</span>
+    </div>`;
+  }).join('');
+
+  const meta = games.map(g => `
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;">
+      <img src="https://a.espncdn.com/i/teamlogos/nba/500/${g.oppAbbr.toLowerCase()}.png" style="width:18px;height:18px;object-fit:contain;" onerror="this.style.display='none'">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.63rem;color:var(--muted);white-space:nowrap;">${g.homeAway} ${g.oppAbbr}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:rgba(255,255,255,0.28);white-space:nowrap;">${g.date}</span>
+    </div>`).join('');
+
+  return `<div style="display:flex;align-items:flex-end;height:${chartH}px;gap:5px;position:relative;">
+      ${bars}
+      <div style="position:absolute;left:0;right:0;bottom:${linePct}%;border-top:1.5px dashed var(--accent);pointer-events:none;opacity:0.85;z-index:1;"></div>
+    </div>
+    <div style="display:flex;gap:5px;margin-top:5px;">${meta}</div>`;
 }
 
 // ── Prop settlement helpers ───────────────────────────────────
@@ -8118,13 +8193,20 @@ async function _sbPropsLoadEnrichments(bodyEl, market) {
           const dots = data.results.map(y =>
             `<span class="sb-l5-dot ${y ? 'yes' : 'no'}">${y ? 'Y' : 'N'}</span>`
           ).join('');
-          el.innerHTML = `<span class="sb-l5-label">LAST 5:</span> <span class="sb-l5-label">${data.count}/${data.total}</span> <span class="sb-l5-dots">${dots}</span>`;
+          el.innerHTML = `<span class="sb-l5-label">L5:</span> <span class="sb-l5-label">${data.count}/${data.total}</span> <span class="sb-l5-dots">${dots}</span>`;
         });
       } else if (hasL5) {
-        // Numeric market: show average
-        _sbFetchPlayerL5(info.espnId, info.teamAbbr, market).then(avg => {
+        // Numeric market: show avg + per-game bar chart
+        _sbFetchPlayerL5Games(info.espnId, info.teamAbbr, market).then(games => {
           const el = document.getElementById(elId);
-          if (el && avg !== null) el.innerHTML = `<span class="sb-l5-label">LAST 5 AVG:</span> <span class="sb-l5-val">${avg}</span>`;
+          const barsEl = document.getElementById(`sb-bars-${market}_${slug}`);
+          if (!games) return;
+          const avg = Math.round(games.reduce((s, g) => s + g.val, 0) / games.length * 10) / 10;
+          if (el) el.innerHTML = `<span class="sb-l5-label">AVG:</span> <span class="sb-l5-val">${avg}</span>`;
+          if (barsEl) {
+            const line = parseFloat(barsEl.dataset.line) || 0;
+            if (line > 0) barsEl.innerHTML = _sbRenderPropBars(games, line);
+          }
         });
       }
     }
@@ -9164,6 +9246,7 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
             <span class="prop-ou">U ${line}</span><span class="prop-odds">${_fmtML(un.price)}</span>
           </button>` : ''}
         </div>
+        <div id="sb-bars-${market}_${player.toLowerCase().replace(/\s+/g,'_')}" data-line="${line}" style="grid-column:1/-1;padding:2px 0 8px;"></div>
       </div>`;
     }
   }
