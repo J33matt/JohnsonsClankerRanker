@@ -7241,7 +7241,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   .sb-props-table { display: flex; flex-direction: column; gap: 0; }
   .sb-prop-row {
-    display: grid; grid-template-columns: 72px 1fr auto auto; align-items: center; gap: 14px;
+    display: grid; grid-template-columns: 72px auto 1fr auto; align-items: center; gap: 14px;
     padding: 8px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.1s;
   }
   .sb-prop-row:last-child { border-bottom: none; }
@@ -9212,8 +9212,11 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
       const nS  = no && _sbSlip.some(l => l.gameKey === gameKey && l.type === nT);
       rows += `<div class="sb-prop-row">
         ${avatar}
-        <div><div class="sb-prop-name">${player}</div></div>
-        <div class="sb-prop-l5" id="sb-l5-${market}_${player.toLowerCase().replace(/\s+/g,'_')}"></div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div class="sb-prop-name">${player}</div>
+          <div class="sb-prop-l5" id="sb-l5-${market}_${player.toLowerCase().replace(/\s+/g,'_')}"></div>
+        </div>
+        <div></div>
         <div class="sb-prop-btns">
           ${yes ? `<button class="sb-prop-btn yn${yS?' selected':''}" data-pgk="${gameKey}" data-ptype="${yT}"
             onclick="_sbToggleLeg('${gameKey}','${yT}','${awayAbbr}','${homeAbbr}',${yes.price},0,'${safe} - ${marketLabel}')">
@@ -9234,8 +9237,11 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
       const uS   = _sbSlip.some(l => l.gameKey === gameKey && l.type === uT);
       rows += `<div class="sb-prop-row">
         ${avatar}
-        <div><div class="sb-prop-name">${player}</div></div>
-        <div class="sb-prop-l5" id="sb-l5-${market}_${player.toLowerCase().replace(/\s+/g,'_')}"></div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div class="sb-prop-name">${player}</div>
+          <div class="sb-prop-l5" id="sb-l5-${market}_${player.toLowerCase().replace(/\s+/g,'_')}"></div>
+        </div>
+        <div id="sb-bars-${market}_${player.toLowerCase().replace(/\s+/g,'_')}" data-line="${line}" style="padding:0 6px;"></div>
         <div class="sb-prop-btns">
           ${ov ? `<button class="sb-prop-btn over${oS?' selected':''}" data-pgk="${gameKey}" data-ptype="${oT}"
             onclick="_sbToggleLeg('${gameKey}','${oT}','${awayAbbr}','${homeAbbr}',${ov.price},${line},'${safe} O ${line}${statName ? ' ' + statName : ''}')">
@@ -9246,7 +9252,6 @@ async function _sbPropsBuildAccordionBody(market, bodyEl) {
             <span class="prop-ou">U ${line}</span><span class="prop-odds">${_fmtML(un.price)}</span>
           </button>` : ''}
         </div>
-        <div id="sb-bars-${market}_${player.toLowerCase().replace(/\s+/g,'_')}" data-line="${line}" style="grid-column:1/-1;padding:2px 0 8px;"></div>
       </div>`;
     }
   }
