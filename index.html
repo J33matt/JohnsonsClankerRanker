@@ -8208,7 +8208,13 @@ async function _sbRenderGolfSection() {
     return;
   }
 
-  // Build name → {headshot, flagHref, country} from cached ESPN leaderboard
+  // Build name → {headshot, flagHref, country} from ESPN leaderboard (fetch if not yet cached)
+  if (!_pgaLeaderboardCache) {
+    try {
+      const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga');
+      _pgaLeaderboardCache = await r.json();
+    } catch(e) {}
+  }
   const _pgaInfo = {};
   for (const ev of _pgaLeaderboardCache?.events || []) {
     const competitors = ev.competitions?.[0]?.competitors || ev.competitors || [];
