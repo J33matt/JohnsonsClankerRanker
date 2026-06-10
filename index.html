@@ -8273,7 +8273,7 @@ const _sbNicknames = {
   'douglas':'doug','doug':'douglas',
 };
 function _sbGolfPlayerInfo(pgaInfo, name) {
-  const _n = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[-'.]/g,' ').replace(/\s+/g,' ').trim();
+  const _n = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ø/g,'o').replace(/æ/g,'ae').replace(/å/g,'a').replace(/ß/g,'ss').replace(/[-'.]/g,' ').replace(/\s+/g,' ').trim();
   const direct = pgaInfo[_n(name)];
   if (direct) return direct;
   const parts = _n(name).split(' ');
@@ -8328,7 +8328,7 @@ async function _sbRenderGolfSection() {
       _pgaLeaderboardCache = await r.json();
     } catch(e) {}
   }
-  const _norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[-'.]/g,' ').replace(/\s+/g,' ').trim();
+  const _norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ø/g,'o').replace(/æ/g,'ae').replace(/å/g,'a').replace(/ß/g,'ss').replace(/[-'.]/g,' ').replace(/\s+/g,' ').trim();
   const _pgaInfo = {};
   const _addCompetitors = competitors => {
     for (const c of competitors) {
