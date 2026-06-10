@@ -8242,9 +8242,37 @@ function _sbToggleGolfAccordion(key) {
   if (chev) chev.style.transform = _sbGolfOpen[key] ? 'rotate(180deg)' : '';
 }
 
+let _sbGolfPrefetchPromise = null;
+async function _sbPrefetchGolfAthletes() {
+  if (_pgaRankingsCache) return;
+  if (_sbGolfPrefetchPromise) return _sbGolfPrefetchPromise;
+  _sbGolfPrefetchPromise = (async () => {
+    try {
+      const s = await fetch('https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/seasons/2026/types/2/standings/0?limit=125').then(r => r.json());
+      const items = Object.values(s.standings || {});
+      const resolved = await Promise.all(items.map(async item => {
+        const ref = (item.athlete?.$ref || '').replace(/^http:/, 'https:');
+        if (!ref) return null;
+        try {
+          const a = await fetch(ref).then(r => r.json());
+          return {
+            name: a.displayName || '',
+            country: a.flag?.alt || a.citizenship || '',
+            flagHref: a.flag?.href || '',
+            headshot: a.headshot?.href || (a.id ? `https://a.espncdn.com/i/headshots/golf/players/full/${a.id}.png` : ''),
+          };
+        } catch { return null; }
+      }));
+      _pgaRankingsCache = resolved.filter(r => r?.name);
+    } catch(e) {}
+  })();
+  return _sbGolfPrefetchPromise;
+}
+
 async function _sbRenderGolfSection() {
   const el = document.getElementById('sb-golf-content');
   if (!el) return;
+  await _sbPrefetchGolfAthletes();
   const sports = await _sbFetchGolfSports();
   if (!sports.length) {
     el.innerHTML = `<div style="text-align:center;padding:48px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem;text-transform:uppercase">No active golf events</div>`;
