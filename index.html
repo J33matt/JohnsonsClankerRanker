@@ -8237,7 +8237,7 @@ async function _sbRenderGolfSection() {
       _pgaLeaderboardCache = await r.json();
     } catch(e) {}
   }
-  const _norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const _norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[-'.]/g,' ').replace(/\s+/g,' ').trim();
   const _pgaInfo = {};
   const _addCompetitors = competitors => {
     for (const c of competitors) {
@@ -8251,6 +8251,12 @@ async function _sbRenderGolfSection() {
   };
   for (const ev of _pgaLeaderboardCache?.events || [])
     _addCompetitors(ev.competitions?.[0]?.competitors || ev.competitors || []);
+
+  // Supplement with FedEx Cup rankings cache if already loaded (top 125 players)
+  for (const p of _pgaRankingsCache || []) {
+    const k = _norm(p.name);
+    if (k && !_pgaInfo[k]) _pgaInfo[k] = { headshot: p.headshot || '', flagHref: p.flagHref || '', country: p.country || '' };
+  }
 
   // Fetch all events in parallel
   const allEvents = [];
@@ -8305,9 +8311,9 @@ async function _sbRenderGolfSection() {
       const inSlip = _sbSlip.some(l => l.gameKey === betKey);
       const info = _pgaInfo[_norm(o.name)] || {};
       const initials = _sbPropInitials(o.name);
-      const hsHtml = info.headshot
-        ? `<img src="${info.headshot}" onerror="this.style.display='none';this.parentElement.dataset.fb='1'">`
-        : initials;
+      const hsHtml = initials + (info.headshot
+        ? `<img src="${info.headshot}" style="position:absolute;top:0;left:0;" onerror="this.style.display='none'">`
+        : '');
       const flagBadge = info.flagHref
         ? `<div class="sb-prop-team-badge" style="border-radius:4px;width:36px;height:24px;bottom:-4px;right:-18px;"><img src="${info.flagHref}" style="width:100%;height:100%;object-fit:cover;" title="${info.country}"></div>`
         : '';
