@@ -7815,8 +7815,9 @@ let _sbPropsEvents   = null;  // cached Odds API event list
 let _sbPropsCache    = {};    // { [eventId_market]: { data, ts } }
 let _sbPropsGameSel  = null;  // selected Odds API event ID
 let _sbActiveSport   = 'nba'; // 'nba' | 'golf'
-const _sbGolfSportsCache = { ts: 0, data: null };
-const _sbGolfOddsCache   = {}; // sportKey → { data, ts }
+const _sbGolfSportsCache      = { ts: 0, data: null };
+const _sbGolfOddsCache        = {}; // sportKey → { data, ts }
+const _sbGolfEventPlayersCache = {}; // eventId → { name → {headshot,flagHref,country} }
 
 const _SB_PROP_MARKETS = [
   { key: 'player_points',                  label: 'Player Points O/U',      stat: 'Points'       },
@@ -8173,6 +8174,27 @@ async function _sbFetchGolfOdds(sportKey) {
   } catch(e) { return null; }
 }
 
+async function _sbFetchGolfEventPlayers(eventId) {
+  if (_sbGolfEventPlayersCache[eventId]) return _sbGolfEventPlayersCache[eventId];
+  try {
+    const d = await fetch(`https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga&event=${eventId}`)
+      .then(r => r.json());
+    const map = {};
+    for (const ev of d.events || []) {
+      const competitors = ev.competitions?.[0]?.competitors || ev.competitors || [];
+      for (const c of competitors) {
+        const n = c.athlete?.displayName;
+        if (n) map[n.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')] = {
+          headshot: c.athlete?.headshot?.href || '',
+          flagHref: c.athlete?.flag?.href || '',
+          country:  c.athlete?.flag?.alt  || '',
+        };
+      }
+    }
+    return (_sbGolfEventPlayersCache[eventId] = map);
+  } catch(e) { return (_sbGolfEventPlayersCache[eventId] = {}); }
+}
+
 function _sbSetSport(sport) {
   _sbActiveSport = sport;
   renderSportsbook();
@@ -8215,18 +8237,20 @@ async function _sbRenderGolfSection() {
       _pgaLeaderboardCache = await r.json();
     } catch(e) {}
   }
+  const _norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const _pgaInfo = {};
-  for (const ev of _pgaLeaderboardCache?.events || []) {
-    const competitors = ev.competitions?.[0]?.competitors || ev.competitors || [];
+  const _addCompetitors = competitors => {
     for (const c of competitors) {
       const n = c.athlete?.displayName;
-      if (n) _pgaInfo[n.toLowerCase()] = {
+      if (n) _pgaInfo[_norm(n)] = {
         headshot: c.athlete?.headshot?.href || '',
         flagHref: c.athlete?.flag?.href || '',
         country:  c.athlete?.flag?.alt  || '',
       };
     }
-  }
+  };
+  for (const ev of _pgaLeaderboardCache?.events || [])
+    _addCompetitors(ev.competitions?.[0]?.competitors || ev.competitors || []);
 
   // Fetch all events in parallel
   const allEvents = [];
@@ -8246,6 +8270,26 @@ async function _sbRenderGolfSection() {
 
   allEvents.sort((a, b) => a.commence.localeCompare(b.commence));
 
+  // For each Odds API tournament, find matching ESPN event and load its full player list
+  if (!_pgaScheduleCache) {
+    try {
+      const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?calendar=whitelist');
+      const d = await r.json();
+      _pgaScheduleCache = d.leagues?.[0]?.calendar || [];
+    } catch(e) { _pgaScheduleCache = []; }
+  }
+  await Promise.all(allEvents.map(async ({ sport }) => {
+    const tournNorm = sport.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const espnEv = _pgaScheduleCache.find(e => {
+      const en = (e.value || e.label || e.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      return _pgaTournMatch(en, tournNorm);
+    });
+    if (espnEv?.id) {
+      const players = await _sbFetchGolfEventPlayers(espnEv.id);
+      Object.assign(_pgaInfo, players);
+    }
+  }));
+
   let html = '';
   allEvents.forEach(({ sport, outcomes }, idx) => {
     const key = sport.key;
@@ -8259,7 +8303,7 @@ async function _sbRenderGolfSection() {
       const safePlayer = o.name.replace(/'/g, "\\'");
       const betKey = `golf_${key}_${o.name.replace(/\s+/g,'_').toLowerCase()}`;
       const inSlip = _sbSlip.some(l => l.gameKey === betKey);
-      const info = _pgaInfo[o.name.toLowerCase()] || {};
+      const info = _pgaInfo[_norm(o.name)] || {};
       const initials = _sbPropInitials(o.name);
       const hsHtml = info.headshot
         ? `<img src="${info.headshot}" onerror="this.style.display='none';this.parentElement.dataset.fb='1'">`
