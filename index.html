@@ -8415,7 +8415,7 @@ async function _sbRenderGolfSection() {
         ? `<img src="${info.headshot}" style="position:absolute;top:0;left:0;" onerror="this.style.display='none'">`
         : '');
       const flagBadge = info.flagHref
-        ? `<div class="sb-prop-team-badge" style="border-radius:4px;width:36px;height:24px;bottom:2px;right:-18px;"><img src="${info.flagHref}" style="width:100%;height:100%;object-fit:cover;" title="${info.country}"></div>`
+        ? `<div class="sb-prop-team-badge" style="border-radius:4px;width:36px;height:24px;bottom:2px;right:-18px;overflow:hidden;"><img src="${info.flagHref}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" title="${info.country}"></div>`
         : '';
       rows += `<div class="sb-prop-row">
         <div class="sb-prop-avatar">${hsHtml}${flagBadge}</div>
