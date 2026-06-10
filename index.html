@@ -9792,11 +9792,7 @@ async function renderSportsbook() {
     </div>`;
 
     if (_sbActiveSport === 'golf') {
-      html += `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
-        <div class="sb-section-label" style="margin-bottom:0">PGA Outrights <span class="sb-section-sub">Tap to add to slip</span></div>
-        <button class="sb-quick-btn" onclick="_sbClearSlip()">🗑 Clear Slip</button>
-      </div>
-      <div id="sb-golf-content"><div style="text-align:center;padding:48px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem">Loading golf odds…</div></div>`;
+      html += `<div id="sb-golf-content"><div style="text-align:center;padding:48px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem">Loading golf odds…</div></div>`;
     } else {
 
     // Today's games
