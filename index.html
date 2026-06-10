@@ -7814,6 +7814,9 @@ const _ODDS_API_KEY = '81037b065591850bd10fc780590f08e8'; // ← paste your The 
 let _sbPropsEvents   = null;  // cached Odds API event list
 let _sbPropsCache    = {};    // { [eventId_market]: { data, ts } }
 let _sbPropsGameSel  = null;  // selected Odds API event ID
+let _sbActiveSport   = 'nba'; // 'nba' | 'golf'
+const _sbGolfSportsCache = { ts: 0, data: null };
+const _sbGolfOddsCache   = {}; // sportKey → { data, ts }
 
 const _SB_PROP_MARKETS = [
   { key: 'player_points',                  label: 'Player Points O/U',      stat: 'Points'       },
@@ -8143,6 +8146,83 @@ async function _sbFetchFirstScorerGames(teamAbbr) {
     })));
     return (_sbFirstScorerGamesCache[teamAbbr] = result);
   } catch(e) { return (_sbFirstScorerGamesCache[teamAbbr] = []); }
+}
+
+// ── Golf Odds ─────────────────────────────────────────────────
+async function _sbFetchGolfSports() {
+  if (_sbGolfSportsCache.data && (Date.now() - _sbGolfSportsCache.ts) < 60 * 60 * 1000)
+    return _sbGolfSportsCache.data;
+  try {
+    const r = await fetch(`https://api.the-odds-api.com/v4/sports?apiKey=${_ODDS_API_KEY}&all=false`);
+    const data = await r.json();
+    const golf = Array.isArray(data) ? data.filter(s => s.group === 'Golf') : [];
+    _sbGolfSportsCache.data = golf;
+    _sbGolfSportsCache.ts = Date.now();
+    return golf;
+  } catch(e) { return []; }
+}
+
+async function _sbFetchGolfOdds(sportKey) {
+  const cached = _sbGolfOddsCache[sportKey];
+  if (cached && (Date.now() - cached.ts) < 30 * 60 * 1000) return cached.data;
+  try {
+    const r = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds?apiKey=${_ODDS_API_KEY}&regions=us&markets=outrights&oddsFormat=american`);
+    const data = await r.json();
+    _sbGolfOddsCache[sportKey] = { data, ts: Date.now() };
+    return data;
+  } catch(e) { return null; }
+}
+
+function _sbSetSport(sport) {
+  _sbActiveSport = sport;
+  renderSportsbook();
+}
+
+function _sbToggleGolfLeg(gameKey, playerName, tournName, ml) {
+  const existIdx = _sbSlip.findIndex(l => l.gameKey === gameKey);
+  if (existIdx !== -1) {
+    _sbSlip.splice(existIdx, 1);
+  } else {
+    _sbSlip.push({ gameKey, type: 'golf_winner', awayAbbr: playerName, homeAbbr: tournName, ml, line: 0, label: `${playerName} to win` });
+  }
+  _renderSbSlip();
+  _sbRenderGolfSection();
+}
+
+async function _sbRenderGolfSection() {
+  const el = document.getElementById('sb-golf-content');
+  if (!el) return;
+  const sports = await _sbFetchGolfSports();
+  if (!sports.length) {
+    el.innerHTML = `<div style="text-align:center;padding:48px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem;text-transform:uppercase">No active golf events</div>`;
+    return;
+  }
+  let html = '';
+  for (const sport of sports) {
+    const eventsData = await _sbFetchGolfOdds(sport.key);
+    if (!eventsData || !Array.isArray(eventsData) || !eventsData.length) continue;
+    for (const event of eventsData) {
+      const outcomes = event.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
+      if (!outcomes.length) continue;
+      const sorted = [...outcomes].sort((a, b) => a.price - b.price);
+      html += `<div class="sb-section-label" style="margin-bottom:12px">${sport.title}</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:24px">`;
+      for (const o of sorted) {
+        const safePlayer = o.name.replace(/'/g, "\\'");
+        const key = `golf_${sport.key}_${o.name.replace(/\s+/g,'_').toLowerCase()}`;
+        const inSlip = _sbSlip.some(l => l.gameKey === key);
+        html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border-radius:6px;border:1px solid ${inSlip ? 'var(--accent)' : 'var(--border)'}">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${o.name}</span>
+          <button onclick="_sbToggleGolfLeg('${key}','${safePlayer}','${sport.title}',${o.price})"
+            style="padding:6px 14px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:1px;cursor:pointer;border:1px solid ${inSlip ? 'var(--accent)' : 'var(--border)'};background:${inSlip ? 'var(--accent)' : 'transparent'};color:${inSlip ? '#fff' : (o.price < 0 ? 'var(--green)' : 'var(--accent2)')}">
+            ${_fmtML(o.price)}
+          </button>
+        </div>`;
+      }
+      html += `</div>`;
+    }
+  }
+  el.innerHTML = html || `<div style="text-align:center;padding:48px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem;text-transform:uppercase">No golf odds available</div>`;
 }
 
 // Grade a prop leg given a slug→statsArray map
@@ -8839,6 +8919,7 @@ async function _sbFetchLeaderboard() {
 }
 
 // ── Format leg description ────────────────────────────────────
+function _sbLegDesc(leg) { return leg.label || leg.awayAbbr || ''; }
 
 // ── Toggle a bet button ───────────────────────────────────────
 function _sbToggleLeg(gameKey, type, awayAbbr, homeAbbr, ml, line, label) {
@@ -8898,10 +8979,10 @@ function _renderSbSlip() {
 
   html += _sbSlip.map(leg => `
     <div class="sb-slip-leg">
-      <div class="sb-slip-leg-icon">${leg.type.startsWith('ml') ? '🏆' : leg.type.startsWith('spread') ? '📏' : '🎯'}</div>
+      <div class="sb-slip-leg-icon">${leg.type === 'golf_winner' ? '⛳' : leg.type.startsWith('ml') ? '🏆' : leg.type.startsWith('spread') ? '📏' : '🎯'}</div>
       <div class="sb-slip-leg-info">
         <div class="sb-slip-leg-pick">${_sbLegDesc(leg)}</div>
-        <div class="sb-slip-leg-game">${leg.awayAbbr} @ ${leg.homeAbbr}</div>
+        <div class="sb-slip-leg-game">${leg.type === 'golf_winner' ? leg.homeAbbr : leg.awayAbbr + ' @ ' + leg.homeAbbr}</div>
       </div>
       <div class="sb-slip-leg-odds ${leg.ml < 0 ? 'fav' : 'dog'}" style="color:${leg.ml < 0 ? 'var(--green)' : 'var(--accent2)'}">${_fmtML(leg.ml)}</div>
       <button class="sb-slip-leg-remove" onclick="_sbRemoveLeg('${leg.gameKey}','${leg.type}')">✕</button>
@@ -9587,6 +9668,20 @@ async function renderSportsbook() {
   if (!isBroke) {
     html += `<div class="sb-layout"><div class="sb-games-main">`;
 
+    // Sport toggle
+    html += `<div style="display:flex;gap:2px;margin-bottom:20px;background:var(--border);border-radius:8px;padding:2px">
+      <button onclick="_sbSetSport('nba')" style="flex:1;padding:8px 0;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbActiveSport==='nba'?'var(--accent)':'transparent'};color:${_sbActiveSport==='nba'?'#fff':'var(--muted)'}">🏀 NBA</button>
+      <button onclick="_sbSetSport('golf')" style="flex:1;padding:8px 0;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbActiveSport==='golf'?'var(--accent)':'transparent'};color:${_sbActiveSport==='golf'?'#fff':'var(--muted)'}">⛳ GOLF</button>
+    </div>`;
+
+    if (_sbActiveSport === 'golf') {
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <div class="sb-section-label" style="margin-bottom:0">Golf Outrights <span class="sb-section-sub">Tap to add to slip</span></div>
+        <button class="sb-quick-btn" onclick="_sbClearSlip()">🗑 Clear Slip</button>
+      </div>
+      <div id="sb-golf-content"><div style="text-align:center;padding:48px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem">Loading golf odds…</div></div>`;
+    } else {
+
     // Today's games
     html += `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
       <div class="sb-section-label" style="margin-bottom:0">${_sbGamesDate === today ? "Today's Games" : "Upcoming Games"} <span class="sb-section-sub">Tap to add to slip</span></div>
@@ -9640,9 +9735,10 @@ async function renderSportsbook() {
     // Player props
     html += _renderSbPropsSection(enrichedGames.filter(g => !g.isFinal));
 
-    // Settled bet history — shown below games, above Clanker's picks
-    // Clanker's picks — shown above user's bet history
+    // Clanker's picks
     html += _renderBotPicks(botBets, enrichedGames);
+
+    } // end else (nba sport)
 
     html += `</div>`;
 
@@ -9699,6 +9795,9 @@ async function renderSportsbook() {
   html += _renderSbHistory(bets);
 
   container.innerHTML = html;
+
+  // Kick off async golf section fill if needed
+  if (_sbActiveSport === 'golf') _sbRenderGolfSection();
 
   // Render bankroll history chart if canvas exists
   const chartCanvas = document.getElementById('sb-bankroll-chart');
