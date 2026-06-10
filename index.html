@@ -8195,7 +8195,7 @@ function _sbToggleGolfAccordion(key) {
   _sbGolfOpen[key] = !_sbGolfOpen[key];
   const body = document.getElementById(`sb-golf-body-${key}`);
   const chev = document.getElementById(`sb-golf-chev-${key}`);
-  if (body) body.style.display = _sbGolfOpen[key] ? 'flex' : 'none';
+  if (body) body.style.display = _sbGolfOpen[key] ? 'block' : 'none';
   if (chev) chev.style.transform = _sbGolfOpen[key] ? 'rotate(180deg)' : '';
 }
 
@@ -8208,15 +8208,28 @@ async function _sbRenderGolfSection() {
     return;
   }
 
-  // Fetch all event data in parallel, attach sport metadata
+  // Build name → {headshot, flagHref, country} from cached ESPN leaderboard
+  const _pgaInfo = {};
+  for (const ev of _pgaLeaderboardCache?.events || []) {
+    const competitors = ev.competitions?.[0]?.competitors || ev.competitors || [];
+    for (const c of competitors) {
+      const n = c.athlete?.displayName;
+      if (n) _pgaInfo[n.toLowerCase()] = {
+        headshot: c.athlete?.headshot?.href || '',
+        flagHref: c.athlete?.flag?.href || '',
+        country:  c.athlete?.flag?.alt  || '',
+      };
+    }
+  }
+
+  // Fetch all events in parallel
   const allEvents = [];
   await Promise.all(sports.map(async sport => {
     const eventsData = await _sbFetchGolfOdds(sport.key);
-    if (!eventsData || !Array.isArray(eventsData)) return;
+    if (!Array.isArray(eventsData)) return;
     for (const event of eventsData) {
       const outcomes = event.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
-      if (!outcomes.length) continue;
-      allEvents.push({ sport, event, outcomes, commence: event.commence_time || '' });
+      if (outcomes.length) allEvents.push({ sport, outcomes, commence: event.commence_time || '' });
     }
   }));
 
@@ -8225,39 +8238,53 @@ async function _sbRenderGolfSection() {
     return;
   }
 
-  // Sort by start date ascending
   allEvents.sort((a, b) => a.commence.localeCompare(b.commence));
 
   let html = '';
-  for (const { sport, outcomes } of allEvents) {
+  allEvents.forEach(({ sport, outcomes }, idx) => {
     const key = sport.key;
-    // Default: first event open, rest closed
-    if (!(key in _sbGolfOpen)) _sbGolfOpen[key] = allEvents.indexOf(allEvents.find(e => e.sport.key === key)) === 0;
+    if (!(key in _sbGolfOpen)) _sbGolfOpen[key] = idx === 0;
     const isOpen = _sbGolfOpen[key];
     const sorted = [...outcomes].sort((a, b) => a.price - b.price);
     const safeSportTitle = sport.title.replace(/'/g, "\\'");
+
+    let rows = '';
+    for (const o of sorted) {
+      const safePlayer = o.name.replace(/'/g, "\\'");
+      const betKey = `golf_${key}_${o.name.replace(/\s+/g,'_').toLowerCase()}`;
+      const inSlip = _sbSlip.some(l => l.gameKey === betKey);
+      const info = _pgaInfo[o.name.toLowerCase()] || {};
+      const initials = _sbPropInitials(o.name);
+      const hsHtml = info.headshot
+        ? `<img src="${info.headshot}" onerror="this.style.display='none';this.parentElement.dataset.fb='1'">`
+        : initials;
+      const flagBadge = info.flagHref
+        ? `<div class="sb-prop-team-badge" style="border-radius:4px;width:36px;height:24px;bottom:-4px;right:-18px;"><img src="${info.flagHref}" style="width:100%;height:100%;object-fit:cover;" title="${info.country}"></div>`
+        : '';
+      rows += `<div class="sb-prop-row">
+        <div class="sb-prop-avatar">${hsHtml}${flagBadge}</div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <div class="sb-prop-name">${o.name}</div>
+        </div>
+        <div></div>
+        <div class="sb-prop-btns">
+          <button class="sb-prop-btn yn${inSlip ? ' selected' : ''}"
+            onclick="_sbToggleGolfLeg('${betKey}','${safePlayer}','${safeSportTitle}',${o.price})">
+            <span class="prop-ou">WIN</span>
+            <span class="prop-odds">${_fmtML(o.price)}</span>
+          </button>
+        </div>
+      </div>`;
+    }
 
     html += `<div style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
       <div onclick="_sbToggleGolfAccordion('${key}')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface2);cursor:pointer;user-select:none">
         <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px">${sport.title}</span>
         <span id="sb-golf-chev-${key}" style="font-size:0.8rem;color:var(--muted);transition:transform 0.2s;display:inline-block;transform:${isOpen ? 'rotate(180deg)' : ''}">▼</span>
       </div>
-      <div id="sb-golf-body-${key}" style="display:${isOpen ? 'flex' : 'none'};flex-direction:column;gap:6px;padding:10px">`;
-
-    for (const o of sorted) {
-      const safePlayer = o.name.replace(/'/g, "\\'");
-      const betKey = `golf_${key}_${o.name.replace(/\s+/g,'_').toLowerCase()}`;
-      const inSlip = _sbSlip.some(l => l.gameKey === betKey);
-      html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--surface);border-radius:6px;border:1px solid ${inSlip ? 'var(--accent)' : 'var(--border)'}">
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${o.name}</span>
-        <button onclick="_sbToggleGolfLeg('${betKey}','${safePlayer}','${safeSportTitle}',${o.price})"
-          style="padding:6px 14px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:1px;cursor:pointer;border:1px solid ${inSlip ? 'var(--accent)' : 'var(--border)'};background:${inSlip ? 'var(--accent)' : 'transparent'};color:${inSlip ? '#fff' : (o.price < 0 ? 'var(--green)' : 'var(--accent2)')}">
-          ${_fmtML(o.price)}
-        </button>
-      </div>`;
-    }
-    html += `</div></div>`;
-  }
+      <div id="sb-golf-body-${key}" class="sb-props-table" style="display:${isOpen ? 'block' : 'none'}">${rows}</div>
+    </div>`;
+  });
   el.innerHTML = html;
 }
 
