@@ -8640,12 +8640,93 @@ async function _sbFixPropLabels() {
   } catch(e) {}
 }
 
+// ── Golf settlement helpers ───────────────────────────────────
+function _pgaTournMatch(a, b) {
+  if (a === b) return true;
+  const s = a.length <= b.length ? a : b;
+  const l = a.length <= b.length ? b : a;
+  return s.length >= 5 && l.includes(s);
+}
+
+async function _sbSettleGolfBets(openGolfBets, allBets) {
+  try {
+    const res = await fetch('https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga');
+    const data = await res.json();
+    let changed = false;
+
+    for (const event of data.events || []) {
+      if (event.status?.type?.state !== 'post') continue;
+      const competitors = event.competitions?.[0]?.competitors || event.competitors || [];
+      const sorted = [...competitors].sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
+      const winner = sorted[0];
+      if (!winner?.athlete?.displayName) continue;
+
+      const winnerSlug = winner.athlete.displayName.toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_');
+      const espnNorm = (event.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      for (const bet of openGolfBets) {
+        if (bet.status !== 'open') continue;
+        const leg = bet.legs.find(l => l.type === 'golf_winner');
+        if (!leg) continue;
+
+        const tournNorm = leg.homeAbbr.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!_pgaTournMatch(espnNorm, tournNorm)) continue;
+
+        const playerSlug = leg.awayAbbr.toLowerCase()
+          .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_');
+        const isWinner = playerSlug === winnerSlug ||
+          playerSlug.replace(/[^a-z0-9]/g, '') === winnerSlug.replace(/[^a-z0-9]/g, '');
+
+        const finalResult = isWinner ? 'win' : 'loss';
+        const payout = finalResult === 'win' ? bet.stake + _mlPayout(leg.ml, bet.stake) : 0;
+
+        bet.status = 'settled';
+        bet.result = finalResult;
+        bet.payout = payout;
+        bet.net = payout - bet.stake;
+        changed = true;
+
+        const net = payout - bet.stake;
+        const lbl = leg.label || leg.awayAbbr || '';
+        if (finalResult === 'win') _sbToast('win', `Bet Won! +$${Math.abs(net).toFixed(2)}`, lbl);
+        else _sbToast('loss', `Bet Lost -$${bet.stake.toFixed(2)}`, lbl);
+
+        if (_sbProfile) {
+          _sbProfile.bankroll = Math.max(0, (_sbProfile.bankroll || 0) + payout);
+          _sbProfile.allTimeW = (_sbProfile.allTimeW || 0) + (finalResult === 'win' ? 1 : 0);
+          _sbProfile.allTimeL = (_sbProfile.allTimeL || 0) + (finalResult === 'loss' ? 1 : 0);
+          _sbProfile.allTimeNet = (_sbProfile.allTimeNet || 0) + (payout - bet.stake);
+          if (finalResult === 'win') _sbProfile.allTimeEarned = (_sbProfile.allTimeEarned || 0) + (payout - bet.stake);
+          if (finalResult === 'loss') _sbProfile.allTimeLost = (_sbProfile.allTimeLost || 0) + bet.stake;
+        }
+      }
+    }
+
+    if (changed) {
+      await _sbSaveBets(allBets);
+      if (_sbProfile) {
+        _sbProfile.history = _sbProfile.history || [];
+        const todayKey = localDateStr(new Date());
+        _sbProfile.history = _sbProfile.history.filter(h => h.date !== todayKey);
+        _sbProfile.history.push({ date: todayKey, bankroll: _sbProfile.bankroll });
+        await _sbSaveProfile();
+        await _sbSaveLeaderboard();
+      }
+    }
+  } catch(e) {}
+}
+
 // ── Auto-settle open bets ─────────────────────────────────────
 async function _sbAutoSettle() {
   const bets = await _sbLoadBets();
   if (!bets.length) return;
   const open = bets.filter(b => b.status === 'open');
   if (!open.length) return;
+
+  // Settle any golf outrights first
+  const openGolfBets = open.filter(b => b.legs.some(l => l.type === 'golf_winner'));
+  if (openGolfBets.length) await _sbSettleGolfBets(openGolfBets, bets);
 
   // Fetch games for all unique dates with open bets, plus ±2 days each
   // (guards against bets stamped with a different calendar date than the actual game)
