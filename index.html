@@ -8272,6 +8272,15 @@ const _sbNicknames = {
   'henry':'hank','hank':'henry',
   'douglas':'doug','doug':'douglas',
 };
+function _sbGolfDisplayName(name) {
+  const parts = name.trim().split(' ');
+  if (parts.length < 2) return name;
+  const nick = _sbNicknames[parts[0].toLowerCase()];
+  if (!nick) return name;
+  // Only shorten (Matthew→Matt), don't lengthen (Matt stays Matt)
+  if (nick.length < parts[0].length) return [nick.charAt(0).toUpperCase() + nick.slice(1), ...parts.slice(1)].join(' ');
+  return name;
+}
 function _sbGolfPlayerInfo(pgaInfo, name) {
   const _n = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ø/g,'o').replace(/æ/g,'ae').replace(/å/g,'a').replace(/ß/g,'ss').replace(/[-'.]/g,' ').replace(/\s+/g,' ').trim();
   const direct = pgaInfo[_n(name)];
@@ -8411,7 +8420,7 @@ async function _sbRenderGolfSection() {
       rows += `<div class="sb-prop-row">
         <div class="sb-prop-avatar">${hsHtml}${flagBadge}</div>
         <div style="display:flex;flex-direction:column;gap:3px;">
-          <div class="sb-prop-name">${o.name}</div>
+          <div class="sb-prop-name">${_sbGolfDisplayName(o.name)}</div>
         </div>
         <div></div>
         <div class="sb-prop-btns">
