@@ -8242,6 +8242,48 @@ function _sbToggleGolfAccordion(key) {
   if (chev) chev.style.transform = _sbGolfOpen[key] ? 'rotate(180deg)' : '';
 }
 
+const _sbNicknames = {
+  'matthew':'matt','matt':'matthew',
+  'christopher':'chris','chris':'christopher',
+  'william':'will','will':'william','billy':'william',
+  'michael':'mike','mike':'michael',
+  'thomas':'tom','tom':'thomas',
+  'nicholas':'nick','nick':'nicholas',
+  'daniel':'dan','dan':'daniel',
+  'robert':'rob','rob':'robert','bob':'robert',
+  'james':'jim','jim':'james',
+  'zachary':'zach','zach':'zachary',
+  'samuel':'sam','sam':'samuel',
+  'joseph':'joe','joe':'joseph',
+  'benjamin':'ben','ben':'benjamin',
+  'steven':'steve','stephen':'steve','steve':'steven',
+  'peter':'pete','pete':'peter',
+  'charles':'charlie','charlie':'charles',
+  'alexander':'alex','alex':'alexander',
+  'andrew':'andy','andy':'andrew',
+  'anthony':'tony','tony':'anthony',
+  'kenneth':'kenny','kenny':'kenneth',
+  'cameron':'cam','cam':'cameron',
+  'brendan':'brendon','brendon':'brendan',
+  'corey':'cory','cory':'corey',
+  'jonathan':'jonathon','jonathon':'jonathan',
+  'david':'dave','dave':'david',
+  'richard':'rick','rick':'richard',
+  'henry':'hank','hank':'henry',
+  'douglas':'doug','doug':'douglas',
+};
+function _sbGolfPlayerInfo(pgaInfo, name) {
+  const _n = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[-'.]/g,' ').replace(/\s+/g,' ').trim();
+  const direct = pgaInfo[_n(name)];
+  if (direct) return direct;
+  const parts = _n(name).split(' ');
+  if (parts.length >= 2) {
+    const alt = _sbNicknames[parts[0]];
+    if (alt) return pgaInfo[[alt, ...parts.slice(1)].join(' ')] || null;
+  }
+  return null;
+}
+
 let _sbGolfPrefetchPromise = null;
 async function _sbPrefetchGolfAthletes() {
   if (_pgaRankingsCache) return;
@@ -8358,7 +8400,7 @@ async function _sbRenderGolfSection() {
       const safePlayer = o.name.replace(/'/g, "\\'");
       const betKey = `golf_${key}_${o.name.replace(/\s+/g,'_').toLowerCase()}`;
       const inSlip = _sbSlip.some(l => l.gameKey === betKey);
-      const info = _pgaInfo[_norm(o.name)] || {};
+      const info = _sbGolfPlayerInfo(_pgaInfo, o.name) || {};
       const initials = _sbPropInitials(o.name);
       const hsHtml = initials + (info.headshot
         ? `<img src="${info.headshot}" style="position:absolute;top:0;left:0;" onerror="this.style.display='none'">`
