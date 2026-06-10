@@ -8174,26 +8174,22 @@ async function _sbFetchGolfOdds(sportKey) {
   } catch(e) { return null; }
 }
 
-async function _sbFetchGolfEventPlayers(dateStr) {
-  if (_sbGolfEventPlayersCache[dateStr]) return _sbGolfEventPlayersCache[dateStr];
+async function _sbFetchGolfPlayerInfo(name) {
+  if (name in _sbGolfEventPlayersCache) return _sbGolfEventPlayersCache[name];
   try {
-    const d = await fetch(`https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga&dates=${dateStr}`)
+    const d = await fetch(`https://site.api.espn.com/apis/site/v2/sports/golf/athletes?search=${encodeURIComponent(name)}&limit=5`)
       .then(r => r.json());
     const _n = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[-'.]/g,' ').replace(/\s+/g,' ').trim();
-    const map = {};
-    for (const ev of d.events || []) {
-      const competitors = ev.competitions?.[0]?.competitors || ev.competitors || [];
-      for (const c of competitors) {
-        const n = c.athlete?.displayName;
-        if (n) map[_n(n)] = {
-          headshot: c.athlete?.headshot?.href || '',
-          flagHref: c.athlete?.flag?.href || '',
-          country:  c.athlete?.flag?.alt  || '',
-        };
-      }
-    }
-    return (_sbGolfEventPlayersCache[dateStr] = map);
-  } catch(e) { return (_sbGolfEventPlayersCache[dateStr] = {}); }
+    const athletes = d.items || d.athletes || [];
+    const normName = _n(name);
+    const match = athletes.find(a => _n(a.displayName || a.fullName || '') === normName) || athletes[0];
+    const info = match ? {
+      headshot: match.headshot?.href || (match.id ? `https://a.espncdn.com/i/headshots/golf/players/full/${match.id}.png` : ''),
+      flagHref: match.flag?.href || '',
+      country:  match.flag?.alt  || match.citizenship || '',
+    } : null;
+    return (_sbGolfEventPlayersCache[name] = info);
+  } catch(e) { return (_sbGolfEventPlayersCache[name] = null); }
 }
 
 function _sbSetSport(sport) {
@@ -8277,12 +8273,12 @@ async function _sbRenderGolfSection() {
 
   allEvents.sort((a, b) => a.commence.localeCompare(b.commence));
 
-  // For each Odds API tournament, fetch ESPN players for that event's date
-  await Promise.all(allEvents.map(async ({ commence }) => {
-    if (!commence) return;
-    const dateStr = commence.slice(0, 10).replace(/-/g, ''); // "2026-06-19T..." → "20260619"
-    const players = await _sbFetchGolfEventPlayers(dateStr);
-    Object.assign(_pgaInfo, players);
+  // For any player not already found in leaderboard cache, fetch by name directly
+  const allPlayerNames = [...new Set(allEvents.flatMap(e => e.outcomes.map(o => o.name)))];
+  const missing = allPlayerNames.filter(n => !_pgaInfo[_norm(n)]);
+  await Promise.all(missing.map(async name => {
+    const info = await _sbFetchGolfPlayerInfo(name);
+    if (info) _pgaInfo[_norm(name)] = info;
   }));
 
   let html = '';
