@@ -8197,6 +8197,25 @@ async function _sbFetchEspnPlayersForDate(dateStr) {
   } catch(e) { return (_sbGolfEventPlayersCache[cacheKey] = {}); }
 }
 
+async function _sbFetchGolfPlayerByName(name) {
+  const cacheKey = `name_${name}`;
+  if (_sbGolfEventPlayersCache[cacheKey] !== undefined) return _sbGolfEventPlayersCache[cacheKey];
+  try {
+    const d = await fetch(`https://site.web.api.espn.com/apis/common/v3/search?query=${encodeURIComponent(name)}&limit=5&type=athlete&sport=golf`)
+      .then(r => r.json());
+    const _n = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[-'.]/g,' ').replace(/\s+/g,' ').trim();
+    const normName = _n(name);
+    const items = d.results?.[0]?.contents || [];
+    const match = items.find(a => _n(a.displayName || '') === normName) || items[0];
+    const info = match ? {
+      headshot: match.headshot?.href || (match.id ? `https://a.espncdn.com/i/headshots/golf/players/full/${match.id}.png` : ''),
+      flagHref: match.flag?.href || '',
+      country: match.flag?.alt || match.citizenship || '',
+    } : null;
+    return (_sbGolfEventPlayersCache[cacheKey] = info);
+  } catch(e) { return (_sbGolfEventPlayersCache[cacheKey] = null); }
+}
+
 function _sbSetSport(sport) {
   _sbActiveSport = sport;
   renderSportsbook();
@@ -8288,6 +8307,14 @@ async function _sbRenderGolfSection() {
     for (const [k, v] of Object.entries(players)) {
       if (!_pgaInfo[k]) _pgaInfo[k] = v;
     }
+  }));
+
+  // Per-player name search fallback for anyone still missing (uses site.web.api.espn.com)
+  const allPlayerNames = [...new Set(allEvents.flatMap(e => e.outcomes.map(o => o.name)))];
+  const missing = allPlayerNames.filter(n => !_pgaInfo[_norm(n)]);
+  await Promise.all(missing.map(async name => {
+    const info = await _sbFetchGolfPlayerByName(name);
+    if (info) _pgaInfo[_norm(name)] = info;
   }));
 
   let html = '';
