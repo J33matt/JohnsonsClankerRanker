@@ -7814,10 +7814,40 @@ const _ODDS_API_KEY = '81037b065591850bd10fc780590f08e8'; // ← paste your The 
 let _sbPropsEvents   = null;  // cached Odds API event list
 let _sbPropsCache    = {};    // { [eventId_market]: { data, ts } }
 let _sbPropsGameSel  = null;  // selected Odds API event ID
-let _sbActiveSport   = 'nba'; // 'nba' | 'golf'
+let _sbActiveSport   = 'nba'; // 'nba' | 'golf' | 'worldcup'
 const _sbGolfSportsCache      = { ts: 0, data: null };
 const _sbGolfOddsCache        = {}; // sportKey → { data, ts }
 const _sbGolfEventPlayersCache = {}; // eventId → { name → {headshot,flagHref,country} }
+const _sbWcMatchCache  = { ts: 0, data: null };
+const _sbWcWinnerCache = { ts: 0, data: null };
+const _sbWcOpen = {}; // dateStr → bool
+
+const _sbWcFlagCodes = {
+  'argentina':'ar','australia':'au','austria':'at','belgium':'be','bolivia':'bo',
+  'brazil':'br','cameroon':'cm','canada':'ca','chile':'cl','china':'cn',
+  'colombia':'co','costa rica':'cr','croatia':'hr','czech republic':'cz','czechia':'cz',
+  'denmark':'dk','ecuador':'ec','egypt':'eg','el salvador':'sv','england':'gb-eng',
+  'france':'fr','germany':'de','ghana':'gh','honduras':'hn','hungary':'hu',
+  'indonesia':'id','iran':'ir','iraq':'iq','ireland':'ie','israel':'il',
+  'italy':'it','ivory coast':'ci',"côte d'ivoire":'ci',"cote d'ivoire":'ci',
+  'jamaica':'jm','japan':'jp','jordan':'jo','kenya':'ke','mali':'ml',
+  'mexico':'mx','morocco':'ma','netherlands':'nl','new zealand':'nz',
+  'nigeria':'ng','norway':'no','panama':'pa','paraguay':'py','peru':'pe',
+  'poland':'pl','portugal':'pt','qatar':'qa','republic of ireland':'ie',
+  'romania':'ro','saudi arabia':'sa','scotland':'gb-sct','senegal':'sn',
+  'serbia':'rs','slovakia':'sk','slovenia':'si','south africa':'za',
+  'south korea':'kr','republic of korea':'kr','spain':'es','sweden':'se',
+  'switzerland':'ch','trinidad and tobago':'tt','tunisia':'tn','turkey':'tr',
+  'ukraine':'ua','united states':'us','usa':'us','uruguay':'uy',
+  'venezuela':'ve','wales':'gb-wls','georgia':'ge','albania':'al',
+  'north macedonia':'mk','cape verde':'cv','guinea':'gn','senegal':'sn',
+  'united arab emirates':'ae','new caledonia':'nc','tahiti':'pf',
+  'cuba':'cu','haiti':'ht','trinidad':'tt','guyana':'gy',
+};
+function _sbWcFlag(country) {
+  const code = _sbWcFlagCodes[(country||'').toLowerCase().trim()];
+  return code ? `https://flagcdn.com/w40/${code}.png` : '';
+}
 
 const _SB_PROP_MARKETS = [
   { key: 'player_points',                  label: 'Player Points O/U',      stat: 'Points'       },
@@ -8214,6 +8244,155 @@ async function _sbFetchGolfPlayerByName(name) {
     } : null;
     return (_sbGolfEventPlayersCache[cacheKey] = info);
   } catch(e) { return (_sbGolfEventPlayersCache[cacheKey] = null); }
+}
+
+async function _sbFetchWcMatchOdds() {
+  if (_sbWcMatchCache.data && Date.now() - _sbWcMatchCache.ts < 5 * 60 * 1000) return _sbWcMatchCache.data;
+  try {
+    const d = await fetch(`https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds?apiKey=${_ODDS_API_KEY}&regions=us&markets=h2h&oddsFormat=american`).then(r => r.json());
+    _sbWcMatchCache.data = Array.isArray(d) ? d : [];
+    _sbWcMatchCache.ts = Date.now();
+    return _sbWcMatchCache.data;
+  } catch(e) { return []; }
+}
+async function _sbFetchWcWinnerOdds() {
+  if (_sbWcWinnerCache.data && Date.now() - _sbWcWinnerCache.ts < 30 * 60 * 1000) return _sbWcWinnerCache.data;
+  try {
+    const d = await fetch(`https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup_winner/odds?apiKey=${_ODDS_API_KEY}&regions=us&markets=outrights&oddsFormat=american`).then(r => r.json());
+    _sbWcWinnerCache.data = Array.isArray(d) ? d : [];
+    _sbWcWinnerCache.ts = Date.now();
+    return _sbWcWinnerCache.data;
+  } catch(e) { return []; }
+}
+
+async function _sbRenderWorldCupSection() {
+  const el = document.getElementById('sb-wc-content');
+  if (!el) return;
+
+  const [matches, winnerEvents] = await Promise.all([_sbFetchWcMatchOdds(), _sbFetchWcWinnerOdds()]);
+  let html = '';
+
+  // — Match odds section —
+  if (matches.length) {
+    // Group by date
+    const byDate = {};
+    for (const ev of matches) {
+      const outcomes = ev.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
+      if (!outcomes.length) continue;
+      const d = new Date(ev.commence_time);
+      const dateKey = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', timeZone:'UTC' });
+      if (!byDate[dateKey]) byDate[dateKey] = [];
+      byDate[dateKey].push(ev);
+    }
+
+    html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:3px;margin-bottom:12px;color:var(--text)">MATCH ODDS</div>`;
+
+    Object.entries(byDate).forEach(([dateKey, evs], groupIdx) => {
+      if (!(dateKey in _sbWcOpen)) _sbWcOpen[dateKey] = groupIdx === 0;
+      const isOpen = _sbWcOpen[dateKey];
+      const safeKey = dateKey.replace(/[^a-z0-9]/gi, '_');
+
+      let rows = '';
+      for (const ev of evs) {
+        const outcomes = ev.bookmakers[0].markets[0].outcomes;
+        const home = outcomes.find(o => o.name === ev.home_team);
+        const away = outcomes.find(o => o.name === ev.away_team);
+        const draw = outcomes.find(o => o.name === 'Draw');
+        const mkKey = (team, type) => `wc_${ev.id}_${type}`;
+        const inSlip = (type) => _sbSlip.some(l => l.gameKey === mkKey(null, type));
+        const btnSel = (type) => inSlip(type) ? ' selected' : '';
+        const tog = (type, team, ml) => `_sbToggleWcLeg('${ev.id}','${type}','${(team||'').replace(/'/g,"\\'")}','${ev.home_team.replace(/'/g,"\\'")}','${ev.away_team.replace(/'/g,"\\'")}',${ml})`;
+        const homeFlag = _sbWcFlag(ev.home_team);
+        const awayFlag = _sbWcFlag(ev.away_team);
+
+        rows += `<div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
+              ${homeFlag ? `<img src="${homeFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px;flex-shrink:0">` : ''}
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.home_team}</span>
+            </div>
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--muted);flex-shrink:0">vs</span>
+            <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;justify-content:flex-end">
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right">${ev.away_team}</span>
+              ${awayFlag ? `<img src="${awayFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px;flex-shrink:0">` : ''}
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px">
+            ${home ? `<button class="sb-prop-btn yn${btnSel('home')}" onclick="${tog('home',ev.home_team,home.price)}" style="flex-direction:column;padding:6px 4px"><span style="font-size:0.65rem;opacity:0.7">HOME</span><span class="prop-odds">${_fmtML(home.price)}</span></button>` : '<div></div>'}
+            ${draw ? `<button class="sb-prop-btn yn${btnSel('draw')}" onclick="${tog('draw','Draw',draw.price)}" style="flex-direction:column;padding:6px 4px"><span style="font-size:0.65rem;opacity:0.7">DRAW</span><span class="prop-odds">${_fmtML(draw.price)}</span></button>` : '<div></div>'}
+            ${away ? `<button class="sb-prop-btn yn${btnSel('away')}" onclick="${tog('away',ev.away_team,away.price)}" style="flex-direction:column;padding:6px 4px"><span style="font-size:0.65rem;opacity:0.7">AWAY</span><span class="prop-odds">${_fmtML(away.price)}</span></button>` : '<div></div>'}
+          </div>
+        </div>`;
+      }
+
+      html += `<div style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <div onclick="_sbToggleWcAccordion('${safeKey}')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface2);cursor:pointer;user-select:none">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;letter-spacing:1px;color:var(--muted)">${dateKey}</span>
+          <span id="sb-wc-chev-${safeKey}" style="font-size:0.8rem;color:var(--muted);transition:transform 0.2s;display:inline-block;transform:${isOpen?'rotate(180deg)':''}">▼</span>
+        </div>
+        <div id="sb-wc-body-${safeKey}" style="display:${isOpen?'block':'none'}">${rows}</div>
+      </div>`;
+    });
+  }
+
+  // — Outright winner section —
+  const outcomes = winnerEvents?.[0]?.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
+  if (outcomes.length) {
+    const sorted = [...outcomes].sort((a, b) => a.price - b.price);
+    html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:3px;margin:20px 0 12px;color:var(--text)">TOURNAMENT WINNER</div>`;
+    html += `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">`;
+    for (const o of sorted) {
+      const betKey = `wc_winner_${o.name.replace(/\s+/g,'_').toLowerCase()}`;
+      const inSlip = _sbSlip.some(l => l.gameKey === betKey);
+      const flag = _sbWcFlag(o.name);
+      html += `<div class="sb-prop-row">
+        <div style="display:flex;align-items:center;gap:10px;grid-column:1/3">
+          ${flag ? `<img src="${flag}" style="width:28px;height:19px;object-fit:cover;border-radius:3px;flex-shrink:0">` : '<div style="width:28px"></div>'}
+          <span class="sb-prop-name">${o.name}</span>
+        </div>
+        <div></div>
+        <div class="sb-prop-btns">
+          <button class="sb-prop-btn yn${inSlip?' selected':''}" onclick="_sbToggleWcWinner('${betKey}','${o.name.replace(/'/g,"\\'")}',${o.price})">
+            <span class="prop-ou">WIN</span>
+            <span class="prop-odds">${_fmtML(o.price)}</span>
+          </button>
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  if (!html) html = `<div style="text-align:center;padding:48px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem;text-transform:uppercase">No World Cup odds available</div>`;
+  el.innerHTML = html;
+}
+
+function _sbToggleWcAccordion(key) {
+  _sbWcOpen[key] = !_sbWcOpen[key];
+  const body = document.getElementById(`sb-wc-body-${key}`);
+  const chev = document.getElementById(`sb-wc-chev-${key}`);
+  if (body) body.style.display = _sbWcOpen[key] ? 'block' : 'none';
+  if (chev) chev.style.transform = _sbWcOpen[key] ? 'rotate(180deg)' : '';
+}
+
+function _sbToggleWcLeg(eventId, type, teamName, homeTeam, awayTeam, ml) {
+  const gameKey = `wc_${eventId}_${type}`;
+  const existIdx = _sbSlip.findIndex(l => l.gameKey.startsWith(`wc_${eventId}_`));
+  if (existIdx !== -1) _sbSlip.splice(existIdx, 1);
+  const already = _sbSlip.some(l => l.gameKey === gameKey);
+  if (!already) {
+    const label = type === 'draw' ? 'Draw' : `${teamName} to win`;
+    _sbSlip.push({ gameKey, type: `wc_${type}`, awayAbbr: teamName, homeAbbr: `${homeTeam} vs ${awayTeam}`, ml, line: 0, label });
+  }
+  _renderSbSlip();
+  _sbRenderWorldCupSection();
+}
+
+function _sbToggleWcWinner(betKey, teamName, ml) {
+  const existIdx = _sbSlip.findIndex(l => l.gameKey === betKey);
+  if (existIdx !== -1) { _sbSlip.splice(existIdx, 1); }
+  else { _sbSlip.push({ gameKey: betKey, type: 'wc_winner', awayAbbr: teamName, homeAbbr: 'FIFA World Cup', ml, line: 0, label: `${teamName} to win World Cup` }); }
+  _renderSbSlip();
+  _sbRenderWorldCupSection();
 }
 
 function _sbSetSport(sport) {
@@ -9279,10 +9458,10 @@ function _renderSbSlip() {
 
   html += _sbSlip.map(leg => `
     <div class="sb-slip-leg">
-      <div class="sb-slip-leg-icon">${leg.type === 'golf_winner' ? '⛳' : leg.type.startsWith('ml') ? '🏆' : leg.type.startsWith('spread') ? '📏' : '🎯'}</div>
+      <div class="sb-slip-leg-icon">${leg.type === 'golf_winner' ? '⛳' : leg.type.startsWith('wc_') ? '⚽' : leg.type.startsWith('ml') ? '🏆' : leg.type.startsWith('spread') ? '📏' : '🎯'}</div>
       <div class="sb-slip-leg-info">
         <div class="sb-slip-leg-pick">${_sbLegDesc(leg)}</div>
-        <div class="sb-slip-leg-game">${leg.type === 'golf_winner' ? leg.homeAbbr : leg.awayAbbr + ' @ ' + leg.homeAbbr}</div>
+        <div class="sb-slip-leg-game">${leg.type === 'golf_winner' ? leg.homeAbbr : leg.type.startsWith('wc_') ? leg.homeAbbr : leg.awayAbbr + ' @ ' + leg.homeAbbr}</div>
       </div>
       <div class="sb-slip-leg-odds ${leg.ml < 0 ? 'fav' : 'dog'}" style="color:${leg.ml < 0 ? 'var(--green)' : 'var(--accent2)'}">${_fmtML(leg.ml)}</div>
       <button class="sb-slip-leg-remove" onclick="_sbRemoveLeg('${leg.gameKey}','${leg.type}')">✕</button>
@@ -9972,10 +10151,13 @@ async function renderSportsbook() {
     html += `<div style="display:flex;gap:2px;margin-bottom:20px;background:var(--border);border-radius:8px;padding:2px">
       <button onclick="_sbSetSport('nba')" style="flex:1;padding:8px 0;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbActiveSport==='nba'?'var(--accent)':'transparent'};color:${_sbActiveSport==='nba'?'#fff':'var(--muted)'}"><img src="https://a.espncdn.com/i/teamlogos/leagues/500/nba.png" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:6px;opacity:${_sbActiveSport==='nba'?1:0.5}">NBA</button>
       <button onclick="_sbSetSport('golf')" style="flex:1;padding:8px 0;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbActiveSport==='golf'?'var(--accent)':'transparent'};color:${_sbActiveSport==='golf'?'#fff':'var(--muted)'}"><img src="https://a3.espncdn.com/combiner/i?img=%2Fi%2Fteamlogos%2Fleagues%2F500%2Fpgatour.png&w=80&h=80&scale=crop&cquality=80&location=origin" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:6px;opacity:${_sbActiveSport==='golf'?1:0.5}">PGA</button>
+      <button onclick="_sbSetSport('worldcup')" style="flex:1;padding:8px 0;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbActiveSport==='worldcup'?'var(--accent)':'transparent'};color:${_sbActiveSport==='worldcup'?'#fff':'var(--muted)'}"><img src="https://a.espncdn.com/i/teamlogos/soccer/500/FIFA.png" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:6px;opacity:${_sbActiveSport==='worldcup'?1:0.5}">WC</button>
     </div>`;
 
     if (_sbActiveSport === 'golf') {
       html += `<div id="sb-golf-content"><div style="text-align:center;padding:48px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem">Loading golf odds…</div></div>`;
+    } else if (_sbActiveSport === 'worldcup') {
+      html += `<div id="sb-wc-content"><div style="text-align:center;padding:48px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem">Loading World Cup odds…</div></div>`;
     } else {
 
     // Today's games
@@ -10092,8 +10274,9 @@ async function renderSportsbook() {
 
   container.innerHTML = html;
 
-  // Kick off async golf section fill if needed
+  // Kick off async section fill if needed
   if (_sbActiveSport === 'golf') _sbRenderGolfSection();
+  if (_sbActiveSport === 'worldcup') _sbRenderWorldCupSection();
 
   // Render bankroll history chart if canvas exists
   const chartCanvas = document.getElementById('sb-bankroll-chart');
