@@ -8269,6 +8269,9 @@ async function _sbFetchWcWinnerOdds() {
 }
 
 let _sbWcSubTab = 'matches'; // 'matches' | 'winner'
+let _sbWcRefreshInterval = null;
+const _sbWcPrevOdds  = {}; // `${eventId}_${type}` → previous price
+const _sbWcOddsFlash = {}; // `${eventId}_${type}` → { dir:'up'|'down', timerId }
 
 function _sbSetWcSubTab(tab) {
   _sbWcSubTab = tab;
@@ -8280,6 +8283,27 @@ async function _sbRenderWorldCupSection() {
   if (!el) return;
 
   const [matches, winnerEvents] = await Promise.all([_sbFetchWcMatchOdds(), _sbFetchWcWinnerOdds()]);
+
+  // Detect odds changes and set flash indicators
+  for (const ev of matches) {
+    const outcomes = ev.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
+    for (const o of outcomes) {
+      const type = o.name === ev.home_team ? 'home' : o.name === ev.away_team ? 'away' : 'draw';
+      const key = `${ev.id}_${type}`;
+      const prev = _sbWcPrevOdds[key];
+      if (prev !== undefined && prev !== o.price) {
+        // more negative (closer to -∞) = odds improved for that side = up arrow
+        const dir = o.price < prev ? 'up' : 'down';
+        if (_sbWcOddsFlash[key]) clearTimeout(_sbWcOddsFlash[key].timerId);
+        const timerId = setTimeout(() => {
+          delete _sbWcOddsFlash[key];
+          if (_sbActiveSport === 'worldcup' && _sbWcSubTab === 'matches') _sbRenderWorldCupSection();
+        }, 15000);
+        _sbWcOddsFlash[key] = { dir, timerId };
+      }
+      _sbWcPrevOdds[key] = o.price;
+    }
+  }
 
   // Subtab bar
   let html = `<div style="display:flex;gap:2px;margin-bottom:16px;background:var(--border);border-radius:8px;padding:2px">
@@ -8322,6 +8346,9 @@ async function _sbRenderWorldCupSection() {
           const homeFlag = _sbWcFlag(ev.home_team);
           const awayFlag = _sbWcFlag(ev.away_team);
           const kickoff = new Date(ev.commence_time).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
+          const flashDir = (type) => (_sbWcOddsFlash[`${ev.id}_${type}`] || {}).dir || null;
+          const flashBorder = (type) => { const d = flashDir(type); return d === 'up' ? 'border:2px solid #22c55e;' : d === 'down' ? 'border:2px solid #ef4444;' : ''; };
+          const flashArrow = (type) => { const d = flashDir(type); return d === 'up' ? `<span style="color:#22c55e;font-size:0.6rem;line-height:1;margin-left:3px">▲</span>` : d === 'down' ? `<span style="color:#ef4444;font-size:0.6rem;line-height:1;margin-left:3px">▼</span>` : ''; };
           html += `<div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04)">
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:1px;margin-bottom:8px">${kickoff}</div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
@@ -8336,9 +8363,9 @@ async function _sbRenderWorldCupSection() {
               </div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px">
-              ${home ? `<button class="sb-prop-btn yn${btnSel('home')}" onclick="${tog('home',ev.home_team,home.price)}" style="flex-direction:column;padding:7px 4px"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px">HOME</span><span class="prop-odds">${_fmtML(home.price)}</span></button>` : '<div></div>'}
-              ${draw ? `<button class="sb-prop-btn yn${btnSel('draw')}" onclick="${tog('draw','Draw',draw.price)}" style="flex-direction:column;padding:7px 4px"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px">DRAW</span><span class="prop-odds">${_fmtML(draw.price)}</span></button>` : '<div></div>'}
-              ${away ? `<button class="sb-prop-btn yn${btnSel('away')}" onclick="${tog('away',ev.away_team,away.price)}" style="flex-direction:column;padding:7px 4px"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px">AWAY</span><span class="prop-odds">${_fmtML(away.price)}</span></button>` : '<div></div>'}
+              ${home ? `<button class="sb-prop-btn yn${btnSel('home')}" onclick="${tog('home',ev.home_team,home.price)}" style="flex-direction:column;padding:7px 4px;${flashBorder('home')}"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px;display:flex;align-items:center;justify-content:center">HOME${flashArrow('home')}</span><span class="prop-odds">${_fmtML(home.price)}</span></button>` : '<div></div>'}
+              ${draw ? `<button class="sb-prop-btn yn${btnSel('draw')}" onclick="${tog('draw','Draw',draw.price)}" style="flex-direction:column;padding:7px 4px;${flashBorder('draw')}"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px;display:flex;align-items:center;justify-content:center">DRAW${flashArrow('draw')}</span><span class="prop-odds">${_fmtML(draw.price)}</span></button>` : '<div></div>'}
+              ${away ? `<button class="sb-prop-btn yn${btnSel('away')}" onclick="${tog('away',ev.away_team,away.price)}" style="flex-direction:column;padding:7px 4px;${flashBorder('away')}"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px;display:flex;align-items:center;justify-content:center">AWAY${flashArrow('away')}</span><span class="prop-odds">${_fmtML(away.price)}</span></button>` : '<div></div>'}
             </div>
           </div>`;
         }
@@ -8403,6 +8430,10 @@ function _sbToggleWcWinner(betKey, teamName, ml) {
 }
 
 function _sbSetSport(sport) {
+  if (sport !== 'worldcup') {
+    clearInterval(_sbWcRefreshInterval);
+    _sbWcRefreshInterval = null;
+  }
   _sbActiveSport = sport;
   renderSportsbook();
 }
@@ -10283,7 +10314,15 @@ async function renderSportsbook() {
 
   // Kick off async section fill if needed
   if (_sbActiveSport === 'golf') _sbRenderGolfSection();
-  if (_sbActiveSport === 'worldcup') _sbRenderWorldCupSection();
+  if (_sbActiveSport === 'worldcup') {
+    _sbRenderWorldCupSection();
+    if (!_sbWcRefreshInterval) {
+      _sbWcRefreshInterval = setInterval(() => {
+        _sbWcMatchCache.ts = 0;
+        if (_sbActiveSport === 'worldcup') _sbRenderWorldCupSection();
+      }, 120000);
+    }
+  }
 
   // Render bankroll history chart if canvas exists
   const chartCanvas = document.getElementById('sb-bankroll-chart');
