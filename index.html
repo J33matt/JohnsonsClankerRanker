@@ -9261,7 +9261,7 @@ async function _sbFixSpainPushBet() {
 
 // ── One-time migration: rebuild history walking backward from 06-14 anchor ──
 async function _sbFixHistoryChart() {
-  if (!_sbProfile || _sbProfile._dsFixed10) return;
+  if (!_sbProfile || _sbProfile._dsFixed11) return;
   try {
     const bets = await _sbLoadBets();
     const settled = (bets || [])
@@ -9286,13 +9286,21 @@ async function _sbFixHistoryChart() {
 
     const history = new Map(Object.entries(PINNED));
 
-    // Walk backward from 06-14 ($692.94) for all dates before it
-    // This is the most accurate direction since 06-14 is the most recent known-correct value
+    // Ensure 06-14 is in allDates so the anchor index is always valid
+    if (!allDates.includes('2026-06-14')) {
+      const ins = allDates.findIndex(d => d > '2026-06-14');
+      ins === -1 ? allDates.push('2026-06-14') : allDates.splice(ins, 0, '2026-06-14');
+    }
+    const anchorIdx = allDates.indexOf('2026-06-14');
+
+    // Correct backward walk: end_of_D = end_of_D_next - net_of_D_next
+    // We subtract the NEXT date's net (not the current date's) to get the current date's end balance.
     let running = 692.94;
-    for (const date of [...allDates].reverse()) {
-      if (date >= '2026-06-14') continue;
-      if (PINNED[date] !== undefined) { running = PINNED[date]; continue; }
-      running -= (netByDate.get(date) || 0);
+    for (let i = anchorIdx - 1; i >= 0; i--) {
+      const date = allDates[i];
+      const nextDate = allDates[i + 1];
+      running -= (netByDate.get(nextDate) || 0);
+      if (PINNED[date] !== undefined) running = PINNED[date]; // reset to known-correct anchor
       history.set(date, Math.round(running * 100) / 100);
     }
 
@@ -9305,6 +9313,7 @@ async function _sbFixHistoryChart() {
     _sbProfile._dsFixed8 = true;
     _sbProfile._dsFixed9 = true;
     _sbProfile._dsFixed10 = true;
+    _sbProfile._dsFixed11 = true;
     await _sbSaveProfile();
   } catch(e) { console.warn('[SB] rebuildHistoryAnchored failed:', e); }
 }
