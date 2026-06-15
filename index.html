@@ -8381,10 +8381,12 @@ async function _sbRenderWorldCupSection() {
 
 function _sbToggleWcLeg(eventId, type, teamName, homeTeam, awayTeam, ml) {
   const gameKey = `wc_${eventId}_${type}`;
-  const existIdx = _sbSlip.findIndex(l => l.gameKey.startsWith(`wc_${eventId}_`));
-  if (existIdx !== -1) _sbSlip.splice(existIdx, 1);
-  const already = _sbSlip.some(l => l.gameKey === gameKey);
-  if (!already) {
+  const sameIdx = _sbSlip.findIndex(l => l.gameKey === gameKey);
+  if (sameIdx !== -1) {
+    _sbSlip.splice(sameIdx, 1); // same button clicked again → deselect
+  } else {
+    const otherIdx = _sbSlip.findIndex(l => l.gameKey.startsWith(`wc_${eventId}_`));
+    if (otherIdx !== -1) _sbSlip.splice(otherIdx, 1); // swap to different outcome
     const label = type === 'draw' ? 'Draw' : `${teamName} to win`;
     _sbSlip.push({ gameKey, type: `wc_${type}`, awayAbbr: teamName, homeAbbr: `${homeTeam} vs ${awayTeam}`, ml, line: 0, label });
   }
