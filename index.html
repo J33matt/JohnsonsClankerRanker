@@ -9233,6 +9233,36 @@ async function _sbFixHistoryGlitch2() {
   await _sbSaveProfile();
 }
 
+// ── One-time fix: correct Spain vs Cape Verde push→loss and bad bankroll ─────
+async function _sbFixSpainPushBet() {
+  if (!_sbProfile || _sbProfile._dsFixed5) return;
+  try {
+    const bets = await _sbLoadBets();
+    let changed = false;
+    for (const b of bets) {
+      // Find the mis-settled Spain home bet on 2026-06-15
+      if (b.date === '2026-06-15' && b.result === 'push' &&
+          b.legs?.[0]?.type === 'wc_home' && Math.abs((b.stake || 0) - 690) < 1) {
+        b.result = 'loss';
+        b.payout = 0;
+        b.net = -(b.stake || 0);
+        changed = true;
+      }
+    }
+    if (changed) await _sbSaveBets(bets);
+    // Recompute correct bankroll from all bet records
+    let correct = _sbProfile.startBalance || 100;
+    for (const b of bets) {
+      if (b.status === 'settled') correct += (b.payout || 0) - (b.stake || 0);
+      else if (b.status === 'open') correct -= (b.stake || 0);
+    }
+    _sbProfile.bankroll = Math.max(0, correct);
+    _sbProfile._dsFixed5 = true;
+    await _sbSaveProfile();
+    await _sbSaveLeaderboard();
+  } catch(e) { console.warn('[SB] spainFix failed:', e); }
+}
+
 // ── One-time migration: fix prop bet labels (YES/NO → market name) ──────────
 async function _sbFixPropLabels() {
   try {
@@ -10201,6 +10231,7 @@ async function renderSportsbook() {
     await _sbFixDoubleSettleBug2();     // one-time: hard-set correct balance to $692.94
     await _sbFixHistoryGlitch();        // one-time: replace $1385.88 history entry with $692.94
     await _sbFixHistoryGlitch2();       // one-time: fix 2026-04-07 entry ($0.80 → $280.00)
+    await _sbFixSpainPushBet();         // one-time: fix Spain vs Cape Verde push→loss, correct bankroll
     await _sbFixPropLabels();   // one-time: fix "YES"/"NO" prop labels to include market name
   }
 
