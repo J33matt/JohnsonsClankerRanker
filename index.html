@@ -8986,7 +8986,7 @@ async function _sbSaveLeaderboard() {
     bankroll: _sbProfile.bankroll,
     w: _sbProfile.allTimeW || 0,
     l: _sbProfile.allTimeL || 0,
-    net: _sbProfile.allTimeNet || 0,
+    net: (_sbProfile.bankroll || 0) + atRisk - (_sbProfile.startBalance || 100),
     bets: totalBets,
     atRisk, potReturn, liveBets,
     allTimeWagered: _sbProfile.allTimeWagered || 0,
@@ -10240,7 +10240,10 @@ async function renderSportsbook() {
   const isBroke = (_sbProfile.bankroll || 0) <= 0;
   const openBets = bets.filter(b => b.status === 'open');
   const settledBets = bets.filter(b => b.status === 'settled');
-  const totalNet = _sbProfile.allTimeNet || 0;
+  // Derive net from bankroll — this is always accurate regardless of historical tracking bugs
+  // or broke resets. Net = how much more you have (in hand + in play) vs. when you started.
+  const openStakes = openBets.reduce((s, b) => s + (b.stake || 0), 0);
+  const totalNet = (_sbProfile.bankroll || 0) + openStakes - (_sbProfile.startBalance || 100);
   const netCls = totalNet > 0 ? 'up' : totalNet < 0 ? 'dn' : '';
   const netStr = (totalNet >= 0 ? '+' : '') + '$' + Math.abs(totalNet).toFixed(2);
   const totalWagered = settledBets.reduce((s, b) => s + (b.stake || 0), 0);
