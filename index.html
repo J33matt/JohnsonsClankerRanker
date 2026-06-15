@@ -8389,7 +8389,7 @@ async function _sbRenderWorldCupSection() {
   const el = document.getElementById('sb-wc-content');
   if (!el) return;
 
-  const [matches, winnerEvents] = await Promise.all([_sbFetchWcMatchOdds(), _sbFetchWcWinnerOdds()]);
+  const [matches, winnerEvents, wcScores] = await Promise.all([_sbFetchWcMatchOdds(), _sbFetchWcWinnerOdds(), _sbFetchWcScores().catch(() => ({}))]);
 
   // Detect odds changes and set flash indicators
   for (const ev of matches) {
@@ -8424,6 +8424,9 @@ async function _sbRenderWorldCupSection() {
     for (const ev of matches) {
       const outcomes = ev.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
       if (!outcomes.length) continue;
+      // Hide games already at full time
+      const _evScKey = [_sbWcNormName(ev.home_team), _sbWcNormName(ev.away_team)].sort().join('|');
+      if (wcScores[_evScKey]?.state === 'post') continue;
       const d = new Date(ev.commence_time);
       // Group by local date; games before 4 AM count as the previous night
       const groupDate = new Date(d);
@@ -9320,12 +9323,39 @@ async function _sbAutoSettle() {
   if (!_sbProfile) return;
   let changed = false;
 
+  // Fetch WC scores once for the whole settle pass (uses 30s cache)
+  const _wcSettleScores = await _sbFetchWcScores().catch(() => ({}));
+
   for (const bet of open) {
     const games = allGames[bet.date] || [];
     let finalResult = null;
     let payout = 0;
 
-    if (bet.betType === 'single') {
+    // WC match bets settle via ESPN soccer scoreboard, not the NBA scoreboard
+    if (bet.legs?.some(l => l.type === 'wc_home' || l.type === 'wc_away' || l.type === 'wc_draw')) {
+      const leg = bet.legs[0];
+      const vsIdx = (leg.homeAbbr || '').indexOf(' vs ');
+      if (vsIdx === -1) continue;
+      const oddsHome = leg.homeAbbr.slice(0, vsIdx).trim();
+      const oddsAway = leg.homeAbbr.slice(vsIdx + 4).trim();
+      const key = [_sbWcNormName(oddsHome), _sbWcNormName(oddsAway)].sort().join('|');
+      const sc = _wcSettleScores[key];
+      if (!sc || sc.state !== 'post') continue;
+      const espnHomeScore = parseInt(sc.homeScore, 10);
+      const espnAwayScore = parseInt(sc.awayScore, 10);
+      if (isNaN(espnHomeScore) || isNaN(espnAwayScore)) continue;
+      const homeIsHome = _sbWcNormName(sc.espnHome) === _sbWcNormName(oddsHome);
+      const oddsHomeScore = homeIsHome ? espnHomeScore : espnAwayScore;
+      const oddsAwayScore = homeIsHome ? espnAwayScore : espnHomeScore;
+      if (leg.type === 'wc_home')
+        finalResult = oddsHomeScore > oddsAwayScore ? 'win' : oddsHomeScore < oddsAwayScore ? 'loss' : 'push';
+      else if (leg.type === 'wc_away')
+        finalResult = oddsAwayScore > oddsHomeScore ? 'win' : oddsAwayScore < oddsHomeScore ? 'loss' : 'push';
+      else if (leg.type === 'wc_draw')
+        finalResult = oddsHomeScore === oddsAwayScore ? 'win' : 'loss';
+      if (!finalResult) continue;
+      payout = finalResult === 'win' ? bet.stake + _mlPayout(leg.ml, bet.stake) : finalResult === 'push' ? bet.stake : 0;
+    } else if (bet.betType === 'single') {
       const leg = bet.legs[0];
       const searchGames = [-1, 1, 2].reduce((acc, offset) => {
         const adj = new Date(bet.date + 'T12:00:00'); adj.setDate(adj.getDate() + offset);
@@ -10469,9 +10499,10 @@ async function renderSportsbook() {
       }, 120000);
     }
     if (!_sbWcScoreInterval) {
-      _sbWcScoreInterval = setInterval(() => {
+      _sbWcScoreInterval = setInterval(async () => {
         _sbWcScoreCache.ts = 0;
-        _sbUpdateWcScores();
+        await _sbUpdateWcScores();
+        _sbAutoSettle().catch(() => {});
       }, 30000);
     }
   }
