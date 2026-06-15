@@ -10237,8 +10237,8 @@ async function renderSportsbook() {
   // Reload after picks are placed so we always display the freshest bets
   const botBets = await _botLoadBets();
 
-  const isBroke = (_sbProfile.bankroll || 0) <= 0;
   const openBets = bets.filter(b => b.status === 'open');
+  const isBroke = (_sbProfile.bankroll || 0) <= 0 && openBets.length === 0;
   const settledBets = bets.filter(b => b.status === 'settled');
   // Derive net from bankroll — this is always accurate regardless of historical tracking bugs
   // or broke resets. Net = how much more you have (in hand + in play) vs. when you started.
