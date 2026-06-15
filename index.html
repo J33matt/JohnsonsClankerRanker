@@ -9235,7 +9235,7 @@ async function _sbFixHistoryGlitch2() {
 
 // ── One-time fix: correct Spain vs Cape Verde push→loss and bad bankroll ─────
 async function _sbFixSpainPushBet() {
-  if (!_sbProfile || _sbProfile._dsFixed5) return;
+  if (!_sbProfile || _sbProfile._dsFixed6) return;
   try {
     const bets = await _sbLoadBets();
     let changed = false;
@@ -9251,7 +9251,7 @@ async function _sbFixSpainPushBet() {
     }
     if (changed) await _sbSaveBets(bets);
     _sbProfile.bankroll = 2.94;
-    _sbProfile._dsFixed5 = true;
+    _sbProfile._dsFixed6 = true;
     await _sbSaveProfile();
     await _sbSaveLeaderboard();
   } catch(e) { console.warn('[SB] spainFix failed:', e); }
