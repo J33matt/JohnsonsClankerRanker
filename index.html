@@ -9257,29 +9257,50 @@ async function _sbFixSpainPushBet() {
   } catch(e) { console.warn('[SB] spainFix failed:', e); }
 }
 
-// ── One-time migration: restore history chart after corrupt 2026-06-15 duplicates ──
+// ── One-time migration: rebuild full bankroll history from settled bet records ──
 async function _sbFixHistoryChart() {
-  if (!_sbProfile || _sbProfile._dsFixed7) return;
+  if (!_sbProfile || _sbProfile._dsFixed8) return;
   try {
-    // Remove corrupt 2026-06-15 entries (both had the same date, collapsing to 1 after dedup)
-    const cleaned = (_sbProfile.history || []).filter(h => h.date !== '2026-06-15');
-    // Restore known correct data points
-    const known = [
-      { date: '2026-04-07', balance: 280.00 },
-      { date: '2026-06-15', balance: 2.94 }
-    ];
-    for (const pt of known) {
-      if (!cleaned.some(h => h.date === pt.date)) cleaned.push(pt);
+    const bets = await _sbLoadBets();
+    const settled = (bets || [])
+      .filter(b => b.status === 'settled')
+      .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+    // Walk settled bets in order, accumulating running balance per date
+    let running = _sbProfile.startBalance || 100;
+    const byDate = new Map();
+    for (const b of settled) {
+      running += (b.net || 0);
+      byDate.set(b.date, Math.round(running * 100) / 100);
     }
-    // Guarantee at least a start entry if we're still short
-    if (cleaned.length < 2) {
-      cleaned.unshift({ date: _sbProfile.startDate || '2026-01-01', balance: _sbProfile.startBalance || 100 });
+
+    // Build sorted history array
+    const history = [];
+    // Add a start entry on startDate (if different from first bet date)
+    const startDate = _sbProfile.startDate;
+    if (startDate && !byDate.has(startDate)) {
+      history.push({ date: startDate, balance: _sbProfile.startBalance || 100 });
     }
-    cleaned.sort((a, b) => a.date.localeCompare(b.date));
-    _sbProfile.history = cleaned;
+    for (const [date, bal] of byDate) {
+      history.push({ date, balance: bal });
+    }
+    history.sort((a, b) => a.date.localeCompare(b.date));
+
+    // Always override today's entry with the known-correct hard value
+    const todayIdx = history.findIndex(h => h.date === '2026-06-15');
+    if (todayIdx >= 0) history[todayIdx].balance = 2.94;
+    else history.push({ date: '2026-06-15', balance: 2.94 });
+
+    // Guarantee at least 2 entries so the chart renders
+    if (history.length < 2) {
+      history.unshift({ date: startDate || '2026-01-01', balance: _sbProfile.startBalance || 100 });
+    }
+
+    _sbProfile.history = history;
     _sbProfile._dsFixed7 = true;
+    _sbProfile._dsFixed8 = true;
     await _sbSaveProfile();
-  } catch(e) { console.warn('[SB] historyChartFix failed:', e); }
+  } catch(e) { console.warn('[SB] rebuildHistory failed:', e); }
 }
 
 // ── One-time migration: fix prop bet labels (YES/NO → market name) ──────────
