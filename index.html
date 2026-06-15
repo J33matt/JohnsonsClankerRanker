@@ -10507,7 +10507,7 @@ async function renderSportsbook() {
       let d = new Date(prev.date + 'T00:00:00');
       d.setDate(d.getDate() + 1);
       while (d.toISOString().slice(0, 10) < cur.date) {
-        filled.push({ date: d.toISOString().slice(0, 10), balance: prev.balance });
+        filled.push({ date: d.toISOString().slice(0, 10), balance: prev.balance, noData: true });
         d.setDate(d.getDate() + 1);
       }
       filled.push(cur);
@@ -10879,6 +10879,9 @@ function _sbRenderBankrollChart(canvas, history) {
 
   const color = isUp ? '#00e87a' : '#ff3355';
   const fillColor = isUp ? 'rgba(0,232,122,0.12)' : 'rgba(255,51,85,0.12)';
+  const dotSize = data.length <= 10 ? 4 : 2;
+  const pointRadii = history.map(h => h.noData ? 0 : dotSize);
+  const pointHoverRadii = history.map(h => h.noData ? 0 : dotSize + 2);
 
   new Chart(canvas, {
     type: 'line',
@@ -10891,7 +10894,8 @@ function _sbRenderBankrollChart(canvas, history) {
         borderWidth: 2,
         fill: true,
         tension: 0.35,
-        pointRadius: data.length <= 10 ? 4 : 2,
+        pointRadius: pointRadii,
+        pointHoverRadius: pointHoverRadii,
         pointBackgroundColor: color,
         pointBorderColor: color,
       }]
