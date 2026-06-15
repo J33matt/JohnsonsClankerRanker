@@ -8356,18 +8356,14 @@ async function _sbFetchWcScores() {
 
 function _sbWcScoreHTML(sc, oddsHomeTeam) {
   if (!sc || sc.state === 'pre') return '';
-  // Align home/away scores to the Odds API's home team
   const homeIsHome = _sbWcNormName(sc.espnHome) === _sbWcNormName(oddsHomeTeam);
   const scoreLeft  = homeIsHome ? sc.homeScore : sc.awayScore;
   const scoreRight = homeIsHome ? sc.awayScore : sc.homeScore;
   const isLive = sc.state === 'in';
-  const liveLabel = `<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:7px;height:7px;background:#ef4444;border-radius:50%;display:inline-block;animation:wc-live-dot 1.2s ease-in-out infinite;flex-shrink:0"></span>LIVE</span>`;
-  const statusLabel = isLive ? liveLabel : (sc.shortDetail || 'FT');
-  return `<div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 0 2px;font-family:'Barlow Condensed',sans-serif">
-    <span style="font-size:0.7rem;color:${isLive?'#ef4444':'var(--muted)'};letter-spacing:2px;font-weight:700;text-transform:uppercase;display:flex;align-items:center">${statusLabel}</span>
-    <span style="font-size:1.15rem;font-weight:700;color:var(--text);letter-spacing:3px">${scoreLeft} – ${scoreRight}</span>
-    ${isLive && sc.shortDetail ? `<span style="font-size:0.7rem;color:var(--muted);letter-spacing:1px">${sc.shortDetail}</span>` : ''}
-  </div>`;
+  const topLine = isLive
+    ? `<span style="display:flex;align-items:center;gap:3px;font-size:0.62rem;color:#ef4444;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif"><span style="width:5px;height:5px;background:#ef4444;border-radius:50%;flex-shrink:0;animation:wc-live-dot 1.2s ease-in-out infinite"></span>${sc.shortDetail||'LIVE'}</span>`
+    : `<span style="font-size:0.62rem;color:var(--muted);font-weight:700;letter-spacing:1.5px;font-family:'Barlow Condensed',sans-serif">${sc.shortDetail||'FT'}</span>`;
+  return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px">${topLine}<span style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--text);letter-spacing:1px;line-height:1.15">${scoreLeft}–${scoreRight}</span></div>`;
 }
 
 async function _sbUpdateWcScores() {
@@ -8378,7 +8374,9 @@ async function _sbUpdateWcScores() {
     const el = document.getElementById(`wc-score-${ev.id}`);
     if (!el) continue;
     const key = [_sbWcNormName(ev.home_team), _sbWcNormName(ev.away_team)].sort().join('|');
-    el.innerHTML = _sbWcScoreHTML(scores[key], ev.home_team);
+    const sc = scores[key];
+    if (!sc || sc.state === 'pre') continue; // leave VS as-is for upcoming games
+    el.innerHTML = _sbWcScoreHTML(sc, ev.home_team);
   }
 }
 
@@ -8459,14 +8457,13 @@ async function _sbRenderWorldCupSection() {
           const flashBorder = (type) => { const d = flashDir(type); return d === 'up' ? 'animation:wc-flash-up 15s ease forwards;' : d === 'down' ? 'animation:wc-flash-down 15s ease forwards;' : ''; };
           const flashArrow = (type) => { const d = flashDir(type); return d ? `<span style="color:${d==='up'?'#22c55e':'#ef4444'};font-size:0.6rem;line-height:1;margin-left:3px;animation:wc-arrow-fade 15s ease forwards;">${d==='up'?'▲':'▼'}</span>` : ''; };
           html += `<div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04)">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px">${kickoff}</div>
-            <div id="wc-score-${ev.id}"></div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:1px;margin-bottom:6px">${kickoff}</div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
               <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
                 ${homeFlag ? `<img src="${homeFlag}" style="width:36px;height:24px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
                 <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.home_team}</span>
               </div>
-              <span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--text);flex-shrink:0;opacity:0.6">VS</span>
+              <div id="wc-score-${ev.id}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;padding:0 6px;min-width:44px"><span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--text);opacity:0.5">VS</span></div>
               <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;justify-content:flex-end">
                 <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right">${ev.away_team}</span>
                 ${awayFlag ? `<img src="${awayFlag}" style="width:36px;height:24px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
