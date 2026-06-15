@@ -7314,6 +7314,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     from { transform: translateY(20px); opacity: 0; }
     to   { transform: translateY(0);    opacity: 1; }
   }
+  @keyframes wc-flash-up {
+    0%   { box-shadow: 0 0 0 0   #22c55e00; }
+    5%   { box-shadow: 0 0 0 2px #22c55e; }
+    20%  { box-shadow: 0 0 0 2px #22c55e44; }
+    35%  { box-shadow: 0 0 0 2px #22c55e; }
+    50%  { box-shadow: 0 0 0 2px #22c55e44; }
+    65%  { box-shadow: 0 0 0 2px #22c55e; }
+    80%  { box-shadow: 0 0 0 2px #22c55e44; }
+    92%  { box-shadow: 0 0 0 2px #22c55e; }
+    100% { box-shadow: 0 0 0 0   #22c55e00; }
+  }
+  @keyframes wc-flash-down {
+    0%   { box-shadow: 0 0 0 0   #ef444400; }
+    5%   { box-shadow: 0 0 0 2px #ef4444; }
+    20%  { box-shadow: 0 0 0 2px #ef444444; }
+    35%  { box-shadow: 0 0 0 2px #ef4444; }
+    50%  { box-shadow: 0 0 0 2px #ef444444; }
+    65%  { box-shadow: 0 0 0 2px #ef4444; }
+    80%  { box-shadow: 0 0 0 2px #ef444444; }
+    92%  { box-shadow: 0 0 0 2px #ef4444; }
+    100% { box-shadow: 0 0 0 0   #ef444400; }
+  }
+  @keyframes wc-arrow-fade {
+    0%   { opacity: 0; }
+    8%   { opacity: 1; }
+    88%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
 
   /* Bankroll chart */
   .sb-bankroll-chart-wrap {
@@ -8347,8 +8375,8 @@ async function _sbRenderWorldCupSection() {
           const awayFlag = _sbWcFlag(ev.away_team);
           const kickoff = new Date(ev.commence_time).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
           const flashDir = (type) => (_sbWcOddsFlash[`${ev.id}_${type}`] || {}).dir || null;
-          const flashBorder = (type) => { const d = flashDir(type); return d === 'up' ? 'border:2px solid #22c55e;' : d === 'down' ? 'border:2px solid #ef4444;' : ''; };
-          const flashArrow = (type) => { const d = flashDir(type); return d === 'up' ? `<span style="color:#22c55e;font-size:0.6rem;line-height:1;margin-left:3px">▲</span>` : d === 'down' ? `<span style="color:#ef4444;font-size:0.6rem;line-height:1;margin-left:3px">▼</span>` : ''; };
+          const flashBorder = (type) => { const d = flashDir(type); return d === 'up' ? 'animation:wc-flash-up 15s ease forwards;' : d === 'down' ? 'animation:wc-flash-down 15s ease forwards;' : ''; };
+          const flashArrow = (type) => { const d = flashDir(type); return d ? `<span style="color:${d==='up'?'#22c55e':'#ef4444'};font-size:0.6rem;line-height:1;margin-left:3px;animation:wc-arrow-fade 15s ease forwards;">${d==='up'?'▲':'▼'}</span>` : ''; };
           html += `<div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04)">
             <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:1px;margin-bottom:8px">${kickoff}</div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
