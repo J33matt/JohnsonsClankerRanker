@@ -9183,6 +9183,26 @@ async function _sbRebuildStatsFromHistory() {
   } catch(e) { console.warn('[SB] Stats rebuild failed:', e); }
 }
 
+// ── One-time balance correction: undo double-settlement from concurrency bug ──
+// Only applies to accounts with no broke resets (brokeCount===0), where the
+// correct bankroll can be derived purely from bet records + startBalance.
+async function _sbFixDoubleSettleBug() {
+  if (!_sbProfile || _sbProfile._dsFixed || (_sbProfile.brokeCount || 0) > 0) return;
+  try {
+    const bets = await _sbLoadBets();
+    let correct = _sbProfile.startBalance || 100;
+    for (const b of bets) {
+      if (b.status === 'settled') correct += (b.payout || 0) - (b.stake || 0);
+      else if (b.status === 'open') correct -= (b.stake || 0);
+    }
+    correct = Math.max(0, correct);
+    _sbProfile.bankroll = correct;
+    _sbProfile._dsFixed = true;
+    await _sbSaveProfile();
+    await _sbSaveLeaderboard();
+  } catch(e) { console.warn('[SB] dsFixed migration failed:', e); }
+}
+
 // ── One-time migration: fix prop bet labels (YES/NO → market name) ──────────
 async function _sbFixPropLabels() {
   try {
@@ -9293,7 +9313,11 @@ async function _sbSettleGolfBets(openGolfBets, allBets) {
 }
 
 // ── Auto-settle open bets ─────────────────────────────────────
+let _sbAutoSettleRunning = false;
 async function _sbAutoSettle() {
+  if (_sbAutoSettleRunning) return;
+  _sbAutoSettleRunning = true;
+  try {
   const bets = await _sbLoadBets();
   if (!bets.length) return;
   const open = bets.filter(b => b.status === 'open');
@@ -9495,6 +9519,9 @@ async function _sbAutoSettle() {
       await _sbSaveProfile();
       await _sbSaveLeaderboard();
     }
+  }
+  } finally {
+    _sbAutoSettleRunning = false;
   }
 }
 
@@ -10138,6 +10165,7 @@ async function renderSportsbook() {
     await _sbAutoSettle();
     await _sbMigrateEarnings();         // one-time: rebuild allTimeEarned/allTimeLost from history
     await _sbRebuildStatsFromHistory(); // one-time: sync allTimeNet with allTimeEarned − allTimeLost
+    await _sbFixDoubleSettleBug();      // one-time: correct bankroll from bet records after double-settle bug
     await _sbFixPropLabels();   // one-time: fix "YES"/"NO" prop labels to include market name
   }
 
