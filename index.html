@@ -11517,7 +11517,7 @@ function _sbToggleHistory() {
   const chevron = document.getElementById('sb-history-chevron');
   const card    = document.getElementById('sb-history-card');
   if (!body) return;
-  body.style.maxHeight      = _sbHistoryOpen ? '4000px' : '0';
+  body.style.maxHeight      = _sbHistoryOpen ? '30000px' : '0';
   body.style.borderTopWidth = _sbHistoryOpen ? '1px'   : '0';
   if (chevron) chevron.style.transform = _sbHistoryOpen ? 'rotate(180deg)' : '';
   if (card)    card.classList.toggle('open', _sbHistoryOpen);
@@ -11544,7 +11544,7 @@ function _renderSbHistory(bets) {
     return divider + _renderSbBetCard(b);
   }).join('');
 
-  const bodyMaxH   = _sbHistoryOpen ? '4000px' : '0';
+  const bodyMaxH   = _sbHistoryOpen ? '30000px' : '0';
   const bodyBorder = _sbHistoryOpen ? '1px' : '0';
   const chevronRot = _sbHistoryOpen ? 'transform:rotate(180deg)' : '';
 
