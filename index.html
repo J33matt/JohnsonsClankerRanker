@@ -8305,22 +8305,22 @@ async function _sbRenderWorldCupSection() {
         const homeFlag = _sbWcFlag(ev.home_team);
         const awayFlag = _sbWcFlag(ev.away_team);
 
-        rows += `<div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04)">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-            <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
-              ${homeFlag ? `<img src="${homeFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px;flex-shrink:0">` : ''}
-              <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.home_team}</span>
+        rows += `<div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
+              ${homeFlag ? `<img src="${homeFlag}" style="width:36px;height:24px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.home_team}</span>
             </div>
-            <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--muted);flex-shrink:0">vs</span>
-            <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;justify-content:flex-end">
-              <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right">${ev.away_team}</span>
-              ${awayFlag ? `<img src="${awayFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px;flex-shrink:0">` : ''}
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--text);flex-shrink:0;opacity:0.6">VS</span>
+            <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;justify-content:flex-end">
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right">${ev.away_team}</span>
+              ${awayFlag ? `<img src="${awayFlag}" style="width:36px;height:24px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
             </div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px">
-            ${home ? `<button class="sb-prop-btn yn${btnSel('home')}" onclick="${tog('home',ev.home_team,home.price)}" style="flex-direction:column;padding:6px 4px"><span style="font-size:0.65rem;opacity:0.7">HOME</span><span class="prop-odds">${_fmtML(home.price)}</span></button>` : '<div></div>'}
-            ${draw ? `<button class="sb-prop-btn yn${btnSel('draw')}" onclick="${tog('draw','Draw',draw.price)}" style="flex-direction:column;padding:6px 4px"><span style="font-size:0.65rem;opacity:0.7">DRAW</span><span class="prop-odds">${_fmtML(draw.price)}</span></button>` : '<div></div>'}
-            ${away ? `<button class="sb-prop-btn yn${btnSel('away')}" onclick="${tog('away',ev.away_team,away.price)}" style="flex-direction:column;padding:6px 4px"><span style="font-size:0.65rem;opacity:0.7">AWAY</span><span class="prop-odds">${_fmtML(away.price)}</span></button>` : '<div></div>'}
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px">
+            ${home ? `<button class="sb-prop-btn yn${btnSel('home')}" onclick="${tog('home',ev.home_team,home.price)}" style="flex-direction:column;padding:7px 4px"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px">HOME</span><span class="prop-odds">${_fmtML(home.price)}</span></button>` : '<div></div>'}
+            ${draw ? `<button class="sb-prop-btn yn${btnSel('draw')}" onclick="${tog('draw','Draw',draw.price)}" style="flex-direction:column;padding:7px 4px"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px">DRAW</span><span class="prop-odds">${_fmtML(draw.price)}</span></button>` : '<div></div>'}
+            ${away ? `<button class="sb-prop-btn yn${btnSel('away')}" onclick="${tog('away',ev.away_team,away.price)}" style="flex-direction:column;padding:7px 4px"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px">AWAY</span><span class="prop-odds">${_fmtML(away.price)}</span></button>` : '<div></div>'}
           </div>
         </div>`;
       }
@@ -10151,7 +10151,7 @@ async function renderSportsbook() {
     html += `<div style="display:flex;gap:2px;margin-bottom:20px;background:var(--border);border-radius:8px;padding:2px">
       <button onclick="_sbSetSport('nba')" style="flex:1;padding:8px 0;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbActiveSport==='nba'?'var(--accent)':'transparent'};color:${_sbActiveSport==='nba'?'#fff':'var(--muted)'}"><img src="https://a.espncdn.com/i/teamlogos/leagues/500/nba.png" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:6px;opacity:${_sbActiveSport==='nba'?1:0.5}">NBA</button>
       <button onclick="_sbSetSport('golf')" style="flex:1;padding:8px 0;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbActiveSport==='golf'?'var(--accent)':'transparent'};color:${_sbActiveSport==='golf'?'#fff':'var(--muted)'}"><img src="https://a3.espncdn.com/combiner/i?img=%2Fi%2Fteamlogos%2Fleagues%2F500%2Fpgatour.png&w=80&h=80&scale=crop&cquality=80&location=origin" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:6px;opacity:${_sbActiveSport==='golf'?1:0.5}">PGA</button>
-      <button onclick="_sbSetSport('worldcup')" style="flex:1;padding:8px 0;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbActiveSport==='worldcup'?'var(--accent)':'transparent'};color:${_sbActiveSport==='worldcup'?'#fff':'var(--muted)'}"><img src="https://png.pngtree.com/png-vector/20250923/ourmid/pngtree-the-fifa-world-cup-trophy-png-image_17551611.webp" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:6px;opacity:${_sbActiveSport==='worldcup'?1:0.5}">WC</button>
+      <button onclick="_sbSetSport('worldcup')" style="flex:1;padding:8px 0;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbActiveSport==='worldcup'?'var(--accent)':'transparent'};color:${_sbActiveSport==='worldcup'?'#fff':'var(--muted)'}"><img src="https://png.pngtree.com/png-vector/20250923/ourmid/pngtree-the-fifa-world-cup-trophy-png-image_17551611.webp" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:6px;opacity:${_sbActiveSport==='worldcup'?1:0.5}">World Cup</button>
     </div>`;
 
     if (_sbActiveSport === 'golf') {
