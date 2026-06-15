@@ -9257,50 +9257,56 @@ async function _sbFixSpainPushBet() {
   } catch(e) { console.warn('[SB] spainFix failed:', e); }
 }
 
-// ── One-time migration: rebuild full bankroll history from settled bet records ──
+// ── One-time migration: rebuild history using user-confirmed anchors + bet-record shape ──
 async function _sbFixHistoryChart() {
-  if (!_sbProfile || _sbProfile._dsFixed8) return;
+  if (!_sbProfile || _sbProfile._dsFixed9) return;
   try {
     const bets = await _sbLoadBets();
     const settled = (bets || [])
       .filter(b => b.status === 'settled')
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-    // Walk settled bets in order, accumulating running balance per date
-    let running = _sbProfile.startBalance || 100;
-    const byDate = new Map();
+    // Net P&L per date from bet records (used for shape between anchors)
+    const netByDate = new Map();
     for (const b of settled) {
-      running += (b.net || 0);
-      byDate.set(b.date, Math.round(running * 100) / 100);
+      netByDate.set(b.date, (netByDate.get(b.date) || 0) + (b.net || 0));
+    }
+    const allDates = [...new Set(settled.map(b => b.date))].sort();
+
+    // User-confirmed correct balances — these are pinned exactly
+    const history = new Map([
+      ['2026-04-06', 261.80],
+      ['2026-04-07', 280.00],
+      ['2026-04-08', 300.59],
+      ['2026-06-15', 2.94],
+    ]);
+
+    // Walk forward from 04-08 anchor using bet records for shape
+    let running = 300.59;
+    for (const date of allDates) {
+      if (date <= '2026-04-08' || date === '2026-06-15') continue;
+      running += (netByDate.get(date) || 0);
+      history.set(date, Math.round(running * 100) / 100);
     }
 
-    // Build sorted history array
-    const history = [];
-    // Add a start entry on startDate (if different from first bet date)
-    const startDate = _sbProfile.startDate;
-    if (startDate && !byDate.has(startDate)) {
-      history.push({ date: startDate, balance: _sbProfile.startBalance || 100 });
-    }
-    for (const [date, bal] of byDate) {
-      history.push({ date, balance: bal });
-    }
-    history.sort((a, b) => a.date.localeCompare(b.date));
-
-    // Always override today's entry with the known-correct hard value
-    const todayIdx = history.findIndex(h => h.date === '2026-06-15');
-    if (todayIdx >= 0) history[todayIdx].balance = 2.94;
-    else history.push({ date: '2026-06-15', balance: 2.94 });
-
-    // Guarantee at least 2 entries so the chart renders
-    if (history.length < 2) {
-      history.unshift({ date: startDate || '2026-01-01', balance: _sbProfile.startBalance || 100 });
+    // Walk backward from 04-06 anchor to estimate pre-April starting point
+    running = 261.80;
+    for (const date of [...allDates].reverse()) {
+      if (date >= '2026-04-06') continue;
+      running -= (netByDate.get(date) || 0);
+      history.set(date, Math.round(running * 100) / 100);
     }
 
-    _sbProfile.history = history;
+    const histArr = [...history.entries()]
+      .map(([date, balance]) => ({ date, balance }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    _sbProfile.history = histArr;
     _sbProfile._dsFixed7 = true;
     _sbProfile._dsFixed8 = true;
+    _sbProfile._dsFixed9 = true;
     await _sbSaveProfile();
-  } catch(e) { console.warn('[SB] rebuildHistory failed:', e); }
+  } catch(e) { console.warn('[SB] rebuildHistoryAnchored failed:', e); }
 }
 
 // ── One-time migration: fix prop bet labels (YES/NO → market name) ──────────
