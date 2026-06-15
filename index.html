@@ -9259,11 +9259,13 @@ async function _sbFixSpainPushBet() {
   } catch(e) { console.warn('[SB] spainFix failed:', e); }
 }
 
-// ── One-time migration: split history rebuild ──
+// ── One-time migration: history rebuild with known-good segments only ──
+// April 6-8: pinned anchors
 // June: backward walk from 06-14 (complete records — accurate)
-// Pre-June: forward walk from 04-08 pin (avoids inflated April values from missing bets)
+// April 9 – May 31: skipped (straight line on chart between 04-08 and first June point)
+// Pre-April: backward walk from 04-06
 async function _sbFixHistoryChart() {
-  if (!_sbProfile || _sbProfile._dsFixed12) return;
+  if (!_sbProfile || _sbProfile._dsFixed13) return;
   try {
     const bets = await _sbLoadBets();
     const settled = (bets || [])
@@ -9294,31 +9296,24 @@ async function _sbFixHistoryChart() {
     let running = 692.94;
     for (let i = anchorIdx - 1; i >= 0; i--) {
       const date = allDates[i];
-      if (date < '2026-06-01') break; // stop at June boundary
+      if (date < '2026-06-01') break;
       const nextDate = allDates[i + 1];
       running -= (netByDate.get(nextDate) || 0);
       history.set(date, Math.round(running * 100) / 100);
     }
 
-    // ── Forward walk from 04-08 for everything before June ──
-    const aprilIdx = allDates.indexOf('2026-04-08');
-    running = 300.59;
-    for (let i = aprilIdx + 1; i < allDates.length; i++) {
-      const date = allDates[i];
-      if (date >= '2026-06-01') break; // stop at June boundary
-      if (PINNED[date] !== undefined) { running = PINNED[date]; continue; }
-      running += (netByDate.get(date) || 0);
-      history.set(date, Math.round(running * 100) / 100);
-    }
+    // ── April 9 – May 31: skipped entirely (chart draws straight line) ──
 
     // ── Backward walk from 04-06 for pre-April dates ──
     const aprilStartIdx = allDates.indexOf('2026-04-06');
-    running = 261.80;
-    for (let i = aprilStartIdx - 1; i >= 0; i--) {
-      const date = allDates[i];
-      const nextDate = allDates[i + 1];
-      running -= (netByDate.get(nextDate) || 0);
-      history.set(date, Math.round(running * 100) / 100);
+    if (aprilStartIdx > 0) {
+      running = 261.80;
+      for (let i = aprilStartIdx - 1; i >= 0; i--) {
+        const date = allDates[i];
+        const nextDate = allDates[i + 1];
+        running -= (netByDate.get(nextDate) || 0);
+        history.set(date, Math.round(running * 100) / 100);
+      }
     }
 
     const histArr = [...history.entries()]
@@ -9332,6 +9327,7 @@ async function _sbFixHistoryChart() {
     _sbProfile._dsFixed10 = true;
     _sbProfile._dsFixed11 = true;
     _sbProfile._dsFixed12 = true;
+    _sbProfile._dsFixed13 = true;
     await _sbSaveProfile();
   } catch(e) { console.warn('[SB] rebuildHistoryAnchored failed:', e); }
 }
