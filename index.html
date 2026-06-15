@@ -8294,7 +8294,10 @@ async function _sbRenderWorldCupSection() {
       const outcomes = ev.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
       if (!outcomes.length) continue;
       const d = new Date(ev.commence_time);
-      const dateKey = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', timeZone:'UTC' });
+      // Group by local date; games before 4 AM count as the previous night
+      const groupDate = new Date(d);
+      if (groupDate.getHours() < 4) groupDate.setDate(groupDate.getDate() - 1);
+      const dateKey = groupDate.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
       if (!byDate[dateKey]) byDate[dateKey] = [];
       byDate[dateKey].push(ev);
     }
