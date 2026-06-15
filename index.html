@@ -10486,6 +10486,22 @@ async function renderSportsbook() {
   const _histMap = new Map();
   for (const h of _histRaw) _histMap.set(h.date, h);
   const hist = [..._histMap.values()].sort((a, b) => a.date.localeCompare(b.date));
+  // Fill in days with no bets so the chart is continuous (carry forward previous balance)
+  if (hist.length >= 2) {
+    const filled = [hist[0]];
+    for (let i = 1; i < hist.length; i++) {
+      const prev = filled[filled.length - 1];
+      const cur = hist[i];
+      let d = new Date(prev.date + 'T00:00:00');
+      d.setDate(d.getDate() + 1);
+      while (d.toISOString().slice(0, 10) < cur.date) {
+        filled.push({ date: d.toISOString().slice(0, 10), balance: prev.balance });
+        d.setDate(d.getDate() + 1);
+      }
+      filled.push(cur);
+    }
+    hist.splice(0, hist.length, ...filled);
+  }
   if (hist.length >= 2) {
     html += `<div class="sb-bankroll-chart-wrap">
       <div class="sb-section-label" style="margin-bottom:12px">📈 Bankroll History</div>
@@ -11519,7 +11535,7 @@ function _renderSbHistory(bets) {
   const netStr   = `${totalNet >= 0 ? '+' : ''}$${Math.abs(totalNet).toFixed(2)}`;
 
   let lastDate = null;
-  const cards = settled.slice(0, 40).map(b => {
+  const cards = settled.map(b => {
     let divider = '';
     if (b.date !== lastDate) {
       lastDate = b.date;
