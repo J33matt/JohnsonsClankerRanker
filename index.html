@@ -9203,6 +9203,14 @@ async function _sbFixDoubleSettleBug() {
   } catch(e) { console.warn('[SB] dsFixed migration failed:', e); }
 }
 
+async function _sbFixDoubleSettleBug2() {
+  if (!_sbProfile || _sbProfile._dsFixed2) return;
+  _sbProfile.bankroll = 692.94;
+  _sbProfile._dsFixed2 = true;
+  await _sbSaveProfile();
+  await _sbSaveLeaderboard();
+}
+
 // ── One-time migration: fix prop bet labels (YES/NO → market name) ──────────
 async function _sbFixPropLabels() {
   try {
@@ -10166,6 +10174,7 @@ async function renderSportsbook() {
     await _sbMigrateEarnings();         // one-time: rebuild allTimeEarned/allTimeLost from history
     await _sbRebuildStatsFromHistory(); // one-time: sync allTimeNet with allTimeEarned − allTimeLost
     await _sbFixDoubleSettleBug();      // one-time: correct bankroll from bet records after double-settle bug
+    await _sbFixDoubleSettleBug2();     // one-time: hard-set correct balance to $692.94
     await _sbFixPropLabels();   // one-time: fix "YES"/"NO" prop labels to include market name
   }
 
