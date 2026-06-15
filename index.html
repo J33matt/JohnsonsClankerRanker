@@ -8962,20 +8962,24 @@ async function _sbSaveLeaderboard() {
   const userKey = 'leaderboard.' + safeNick;
   const totalBets = (_sbProfile.allTimeW || 0) + (_sbProfile.allTimeL || 0);
 
-  // Compute live-bet stats from open bets
-  let atRisk = 0, potReturn = 0, liveBets = 0;
+  // Compute all stats live from bet records — never trust stored counters
+  let atRisk = 0, potReturn = 0, liveBets = 0, lbEarned = 0, lbLost = 0;
   try {
     const bets = await _sbLoadBets();
     for (const b of bets) {
-      if (b.status !== 'open') continue;
-      liveBets++;
-      atRisk += b.stake || 0;
-      if (b.potentialPayout != null) {
-        potReturn += b.potentialPayout;
-      } else if (b.betType === 'parlay' && b.parlayML) {
-        potReturn += (b.stake || 0) + _mlPayout(b.parlayML, b.stake || 0);
-      } else if (b.ml) {
-        potReturn += (b.stake || 0) + _mlPayout(b.ml, b.stake || 0);
+      if (b.status === 'open') {
+        liveBets++;
+        atRisk += b.stake || 0;
+        if (b.potentialPayout != null) {
+          potReturn += b.potentialPayout;
+        } else if (b.betType === 'parlay' && b.parlayML) {
+          potReturn += (b.stake || 0) + _mlPayout(b.parlayML, b.stake || 0);
+        } else if (b.ml) {
+          potReturn += (b.stake || 0) + _mlPayout(b.ml, b.stake || 0);
+        }
+      } else if (b.status === 'settled') {
+        if (b.result === 'win')  lbEarned += Math.max(0, (b.payout || 0) - (b.stake || 0));
+        if (b.result === 'loss') lbLost   += b.stake || 0;
       }
     }
   } catch(e) {}
@@ -8990,8 +8994,8 @@ async function _sbSaveLeaderboard() {
     bets: totalBets,
     atRisk, potReturn, liveBets,
     allTimeWagered: _sbProfile.allTimeWagered || 0,
-    allTimeEarned: _sbProfile.allTimeEarned || 0,
-    allTimeLost: _sbProfile.allTimeLost || 0,
+    allTimeEarned: lbEarned,
+    allTimeLost: lbLost,
     brokeCount: _sbProfile.brokeCount || 0,
     ts: Date.now()
   };
@@ -10246,7 +10250,13 @@ async function renderSportsbook() {
   const totalNet = (_sbProfile.bankroll || 0) + openStakes - (_sbProfile.startBalance || 100);
   const netCls = totalNet > 0 ? 'up' : totalNet < 0 ? 'dn' : '';
   const netStr = (totalNet >= 0 ? '+' : '') + '$' + Math.abs(totalNet).toFixed(2);
-  const totalWagered = settledBets.reduce((s, b) => s + (b.stake || 0), 0);
+  // Compute earnings/losses live from bet records — never trust stored counters
+  let allTimeEarned = 0, allTimeLost = 0, totalWagered = 0;
+  for (const b of settledBets) {
+    totalWagered += b.stake || 0;
+    if (b.result === 'win')  allTimeEarned += Math.max(0, (b.payout || 0) - (b.stake || 0));
+    if (b.result === 'loss') allTimeLost   += b.stake || 0;
+  }
   const roi = totalWagered > 0
     ? ((totalNet / totalWagered) * 100).toFixed(1)
     : '0.0';
