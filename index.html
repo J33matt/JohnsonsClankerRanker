@@ -7342,6 +7342,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     88%  { opacity: 1; }
     100% { opacity: 0; }
   }
+  @keyframes wc-live-dot {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.15; }
+  }
 
   /* Bankroll chart */
   .sb-bankroll-chart-wrap {
@@ -8300,6 +8304,75 @@ let _sbWcSubTab = 'matches'; // 'matches' | 'winner'
 let _sbWcRefreshInterval = null;
 const _sbWcPrevOdds  = {}; // `${eventId}_${type}` → previous price
 const _sbWcOddsFlash = {}; // `${eventId}_${type}` → { dir:'up'|'down', timerId }
+const _sbWcScoreCache = { ts: 0, data: null };
+let _sbWcScoreInterval = null;
+
+// Normalize team names for ESPN ↔ Odds API matching
+function _sbWcNormName(s) {
+  const aliases = {
+    'south korea':'republic of korea','korea republic':'republic of korea',
+    'usa':'united states','ir iran':'iran',
+    'ivory coast':"cote d ivoire","côte d'ivoire":"cote d ivoire","cote d'ivoire":"cote d ivoire",
+  };
+  const n = (s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+  return aliases[n] || n;
+}
+
+async function _sbFetchWcScores() {
+  if (_sbWcScoreCache.data && Date.now() - _sbWcScoreCache.ts < 30000) return _sbWcScoreCache.data;
+  try {
+    const d = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world_cup/scoreboard').then(r => r.json());
+    const result = {};
+    for (const ev of d.events || []) {
+      const comp = ev.competitions?.[0];
+      if (!comp) continue;
+      const homeC = comp.competitors?.find(c => c.homeAway === 'home');
+      const awayC = comp.competitors?.find(c => c.homeAway === 'away');
+      if (!homeC || !awayC) continue;
+      // Key by sorted normalized names so home/away order doesn't matter
+      const key = [_sbWcNormName(homeC.team?.displayName), _sbWcNormName(awayC.team?.displayName)].sort().join('|');
+      result[key] = {
+        espnHome: homeC.team?.displayName,
+        espnAway: awayC.team?.displayName,
+        homeScore: homeC.score ?? '',
+        awayScore: awayC.score ?? '',
+        state: comp.status?.type?.state,          // 'pre' | 'in' | 'post'
+        shortDetail: comp.status?.type?.shortDetail, // "23'", "HT", "FT", etc.
+      };
+    }
+    _sbWcScoreCache.data = result;
+    _sbWcScoreCache.ts = Date.now();
+    return result;
+  } catch(e) { return _sbWcScoreCache.data || {}; }
+}
+
+function _sbWcScoreHTML(sc, oddsHomeTeam) {
+  if (!sc || sc.state === 'pre') return '';
+  // Align home/away scores to the Odds API's home team
+  const homeIsHome = _sbWcNormName(sc.espnHome) === _sbWcNormName(oddsHomeTeam);
+  const scoreLeft  = homeIsHome ? sc.homeScore : sc.awayScore;
+  const scoreRight = homeIsHome ? sc.awayScore : sc.homeScore;
+  const isLive = sc.state === 'in';
+  const liveLabel = `<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:7px;height:7px;background:#ef4444;border-radius:50%;display:inline-block;animation:wc-live-dot 1.2s ease-in-out infinite;flex-shrink:0"></span>LIVE</span>`;
+  const statusLabel = isLive ? liveLabel : (sc.shortDetail || 'FT');
+  return `<div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:6px 0 2px;font-family:'Barlow Condensed',sans-serif">
+    <span style="font-size:0.7rem;color:${isLive?'#ef4444':'var(--muted)'};letter-spacing:2px;font-weight:700;text-transform:uppercase;display:flex;align-items:center">${statusLabel}</span>
+    <span style="font-size:1.15rem;font-weight:700;color:var(--text);letter-spacing:3px">${scoreLeft} – ${scoreRight}</span>
+    ${isLive && sc.shortDetail ? `<span style="font-size:0.7rem;color:var(--muted);letter-spacing:1px">${sc.shortDetail}</span>` : ''}
+  </div>`;
+}
+
+async function _sbUpdateWcScores() {
+  if (_sbActiveSport !== 'worldcup' || _sbWcSubTab !== 'matches') return;
+  const scores = await _sbFetchWcScores();
+  const matches = _sbWcMatchCache.data || [];
+  for (const ev of matches) {
+    const el = document.getElementById(`wc-score-${ev.id}`);
+    if (!el) continue;
+    const key = [_sbWcNormName(ev.home_team), _sbWcNormName(ev.away_team)].sort().join('|');
+    el.innerHTML = _sbWcScoreHTML(scores[key], ev.home_team);
+  }
+}
 
 function _sbSetWcSubTab(tab) {
   _sbWcSubTab = tab;
@@ -8378,7 +8451,8 @@ async function _sbRenderWorldCupSection() {
           const flashBorder = (type) => { const d = flashDir(type); return d === 'up' ? 'animation:wc-flash-up 15s ease forwards;' : d === 'down' ? 'animation:wc-flash-down 15s ease forwards;' : ''; };
           const flashArrow = (type) => { const d = flashDir(type); return d ? `<span style="color:${d==='up'?'#22c55e':'#ef4444'};font-size:0.6rem;line-height:1;margin-left:3px;animation:wc-arrow-fade 15s ease forwards;">${d==='up'?'▲':'▼'}</span>` : ''; };
           html += `<div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04)">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:1px;margin-bottom:8px">${kickoff}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px">${kickoff}</div>
+            <div id="wc-score-${ev.id}"></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
               <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
                 ${homeFlag ? `<img src="${homeFlag}" style="width:36px;height:24px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
@@ -8432,6 +8506,7 @@ async function _sbRenderWorldCupSection() {
   }
 
   el.innerHTML = html;
+  if (_sbWcSubTab === 'matches') _sbUpdateWcScores();
 }
 
 function _sbToggleWcLeg(eventId, type, teamName, homeTeam, awayTeam, ml) {
@@ -8459,8 +8534,8 @@ function _sbToggleWcWinner(betKey, teamName, ml) {
 
 function _sbSetSport(sport) {
   if (sport !== 'worldcup') {
-    clearInterval(_sbWcRefreshInterval);
-    _sbWcRefreshInterval = null;
+    clearInterval(_sbWcRefreshInterval);  _sbWcRefreshInterval = null;
+    clearInterval(_sbWcScoreInterval);    _sbWcScoreInterval = null;
   }
   _sbActiveSport = sport;
   renderSportsbook();
@@ -10349,6 +10424,12 @@ async function renderSportsbook() {
         _sbWcMatchCache.ts = 0;
         if (_sbActiveSport === 'worldcup') _sbRenderWorldCupSection();
       }, 120000);
+    }
+    if (!_sbWcScoreInterval) {
+      _sbWcScoreInterval = setInterval(() => {
+        _sbWcScoreCache.ts = 0;
+        _sbUpdateWcScores();
+      }, 30000);
     }
   }
 
