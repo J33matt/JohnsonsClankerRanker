@@ -8283,24 +8283,56 @@ async function _sbFetchGolfPlayerByName(name) {
   } catch(e) { return (_sbGolfEventPlayersCache[cacheKey] = null); }
 }
 
+// Shared ESPN WC scoreboard cache — supplies both match odds and scores in one request
+const _sbEspnWcCache = { ts: 0, data: null };
+async function _sbFetchEspnWcScoreboard() {
+  if (_sbEspnWcCache.data && Date.now() - _sbEspnWcCache.ts < 30000) return _sbEspnWcCache.data;
+  try {
+    const d = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard').then(r => r.json());
+    _sbEspnWcCache.data = d.events || [];
+    _sbEspnWcCache.ts = Date.now();
+    return _sbEspnWcCache.data;
+  } catch(e) { return _sbEspnWcCache.data || []; }
+}
+
+// Parse h2h odds from ESPN scoreboard — no API key required
 async function _sbFetchWcMatchOdds() {
-  if (_sbWcMatchCache.data && Date.now() - _sbWcMatchCache.ts < 5 * 60 * 1000) return _sbWcMatchCache.data;
+  if (_sbWcMatchCache.data && Date.now() - _sbWcMatchCache.ts < 30000) return _sbWcMatchCache.data;
   try {
-    const d = await fetch(`https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds?apiKey=${_ODDS_API_KEY}&regions=us&markets=h2h&oddsFormat=american`).then(r => r.json());
-    _sbWcMatchCache.data = Array.isArray(d) ? d : [];
+    const events = await _sbFetchEspnWcScoreboard();
+    const matches = [];
+    for (const ev of events) {
+      const comp = ev.competitions?.[0];
+      if (!comp) continue;
+      const homeC = comp.competitors?.find(c => c.homeAway === 'home');
+      const awayC = comp.competitors?.find(c => c.homeAway === 'away');
+      if (!homeC || !awayC) continue;
+      const odds = comp.odds?.[0];
+      if (!odds) continue;
+      const homeML = parseInt(odds.moneyline?.home?.close?.odds ?? odds.moneyline?.home?.open?.odds ?? '0');
+      const awayML = parseInt(odds.moneyline?.away?.close?.odds ?? odds.moneyline?.away?.open?.odds ?? '0');
+      const drawML = odds.drawOdds?.moneyLine ?? parseInt(odds.moneyline?.draw?.close?.odds ?? '0');
+      if (!homeML || !awayML) continue;
+      matches.push({
+        id: ev.id,
+        home_team: homeC.team?.displayName,
+        away_team: awayC.team?.displayName,
+        commence_time: comp.date || ev.date,
+        bookmakers: [{ markets: [{ key: 'h2h', outcomes: [
+          { name: homeC.team?.displayName, price: homeML },
+          { name: awayC.team?.displayName, price: awayML },
+          { name: 'Draw', price: drawML }
+        ]}]}]
+      });
+    }
+    _sbWcMatchCache.data = matches;
     _sbWcMatchCache.ts = Date.now();
-    return _sbWcMatchCache.data;
-  } catch(e) { return []; }
+    return matches;
+  } catch(e) { return _sbWcMatchCache.data || []; }
 }
-async function _sbFetchWcWinnerOdds() {
-  if (_sbWcWinnerCache.data && Date.now() - _sbWcWinnerCache.ts < 30 * 60 * 1000) return _sbWcWinnerCache.data;
-  try {
-    const d = await fetch(`https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup_winner/odds?apiKey=${_ODDS_API_KEY}&regions=us&markets=outrights&oddsFormat=american`).then(r => r.json());
-    _sbWcWinnerCache.data = Array.isArray(d) ? d : [];
-    _sbWcWinnerCache.ts = Date.now();
-    return _sbWcWinnerCache.data;
-  } catch(e) { return []; }
-}
+
+// Tournament winner odds unavailable without paid API — returns empty
+async function _sbFetchWcWinnerOdds() { return []; }
 
 let _sbWcSubTab = 'matches'; // 'matches' | 'winner'
 let _sbWcRefreshInterval = null;
@@ -8331,23 +8363,22 @@ function _sbWcNormName(s) {
 async function _sbFetchWcScores() {
   if (_sbWcScoreCache.data && Date.now() - _sbWcScoreCache.ts < 30000) return _sbWcScoreCache.data;
   try {
-    const d = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard').then(r => r.json());
+    const events = await _sbFetchEspnWcScoreboard();
     const result = {};
-    for (const ev of d.events || []) {
+    for (const ev of events) {
       const comp = ev.competitions?.[0];
       if (!comp) continue;
       const homeC = comp.competitors?.find(c => c.homeAway === 'home');
       const awayC = comp.competitors?.find(c => c.homeAway === 'away');
       if (!homeC || !awayC) continue;
-      // Key by sorted normalized names so home/away order doesn't matter
       const key = [_sbWcNormName(homeC.team?.displayName), _sbWcNormName(awayC.team?.displayName)].sort().join('|');
       result[key] = {
         espnHome: homeC.team?.displayName,
         espnAway: awayC.team?.displayName,
         homeScore: homeC.score ?? '',
         awayScore: awayC.score ?? '',
-        state: comp.status?.type?.state,          // 'pre' | 'in' | 'post'
-        shortDetail: comp.status?.type?.shortDetail, // "23'", "HT", "FT", etc.
+        state: comp.status?.type?.state,
+        shortDetail: comp.status?.type?.shortDetail,
       };
     }
     _sbWcScoreCache.data = result;
@@ -8414,11 +8445,7 @@ async function _sbRenderWorldCupSection() {
     }
   }
 
-  // Subtab bar
-  let html = `<div style="display:flex;gap:2px;margin-bottom:16px;background:var(--border);border-radius:8px;padding:2px">
-    <button onclick="_sbSetWcSubTab('matches')" style="flex:1;padding:7px 0;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbWcSubTab==='matches'?'var(--accent)':'transparent'};color:${_sbWcSubTab==='matches'?'#fff':'var(--muted)'}">Match Odds</button>
-    <button onclick="_sbSetWcSubTab('winner')" style="flex:1;padding:7px 0;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.85rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbWcSubTab==='winner'?'var(--accent)':'transparent'};color:${_sbWcSubTab==='winner'?'#fff':'var(--muted)'}">Tournament Winner</button>
-  </div>`;
+  let html = ``;
 
   if (_sbWcSubTab === 'matches') {
     // Group by date, render flat with dividers
