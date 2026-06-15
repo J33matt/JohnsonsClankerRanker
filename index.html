@@ -9147,6 +9147,30 @@ async function _sbMigrateEarnings() {
   } catch(e) { console.warn('[SB] Earnings migration failed:', e); }
 }
 
+// ── Migration: rebuild allTimeNet from bet history to match allTimeEarned − allTimeLost ──
+// The original migration rebuilt earned/lost but left allTimeNet accumulating live,
+// so the three counters can drift out of sync. This pass fixes allTimeNet.
+async function _sbRebuildStatsFromHistory() {
+  if (!_sbProfile || _sbProfile.statsMigrated2) return;
+  try {
+    const bets = await _sbLoadBets();
+    let net = 0, earned = 0, lost = 0;
+    for (const b of bets) {
+      if (b.status !== 'settled') continue;
+      const profit = (b.payout || 0) - (b.stake || 0);
+      net += profit;
+      if (b.result === 'win')  earned += Math.max(0, profit);
+      if (b.result === 'loss') lost   += b.stake || 0;
+    }
+    _sbProfile.allTimeNet    = net;
+    _sbProfile.allTimeEarned = earned;
+    _sbProfile.allTimeLost   = lost;
+    _sbProfile.statsMigrated2 = true;
+    await _sbSaveProfile();
+    await _sbSaveLeaderboard();
+  } catch(e) { console.warn('[SB] Stats rebuild failed:', e); }
+}
+
 // ── One-time migration: fix prop bet labels (YES/NO → market name) ──────────
 async function _sbFixPropLabels() {
   try {
@@ -10073,7 +10097,8 @@ async function renderSportsbook() {
   // Run auto-settle (only meaningful if there's a profile)
   if (_sbProfile) {
     await _sbAutoSettle();
-    await _sbMigrateEarnings(); // one-time: rebuild allTimeEarned/allTimeLost from history
+    await _sbMigrateEarnings();         // one-time: rebuild allTimeEarned/allTimeLost from history
+    await _sbRebuildStatsFromHistory(); // one-time: sync allTimeNet with allTimeEarned − allTimeLost
     await _sbFixPropLabels();   // one-time: fix "YES"/"NO" prop labels to include market name
   }
 
