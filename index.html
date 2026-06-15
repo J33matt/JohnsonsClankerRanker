@@ -9257,6 +9257,31 @@ async function _sbFixSpainPushBet() {
   } catch(e) { console.warn('[SB] spainFix failed:', e); }
 }
 
+// ── One-time migration: restore history chart after corrupt 2026-06-15 duplicates ──
+async function _sbFixHistoryChart() {
+  if (!_sbProfile || _sbProfile._dsFixed7) return;
+  try {
+    // Remove corrupt 2026-06-15 entries (both had the same date, collapsing to 1 after dedup)
+    const cleaned = (_sbProfile.history || []).filter(h => h.date !== '2026-06-15');
+    // Restore known correct data points
+    const known = [
+      { date: '2026-04-07', balance: 280.00 },
+      { date: '2026-06-15', balance: 2.94 }
+    ];
+    for (const pt of known) {
+      if (!cleaned.some(h => h.date === pt.date)) cleaned.push(pt);
+    }
+    // Guarantee at least a start entry if we're still short
+    if (cleaned.length < 2) {
+      cleaned.unshift({ date: _sbProfile.startDate || '2026-01-01', balance: _sbProfile.startBalance || 100 });
+    }
+    cleaned.sort((a, b) => a.date.localeCompare(b.date));
+    _sbProfile.history = cleaned;
+    _sbProfile._dsFixed7 = true;
+    await _sbSaveProfile();
+  } catch(e) { console.warn('[SB] historyChartFix failed:', e); }
+}
+
 // ── One-time migration: fix prop bet labels (YES/NO → market name) ──────────
 async function _sbFixPropLabels() {
   try {
@@ -10226,6 +10251,7 @@ async function renderSportsbook() {
     await _sbFixHistoryGlitch();        // one-time: replace $1385.88 history entry with $692.94
     await _sbFixHistoryGlitch2();       // one-time: fix 2026-04-07 entry ($0.80 → $280.00)
     await _sbFixSpainPushBet();         // one-time: fix Spain vs Cape Verde push→loss, correct bankroll
+    await _sbFixHistoryChart();         // one-time: restore chart after corrupt duplicate 2026-06-15 entries
     await _sbFixPropLabels();   // one-time: fix "YES"/"NO" prop labels to include market name
   }
 
