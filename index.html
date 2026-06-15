@@ -8283,12 +8283,12 @@ async function _sbFetchGolfPlayerByName(name) {
   } catch(e) { return (_sbGolfEventPlayersCache[cacheKey] = null); }
 }
 
-// Shared ESPN WC scoreboard cache — supplies both match odds and scores in one request
+// Shared ESPN WC scoreboard cache — full tournament range in one request, no API key needed
 const _sbEspnWcCache = { ts: 0, data: null };
 async function _sbFetchEspnWcScoreboard() {
   if (_sbEspnWcCache.data && Date.now() - _sbEspnWcCache.ts < 30000) return _sbEspnWcCache.data;
   try {
-    const d = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard').then(r => r.json());
+    const d = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260612-20260719').then(r => r.json());
     _sbEspnWcCache.data = d.events || [];
     _sbEspnWcCache.ts = Date.now();
     return _sbEspnWcCache.data;
