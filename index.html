@@ -9222,6 +9222,17 @@ async function _sbFixHistoryGlitch() {
   await _sbSaveProfile();
 }
 
+async function _sbFixHistoryGlitch2() {
+  if (!_sbProfile || _sbProfile._dsFixed4) return;
+  if (_sbProfile.history) {
+    for (const h of _sbProfile.history) {
+      if (h.date === '2026-04-07' && Math.abs(h.balance - 0.80) < 0.02) h.balance = 280.00;
+    }
+  }
+  _sbProfile._dsFixed4 = true;
+  await _sbSaveProfile();
+}
+
 // ── One-time migration: fix prop bet labels (YES/NO → market name) ──────────
 async function _sbFixPropLabels() {
   try {
@@ -10187,6 +10198,7 @@ async function renderSportsbook() {
     await _sbFixDoubleSettleBug();      // one-time: correct bankroll from bet records after double-settle bug
     await _sbFixDoubleSettleBug2();     // one-time: hard-set correct balance to $692.94
     await _sbFixHistoryGlitch();        // one-time: replace $1385.88 history entry with $692.94
+    await _sbFixHistoryGlitch2();       // one-time: fix 2026-04-07 entry ($0.80 → $280.00)
     await _sbFixPropLabels();   // one-time: fix "YES"/"NO" prop labels to include market name
   }
 
