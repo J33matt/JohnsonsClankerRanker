@@ -8313,15 +8313,23 @@ function _sbWcNormName(s) {
     'south korea':'republic of korea','korea republic':'republic of korea',
     'usa':'united states','ir iran':'iran',
     'ivory coast':"cote d ivoire","côte d'ivoire":"cote d ivoire","cote d'ivoire":"cote d ivoire",
+    'türkiye':'turkey','turkiye':'turkey',
+    'curacao':'curacao','curaçao':'curacao',
+    'dr congo':'dr congo','democratic republic of congo':'dr congo','dr. congo':'dr congo',
+    'cape verde':'cape verde','cabo verde':'cape verde',
+    'north macedonia':'north macedonia','republic of north macedonia':'north macedonia',
   };
-  const n = (s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+  // Strip accents and special chars, then check alias map
+  const n = (s||'').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')  // strip diacritics (ü→u, é→e, etc.)
+    .replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
   return aliases[n] || n;
 }
 
 async function _sbFetchWcScores() {
   if (_sbWcScoreCache.data && Date.now() - _sbWcScoreCache.ts < 30000) return _sbWcScoreCache.data;
   try {
-    const d = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world_cup/scoreboard').then(r => r.json());
+    const d = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard').then(r => r.json());
     const result = {};
     for (const ev of d.events || []) {
       const comp = ev.competitions?.[0];
