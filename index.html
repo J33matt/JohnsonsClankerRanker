@@ -9257,42 +9257,39 @@ async function _sbFixSpainPushBet() {
   } catch(e) { console.warn('[SB] spainFix failed:', e); }
 }
 
-// ── One-time migration: rebuild history using user-confirmed anchors + bet-record shape ──
+// ── One-time migration: rebuild history walking backward from 06-14 anchor ──
 async function _sbFixHistoryChart() {
-  if (!_sbProfile || _sbProfile._dsFixed9) return;
+  if (!_sbProfile || _sbProfile._dsFixed10) return;
   try {
     const bets = await _sbLoadBets();
     const settled = (bets || [])
       .filter(b => b.status === 'settled')
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-    // Net P&L per date from bet records (used for shape between anchors)
+    // Net P&L per date from bet records
     const netByDate = new Map();
     for (const b of settled) {
       netByDate.set(b.date, (netByDate.get(b.date) || 0) + (b.net || 0));
     }
     const allDates = [...new Set(settled.map(b => b.date))].sort();
 
-    // User-confirmed correct balances — these are pinned exactly
-    const history = new Map([
-      ['2026-04-06', 261.80],
-      ['2026-04-07', 280.00],
-      ['2026-04-08', 300.59],
-      ['2026-06-15', 2.94],
-    ]);
+    // User-confirmed anchors — pinned exactly and never overwritten
+    const PINNED = {
+      '2026-04-06': 261.80,
+      '2026-04-07': 280.00,
+      '2026-04-08': 300.59,
+      '2026-06-14': 692.94,
+      '2026-06-15': 2.94,
+    };
 
-    // Walk forward from 04-08 anchor using bet records for shape
-    let running = 300.59;
-    for (const date of allDates) {
-      if (date <= '2026-04-08' || date === '2026-06-15') continue;
-      running += (netByDate.get(date) || 0);
-      history.set(date, Math.round(running * 100) / 100);
-    }
+    const history = new Map(Object.entries(PINNED));
 
-    // Walk backward from 04-06 anchor to estimate pre-April starting point
-    running = 261.80;
+    // Walk backward from 06-14 ($692.94) for all dates before it
+    // This is the most accurate direction since 06-14 is the most recent known-correct value
+    let running = 692.94;
     for (const date of [...allDates].reverse()) {
-      if (date >= '2026-04-06') continue;
+      if (date >= '2026-06-14') continue;
+      if (PINNED[date] !== undefined) { running = PINNED[date]; continue; }
       running -= (netByDate.get(date) || 0);
       history.set(date, Math.round(running * 100) / 100);
     }
@@ -9305,6 +9302,7 @@ async function _sbFixHistoryChart() {
     _sbProfile._dsFixed7 = true;
     _sbProfile._dsFixed8 = true;
     _sbProfile._dsFixed9 = true;
+    _sbProfile._dsFixed10 = true;
     await _sbSaveProfile();
   } catch(e) { console.warn('[SB] rebuildHistoryAnchored failed:', e); }
 }
