@@ -9387,6 +9387,7 @@ async function _sbAutoSettle() {
 
     // WC match bets settle via ESPN soccer scoreboard, not the NBA scoreboard
     if (bet.legs?.some(l => l.type === 'wc_home' || l.type === 'wc_away' || l.type === 'wc_draw')) {
+      if (bet.payout !== null && bet.payout !== undefined) continue; // idempotency guard
       const leg = bet.legs[0];
       const vsIdx = (leg.homeAbbr || '').indexOf(' vs ');
       if (vsIdx === -1) continue;
@@ -9401,14 +9402,15 @@ async function _sbAutoSettle() {
       const homeIsHome = _sbWcNormName(sc.espnHome) === _sbWcNormName(oddsHome);
       const oddsHomeScore = homeIsHome ? espnHomeScore : espnAwayScore;
       const oddsAwayScore = homeIsHome ? espnAwayScore : espnHomeScore;
+      // 3-way market: draw is a loss for home/away bettors (no push)
       if (leg.type === 'wc_home')
-        finalResult = oddsHomeScore > oddsAwayScore ? 'win' : oddsHomeScore < oddsAwayScore ? 'loss' : 'push';
+        finalResult = oddsHomeScore > oddsAwayScore ? 'win' : 'loss';
       else if (leg.type === 'wc_away')
-        finalResult = oddsAwayScore > oddsHomeScore ? 'win' : oddsAwayScore < oddsHomeScore ? 'loss' : 'push';
+        finalResult = oddsAwayScore > oddsHomeScore ? 'win' : 'loss';
       else if (leg.type === 'wc_draw')
         finalResult = oddsHomeScore === oddsAwayScore ? 'win' : 'loss';
       if (!finalResult) continue;
-      payout = finalResult === 'win' ? bet.stake + _mlPayout(leg.ml, bet.stake) : finalResult === 'push' ? bet.stake : 0;
+      payout = finalResult === 'win' ? bet.stake + _mlPayout(leg.ml, bet.stake) : 0;
     } else if (bet.betType === 'single') {
       const leg = bet.legs[0];
       const searchGames = [-1, 1, 2].reduce((acc, offset) => {
