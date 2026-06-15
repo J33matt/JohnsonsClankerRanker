@@ -7840,6 +7840,8 @@ let _sbEnrichedGamesCache = []; // enriched games with odds + spreads + totals
 let _sbHistoryFilter = 'all'; // 'all' | 'open' | 'settled'
 let _sbLbSort = { col: 'bankroll', dir: -1 }; // active leaderboard sort column + direction
 let _sbHistoryOpen = false; // collapsed by default
+let _sbHistoryMonth = new Date().toISOString().slice(0, 7); // 'YYYY-MM' currently viewed month
+let _sbCachedBets = []; // bets cached for history re-render without full page reload
 
 // ── Player Props State ────────────────────────────────────────
 const _ODDS_API_KEY = '81037b065591850bd10fc780590f08e8'; // ← paste your The Odds API key here
@@ -10410,6 +10412,7 @@ async function renderSportsbook() {
   // Reload after picks are placed so we always display the freshest bets
   const botBets = await _botLoadBets();
 
+  _sbCachedBets = bets;
   const openBets = bets.filter(b => b.status === 'open');
   const isBroke = (_sbProfile.bankroll || 0) <= 0 && openBets.length === 0;
   const settledBets = bets.filter(b => b.status === 'settled');
@@ -11523,9 +11526,65 @@ function _sbToggleHistory() {
   if (card)    card.classList.toggle('open', _sbHistoryOpen);
 }
 
+function _sbNavHistoryMonth(delta) {
+  const [y, m] = _sbHistoryMonth.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  _sbHistoryMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  const body = document.getElementById('sb-history-body');
+  if (body) body.innerHTML = _sbHistoryBodyHtml(_sbCachedBets);
+}
+
+function _sbHistoryBodyHtml(bets) {
+  const settled = [...bets].filter(b => b.status !== 'open').sort((a, b) => b.id - a.id);
+  const months = [...new Set(settled.map(b => b.date.slice(0, 7)))].sort();
+  if (!months.length) return '<div class="sb-history-empty">No settled bets yet</div>';
+
+  // Clamp selected month to valid range
+  if (_sbHistoryMonth < months[0]) _sbHistoryMonth = months[0];
+  if (_sbHistoryMonth > months[months.length - 1]) _sbHistoryMonth = months[months.length - 1];
+
+  const hasPrev = months.indexOf(_sbHistoryMonth) > 0;
+  const hasNext = months.indexOf(_sbHistoryMonth) < months.length - 1;
+
+  const [y, m] = _sbHistoryMonth.split('-').map(Number);
+  const monthLabel = new Date(y, m - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  const monthBets = settled.filter(b => b.date.startsWith(_sbHistoryMonth));
+  const mWins   = monthBets.filter(b => b.result === 'win').length;
+  const mLosses = monthBets.filter(b => b.result === 'loss').length;
+  const mNet    = monthBets.filter(b => b.net != null).reduce((s, b) => s + b.net, 0);
+  const mNetStr = `${mNet >= 0 ? '+' : ''}$${Math.abs(mNet).toFixed(2)}`;
+  const mNetCol = mNet >= 0 ? 'var(--green)' : 'var(--red)';
+
+  const navBtnStyle = `background:transparent;border:1px solid var(--border);color:var(--text);font-size:1rem;width:32px;height:32px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;`;
+  const disabledStyle = `opacity:0.25;pointer-events:none;`;
+
+  let nav = `<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface2)">
+    <button style="${navBtnStyle}${hasPrev ? '' : disabledStyle}" onclick="event.stopPropagation();_sbNavHistoryMonth(-1)">&#8592;</button>
+    <span style="flex:1;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;color:var(--text)">${monthLabel}</span>
+    <button style="${navBtnStyle}${hasNext ? '' : disabledStyle}" onclick="event.stopPropagation();_sbNavHistoryMonth(1)">&#8594;</button>
+  </div>
+  <div style="padding:6px 16px 8px;display:flex;gap:16px;font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;letter-spacing:1px;color:var(--muted);border-bottom:1px solid var(--border)">
+    <span>${mWins}W–${mLosses}L</span>
+    <span style="color:${mNetCol}">${mNetStr}</span>
+  </div>`;
+
+  let lastDate = null;
+  const cards = monthBets.map(b => {
+    let divider = '';
+    if (b.date !== lastDate) {
+      lastDate = b.date;
+      divider = `<div style="padding:10px 20px 6px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:3px;color:var(--accent2);text-transform:uppercase;border-top:2px solid rgba(255,170,0,0.2);background:rgba(255,170,0,0.04);margin-top:8px">📅 ${b.date}</div>`;
+    }
+    return divider + _renderSbBetCard(b);
+  }).join('');
+
+  return nav + `<div style="padding:8px 0 4px">${cards || '<div class="sb-history-empty">No bets this month</div>'}</div>`;
+}
+
 function _renderSbHistory(bets) {
   if (!bets.length) return '';
-  const settled = [...bets].filter(b => b.status !== 'open').sort((a, b) => b.id - a.id);
+  const settled = [...bets].filter(b => b.status !== 'open');
   if (!settled.length) return '';
 
   const wins     = settled.filter(b => b.result === 'win').length;
@@ -11534,15 +11593,11 @@ function _renderSbHistory(bets) {
   const netColor = totalNet >= 0 ? 'var(--green)' : 'var(--red)';
   const netStr   = `${totalNet >= 0 ? '+' : ''}$${Math.abs(totalNet).toFixed(2)}`;
 
-  let lastDate = null;
-  const cards = settled.map(b => {
-    let divider = '';
-    if (b.date !== lastDate) {
-      lastDate = b.date;
-      divider = `<div style="padding:10px 20px 6px;font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:3px;color:var(--accent2);text-transform:uppercase;border-top:2px solid rgba(255,170,0,0.2);background:rgba(255,170,0,0.04);margin-top:8px">📅 ${b.date}</div>`;
-    }
-    return divider + _renderSbBetCard(b);
-  }).join('');
+  // Default to most recent month
+  const months = [...new Set(settled.map(b => b.date.slice(0, 7)))].sort();
+  if (months.length && (_sbHistoryMonth < months[0] || _sbHistoryMonth > months[months.length - 1])) {
+    _sbHistoryMonth = months[months.length - 1];
+  }
 
   const bodyMaxH   = _sbHistoryOpen ? '30000px' : '0';
   const bodyBorder = _sbHistoryOpen ? '1px' : '0';
@@ -11559,9 +11614,7 @@ function _renderSbHistory(bets) {
         </span>
       </div>
       <div id="sb-history-body" style="max-height:${bodyMaxH};overflow:hidden;transition:max-height 0.3s ease;border-top-width:${bodyBorder};border-top-style:solid;border-top-color:var(--border);">
-        <div style="padding:16px 0 4px">
-          ${cards || '<div class="sb-history-empty">No settled bets yet</div>'}
-        </div>
+        ${_sbHistoryBodyHtml(bets)}
       </div>
     </div>`;
 }
