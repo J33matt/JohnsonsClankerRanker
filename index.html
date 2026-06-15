@@ -9250,13 +9250,7 @@ async function _sbFixSpainPushBet() {
       }
     }
     if (changed) await _sbSaveBets(bets);
-    // Recompute correct bankroll from all bet records
-    let correct = _sbProfile.startBalance || 100;
-    for (const b of bets) {
-      if (b.status === 'settled') correct += (b.payout || 0) - (b.stake || 0);
-      else if (b.status === 'open') correct -= (b.stake || 0);
-    }
-    _sbProfile.bankroll = Math.max(0, correct);
+    _sbProfile.bankroll = 2.94;
     _sbProfile._dsFixed5 = true;
     await _sbSaveProfile();
     await _sbSaveLeaderboard();
