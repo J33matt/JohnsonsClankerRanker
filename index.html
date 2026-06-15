@@ -9259,23 +9259,23 @@ async function _sbFixSpainPushBet() {
   } catch(e) { console.warn('[SB] spainFix failed:', e); }
 }
 
-// ── One-time migration: rebuild history walking backward from 06-14 anchor ──
+// ── One-time migration: split history rebuild ──
+// June: backward walk from 06-14 (complete records — accurate)
+// Pre-June: forward walk from 04-08 pin (avoids inflated April values from missing bets)
 async function _sbFixHistoryChart() {
-  if (!_sbProfile || _sbProfile._dsFixed11) return;
+  if (!_sbProfile || _sbProfile._dsFixed12) return;
   try {
     const bets = await _sbLoadBets();
     const settled = (bets || [])
       .filter(b => b.status === 'settled')
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-    // Net P&L per date from bet records
     const netByDate = new Map();
     for (const b of settled) {
       netByDate.set(b.date, (netByDate.get(b.date) || 0) + (b.net || 0));
     }
     const allDates = [...new Set(settled.map(b => b.date))].sort();
 
-    // User-confirmed anchors — pinned exactly and never overwritten
     const PINNED = {
       '2026-04-06': 261.80,
       '2026-04-07': 280.00,
@@ -9283,24 +9283,41 @@ async function _sbFixHistoryChart() {
       '2026-06-14': 692.94,
       '2026-06-15': 2.94,
     };
-
     const history = new Map(Object.entries(PINNED));
 
-    // Ensure 06-14 is in allDates so the anchor index is always valid
+    // ── Backward walk from 06-14 for June only (complete records) ──
     if (!allDates.includes('2026-06-14')) {
       const ins = allDates.findIndex(d => d > '2026-06-14');
       ins === -1 ? allDates.push('2026-06-14') : allDates.splice(ins, 0, '2026-06-14');
     }
     const anchorIdx = allDates.indexOf('2026-06-14');
-
-    // Correct backward walk: end_of_D = end_of_D_next - net_of_D_next
-    // We subtract the NEXT date's net (not the current date's) to get the current date's end balance.
     let running = 692.94;
     for (let i = anchorIdx - 1; i >= 0; i--) {
       const date = allDates[i];
+      if (date < '2026-06-01') break; // stop at June boundary
       const nextDate = allDates[i + 1];
       running -= (netByDate.get(nextDate) || 0);
-      if (PINNED[date] !== undefined) running = PINNED[date]; // reset to known-correct anchor
+      history.set(date, Math.round(running * 100) / 100);
+    }
+
+    // ── Forward walk from 04-08 for everything before June ──
+    const aprilIdx = allDates.indexOf('2026-04-08');
+    running = 300.59;
+    for (let i = aprilIdx + 1; i < allDates.length; i++) {
+      const date = allDates[i];
+      if (date >= '2026-06-01') break; // stop at June boundary
+      if (PINNED[date] !== undefined) { running = PINNED[date]; continue; }
+      running += (netByDate.get(date) || 0);
+      history.set(date, Math.round(running * 100) / 100);
+    }
+
+    // ── Backward walk from 04-06 for pre-April dates ──
+    const aprilStartIdx = allDates.indexOf('2026-04-06');
+    running = 261.80;
+    for (let i = aprilStartIdx - 1; i >= 0; i--) {
+      const date = allDates[i];
+      const nextDate = allDates[i + 1];
+      running -= (netByDate.get(nextDate) || 0);
       history.set(date, Math.round(running * 100) / 100);
     }
 
@@ -9314,6 +9331,7 @@ async function _sbFixHistoryChart() {
     _sbProfile._dsFixed9 = true;
     _sbProfile._dsFixed10 = true;
     _sbProfile._dsFixed11 = true;
+    _sbProfile._dsFixed12 = true;
     await _sbSaveProfile();
   } catch(e) { console.warn('[SB] rebuildHistoryAnchored failed:', e); }
 }
