@@ -7814,7 +7814,7 @@ const _ODDS_API_KEY = '81037b065591850bd10fc780590f08e8'; // ← paste your The 
 let _sbPropsEvents   = null;  // cached Odds API event list
 let _sbPropsCache    = {};    // { [eventId_market]: { data, ts } }
 let _sbPropsGameSel  = null;  // selected Odds API event ID
-let _sbActiveSport   = 'nba'; // 'nba' | 'golf' | 'worldcup'
+let _sbActiveSport   = 'worldcup'; // 'nba' | 'golf' | 'worldcup'
 const _sbGolfSportsCache      = { ts: 0, data: null };
 const _sbGolfOddsCache        = {}; // sportKey → { data, ts }
 const _sbGolfEventPlayersCache = {}; // eventId → { name → {headshot,flagHref,country} }
@@ -8315,7 +8315,9 @@ async function _sbRenderWorldCupSection() {
           const tog = (type, team, ml) => `_sbToggleWcLeg('${ev.id}','${type}','${(team||'').replace(/'/g,"\\'")}','${ev.home_team.replace(/'/g,"\\'")}','${ev.away_team.replace(/'/g,"\\'")}',${ml})`;
           const homeFlag = _sbWcFlag(ev.home_team);
           const awayFlag = _sbWcFlag(ev.away_team);
+          const kickoff = new Date(ev.commence_time).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
           html += `<div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04)">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:1px;margin-bottom:8px">${kickoff}</div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
               <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
                 ${homeFlag ? `<img src="${homeFlag}" style="width:36px;height:24px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
