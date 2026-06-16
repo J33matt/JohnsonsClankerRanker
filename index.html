@@ -8477,7 +8477,8 @@ async function _sbFetchWcPlayerProps(eventId) {
     const wantedIds = new Set(['37','38','39','40']);
     const playerItems = items.filter(it => wantedIds.has(it.type?.id));
 
-    const unknownRefs = [...new Set(playerItems.map(it => it.athlete?.['$ref']).filter(r => {
+    const _getRef = it => (it.athlete?.['$ref'] || it.participant?.['$ref'] || '').replace(/^http:/, 'https:');
+    const unknownRefs = [...new Set(playerItems.map(_getRef).filter(r => {
       const id = r?.split('/athletes/')[1]?.split('?')[0];
       return id && !_sbAthleteCache[id];
     }))];
@@ -8486,7 +8487,7 @@ async function _sbFetchWcPlayerProps(eventId) {
       for (const ath of fetched) {
         if (!ath) continue;
         const id = String(ath.id || '');
-        if (id) _sbAthleteCache[id] = ath.displayName || ath.fullName || 'Unknown';
+        if (id) _sbAthleteCache[id] = ath.displayName || ath.fullName || ath.shortName || 'Unknown';
       }
     }
 
@@ -8494,7 +8495,7 @@ async function _sbFetchWcPlayerProps(eventId) {
     for (const it of playerItems) {
       const tid = it.type?.id;
       if (!byType[tid]) continue;
-      const ref = it.athlete?.['$ref'] || '';
+      const ref = _getRef(it);
       const athleteId = ref.split('/athletes/')[1]?.split('?')[0] || '';
       if (!athleteId) continue;
       const name = _sbAthleteCache[athleteId] || 'Unknown';
