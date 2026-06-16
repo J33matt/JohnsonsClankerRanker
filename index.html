@@ -8625,8 +8625,10 @@ async function _sbRenderWorldCupSection() {
           const flashDir = (type) => (_sbWcOddsFlash[`${ev.id}_${type}`] || {}).dir || null;
           const flashBorder = (type) => { const d = flashDir(type); return d === 'up' ? 'animation:wc-flash-up 15s ease forwards;' : d === 'down' ? 'animation:wc-flash-down 15s ease forwards;' : ''; };
           const flashArrow = (type) => { const d = flashDir(type); return d ? `<span style="color:${d==='up'?'#22c55e':'#ef4444'};font-size:0.6rem;line-height:1;margin-left:3px;animation:wc-arrow-fade 15s ease forwards;">${d==='up'?'▲':'▼'}</span>` : ''; };
+          const _evLiveKey = [_sbWcNormName(ev.home_team), _sbWcNormName(ev.away_team)].sort().join('|');
+          const _isLive = wcScores[_evLiveKey]?.state === 'in';
           html += `<div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04)">
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:1px;margin-bottom:6px">${kickoff}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:${_isLive?'#22c55e':'var(--muted)'};letter-spacing:1px;margin-bottom:6px">${_isLive?'● LIVE':kickoff}</div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
               <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
                 ${homeFlag ? `<img src="${homeFlag}" style="width:36px;height:24px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
@@ -8638,11 +8640,13 @@ async function _sbRenderWorldCupSection() {
                 ${awayFlag ? `<img src="${awayFlag}" style="width:36px;height:24px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
               </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px">
+            ${_isLive
+              ? `<div style="margin-top:10px;padding:8px;text-align:center;border-radius:6px;border:1px dashed rgba(255,255,255,0.12)"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;letter-spacing:2px;color:var(--muted)">BETTING LOCKED</span></div>`
+              : `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px">
               ${home ? `<button class="sb-prop-btn yn${btnSel('home')}" onclick="${tog('home',ev.home_team,home.price)}" style="flex-direction:column;padding:7px 4px;${flashBorder('home')}"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px;display:flex;align-items:center;justify-content:center">HOME${flashArrow('home')}</span><span class="prop-odds">${_fmtML(home.price)}</span></button>` : '<div></div>'}
               ${draw ? `<button class="sb-prop-btn yn${btnSel('draw')}" onclick="${tog('draw','Draw',draw.price)}" style="flex-direction:column;padding:7px 4px;${flashBorder('draw')}"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px;display:flex;align-items:center;justify-content:center">DRAW${flashArrow('draw')}</span><span class="prop-odds">${_fmtML(draw.price)}</span></button>` : '<div></div>'}
               ${away ? `<button class="sb-prop-btn yn${btnSel('away')}" onclick="${tog('away',ev.away_team,away.price)}" style="flex-direction:column;padding:7px 4px;${flashBorder('away')}"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px;display:flex;align-items:center;justify-content:center">AWAY${flashArrow('away')}</span><span class="prop-odds">${_fmtML(away.price)}</span></button>` : '<div></div>'}
-            </div>
+            </div>`}
           </div>`;
         }
         firstGroup = false;
@@ -8672,16 +8676,16 @@ async function _sbRenderWorldCupSection() {
         const awayC = comp?.competitors?.find(c => c.homeAway === 'away');
         const homeTeamId = homeC?.team?.id;
         const awayTeamId = awayC?.team?.id;
-        const props = await _sbFetchWcGameProps(ev.id, homeTeamId, awayTeamId);
-        if (!props) continue;
+        const gameState = comp?.status?.type?.state || 'pre';
+        const props = gameState === 'pre' ? await _sbFetchWcGameProps(ev.id, homeTeamId, awayTeamId) : null;
         const kickoff = new Date(ev.commence_time).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
         const homeFlag = _sbWcFlag(ev.home_team);
         const awayFlag = _sbWcFlag(ev.away_team);
         const matchLabel = `${ev.home_team} vs ${ev.away_team}`;
         const esc = s => (s||'').replace(/'/g,"\\'");
         const sel = (gk) => _sbSlip.some(l => l.gameKey === gk) ? ' selected' : '';
-        gpHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">
-          <div style="padding:10px 14px 6px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between">
+        const gpIsLive = gameState === 'in';
+        const gpGameHeader = `<div style="padding:10px 14px 6px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between">
             <div style="display:flex;align-items:center;gap:8px">
               ${homeFlag?`<img src="${homeFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px">`:''}
               <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${ev.home_team}</span>
@@ -8689,8 +8693,14 @@ async function _sbRenderWorldCupSection() {
               <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${ev.away_team}</span>
               ${awayFlag?`<img src="${awayFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px">`:''}
             </div>
-            <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:1px">${kickoff}</span>
-          </div>
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:${gpIsLive?'#22c55e':'var(--muted)'};letter-spacing:1px">${gpIsLive?'● LIVE':kickoff}</span>
+          </div>`;
+        if (gpIsLive || (!props && gameState !== 'pre')) {
+          gpHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">${gpGameHeader}<div style="padding:14px;text-align:center"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:2px;color:var(--muted)">BETTING LOCKED</span></div></div>`;
+          continue;
+        }
+        if (!props) continue;
+        gpHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">${gpGameHeader}
           <div style="padding:10px 14px 12px;display:flex;flex-direction:column;gap:10px">`;
 
         // BTTS
@@ -8775,6 +8785,7 @@ async function _sbRenderWorldCupSection() {
       const cont = document.getElementById('wc-pp-container');
       if (!cont) return;
       let ppHtml = '';
+      const ppScoreboard = await _sbFetchEspnWcScoreboard();
       const propTypeLabels = [
         { key: 'firstScorer', label: 'FIRST GOALSCORER',   type: 'wc_fg', prefix: '_fg' },
         { key: 'lastScorer',  label: 'LAST GOALSCORER',    type: 'wc_lg', prefix: '_lg' },
@@ -8782,18 +8793,15 @@ async function _sbRenderWorldCupSection() {
         { key: 'score3plus',  label: 'TO SCORE 3+ GOALS',  type: 'wc_s3', prefix: '_s3' },
       ];
       for (const ev of propGames2) {
-        const props = await _sbFetchWcPlayerProps(ev.id);
-        if (!props) continue;
+        const ppScEv = ppScoreboard.find(e => e.id === ev.id);
+        const ppState = ppScEv?.competitions?.[0]?.status?.type?.state || 'pre';
+        const ppIsLive = ppState === 'in';
         const kickoff = new Date(ev.commence_time).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
         const homeFlag = _sbWcFlag(ev.home_team);
         const awayFlag = _sbWcFlag(ev.away_team);
         const matchLabel = `${ev.home_team} vs ${ev.away_team}`;
         const esc = s => (s||'').replace(/'/g,"\\'");
-        const hasAny = propTypeLabels.some(pt => (props[pt.key]||[]).length > 0);
-        if (!hasAny) continue;
-
-        ppHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">
-          <div style="padding:10px 14px 6px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between">
+        const ppGameHeader = `<div style="padding:10px 14px 6px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between">
             <div style="display:flex;align-items:center;gap:8px">
               ${homeFlag?`<img src="${homeFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px">`:''}
               <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${ev.home_team}</span>
@@ -8801,8 +8809,18 @@ async function _sbRenderWorldCupSection() {
               <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${ev.away_team}</span>
               ${awayFlag?`<img src="${awayFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px">`:''}
             </div>
-            <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:1px">${kickoff}</span>
-          </div>
+            <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:${ppIsLive?'#22c55e':'var(--muted)'};letter-spacing:1px">${ppIsLive?'● LIVE':kickoff}</span>
+          </div>`;
+        if (ppIsLive) {
+          ppHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">${ppGameHeader}<div style="padding:14px;text-align:center"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:2px;color:var(--muted)">BETTING LOCKED</span></div></div>`;
+          continue;
+        }
+        const props = await _sbFetchWcPlayerProps(ev.id);
+        if (!props) continue;
+        const hasAny = propTypeLabels.some(pt => (props[pt.key]||[]).length > 0);
+        if (!hasAny) continue;
+
+        ppHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">${ppGameHeader}
           <div style="padding:10px 14px 12px;display:flex;flex-direction:column;gap:10px">`;
 
         for (const pt of propTypeLabels) {
