@@ -7281,6 +7281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   .sb-prop-btn .prop-ou { font-size: 0.92rem; font-weight: 700; color: var(--text); }
   .sb-prop-btn .prop-odds { font-size: 1rem; font-weight: 700; color: var(--accent2); }
   .sb-prop-btn:hover { background: rgba(255,170,0,0.08); border-color: var(--accent2); }
+  .wc-prop-header:hover { outline: 1px solid rgba(255,255,255,0.18); }
   .sb-prop-btn.selected, .sb-prop-btn.over.selected, .sb-prop-btn.under.selected, .sb-prop-btn.yn.selected { background: rgba(255,170,0,0.15); border-color: var(--accent2); }
   .sb-props-empty { padding: 32px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.82rem; letter-spacing: 2px; }
   .sb-props-loading { padding: 20px 16px; text-align: center; color: var(--muted); font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; letter-spacing: 2px; }
@@ -8684,6 +8685,17 @@ async function _sbRenderWorldCupSection() {
       const cont = document.getElementById('wc-gp-container');
       if (!cont) return;
       const allScoreboard = await _sbFetchEspnWcScoreboard();
+      // Determine which date's games start open
+      const _todayStr = new Date().toDateString();
+      const _gpTodayGames = propGames.filter(ev => new Date(ev.commence_time).toDateString() === _todayStr);
+      const _gpTodayAllLocked = _gpTodayGames.length > 0 && _gpTodayGames.every(ev => {
+        const s = allScoreboard.find(e => e.id === ev.id)?.competitions?.[0]?.status?.type?.state || 'pre';
+        return s !== 'pre';
+      });
+      const _gpNextDate = (_gpTodayAllLocked || !_gpTodayGames.length)
+        ? propGames.find(ev => new Date(ev.commence_time).toDateString() !== _todayStr)?.commence_time
+        : null;
+      const _gpAutoOpenDate = _gpNextDate ? new Date(_gpNextDate).toDateString() : _todayStr;
       let gpHtml = '';
       for (const ev of propGames) {
         const scEv = allScoreboard.find(e => e.id === ev.id);
@@ -8701,9 +8713,9 @@ async function _sbRenderWorldCupSection() {
         const esc = s => (s||'').replace(/'/g,"\\'");
         const sel = (gk) => _sbSlip.some(l => l.gameKey === gk) ? ' selected' : '';
         const gpIsLive = gameState === 'in';
-        const gpIsToday = new Date(ev.commence_time).toDateString() === new Date().toDateString();
+        const gpIsToday = new Date(ev.commence_time).toDateString() === _gpAutoOpenDate;
         const gpOpen = gpIsToday || gpIsLive;
-        const gpHeader = `<div onclick="_sbToggleWcPropGame('gp-${ev.id}')" style="padding:10px 14px 8px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
+        const gpHeader = `<div class="wc-prop-header" onclick="_sbToggleWcPropGame('gp-${ev.id}')" style="padding:10px 14px 8px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
             <div style="display:flex;align-items:center;gap:8px">
               ${homeFlag?`<img src="${homeFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px">`:''}
               <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${ev.home_team}</span>
@@ -8807,6 +8819,16 @@ async function _sbRenderWorldCupSection() {
       if (!cont) return;
       let ppHtml = '';
       const ppScoreboard = await _sbFetchEspnWcScoreboard();
+      const _ppTodayStr = new Date().toDateString();
+      const _ppTodayGames = propGames2.filter(ev => new Date(ev.commence_time).toDateString() === _ppTodayStr);
+      const _ppTodayAllLocked = _ppTodayGames.length > 0 && _ppTodayGames.every(ev => {
+        const s = ppScoreboard.find(e => e.id === ev.id)?.competitions?.[0]?.status?.type?.state || 'pre';
+        return s !== 'pre';
+      });
+      const _ppNextDate = (_ppTodayAllLocked || !_ppTodayGames.length)
+        ? propGames2.find(ev => new Date(ev.commence_time).toDateString() !== _ppTodayStr)?.commence_time
+        : null;
+      const _ppAutoOpenDate = _ppNextDate ? new Date(_ppNextDate).toDateString() : _ppTodayStr;
       const propTypeLabels = [
         { key: 'firstScorer', label: 'FIRST GOALSCORER',   type: 'wc_fg', prefix: '_fg' },
         { key: 'lastScorer',  label: 'LAST GOALSCORER',    type: 'wc_lg', prefix: '_lg' },
@@ -8817,14 +8839,14 @@ async function _sbRenderWorldCupSection() {
         const ppScEv = ppScoreboard.find(e => e.id === ev.id);
         const ppState = ppScEv?.competitions?.[0]?.status?.type?.state || 'pre';
         const ppIsLive = ppState === 'in';
-        const ppIsToday = new Date(ev.commence_time).toDateString() === new Date().toDateString();
+        const ppIsToday = new Date(ev.commence_time).toDateString() === _ppAutoOpenDate;
         const ppOpen = ppIsToday || ppIsLive;
         const kickoff = new Date(ev.commence_time).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
         const homeFlag = _sbWcFlag(ev.home_team);
         const awayFlag = _sbWcFlag(ev.away_team);
         const matchLabel = `${ev.home_team} vs ${ev.away_team}`;
         const esc = s => (s||'').replace(/'/g,"\\'");
-        const ppGameHeader = `<div onclick="_sbToggleWcPropGame('pp-${ev.id}')" style="padding:10px 14px 8px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
+        const ppGameHeader = `<div class="wc-prop-header" onclick="_sbToggleWcPropGame('pp-${ev.id}')" style="padding:10px 14px 8px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
             <div style="display:flex;align-items:center;gap:8px">
               ${homeFlag?`<img src="${homeFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px">`:''}
               <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${ev.home_team}</span>
