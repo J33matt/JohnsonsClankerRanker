@@ -8431,10 +8431,19 @@ async function _sbFetchWcGameProps(eventId, homeTeamId, awayTeamId) {
 
     const bttsItems = gameItems.filter(it => it.type?.id === '152');
     const oeItems   = gameItems.filter(it => it.type?.id === '154');
-    const h1Totals  = gameItems.filter(it => it.type?.id === '72').map(it => ({
-      line: parseFloat(it.current?.target?.value || '0'),
-      odds: parseInt(it.current?.over?.american || '0'),
-    })).filter(x => x.line && x.odds).sort((a, b) => a.line - b.line);
+    // Group type-72 items by line; in ESPN API order, first item per line = over, second = under
+    const _h1ByLine = new Map();
+    for (const it of gameItems.filter(it => it.type?.id === '72')) {
+      const line = parseFloat(it.current?.target?.value || '0');
+      const odds = parseInt(it.current?.over?.american || '0');
+      if (!line || !odds) continue;
+      if (!_h1ByLine.has(line)) _h1ByLine.set(line, []);
+      _h1ByLine.get(line).push(odds);
+    }
+    const h1Totals = [..._h1ByLine.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([line, arr]) => ({ line, overOdds: arr[0] || null, underOdds: arr[1] || null }))
+      .filter(x => x.overOdds || x.underOdds);
 
     let h1mlHome = null, h1mlAway = null, h1mlDraw = null;
     for (const it of gameItems.filter(it => it.type?.id === '73')) {
@@ -8698,14 +8707,26 @@ async function _sbRenderWorldCupSection() {
 
         // 1H Total
         if (props.h1Totals?.length) {
-          const cols = props.h1Totals.length > 1 ? `repeat(${props.h1Totals.length},1fr)` : '1fr';
           gpHtml += `<div>
-            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:2px;color:var(--muted);margin-bottom:5px">1ST HALF TOTAL (OVER)</div>
-            <div style="display:grid;grid-template-columns:${cols};gap:6px">`;
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:2px;color:var(--muted);margin-bottom:5px">1ST HALF TOTAL</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:2px">
+              <div style="font-size:0.65rem;letter-spacing:1px;color:var(--muted);text-align:center;padding-bottom:2px">OVER</div>
+              <div style="font-size:0.65rem;letter-spacing:1px;color:var(--muted);text-align:center;padding-bottom:2px">UNDER</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">`;
           for (const t of props.h1Totals) {
             const lineKey = String(Math.round(t.line * 10));
-            const gk = `wc_${ev.id}_1h_over_${lineKey}`;
-            gpHtml += `<button class="sb-prop-btn yn${sel(gk)}" onclick="_sbToggleWcGameProp('${ev.id}','${gk}','wc_1h_over','${gk}','${esc(matchLabel)}','Over ${t.line} (1H)',${t.odds},${t.line})" style="flex-direction:column;padding:7px 4px"><span style="font-size:0.72rem;font-weight:700;letter-spacing:1px">OVER ${t.line}</span><span class="prop-odds">${_fmtML(t.odds)}</span></button>`;
+            const gkO = `wc_${ev.id}_1h_over_${lineKey}`;
+            const gkU = `wc_${ev.id}_1h_under_${lineKey}`;
+            const mktPfx = `wc_${ev.id}_1h_ou_${lineKey}`;
+            gpHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">`;
+            if (t.overOdds) {
+              gpHtml += `<button class="sb-prop-btn yn${sel(gkO)}" onclick="_sbToggleWcGameProp('${ev.id}','${gkO}','wc_1h_over','${mktPfx}','${esc(matchLabel)}','Over ${t.line} (1H)',${t.overOdds},${t.line})" style="flex-direction:column;padding:7px 4px"><span style="font-size:0.72rem;font-weight:700;letter-spacing:1px">O ${t.line}</span><span class="prop-odds">${_fmtML(t.overOdds)}</span></button>`;
+            } else { gpHtml += `<div></div>`; }
+            if (t.underOdds) {
+              gpHtml += `<button class="sb-prop-btn yn${sel(gkU)}" onclick="_sbToggleWcGameProp('${ev.id}','${gkU}','wc_1h_under','${mktPfx}','${esc(matchLabel)}','Under ${t.line} (1H)',${t.underOdds},${t.line})" style="flex-direction:column;padding:7px 4px"><span style="font-size:0.72rem;font-weight:700;letter-spacing:1px">U ${t.line}</span><span class="prop-odds">${_fmtML(t.underOdds)}</span></button>`;
+            } else { gpHtml += `<div></div>`; }
+            gpHtml += `</div>`;
           }
           gpHtml += `</div></div>`;
         }
@@ -9881,6 +9902,9 @@ async function _sbAutoSettle() {
         if (leg.type === 'wc_1h_over') {
           const h1total = summary.homeHalf1 + summary.awayHalf1;
           won = h1total > (leg.line || 0.5);
+        } else if (leg.type === 'wc_1h_under') {
+          const h1total = summary.homeHalf1 + summary.awayHalf1;
+          won = h1total < (leg.line || 0.5);
         } else if (leg.type === 'wc_1hml_home' || leg.type === 'wc_1hml_away' || leg.type === 'wc_1hml_draw') {
           const h1h = summary.homeHalf1, h1a = summary.awayHalf1;
           const vsIdx = (leg.homeAbbr || '').indexOf(' vs ');
