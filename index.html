@@ -10407,6 +10407,7 @@ async function _sbRefreshBets() {
   if (!panel) return;
   const openBets = bets.filter(b => b.status === 'open');
   panel.innerHTML = openBets.length ? _renderSbOpenBets(openBets) : '';
+  setTimeout(() => _sbFillWcBetTrackers(openBets).catch(() => {}), 0);
   // Update balance display if it changed
   if (_sbProfile && _sbProfile.bankroll !== prevBankroll) {
     const balEl = document.querySelector('.sb-bankroll-val');
@@ -11108,6 +11109,7 @@ async function renderSportsbook() {
   html += _renderSbHistory(bets);
 
   container.innerHTML = html;
+  setTimeout(() => _sbFillWcBetTrackers(bets).catch(() => {}), 0);
 
   // Kick off async section fill if needed
   if (_sbActiveSport === 'golf') _sbRenderGolfSection();
@@ -11920,6 +11922,7 @@ function _renderSbBetCard(bet, opts = {}) {
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:2px">${typeStr}</div>
           <div style="display:flex;align-items:center;gap:5px;margin-top:4px;font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted)">${logoA}${logoH} ${gameStr}</div>
           ${marginHtml}${ouBarHtml}
+          ${(l.type?.startsWith('wc_') && l.type !== 'wc_winner') ? `<div id="wc-bt-${String(bet.id).replace('.','')}-${i}"></div>` : ''}
         </div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px;color:var(--muted);flex-shrink:0">${_fmtML(l.ml)}</div>
       </div>`;
@@ -11966,6 +11969,215 @@ function _renderSbBetCard(bet, opts = {}) {
     </div>`;
 }
 
+// ── WC live bet trackers ───────────────────────────────────────
+function _wcBetEventId(l) {
+  if (l.eventId) return String(l.eventId);
+  const m = (l.gameKey || '').match(/^wc_(\d+)_/);
+  return m ? m[1] : null;
+}
+
+function _wcScoreBlock(h, a, hs, as_, stateLabel, stateColor) {
+  return `<div style="margin-top:7px;background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h}</span>
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:1.25rem;color:var(--text);flex-shrink:0">${hs} — ${as_}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--text);flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a}</span>
+    </div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:1px;color:${stateColor};margin-top:3px">${stateLabel}</div>
+  </div>`;
+}
+
+function _wcStatusRow(winning, label) {
+  const c = winning ? 'var(--green)' : 'var(--red)';
+  return `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:${c};margin-top:3px">${winning ? '✓' : '✗'} ${label}</div>`;
+}
+
+function _wcMatchTracker(hs, as_, stateLabel, stateColor, leg) {
+  let winning;
+  if (leg.type === 'wc_home') winning = hs > as_;
+  else if (leg.type === 'wc_away') winning = as_ > hs;
+  else winning = hs === as_;
+  const [h, a] = (leg.homeAbbr || '').split(' vs ');
+  const block = _wcScoreBlock(h||'Home', a||'Away', hs, as_, stateLabel, stateColor);
+  const status = stateLabel === 'FINAL' || stateLabel !== 'PRE' ? _wcStatusRow(winning, winning ? 'Winning' : 'Losing') : '';
+  return block + status;
+}
+
+function _wcBttsTracker(hs, as_, stateLabel, stateColor, leg) {
+  const dot = (scored) => `<span style="display:inline-flex;width:16px;height:16px;border-radius:50%;align-items:center;justify-content:center;border:2px solid ${scored?'var(--green)':'rgba(255,255,255,0.2)'};background:${scored?'rgba(0,232,122,0.15)':'rgba(255,255,255,0.05)'};color:${scored?'var(--green)':'var(--muted)'};font-size:0.55rem">${scored?'✓':'○'}</span>`;
+  const [h, a] = (leg.homeAbbr || '').split(' vs ');
+  const hS = hs > 0, aS = as_ > 0;
+  const both = hS && aS;
+  const winning = leg.type === 'wc_btts_yes' ? both : (!hS || !aS);
+  const note = both ? 'Both teams scored' : hS ? `${a||'Away'} needs a goal` : aS ? `${h||'Home'} needs a goal` : 'Neither team has scored';
+  return `<div style="margin-top:7px;background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 12px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:5px">${dot(hS)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--text)">${h||'Home'} (${hs})</span></div>
+      <div style="display:flex;align-items:center;gap:5px"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:var(--text)">${a||'Away'} (${as_})</span>${dot(aS)}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:1px;color:${stateColor}">${stateLabel}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:${winning?'var(--green)':'var(--red)'}">${note}</span>
+    </div>
+  </div>`;
+}
+
+function _wcOeTracker(total, stateLabel, stateColor, leg) {
+  const isOdd = total % 2 === 1;
+  const winning = leg.type === 'wc_goals_odd' ? isOdd : !isOdd;
+  return `<div style="margin-top:7px;background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 12px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;letter-spacing:1px;color:var(--muted)">TOTAL GOALS</span>
+    <span style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--text)">${total}</span>
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;font-weight:700;color:${winning?'var(--green)':'var(--red)'}">${isOdd?'ODD':'EVEN'} ${winning?'✓':'✗'}</span>
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:1px;color:${stateColor}">${stateLabel}</span>
+  </div>`;
+}
+
+function _wcH1TotalTracker(h1Total, stateLabel, stateColor, leg) {
+  const line = leg.line || 0.5;
+  const isOver = leg.type === 'wc_1h_over';
+  const winning = isOver ? h1Total > line : h1Total < line;
+  const maxG = Math.max(line * 1.5, h1Total + 2, 3);
+  const pct = Math.min(100, (h1Total / maxG) * 100);
+  const lp = Math.min(99, (line / maxG) * 100);
+  const note = winning ? (isOver ? `Over by ${h1Total - line}` : `Under by ${line - h1Total}`) : isOver ? `Need ${Math.ceil(line + 0.5) - h1Total} more` : `Over target`;
+  return `<div style="margin-top:7px;background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 12px">
+    <div style="display:flex;justify-content:space-between;font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:var(--muted);margin-bottom:4px">
+      <span>1H: ${h1Total} goals</span>
+      <span style="color:${winning?'var(--green)':'var(--red)'}">${note}</span>
+      <span>${isOver?'O':'U'} ${line}</span>
+    </div>
+    <div style="position:relative;height:5px;background:rgba(255,255,255,0.08);border-radius:3px">
+      <div style="height:100%;width:${pct}%;background:${winning?'var(--green)':'var(--red)'};border-radius:3px"></div>
+      <div style="position:absolute;top:-4px;left:${lp}%;width:2px;height:13px;background:var(--accent2);border-radius:1px;transform:translateX(-50%)"></div>
+    </div>
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:${stateColor};margin-top:3px;display:block;letter-spacing:1px">${stateLabel}</span>
+  </div>`;
+}
+
+function _wcH1MlTracker(h1Home, h1Away, stateLabel, stateColor, leg) {
+  let winning;
+  if (leg.type === 'wc_1hml_home') winning = h1Home > h1Away;
+  else if (leg.type === 'wc_1hml_away') winning = h1Away > h1Home;
+  else winning = h1Home === h1Away;
+  const [h, a] = (leg.homeAbbr || '').split(' vs ');
+  return `<div style="margin-top:7px;background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 12px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--text)">${h||'Home'}</span>
+      <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--text)">${h1Home} — ${h1Away}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.58rem;color:var(--muted);letter-spacing:1px">1ST HALF</div></div>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--text)">${a||'Away'}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;letter-spacing:1px;color:${stateColor}">${stateLabel}</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:${winning?'var(--green)':'var(--red)'}">${winning?'✓ Winning':'✗ Losing'}</span>
+    </div>
+  </div>`;
+}
+
+function _wcGoalscorerTracker(goals, stateLabel, stateColor, leg) {
+  const real = (goals || []).filter(g => g.type !== 'own-goal');
+  const fg = real[0], lg = real[real.length - 1];
+  const isFg = leg.type === 'wc_fg';
+  const target = isFg ? fg : lg;
+  if (!target) {
+    return `<div style="margin-top:7px;background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 12px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:var(--muted)">No goals yet</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:${stateColor}">${stateLabel}</span>
+    </div>`;
+  }
+  const hit = target.athleteId === leg.athleteId;
+  const lbl = isFg ? 'FIRST GOAL' : (stateLabel === 'FINAL' ? 'LAST GOAL' : 'LATEST GOAL');
+  return `<div style="margin-top:7px;background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 12px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:var(--muted);letter-spacing:1px">${lbl}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;color:var(--text)">${target.athleteName}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:${stateColor};letter-spacing:1px">${stateLabel}</div>
+    </div>
+    <span style="font-size:1.1rem;color:${hit?'var(--green)':'var(--red)'}">${hit?'✓':'✗'}</span>
+  </div>`;
+}
+
+function _wcScorerGoalsTracker(goals, stateLabel, stateColor, leg) {
+  const real = (goals || []).filter(g => g.type !== 'own-goal');
+  const count = real.filter(g => g.athleteId === leg.athleteId).length;
+  const target = leg.type === 'wc_s2' ? 2 : 3;
+  const pct = Math.min(100, (count / target) * 100);
+  const won = count >= target;
+  return `<div style="margin-top:7px;background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 12px">
+    <div style="display:flex;justify-content:space-between;font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;margin-bottom:4px">
+      <span style="color:var(--text)">${leg.awayAbbr}</span>
+      <span style="color:${won?'var(--green)':count>0?'var(--accent2)':'var(--muted)'}">${count} / ${target} goals ${won?'✓':''}</span>
+    </div>
+    <div style="height:5px;background:rgba(255,255,255,0.08);border-radius:3px">
+      <div style="height:100%;width:${pct}%;background:${won?'var(--green)':count>0?'var(--accent2)':'rgba(255,255,255,0.2)'};border-radius:3px;transition:width 0.4s"></div>
+    </div>
+    <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:${stateColor};margin-top:3px;display:block;letter-spacing:1px">${stateLabel}</span>
+  </div>`;
+}
+
+async function _sbFillWcBetTrackers(bets) {
+  const wcBets = (bets || []).filter(b => b.legs?.some(l => l.type?.startsWith('wc_') && l.type !== 'wc_winner'));
+  if (!wcBets.length) return;
+  const scoreboard = await _sbFetchEspnWcScoreboard().catch(() => []);
+  const summaryTypes = new Set(['wc_1h_over','wc_1h_under','wc_1hml_home','wc_1hml_away','wc_1hml_draw','wc_fg','wc_lg','wc_s2','wc_s3']);
+  const toFetch = new Set();
+  for (const bet of wcBets) {
+    for (const l of (bet.legs || [])) {
+      if (!summaryTypes.has(l.type)) continue;
+      const eid = _wcBetEventId(l);
+      if (eid && scoreboard.find(e => e.id === eid)?.competitions?.[0]?.status?.type?.state !== 'pre') toFetch.add(eid);
+    }
+  }
+  const summaries = {};
+  await Promise.all([...toFetch].map(async id => { summaries[id] = await _sbFetchWcSummary(id).catch(() => null); }));
+
+  for (const bet of wcBets) {
+    for (let i = 0; i < (bet.legs || []).length; i++) {
+      const l = bet.legs[i];
+      if (!l.type?.startsWith('wc_') || l.type === 'wc_winner') continue;
+      const el = document.getElementById(`wc-bt-${String(bet.id).replace('.','')}-${i}`);
+      if (!el) continue;
+      const eid = _wcBetEventId(l);
+      if (!eid) continue;
+      const scEv = scoreboard.find(e => e.id === eid);
+      const comp = scEv?.competitions?.[0];
+      const state = comp?.status?.type?.state || 'pre';
+      if (state === 'pre') continue;
+      const homeC = comp?.competitors?.find(c => c.homeAway === 'home');
+      const awayC = comp?.competitors?.find(c => c.homeAway === 'away');
+      const espnH = homeC?.team?.displayName || '';
+      const espnA = awayC?.team?.displayName || '';
+      const eHs = parseInt(homeC?.score || '0');
+      const eAs = parseInt(awayC?.score || '0');
+      const vsIdx = (l.homeAbbr || '').indexOf(' vs ');
+      const betH = vsIdx >= 0 ? l.homeAbbr.slice(0, vsIdx).trim() : espnH;
+      const swapped = _sbWcNormName(espnH) !== _sbWcNormName(betH);
+      const hs = swapped ? eAs : eHs;
+      const as_ = swapped ? eHs : eAs;
+      const isLive = state === 'in';
+      const stateLabel = isLive ? '● LIVE' : 'FINAL';
+      const stateColor = isLive ? '#22c55e' : 'var(--muted)';
+      const summary = summaries[eid] || null;
+      let html = '';
+      if (['wc_home','wc_away','wc_draw'].includes(l.type)) {
+        html = _wcMatchTracker(hs, as_, stateLabel, stateColor, l);
+      } else if (['wc_btts_yes','wc_btts_no'].includes(l.type)) {
+        html = _wcBttsTracker(hs, as_, stateLabel, stateColor, l);
+      } else if (['wc_goals_odd','wc_goals_even'].includes(l.type)) {
+        html = _wcOeTracker(hs + as_, stateLabel, stateColor, l);
+      } else if (summary) {
+        const h1H = swapped ? summary.awayHalf1 : summary.homeHalf1;
+        const h1A = swapped ? summary.homeHalf1 : summary.awayHalf1;
+        if (l.type === 'wc_1h_over' || l.type === 'wc_1h_under') html = _wcH1TotalTracker(h1H + h1A, stateLabel, stateColor, l);
+        else if (['wc_1hml_home','wc_1hml_away','wc_1hml_draw'].includes(l.type)) html = _wcH1MlTracker(h1H, h1A, stateLabel, stateColor, l);
+        else if (l.type === 'wc_fg' || l.type === 'wc_lg') html = _wcGoalscorerTracker(summary.goalEvents, stateLabel, stateColor, l);
+        else if (l.type === 'wc_s2' || l.type === 'wc_s3') html = _wcScorerGoalsTracker(summary.goalEvents, stateLabel, stateColor, l);
+      }
+      el.innerHTML = html;
+    }
+  }
+}
+
 function _renderSbOpenBets(openBets) {
   if (!openBets.length) return '';
 
@@ -11999,7 +12211,7 @@ function _sbNavHistoryMonth(delta) {
   const d = new Date(y, m - 1 + delta, 1);
   _sbHistoryMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   const body = document.getElementById('sb-history-body');
-  if (body) body.innerHTML = _sbHistoryBodyHtml(_sbCachedBets);
+  if (body) { body.innerHTML = _sbHistoryBodyHtml(_sbCachedBets); setTimeout(() => _sbFillWcBetTrackers(_sbCachedBets).catch(() => {}), 0); }
 }
 
 function _sbHistoryBodyHtml(bets) {
