@@ -8701,7 +8701,9 @@ async function _sbRenderWorldCupSection() {
         const esc = s => (s||'').replace(/'/g,"\\'");
         const sel = (gk) => _sbSlip.some(l => l.gameKey === gk) ? ' selected' : '';
         const gpIsLive = gameState === 'in';
-        const gpGameHeader = `<div style="padding:10px 14px 6px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between">
+        const gpIsToday = new Date(ev.commence_time).toDateString() === new Date().toDateString();
+        const gpOpen = gpIsToday || gpIsLive;
+        const gpHeader = `<div onclick="_sbToggleWcPropGame('gp-${ev.id}')" style="padding:10px 14px 8px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
             <div style="display:flex;align-items:center;gap:8px">
               ${homeFlag?`<img src="${homeFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px">`:''}
               <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${ev.home_team}</span>
@@ -8709,15 +8711,18 @@ async function _sbRenderWorldCupSection() {
               <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${ev.away_team}</span>
               ${awayFlag?`<img src="${awayFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px">`:''}
             </div>
-            <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:${gpIsLive?'#22c55e':'var(--muted)'};letter-spacing:1px">${gpIsLive?'● LIVE':kickoff}</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:${gpIsLive?'#22c55e':'var(--muted)'};letter-spacing:1px">${gpIsLive?'● LIVE':kickoff}</span>
+              <span id="wc-pg-chev-gp-${ev.id}" style="font-size:0.65rem;color:var(--muted);transition:transform 0.2s;transform:${gpOpen?'rotate(0)':'rotate(-90deg)'}">▼</span>
+            </div>
           </div>`;
         if (gpIsLive || (!props && gameState !== 'pre')) {
-          gpHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">${gpGameHeader}<div style="padding:14px;text-align:center"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:2px;color:var(--muted)">BETTING LOCKED</span></div></div>`;
+          gpHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">${gpHeader}<div id="wc-pg-body-gp-${ev.id}" style="display:${gpOpen?'block':'none'}"><div style="padding:14px;text-align:center"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:2px;color:var(--muted)">BETTING LOCKED</span></div></div></div>`;
           continue;
         }
         if (!props) continue;
-        gpHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">${gpGameHeader}
-          <div style="padding:10px 14px 12px;display:flex;flex-direction:column;gap:10px">`;
+        gpHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">${gpHeader}
+          <div id="wc-pg-body-gp-${ev.id}" style="display:${gpOpen?'block':'none'};padding:10px 14px 12px"><div style="display:flex;flex-direction:column;gap:10px">`;
 
         // BTTS
         if (props.bttsYes !== null || props.bttsNo !== null) {
@@ -8782,7 +8787,7 @@ async function _sbRenderWorldCupSection() {
           </div>`;
         }
 
-        gpHtml += `</div></div>`;
+        gpHtml += `</div></div></div>`;
       }
       cont.innerHTML = gpHtml || `<div style="text-align:center;padding:32px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem">No game props available</div>`;
     }, 0);
@@ -8812,12 +8817,14 @@ async function _sbRenderWorldCupSection() {
         const ppScEv = ppScoreboard.find(e => e.id === ev.id);
         const ppState = ppScEv?.competitions?.[0]?.status?.type?.state || 'pre';
         const ppIsLive = ppState === 'in';
+        const ppIsToday = new Date(ev.commence_time).toDateString() === new Date().toDateString();
+        const ppOpen = ppIsToday || ppIsLive;
         const kickoff = new Date(ev.commence_time).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
         const homeFlag = _sbWcFlag(ev.home_team);
         const awayFlag = _sbWcFlag(ev.away_team);
         const matchLabel = `${ev.home_team} vs ${ev.away_team}`;
         const esc = s => (s||'').replace(/'/g,"\\'");
-        const ppGameHeader = `<div style="padding:10px 14px 6px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between">
+        const ppGameHeader = `<div onclick="_sbToggleWcPropGame('pp-${ev.id}')" style="padding:10px 14px 8px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
             <div style="display:flex;align-items:center;gap:8px">
               ${homeFlag?`<img src="${homeFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px">`:''}
               <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${ev.home_team}</span>
@@ -8825,10 +8832,13 @@ async function _sbRenderWorldCupSection() {
               <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;letter-spacing:1px">${ev.away_team}</span>
               ${awayFlag?`<img src="${awayFlag}" style="width:24px;height:16px;object-fit:cover;border-radius:2px">`:''}
             </div>
-            <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:${ppIsLive?'#22c55e':'var(--muted)'};letter-spacing:1px">${ppIsLive?'● LIVE':kickoff}</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:${ppIsLive?'#22c55e':'var(--muted)'};letter-spacing:1px">${ppIsLive?'● LIVE':kickoff}</span>
+              <span id="wc-pg-chev-pp-${ev.id}" style="font-size:0.65rem;color:var(--muted);transition:transform 0.2s;transform:${ppOpen?'rotate(0)':'rotate(-90deg)'}">▼</span>
+            </div>
           </div>`;
         if (ppIsLive) {
-          ppHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">${ppGameHeader}<div style="padding:14px;text-align:center"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:2px;color:var(--muted)">BETTING LOCKED</span></div></div>`;
+          ppHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">${ppGameHeader}<div id="wc-pg-body-pp-${ev.id}" style="display:${ppOpen?'block':'none'}"><div style="padding:14px;text-align:center"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;letter-spacing:2px;color:var(--muted)">BETTING LOCKED</span></div></div></div>`;
           continue;
         }
         const ppHomeC = ppScEv?.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home');
@@ -8855,7 +8865,7 @@ async function _sbRenderWorldCupSection() {
         };
 
         ppHtml += `<div style="border-bottom:1px solid rgba(255,255,255,0.06)">${ppGameHeader}
-          <div style="padding:10px 14px 12px;display:flex;flex-direction:column;gap:12px">`;
+          <div id="wc-pg-body-pp-${ev.id}" style="display:${ppOpen?'block':'none'}"><div style="padding:10px 14px 12px;display:flex;flex-direction:column;gap:12px">`;
 
         for (const pt of propTypeLabels) {
           const players = props[pt.key] || [];
@@ -8878,7 +8888,7 @@ async function _sbRenderWorldCupSection() {
           }
           ppHtml += `</div></div></div>`;
         }
-        ppHtml += `</div></div>`;
+        ppHtml += `</div></div></div>`;
       }
       cont.innerHTML = ppHtml || `<div style="text-align:center;padding:32px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem">No player props available</div>`;
     }, 0);
@@ -8901,6 +8911,15 @@ function _sbToggleWcLeg(eventId, type, teamName, homeTeam, awayTeam, ml) {
   }
   _renderSbSlip();
   _sbRenderWorldCupSection();
+}
+
+function _sbToggleWcPropGame(id) {
+  const body = document.getElementById(`wc-pg-body-${id}`);
+  const chev = document.getElementById(`wc-pg-chev-${id}`);
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? 'rotate(-90deg)' : 'rotate(0)';
 }
 
 function _sbToggleWcWinner(betKey, teamName, ml) {
