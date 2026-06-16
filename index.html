@@ -8474,9 +8474,12 @@ async function _sbFetchWcPlayerProps(eventId, homeTeamId, awayTeamId) {
   if (c && Date.now() - c.ts < 300000) return c.data;
   try {
     const base = `https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world/events/${eventId}/competitions/${eventId}/odds/100/propBets?lang=en&region=us&limit=100`;
-    const d = await fetch(base + '&page=1').then(r => r.json());
-    const items = d.items || [];
-    const wantedIds = new Set(['37','38','39','40']);
+    const [d1, d3] = await Promise.all([
+      fetch(base + '&page=1').then(r => r.json()),
+      fetch(base + '&page=3').then(r => r.json()),
+    ]);
+    const items = [...(d1.items || []), ...(d3.items || [])];
+    const wantedIds = new Set(['39','40','230']);
     const playerItems = items.filter(it => wantedIds.has(it.type?.id));
 
     const _getRef = it => (it.athlete?.['$ref'] || it.participant?.['$ref'] || '').replace(/^http:/, 'https:');
@@ -8501,7 +8504,7 @@ async function _sbFetchWcPlayerProps(eventId, homeTeamId, awayTeamId) {
     }
 
     const _mlProb = ml => ml < 0 ? Math.abs(ml) / (Math.abs(ml) + 100) : 100 / (ml + 100);
-    const byType = { '37': [], '38': [], '39': [], '40': [] };
+    const byType = { '39': [], '40': [], '230': [] };
     for (const it of playerItems) {
       const tid = it.type?.id;
       if (!byType[tid]) continue;
@@ -8520,10 +8523,9 @@ async function _sbFetchWcPlayerProps(eventId, homeTeamId, awayTeamId) {
     // Sort each market by probability descending (most likely first)
     const sortByProb = arr => [...arr].sort((a, b) => b.prob - a.prob);
     const data = {
-      firstScorer: sortByProb(byType['37']),
-      lastScorer:  sortByProb(byType['38']),
-      score2plus:  sortByProb(byType['39']),
-      score3plus:  sortByProb(byType['40']),
+      anytimeScorer: sortByProb(byType['230']),
+      score2plus:    sortByProb(byType['39']),
+      score3plus:    sortByProb(byType['40']),
     };
     _sbWcPlayerPropsCache[cacheKey] = { ts: Date.now(), data };
     return data;
@@ -8830,10 +8832,9 @@ async function _sbRenderWorldCupSection() {
         : null;
       const _ppAutoOpenDate = _ppNextDate ? new Date(_ppNextDate).toDateString() : _ppTodayStr;
       const propTypeLabels = [
-        { key: 'firstScorer', label: 'FIRST GOALSCORER',   type: 'wc_fg', prefix: '_fg' },
-        { key: 'lastScorer',  label: 'LAST GOALSCORER',    type: 'wc_lg', prefix: '_lg' },
-        { key: 'score2plus',  label: 'TO SCORE 2+ GOALS',  type: 'wc_s2', prefix: '_s2' },
-        { key: 'score3plus',  label: 'TO SCORE 3+ GOALS',  type: 'wc_s3', prefix: '_s3' },
+        { key: 'anytimeScorer', label: 'ANYTIME GOALSCORER', type: 'wc_ag', prefix: '_ag' },
+        { key: 'score2plus',    label: 'TO SCORE 2+ GOALS',  type: 'wc_s2', prefix: '_s2' },
+        { key: 'score3plus',    label: 'TO SCORE 3+ GOALS',  type: 'wc_s3', prefix: '_s3' },
       ];
       for (const ev of propGames2) {
         const ppScEv = ppScoreboard.find(e => e.id === ev.id);
@@ -10015,13 +10016,12 @@ async function _sbAutoSettle() {
           if (leg.type === 'wc_1hml_home') won = h1BetHome > h1BetAway;
           else if (leg.type === 'wc_1hml_away') won = h1BetAway > h1BetHome;
           else won = h1BetHome === h1BetAway;
-        } else if (['wc_fg','wc_lg','wc_s2','wc_s3'].includes(leg.type)) {
+        } else if (['wc_ag','wc_s2','wc_s3'].includes(leg.type)) {
           const goals = summary.goalEvents || [];
           const realGoals = goals.filter(g => g.type !== 'own-goal');
           const aId = leg.athleteId;
           if (!aId) continue;
-          if (leg.type === 'wc_fg') won = realGoals[0]?.athleteId === aId;
-          else if (leg.type === 'wc_lg') won = realGoals[realGoals.length - 1]?.athleteId === aId;
+          if (leg.type === 'wc_ag') won = realGoals.some(g => g.athleteId === aId);
           else if (leg.type === 'wc_s2') won = realGoals.filter(g => g.athleteId === aId).length >= 2;
           else if (leg.type === 'wc_s3') won = realGoals.filter(g => g.athleteId === aId).length >= 3;
         } else { continue; }
@@ -12179,6 +12179,20 @@ function _wcGoalscorerTracker(goals, stateLabel, stateColor, leg) {
   </div>`;
 }
 
+function _wcAnytimeScorerTracker(goals, stateLabel, stateColor, leg) {
+  const real = (goals || []).filter(g => g.type !== 'own-goal');
+  const scored = real.some(g => g.athleteId === leg.athleteId);
+  const count = real.filter(g => g.athleteId === leg.athleteId).length;
+  return `<div style="margin-top:7px;background:rgba(255,255,255,0.04);border-radius:7px;padding:7px 12px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:var(--muted);letter-spacing:1px">ANYTIME GOAL</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;color:var(--text)">${leg.awayAbbr || 'Player'}${count > 1 ? ` (${count} goals)` : ''}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:${stateColor};letter-spacing:1px">${stateLabel}</div>
+    </div>
+    <span style="font-size:1.1rem;color:${scored?'var(--green)':'var(--muted)'}">${scored?'✓':'–'}</span>
+  </div>`;
+}
+
 function _wcScorerGoalsTracker(goals, stateLabel, stateColor, leg) {
   const real = (goals || []).filter(g => g.type !== 'own-goal');
   const count = real.filter(g => g.athleteId === leg.athleteId).length;
@@ -12201,7 +12215,7 @@ async function _sbFillWcBetTrackers(bets) {
   const wcBets = (bets || []).filter(b => b.legs?.some(l => l.type?.startsWith('wc_') && l.type !== 'wc_winner'));
   if (!wcBets.length) return;
   const scoreboard = await _sbFetchEspnWcScoreboard().catch(() => []);
-  const summaryTypes = new Set(['wc_1h_over','wc_1h_under','wc_1hml_home','wc_1hml_away','wc_1hml_draw','wc_fg','wc_lg','wc_s2','wc_s3']);
+  const summaryTypes = new Set(['wc_1h_over','wc_1h_under','wc_1hml_home','wc_1hml_away','wc_1hml_draw','wc_ag','wc_s2','wc_s3']);
   const toFetch = new Set();
   for (const bet of wcBets) {
     for (const l of (bet.legs || [])) {
@@ -12252,7 +12266,7 @@ async function _sbFillWcBetTrackers(bets) {
         const h1A = swapped ? summary.homeHalf1 : summary.awayHalf1;
         if (l.type === 'wc_1h_over' || l.type === 'wc_1h_under') html = _wcH1TotalTracker(h1H + h1A, stateLabel, stateColor, l);
         else if (['wc_1hml_home','wc_1hml_away','wc_1hml_draw'].includes(l.type)) html = _wcH1MlTracker(h1H, h1A, stateLabel, stateColor, l);
-        else if (l.type === 'wc_fg' || l.type === 'wc_lg') html = _wcGoalscorerTracker(summary.goalEvents, stateLabel, stateColor, l);
+        else if (l.type === 'wc_ag') html = _wcAnytimeScorerTracker(summary.goalEvents, stateLabel, stateColor, l);
         else if (l.type === 'wc_s2' || l.type === 'wc_s3') html = _wcScorerGoalsTracker(summary.goalEvents, stateLabel, stateColor, l);
       }
       el.innerHTML = html;
