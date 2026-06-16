@@ -9565,10 +9565,12 @@ async function _sbFixSpainPushBet() {
         changed = true;
       }
     }
-    if (changed) await _sbSaveBets(bets);
-    // Only hard-set bankroll if it still appears inflated by the push (>= $600).
-    // If it's already < $600, the fix was already applied or subsequent bets updated it.
-    if (_sbProfile.bankroll >= 600) _sbProfile.bankroll = 2.94;
+    if (changed) {
+      await _sbSaveBets(bets);
+      // Push incorrectly returned the $690 stake — subtract it from whatever the current bankroll is
+      _sbProfile.bankroll = Math.max(0, (_sbProfile.bankroll || 0) - 690);
+    }
+    // If not changed, Spain bet was already a loss — bankroll is correct, don't touch it
     _sbProfile._dsFixed6 = true;
     await _sbSaveProfile();
     await _sbSaveLeaderboard();
