@@ -8874,15 +8874,13 @@ async function _sbRenderWorldCupSection() {
 
         const ppBtn = (p, gk, pt) => {
           const inSl = _sbSlip.some(l => l.gameKey === gk);
-          const flag = p.side === 'home' ? (homeFlag ? `<img src="${homeFlag}" style="width:14px;height:10px;object-fit:cover;border-radius:1px;flex-shrink:0">` : '') : (awayFlag ? `<img src="${awayFlag}" style="width:14px;height:10px;object-fit:cover;border-radius:1px;flex-shrink:0">` : '');
-          const posTag = p.pos ? `<span style="font-size:0.6rem;color:var(--muted);background:rgba(255,255,255,0.08);border-radius:3px;padding:0 3px;flex-shrink:0">${p.pos}</span>` : '';
-          return `<button class="sb-prop-btn yn${inSl?' selected':''}" onclick="_sbToggleWcPlayerProp('${ev.id}','${gk}','${pt.type}','wc_${ev.id}${pt.prefix}','${esc(matchLabel)}','${esc(p.name)}','${p.athleteId}',${p.odds})" style="flex-direction:column;align-items:flex-start;padding:5px 7px;gap:2px;width:100%">
-            <div style="display:flex;align-items:center;gap:4px;width:100%">
-              ${flag}
-              <span style="font-size:0.76rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left">${p.name}</span>
-              ${posTag}
-            </div>
-            <span class="prop-odds" style="font-size:0.8rem">${_fmtML(p.odds)}</span>
+          const flag = p.side === 'home' ? (homeFlag ? `<img src="${homeFlag}" style="width:16px;height:11px;object-fit:cover;border-radius:1px;flex-shrink:0">` : '') : (awayFlag ? `<img src="${awayFlag}" style="width:16px;height:11px;object-fit:cover;border-radius:1px;flex-shrink:0">` : '');
+          const posTag = p.pos ? `<span style="font-size:0.68rem;color:var(--muted);flex-shrink:0">${p.pos}</span>` : '';
+          return `<button class="sb-prop-btn yn${inSl?' selected':''}" onclick="_sbToggleWcPlayerProp('${ev.id}','${gk}','${pt.type}','wc_${ev.id}${pt.prefix}','${esc(matchLabel)}','${esc(p.name)}','${p.athleteId}',${p.odds})" style="flex-direction:row;align-items:center;padding:7px 9px;gap:5px;width:100%">
+            ${flag}
+            <span style="font-size:0.88rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left">${p.name}</span>
+            ${posTag}
+            <span class="prop-odds" style="font-size:0.92rem;flex-shrink:0">${_fmtML(p.odds)}</span>
           </button>`;
         };
 
