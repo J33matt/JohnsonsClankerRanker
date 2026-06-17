@@ -9520,10 +9520,15 @@ async function _sbSaveLeaderboard() {
         }
       } else if (b.status === 'settled') {
         if (b.result === 'win')  lbEarned += Math.max(0, (b.payout || 0) - (b.stake || 0));
-        if (b.result === 'loss') lbLost   += b.stake || 0;
       }
     }
   } catch(e) {}
+  // Derive losses from the bankroll identity so they stay consistent with the
+  // ground-truth balance even when win records are missing/mislabeled:
+  //   balance + in-play = startBalance + earnings − losses
+  // ⟹ losses = (earnings + startBalance) − (balance + in-play) = earnings − net
+  const _lbNet = (_sbProfile.bankroll || 0) + atRisk - (_sbProfile.startBalance || 100);
+  lbLost = Math.max(0, lbEarned - _lbNet);
 
   const entry = {
     v: 2,  // version — pre-auth entries lack this and are filtered from display
@@ -11092,13 +11097,15 @@ async function renderSportsbook() {
   const totalNet = (_sbProfile.bankroll || 0) + openStakes - (_sbProfile.startBalance || 100);
   const netCls = totalNet > 0 ? 'up' : totalNet < 0 ? 'dn' : '';
   const netStr = (totalNet >= 0 ? '+' : '') + '$' + Math.abs(totalNet).toFixed(2);
-  // Compute earnings/losses live from bet records — never trust stored counters
+  // Compute earnings live from bet records — never trust stored counters
   let allTimeEarned = 0, allTimeLost = 0, totalWagered = 0;
   for (const b of settledBets) {
     totalWagered += b.stake || 0;
     if (b.result === 'win')  allTimeEarned += Math.max(0, (b.payout || 0) - (b.stake || 0));
-    if (b.result === 'loss') allTimeLost   += b.stake || 0;
   }
+  // Derive losses from the bankroll identity (immune to missing/mislabeled wins):
+  //   losses = (earnings + startBalance) − (balance + in-play) = earnings − net
+  allTimeLost = Math.max(0, allTimeEarned - totalNet);
   const roi = totalWagered > 0
     ? ((totalNet / totalWagered) * 100).toFixed(1)
     : '0.0';
