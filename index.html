@@ -9504,7 +9504,7 @@ async function _sbSaveLeaderboard() {
   const totalBets = (_sbProfile.allTimeW || 0) + (_sbProfile.allTimeL || 0);
 
   // Compute all stats live from bet records — never trust stored counters
-  let atRisk = 0, potReturn = 0, liveBets = 0, lbEarned = 0, lbLost = 0;
+  let atRisk = 0, potReturn = 0, liveBets = 0, lbEarned = 0, lbLost = 0, lbW = 0, lbL = 0;
   try {
     const bets = await _sbLoadBets();
     for (const b of bets) {
@@ -9519,7 +9519,8 @@ async function _sbSaveLeaderboard() {
           potReturn += (b.stake || 0) + _mlPayout(b.ml, b.stake || 0);
         }
       } else if (b.status === 'settled') {
-        if (b.result === 'win')  lbEarned += Math.max(0, (b.payout || 0) - (b.stake || 0));
+        if (b.result === 'win')  { lbEarned += Math.max(0, (b.payout || 0) - (b.stake || 0)); lbW++; }
+        else if (b.result === 'loss') lbL++;
       }
     }
   } catch(e) {}
@@ -9534,8 +9535,8 @@ async function _sbSaveLeaderboard() {
     v: 2,  // version — pre-auth entries lack this and are filtered from display
     nickname: _sbProfile.nickname,
     bankroll: _sbProfile.bankroll,
-    w: _sbProfile.allTimeW || 0,
-    l: _sbProfile.allTimeL || 0,
+    w: lbW,
+    l: lbL,
     net: (_sbProfile.bankroll || 0) + atRisk - (_sbProfile.startBalance || 100),
     bets: totalBets,
     atRisk, potReturn, liveBets,
@@ -11106,6 +11107,9 @@ async function renderSportsbook() {
   // Derive losses from the bankroll identity (immune to missing/mislabeled wins):
   //   losses = (earnings + startBalance) − (balance + in-play) = earnings − net
   allTimeLost = Math.max(0, allTimeEarned - totalNet);
+  // W–L record counted from settled bet records (source of truth = bet history)
+  const recordW = settledBets.filter(b => b.result === 'win').length;
+  const recordL = settledBets.filter(b => b.result === 'loss').length;
   const roi = totalWagered > 0
     ? ((totalNet / totalWagered) * 100).toFixed(1)
     : '0.0';
@@ -11130,8 +11134,8 @@ async function renderSportsbook() {
       <div class="sb-bankroll-sub">Started $${_sbProfile.startBalance || 100} · ${_sbProfile.startDate || '—'} · $${totalWagered.toFixed(0)} wagered total</div>
     </div>
     <div class="sb-stats-row">
-      <div class="sb-stat-pill"><b>${_sbProfile.allTimeW || 0}</b>Wins</div>
-      <div class="sb-stat-pill"><b>${_sbProfile.allTimeL || 0}</b>Losses</div>
+      <div class="sb-stat-pill"><b>${recordW}</b>Wins</div>
+      <div class="sb-stat-pill"><b>${recordL}</b>Losses</div>
       <div class="sb-stat-pill"><b class="${netCls}">${netStr}</b>All-Time Net</div>
       <div class="sb-stat-pill"><b class="${netCls}">${roi}%</b>ROI</div>
       <div class="sb-stat-pill"><b>${openBets.length}</b>Open Bets</div>
@@ -11793,6 +11797,11 @@ function _renderBotPicks(botBets, enrichedGames) {
 function _renderSbLeaderboard(entries) {
   const myNick = _sbProfile?.nickname || '';
   const sort = _sbLbSort;
+  // Current user's record counted live from bet records, so the scoreboard
+  // matches the bet history exactly (independent of last leaderboard save).
+  const _mySettled = (_sbCachedBets || []).filter(b => b.status === 'settled');
+  const _myW = _mySettled.filter(b => b.result === 'win').length;
+  const _myL = _mySettled.filter(b => b.result === 'loss').length;
 
   if (!entries.length) {
     return `<div class="sb-leaderboard" style="margin-bottom:28px">
@@ -11811,8 +11820,8 @@ function _renderSbLeaderboard(entries) {
     displayEntries.push({
       nickname: myNick,
       bankroll: _sbProfile.bankroll || 0,
-      w: _sbProfile.allTimeW || 0,
-      l: _sbProfile.allTimeL || 0,
+      w: _myW,
+      l: _myL,
       net: _sbProfile.allTimeNet || 0,
       atRisk: 0, potReturn: 0, liveBets: 0,
       allTimeEarned: _sbProfile.allTimeEarned || 0,
@@ -11859,7 +11868,7 @@ function _renderSbLeaderboard(entries) {
     const rank = rankMap.get(e.nickname) ?? 999;
     const rankColor = rank === 0 ? '#ffd700' : rank === 1 ? '#c0c0c0' : rank === 2 ? '#cd7f32' : 'var(--muted)';
     const rankDisplay = e._notInTop ? '—' : (rank < 3 ? medals[rank] : `#${rank + 1}`);
-    const record = `${e.w || 0}W–${e.l || 0}L`;
+    const record = isYou ? `${_myW}W–${_myL}L` : `${e.w || 0}W–${e.l || 0}L`;
     // Use live in-memory bankroll for current user so Balance column matches header exactly
     const bal = isYou && _sbProfile ? _sbProfile.bankroll : (e.bankroll || 0);
     const balColor = bal >= 100 ? 'var(--green)' : 'var(--red)';
@@ -12584,7 +12593,10 @@ function _renderSbHistory(bets) {
 
   const wins     = settled.filter(b => b.result === 'win').length;
   const losses   = settled.filter(b => b.result === 'loss').length;
-  const totalNet = settled.filter(b => b.net != null).reduce((s, b) => s + b.net, 0);
+  // Net from the ground-truth bankroll (matches All-Time Net), immune to missing
+  // win records: net = (balance + in-play) − startBalance
+  const _openStakes = bets.filter(b => b.status === 'open').reduce((s, b) => s + (b.stake || 0), 0);
+  const totalNet = (_sbProfile?.bankroll || 0) + _openStakes - (_sbProfile?.startBalance || 100);
   const netColor = totalNet >= 0 ? 'var(--green)' : 'var(--red)';
   const netStr   = `${totalNet >= 0 ? '+' : ''}$${Math.abs(totalNet).toFixed(2)}`;
 
