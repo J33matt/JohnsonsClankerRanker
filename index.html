@@ -12066,7 +12066,7 @@ function _renderSbBetCard(bet, opts = {}) {
     }
 
     const desc = _sbLegDesc(l);
-    const gameStr = `${l.awayAbbr} @ ${l.homeAbbr}`;
+    const gameStr = (l.type === 'golf_winner' || l.type?.startsWith('wc_')) ? l.homeAbbr : `${l.awayAbbr} @ ${l.homeAbbr}`;
     const typeStr = legTypeLabel(l.type);
     const awayLogo = getLogoUrl(l.awayAbbr);
     const homeLogo = getLogoUrl(l.homeAbbr);
