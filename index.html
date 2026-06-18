@@ -7883,8 +7883,19 @@ const _sbWcFlagCodes = {
   'dr congo':'cd','democratic republic of congo':'cd','congo dr':'cd','dr. congo':'cd',
   'uzbekistan':'uz','curaçao':'cw','curacao':'cw',
 };
+// Normalize separators so "Bosnia-Herzegovina", "Bosnia & Herzegovina" and
+// "Bosnia and Herzegovina" all map to the same key.
+const _sbWcFlagNorm = s => (s || '').toLowerCase()
+  .replace(/\s*&\s*/g, ' ')
+  .replace(/\s+and\s+/g, ' ')
+  .replace(/-/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+const _sbWcFlagCodesNorm = Object.fromEntries(
+  Object.entries(_sbWcFlagCodes).map(([k, v]) => [_sbWcFlagNorm(k), v])
+);
 function _sbWcFlag(country) {
-  const code = _sbWcFlagCodes[(country||'').toLowerCase().trim()];
+  const code = _sbWcFlagCodesNorm[_sbWcFlagNorm(country)];
   return code ? `https://flagcdn.com/w40/${code}.png` : '';
 }
 
