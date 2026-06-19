@@ -8347,7 +8347,7 @@ async function _sbFetchWcMatchOdds() {
 // Tournament winner odds unavailable without paid API — returns empty
 async function _sbFetchWcWinnerOdds() { return []; }
 
-let _sbWcSubTab = 'matches'; // 'matches' | 'game_props' | 'player_props'
+let _sbWcSubTab = 'matches'; // 'matches' (3-way) | 'dnb' (draw no bet) | 'game_props' | 'player_props'
 let _sbWcRefreshInterval = null;
 const _sbWcPrevOdds  = {}; // `${eventId}_${type}` → previous price
 const _sbWcOddsFlash = {}; // `${eventId}_${type}` → { dir:'up'|'down', timerId }
@@ -8672,7 +8672,8 @@ async function _sbRenderWorldCupSection() {
 
   const tabStyle = (tab) => `padding:6px 14px;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;letter-spacing:2px;cursor:pointer;transition:all 0.15s;background:${_sbWcSubTab===tab?'var(--accent)':'transparent'};color:${_sbWcSubTab===tab?'#fff':'var(--muted)'}`;
   let html = `<div style="display:flex;gap:2px;margin-bottom:16px;background:var(--border);border-radius:8px;padding:2px">
-    <button style="${tabStyle('matches')}" onclick="_sbSetWcSubTab('matches')">MATCH ODDS</button>
+    <button style="${tabStyle('matches')}" onclick="_sbSetWcSubTab('matches')">3-WAY</button>
+    <button style="${tabStyle('dnb')}" onclick="_sbSetWcSubTab('dnb')">DRAW NO BET</button>
     <button style="${tabStyle('game_props')}" onclick="_sbSetWcSubTab('game_props')">GAME PROPS</button>
     <button style="${tabStyle('player_props')}" onclick="_sbSetWcSubTab('player_props')">PLAYER PROPS</button>
   </div>`;
@@ -8740,6 +8741,74 @@ async function _sbRenderWorldCupSection() {
               ${draw ? `<button class="sb-prop-btn yn${btnSel('draw')}" onclick="${tog('draw','Draw',draw.price)}" style="flex-direction:column;padding:7px 4px;${flashBorder('draw')}"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px;display:flex;align-items:center;justify-content:center">DRAW${flashArrow('draw')}</span><span class="prop-odds">${_fmtML(draw.price)}</span></button>` : '<div></div>'}
               ${away ? `<button class="sb-prop-btn yn${btnSel('away')}" onclick="${tog('away',ev.away_team,away.price)}" style="flex-direction:column;padding:7px 4px;${flashBorder('away')}"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px;display:flex;align-items:center;justify-content:center">AWAY${flashArrow('away')}</span><span class="prop-odds">${_fmtML(away.price)}</span></button>` : '<div></div>'}
             </div>`}
+          </div>`;
+        }
+        firstGroup = false;
+      }
+      html += `</div>`;
+    }
+  } else if (_sbWcSubTab === 'dnb') {
+    // ── Draw No Bet (two-way) Tab ───────────────────────────────
+    // Odds derived from the 3-way prices; if the match draws, the stake is refunded.
+    const byDate = {};
+    for (const ev of matches) {
+      const outcomes = ev.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
+      if (!outcomes.length) continue;
+      const _evScKey = [_sbWcNormName(ev.home_team), _sbWcNormName(ev.away_team)].sort().join('|');
+      if (wcScores[_evScKey]?.state === 'post') continue;
+      const d = new Date(ev.commence_time);
+      const groupDate = new Date(d);
+      if (groupDate.getHours() < 4) groupDate.setDate(groupDate.getDate() - 1);
+      const dateKey = groupDate.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+      if (!byDate[dateKey]) byDate[dateKey] = [];
+      byDate[dateKey].push(ev);
+    }
+
+    if (!Object.keys(byDate).length) {
+      html += `<div style="text-align:center;padding:48px 0;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:3px;font-size:0.82rem;text-transform:uppercase">No matches available</div>`;
+    } else {
+      html += `<div style="padding:8px 12px;margin-bottom:10px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--muted);letter-spacing:0.5px">Two-way market — pick a side with no draw option. <span style="color:var(--text)">If the match ends level, your stake is refunded.</span></div>`;
+      html += `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">`;
+      let firstGroup = true;
+      for (const [dateKey, evs] of Object.entries(byDate)) {
+        if (!firstGroup) html += `<div style="height:1px;background:rgba(255,255,255,0.1);margin:0"></div>`;
+        html += `<div style="padding:8px 14px 4px;background:var(--surface2)">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:2px;color:var(--muted)">${dateKey}</span>
+        </div>`;
+        for (const ev of evs) {
+          const outcomes = ev.bookmakers[0].markets[0].outcomes;
+          const home = outcomes.find(o => o.name === ev.home_team);
+          const away = outcomes.find(o => o.name === ev.away_team);
+          const draw = outcomes.find(o => o.name === 'Draw');
+          const dnb = (home && away) ? _sbWcDnbOdds(home.price, draw?.price, away.price) : null;
+          const btnSel = (type) => _sbSlip.some(l => l.gameKey === `wc_${ev.id}_${type}`) ? ' selected' : '';
+          const tog = (type, team, ml) => `_sbToggleWcLeg('${ev.id}','${type}','${(team||'').replace(/'/g,"\\'")}','${ev.home_team.replace(/'/g,"\\'")}','${ev.away_team.replace(/'/g,"\\'")}',${ml})`;
+          const homeFlag = _sbWcFlag(ev.home_team);
+          const awayFlag = _sbWcFlag(ev.away_team);
+          const kickoff = new Date(ev.commence_time).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
+          const _evLiveKey = [_sbWcNormName(ev.home_team), _sbWcNormName(ev.away_team)].sort().join('|');
+          const _isLive = wcScores[_evLiveKey]?.state === 'in';
+          html += `<div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04)">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:${_isLive?'#22c55e':'var(--muted)'};letter-spacing:1px;margin-bottom:6px">${_isLive?'● LIVE':kickoff}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
+                ${homeFlag ? `<img src="${homeFlag}" style="width:36px;height:24px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
+                <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.home_team}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;padding:0 6px;min-width:44px"><span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--text);opacity:0.5">VS</span></div>
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;justify-content:flex-end">
+                <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right">${ev.away_team}</span>
+                ${awayFlag ? `<img src="${awayFlag}" style="width:36px;height:24px;object-fit:cover;border-radius:3px;flex-shrink:0">` : ''}
+              </div>
+            </div>
+            ${_isLive
+              ? `<div style="margin-top:10px;padding:8px;text-align:center;border-radius:6px;border:1px dashed rgba(255,255,255,0.12)"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;letter-spacing:2px;color:var(--muted)">BETTING LOCKED</span></div>`
+              : dnb
+              ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">
+              <button class="sb-prop-btn yn${btnSel('dnb_home')}" onclick="${tog('dnb_home',ev.home_team,dnb.home)}" style="flex-direction:column;padding:7px 4px"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px">HOME · DNB</span><span class="prop-odds">${_fmtML(dnb.home)}</span></button>
+              <button class="sb-prop-btn yn${btnSel('dnb_away')}" onclick="${tog('dnb_away',ev.away_team,dnb.away)}" style="flex-direction:column;padding:7px 4px"><span style="font-size:0.72rem;font-weight:700;color:var(--text);letter-spacing:1px">AWAY · DNB</span><span class="prop-odds">${_fmtML(dnb.away)}</span></button>
+            </div>`
+              : `<div style="margin-top:10px;padding:8px;text-align:center;border-radius:6px;border:1px dashed rgba(255,255,255,0.12)"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;letter-spacing:2px;color:var(--muted)">ODDS UNAVAILABLE</span></div>`}
           </div>`;
         }
         firstGroup = false;
@@ -9039,7 +9108,9 @@ function _sbToggleWcLeg(eventId, type, teamName, homeTeam, awayTeam, ml) {
   } else {
     const otherIdx = _sbSlip.findIndex(l => l.gameKey.startsWith(`wc_${eventId}_`));
     if (otherIdx !== -1) _sbSlip.splice(otherIdx, 1); // swap to different outcome
-    const label = type === 'draw' ? 'Draw' : `${teamName} to win`;
+    const label = type === 'draw' ? 'Draw'
+      : (type === 'dnb_home' || type === 'dnb_away') ? `${teamName} (Draw No Bet)`
+      : `${teamName} to win`;
     _sbSlip.push({ gameKey, type: `wc_${type}`, awayAbbr: teamName, homeAbbr: `${homeTeam} vs ${awayTeam}`, ml, line: 0, label });
   }
   _renderSbSlip();
@@ -10061,7 +10132,7 @@ async function _sbAutoSettle() {
     let payout = 0;
 
     // WC match bets settle via ESPN soccer scoreboard, not the NBA scoreboard
-    if (bet.legs?.some(l => l.type === 'wc_home' || l.type === 'wc_away' || l.type === 'wc_draw')) {
+    if (bet.legs?.some(l => ['wc_home','wc_away','wc_draw','wc_dnb_home','wc_dnb_away'].includes(l.type))) {
       if (bet.payout !== null && bet.payout !== undefined) continue; // idempotency guard
       const leg = bet.legs[0];
       const vsIdx = (leg.homeAbbr || '').indexOf(' vs ');
@@ -10084,10 +10155,17 @@ async function _sbAutoSettle() {
         finalResult = oddsAwayScore > oddsHomeScore ? 'win' : 'loss';
       else if (leg.type === 'wc_draw')
         finalResult = oddsHomeScore === oddsAwayScore ? 'win' : 'loss';
+      // Draw No Bet: draw refunds the stake (push); otherwise win/lose on the side
+      else if (leg.type === 'wc_dnb_home')
+        finalResult = oddsHomeScore === oddsAwayScore ? 'push' : oddsHomeScore > oddsAwayScore ? 'win' : 'loss';
+      else if (leg.type === 'wc_dnb_away')
+        finalResult = oddsHomeScore === oddsAwayScore ? 'push' : oddsAwayScore > oddsHomeScore ? 'win' : 'loss';
       if (!finalResult) continue;
-      payout = finalResult === 'win' ? bet.stake + _mlPayout(leg.ml, bet.stake) : 0;
+      payout = finalResult === 'win' ? bet.stake + _mlPayout(leg.ml, bet.stake)
+             : finalResult === 'push' ? bet.stake
+             : 0;
 
-    } else if (bet.legs?.some(l => l.type?.startsWith('wc_') && !['wc_home','wc_away','wc_draw','wc_winner'].includes(l.type))) {
+    } else if (bet.legs?.some(l => l.type?.startsWith('wc_') && !['wc_home','wc_away','wc_draw','wc_winner','wc_dnb_home','wc_dnb_away'].includes(l.type))) {
       // ── WC Prop Bets (game props + player props) ──────────────
       if (bet.payout !== null && bet.payout !== undefined) continue;
       const leg = bet.legs[0];
@@ -12053,6 +12131,7 @@ function _renderSbBetCard(bet, opts = {}) {
   // For settled single bets and all bets, derive from game scores if possible
   const legTypeLabel = (type) => {
     if (type === 'ml_away' || type === 'ml_home') return 'MONEYLINE';
+    if (type === 'wc_dnb_home' || type === 'wc_dnb_away') return 'DRAW NO BET';
     if (type.startsWith('spread')) return 'SPREAD BETTING';
     if (type.startsWith('ou')) return 'TOTAL POINTS';
     return '';
@@ -12233,6 +12312,23 @@ function _wcMatchTracker(hs, as_, stateLabel, stateColor, leg) {
   const block = _wcScoreBlock(h||'Home', a||'Away', hs, as_, stateLabel, stateColor);
   const status = stateLabel === 'FINAL' || stateLabel !== 'PRE' ? _wcStatusRow(winning, winning ? 'Winning' : 'Losing') : '';
   return block + status;
+}
+
+function _wcDnbTracker(hs, as_, stateLabel, stateColor, leg) {
+  const isHome = leg.type === 'wc_dnb_home';
+  const [h, a] = (leg.homeAbbr || '').split(' vs ');
+  const block = _wcScoreBlock(h||'Home', a||'Away', hs, as_, stateLabel, stateColor);
+  let statusRow = '';
+  if (stateLabel !== 'PRE') {
+    if (hs === as_) {
+      statusRow = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:var(--muted);margin-top:3px">↺ Level — stake refunds (Draw No Bet)</div>`;
+    } else {
+      const winning = isHome ? hs > as_ : as_ > hs;
+      const c = winning ? 'var(--green)' : 'var(--red)';
+      statusRow = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:${c};margin-top:3px">${winning ? '✓' : '✗'} ${winning ? 'Winning' : 'Losing'} · Draw No Bet</div>`;
+    }
+  }
+  return block + statusRow;
 }
 
 function _wcBttsTracker(hs, as_, stateLabel, stateColor, leg) {
@@ -12486,6 +12582,8 @@ async function _sbFillWcBetTrackers(bets) {
       let html = '';
       if (['wc_home','wc_away','wc_draw'].includes(l.type)) {
         html = _wcMatchTracker(hs, as_, stateLabel, stateColor, l);
+      } else if (['wc_dnb_home','wc_dnb_away'].includes(l.type)) {
+        html = _wcDnbTracker(hs, as_, stateLabel, stateColor, l);
       } else if (['wc_btts_yes','wc_btts_no'].includes(l.type)) {
         html = _wcBttsTracker(hs, as_, stateLabel, stateColor, l);
       } else if (['wc_cs_home_yes','wc_cs_home_no','wc_cs_away_yes','wc_cs_away_no'].includes(l.type)) {

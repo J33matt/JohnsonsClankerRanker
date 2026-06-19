@@ -893,6 +893,44 @@ function _mlPayout(moneyLine, stake) {
 }
 
 
+// Convert American moneyline → decimal odds
+function _americanToDecimal(ml) {
+  if (!ml) return 2.0;
+  return ml > 0 ? 1 + ml / 100 : 1 + 100 / Math.abs(ml);
+}
+// Convert decimal odds → American moneyline, rounded to the nearest 5 (like posted lines)
+function _decimalToAmerican(d) {
+  if (!d || d <= 1) return null;
+  const raw = d >= 2 ? (d - 1) * 100 : -100 / (d - 1);
+  return Math.round(raw / 5) * 5;
+}
+// Derive Draw No Bet (two-way) American odds from a 3-way (1X2) American price set.
+// Method (matches how recreational books like DraftKings — our ESPN source — price it):
+//   1. Convert 3-way prices to implied probabilities (sum > 1 = the book's vig).
+//   2. Drop the draw and renormalize between the two teams. The ratio pHome:pAway
+//      is preserved, so this is independent of the de-vig method.
+//   3. Re-apply a margin. DNB ≈ Asian Handicap 0, which books run thinner than the
+//      3-way, so we keep ~2/3 of the 3-way overround — the draw's ~1/3 share of the
+//      margin is removed along with the draw outcome.
+const _DNB_MARGIN_KEEP = 2 / 3;
+function _sbWcDnbOdds(homeML, drawML, awayML) {
+  if (homeML == null || awayML == null) return null;
+  const pH = 1 / _americanToDecimal(homeML);
+  const pA = 1 / _americanToDecimal(awayML);
+  const pD = drawML != null ? 1 / _americanToDecimal(drawML) : 0;
+  if (!(pH > 0) || !(pA > 0)) return null;
+  const over3 = pH + pA + pD;                            // 3-way overround
+  const fH = pH / (pH + pA);                             // fair two-way probabilities
+  const fA = pA / (pH + pA);
+  const R2 = 1 + Math.max(0, over3 - 1) * _DNB_MARGIN_KEEP; // two-way target overround
+  // Clamp priced probability below 1 so extreme favorites still yield a valid
+  // (very negative) line instead of an impossible >100% implied probability.
+  const clamp = p => Math.min(0.985, Math.max(0.01, p));
+  const home = _decimalToAmerican(1 / clamp(fH * R2));
+  const away = _decimalToAmerican(1 / clamp(fA * R2));
+  return (home && away) ? { home, away } : null;
+}
+
 // Format dollar amount with sign: +$9.09 or -$10.00
 function _fmtDollars(amt) {
   const sign = amt >= 0 ? '+' : '-';
