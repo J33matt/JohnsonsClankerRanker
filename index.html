@@ -10365,15 +10365,7 @@ async function _sbAutoSettle() {
     await _sbSaveBets(bets);
     if (_sbProfile) {
       // Check if broke — tiered reset: $50 first time, $25 second, $10 thereafter
-      if (_sbProfile.bankroll <= 0) {
-        const today = localDateStr(new Date());
-        if (!_sbProfile.brokeDate || _sbProfile.brokeDate !== today) {
-          const resetAmt = _sbNextResetAmount(_sbProfile.brokeCount);
-          _sbProfile.bankroll = resetAmt;
-          _sbProfile.brokeDate = today;
-          _sbProfile.brokeCount = (_sbProfile.brokeCount || 0) + 1;
-        }
-      }
+      await _sbApplyBrokeReset(bets);
       // Record bankroll snapshot in history only when all bets for the day are settled.
       // This prevents a mid-day snapshot with funds still locked in open bets.
       const snapDate = localDateStr(new Date());
@@ -11178,8 +11170,11 @@ async function renderSportsbook() {
   const botBets = await _botLoadBets();
 
   _sbCachedBets = bets;
+  // Heal a stuck broke balance on load (covers cases where no fresh settlement
+  // re-triggers the reset, and sub-$1 residue from an all-in that can't be bet).
+  await _sbApplyBrokeReset(bets);
   const openBets = bets.filter(b => b.status === 'open');
-  const isBroke = (_sbProfile.bankroll || 0) <= 0 && openBets.length === 0;
+  const isBroke = (_sbProfile.bankroll || 0) < 1 && openBets.length === 0;
   const settledBets = bets.filter(b => b.status === 'settled');
   // Derive net from bankroll — this is always accurate regardless of historical tracking bugs
   // or broke resets. Net = how much more you have (in hand + in play) vs. when you started.
@@ -12836,6 +12831,29 @@ function _sbNextResetAmount(brokeCount) {
   if (n === 0) return 50;
   if (n === 1) return 25;
   return 10;
+}
+
+// Bankruptcy reset: when the player can no longer place the $1 minimum bet and
+// has no open bets that could still pay out, restock once per day (tiered:
+// $50 / $25 / $10). Runs both after settlement and on render, so a stuck balance
+// always heals even if no new settlement re-triggers it. Returns true if it reset.
+async function _sbApplyBrokeReset(bets) {
+  if (!_sbProfile) return false;
+  const openCount = (bets || []).filter(b => b.status === 'open').length;
+  if (openCount > 0) return false;                    // live bets could still pay out
+  if ((_sbProfile.bankroll || 0) >= 1) return false;  // can still meet the $1 minimum
+  const today = localDateStr(new Date());
+  if (_sbProfile.brokeDate === today) return false;   // already used today's reset
+  const resetAmt = _sbNextResetAmount(_sbProfile.brokeCount);
+  _sbProfile.bankroll = resetAmt;
+  _sbProfile.brokeDate = today;
+  _sbProfile.brokeCount = (_sbProfile.brokeCount || 0) + 1;
+  if (!_sbProfile.history) _sbProfile.history = [];
+  _sbProfile.history.push({ date: today, balance: resetAmt, label: 'Reset' });
+  if (_sbProfile.history.length > 90) _sbProfile.history = _sbProfile.history.slice(-90);
+  await _sbSaveProfile();
+  await _sbSaveLeaderboard();
+  return true;
 }
 
 async function _sbStartFresh() {
