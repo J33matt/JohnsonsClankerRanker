@@ -8415,6 +8415,9 @@ async function _sbFetchWcSummary(eventId) {
     const awayC = comps.find(c => c.homeAway === 'away') || comps[1] || {};
     const homeHalf1 = parseInt(homeC.linescores?.[0]?.displayValue || '0') || 0;
     const awayHalf1 = parseInt(awayC.linescores?.[0]?.displayValue || '0') || 0;
+    // First-half linescores are only present once the half is over; used to gate
+    // early settlement of 1st-half markets (don't settle on missing data).
+    const hasHalf1 = (homeC.linescores?.length > 0) && (awayC.linescores?.length > 0);
     const goalEvents = (d.keyEvents || [])
       .filter(e => e.scoringPlay && e.participants?.[0]?.athlete)
       .map(e => ({
@@ -8436,7 +8439,7 @@ async function _sbFetchWcSummary(eventId) {
       const stat = (bt.statistics || []).find(s => s.name === 'wonCorners');
       if (tid && stat) cornersMap[tid] = parseInt(stat.displayValue || '0') || 0;
     }
-    const data = { homeHalf1, awayHalf1, goalEvents, assistEvents, cornersMap };
+    const data = { homeHalf1, awayHalf1, hasHalf1, goalEvents, assistEvents, cornersMap };
     _sbWcSummaryCache[eventId] = { ts: Date.now(), data };
     return data;
   } catch(e) { return _sbWcSummaryCache[eventId]?.data || null; }
@@ -10175,7 +10178,14 @@ async function _sbAutoSettle() {
       const scEv = allScoreboardEvts.find(e => e.id === eventId);
       if (!scEv) continue;
       const scComp = scEv.competitions?.[0];
-      if (scComp?.status?.type?.state !== 'post') continue;
+      const _state = scComp?.status?.type?.state || 'pre';
+      const _period = scComp?.status?.period || 0;
+      // 1st-half markets are decided at the break — settle once the 2nd half has
+      // begun (or the match is final). Everything else waits for full time.
+      const _is1H = ['wc_1h_over','wc_1h_under','wc_1hml_home','wc_1hml_away','wc_1hml_draw'].includes(leg.type);
+      const _firstHalfDone = _state === 'post' || _period >= 2;
+      if (_is1H) { if (!_firstHalfDone) continue; }
+      else if (_state !== 'post') continue;
       const scHomeC = scComp.competitors?.find(c => c.homeAway === 'home');
       const scAwayC = scComp.competitors?.find(c => c.homeAway === 'away');
       const homeScore = parseInt(scHomeC?.score || '0');
@@ -10207,6 +10217,9 @@ async function _sbAutoSettle() {
       } else {
         const summary = await _sbFetchWcSummary(eventId);
         if (!summary) continue;
+        // For 1st-half markets, require the half-time linescores to be present
+        // so we never grade on missing data.
+        if (_is1H && !summary.hasHalf1) continue;
         if (leg.type === 'wc_1h_over') {
           const h1total = summary.homeHalf1 + summary.awayHalf1;
           won = h1total > (leg.line || 0.5);
