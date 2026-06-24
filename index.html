@@ -9059,7 +9059,7 @@ async function _sbRenderWorldCupSection() {
           const inSl = _sbSlip.some(l => l.gameKey === gk);
           const flag = p.side === 'home' ? (homeFlag ? `<img src="${homeFlag}" style="width:16px;height:11px;object-fit:cover;border-radius:1px;flex-shrink:0">` : '') : (awayFlag ? `<img src="${awayFlag}" style="width:16px;height:11px;object-fit:cover;border-radius:1px;flex-shrink:0">` : '');
           const posTag = p.pos ? `<span style="font-size:0.68rem;color:var(--muted);flex-shrink:0">${p.pos}</span>` : '';
-          return `<button class="sb-prop-btn yn${inSl?' selected':''}" onclick="_sbToggleWcPlayerProp('${ev.id}','${gk}','${pt.type}','wc_${ev.id}${pt.prefix}','${esc(matchLabel)}','${esc(p.name)}','${p.athleteId}',${p.odds})" style="flex-direction:row;align-items:center;padding:7px 9px;gap:5px;width:100%">
+          return `<button class="sb-prop-btn yn${inSl?' selected':''}" onclick="_sbToggleWcPlayerProp('${ev.id}','${gk}','${pt.type}','wc_${ev.id}${pt.prefix}','${esc(matchLabel)}','${esc(p.name)}','${p.athleteId}',${p.odds},'${p.side||''}')" style="flex-direction:row;align-items:center;padding:7px 9px;gap:5px;width:100%">
             ${flag}
             <span style="display:flex;align-items:center;gap:4px;flex:1;min-width:0">
               <span style="font-size:0.88rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span>
@@ -9109,7 +9109,10 @@ function _sbToggleWcLeg(eventId, type, teamName, homeTeam, awayTeam, ml) {
   if (sameIdx !== -1) {
     _sbSlip.splice(sameIdx, 1); // same button clicked again → deselect
   } else {
-    const otherIdx = _sbSlip.findIndex(l => l.gameKey.startsWith(`wc_${eventId}_`));
+    // Only swap mutually-exclusive match-result outcomes (3-way + DNB) for this game;
+    // props from the same game are allowed to coexist for same-game parlays.
+    const matchKeys = ['home','draw','away','dnb_home','dnb_away'].map(s => `wc_${eventId}_${s}`);
+    const otherIdx = _sbSlip.findIndex(l => l.gameKey !== gameKey && matchKeys.includes(l.gameKey));
     if (otherIdx !== -1) _sbSlip.splice(otherIdx, 1); // swap to different outcome
     const label = type === 'draw' ? 'Draw'
       : (type === 'dnb_home' || type === 'dnb_away') ? `${teamName} (Draw No Bet)`
@@ -9150,14 +9153,14 @@ function _sbToggleWcGameProp(eventId, gameKey, type, marketPrefix, matchLabel, p
   _sbRenderWorldCupSection();
 }
 
-function _sbToggleWcPlayerProp(eventId, gameKey, type, marketPrefix, matchLabel, playerName, athleteId, ml) {
+function _sbToggleWcPlayerProp(eventId, gameKey, type, marketPrefix, matchLabel, playerName, athleteId, ml, side) {
   const sameIdx = _sbSlip.findIndex(l => l.gameKey === gameKey);
   if (sameIdx !== -1) { _sbSlip.splice(sameIdx, 1); }
   else {
     // Remove other bet for same player prop market (e.g. can't have two First Goalscorer bets)
     const conflictIdx = _sbSlip.findIndex(l => l.gameKey !== gameKey && l.gameKey.startsWith(marketPrefix));
     if (conflictIdx !== -1) _sbSlip.splice(conflictIdx, 1);
-    _sbSlip.push({ gameKey, type, homeAbbr: matchLabel, awayAbbr: playerName, ml, line: 0, eventId, athleteId, label: playerName });
+    _sbSlip.push({ gameKey, type, homeAbbr: matchLabel, awayAbbr: playerName, ml, line: 0, eventId, athleteId, side: side || null, label: playerName });
   }
   _renderSbSlip();
   _sbRenderWorldCupSection();
@@ -10091,6 +10094,86 @@ async function _sbSettleGolfBets(openGolfBets, allBets) {
   } catch(e) {}
 }
 
+// Grade a single World Cup leg → 'win' | 'loss' | 'push' | null (not ready).
+// Shared by single-bet and parlay settlement. `scoreboard` is pre-fetched.
+async function _sbGradeWcLeg(leg, scoreboard) {
+  const t = leg.type || '';
+  const eventId = leg.eventId ? String(leg.eventId) : (leg.gameKey || '').match(/^wc_(\d+)_/)?.[1];
+  if (!eventId) return null;
+  const scEv = (scoreboard || []).find(e => e.id === eventId);
+  const comp = scEv?.competitions?.[0];
+  if (!comp) return null;
+  const state = comp.status?.type?.state || 'pre';
+  const period = comp.status?.period || 0;
+  const homeC = comp.competitors?.find(c => c.homeAway === 'home');
+  const awayC = comp.competitors?.find(c => c.homeAway === 'away');
+  const eHs = parseInt(homeC?.score || '0'), eAs = parseInt(awayC?.score || '0');
+  // Orient to the bet's home/away (leg.homeAbbr = "BetHome vs BetAway")
+  const vsIdx = (leg.homeAbbr || '').indexOf(' vs ');
+  const betHome = vsIdx >= 0 ? leg.homeAbbr.slice(0, vsIdx).trim() : '';
+  const bHisEH = _sbWcNormName(homeC?.team?.displayName) === _sbWcNormName(betHome);
+  const hs = bHisEH ? eHs : eAs;   // bet-home goals
+  const as_ = bHisEH ? eAs : eHs;  // bet-away goals
+  const total = hs + as_;
+  const is1H = ['wc_1h_over','wc_1h_under','wc_1hml_home','wc_1hml_away','wc_1hml_draw'].includes(t);
+  if (is1H) { if (!(state === 'post' || period >= 2)) return null; }
+  else if (state !== 'post') return null;
+
+  switch (t) {
+    case 'wc_home': return hs > as_ ? 'win' : 'loss';
+    case 'wc_away': return as_ > hs ? 'win' : 'loss';
+    case 'wc_draw': return hs === as_ ? 'win' : 'loss';
+    case 'wc_dnb_home': return hs === as_ ? 'push' : hs > as_ ? 'win' : 'loss';
+    case 'wc_dnb_away': return hs === as_ ? 'push' : as_ > hs ? 'win' : 'loss';
+    case 'wc_btts_yes': return (hs > 0 && as_ > 0) ? 'win' : 'loss';
+    case 'wc_btts_no':  return (hs === 0 || as_ === 0) ? 'win' : 'loss';
+    case 'wc_goals_odd':  return total % 2 === 1 ? 'win' : 'loss';
+    case 'wc_goals_even': return total % 2 === 0 ? 'win' : 'loss';
+    case 'wc_cs_home_yes': return as_ === 0 ? 'win' : 'loss';
+    case 'wc_cs_home_no':  return as_ > 0 ? 'win' : 'loss';
+    case 'wc_cs_away_yes': return hs === 0 ? 'win' : 'loss';
+    case 'wc_cs_away_no':  return hs > 0 ? 'win' : 'loss';
+    case 'wc_ttg_home_over':  return hs > (leg.line || 0.5) ? 'win' : 'loss';
+    case 'wc_ttg_home_under': return hs < (leg.line || 0.5) ? 'win' : 'loss';
+    case 'wc_ttg_away_over':  return as_ > (leg.line || 0.5) ? 'win' : 'loss';
+    case 'wc_ttg_away_under': return as_ < (leg.line || 0.5) ? 'win' : 'loss';
+  }
+
+  const summary = await _sbFetchWcSummary(eventId);
+  if (!summary) return null;
+  const eHId = String(homeC?.team?.id || ''), eAId = String(awayC?.team?.id || '');
+  if (t === 'wc_1h_over' || t === 'wc_1h_under') {
+    if (!summary.hasHalf1) return null;
+    const h1 = summary.homeHalf1 + summary.awayHalf1;
+    return t === 'wc_1h_over' ? (h1 > (leg.line || 0.5) ? 'win' : 'loss') : (h1 < (leg.line || 0.5) ? 'win' : 'loss');
+  }
+  if (t === 'wc_1hml_home' || t === 'wc_1hml_away' || t === 'wc_1hml_draw') {
+    if (!summary.hasHalf1) return null;
+    const h1h = bHisEH ? summary.homeHalf1 : summary.awayHalf1;
+    const h1a = bHisEH ? summary.awayHalf1 : summary.homeHalf1;
+    if (t === 'wc_1hml_home') return h1h > h1a ? 'win' : 'loss';
+    if (t === 'wc_1hml_away') return h1a > h1h ? 'win' : 'loss';
+    return h1h === h1a ? 'win' : 'loss';
+  }
+  const realGoals = (summary.goalEvents || []).filter(g => g.type !== 'own-goal');
+  const aId = leg.athleteId;
+  if (t === 'wc_ag') return aId ? (realGoals.some(g => g.athleteId === aId) ? 'win' : 'loss') : null;
+  if (t === 'wc_s2') return aId ? (realGoals.filter(g => g.athleteId === aId).length >= 2 ? 'win' : 'loss') : null;
+  if (t === 'wc_s3') return aId ? (realGoals.filter(g => g.athleteId === aId).length >= 3 ? 'win' : 'loss') : null;
+  if (t === 'wc_asst') return aId ? ((summary.assistEvents || []).some(a => a.athleteId === aId) ? 'win' : 'loss') : null;
+  if (t === 'wc_corn_over' || t === 'wc_corn_under') {
+    const tot = Object.values(summary.cornersMap || {}).reduce((s, v) => s + v, 0);
+    return t === 'wc_corn_over' ? (tot > (leg.line || 8.5) ? 'win' : 'loss') : (tot < (leg.line || 8.5) ? 'win' : 'loss');
+  }
+  if (['wc_tcorn_home_over','wc_tcorn_home_under','wc_tcorn_away_over','wc_tcorn_away_under'].includes(t)) {
+    const tId = t.includes('_home_') ? (bHisEH ? eHId : eAId) : (bHisEH ? eAId : eHId);
+    const c = (summary.cornersMap || {})[tId];
+    if (c == null) return null;
+    return t.includes('_over') ? (c > (leg.line || 5.5) ? 'win' : 'loss') : (c < (leg.line || 5.5) ? 'win' : 'loss');
+  }
+  return null;
+}
+
 // ── Auto-settle open bets ─────────────────────────────────────
 let _sbAutoSettleRunning = false;
 async function _sbAutoSettle() {
@@ -10135,7 +10218,7 @@ async function _sbAutoSettle() {
     let payout = 0;
 
     // WC match bets settle via ESPN soccer scoreboard, not the NBA scoreboard
-    if (bet.legs?.some(l => ['wc_home','wc_away','wc_draw','wc_dnb_home','wc_dnb_away'].includes(l.type))) {
+    if (bet.betType !== 'parlay' && bet.legs?.some(l => ['wc_home','wc_away','wc_draw','wc_dnb_home','wc_dnb_away'].includes(l.type))) {
       if (bet.payout !== null && bet.payout !== undefined) continue; // idempotency guard
       const leg = bet.legs[0];
       const vsIdx = (leg.homeAbbr || '').indexOf(' vs ');
@@ -10168,7 +10251,7 @@ async function _sbAutoSettle() {
              : finalResult === 'push' ? bet.stake
              : 0;
 
-    } else if (bet.legs?.some(l => l.type?.startsWith('wc_') && !['wc_home','wc_away','wc_draw','wc_winner','wc_dnb_home','wc_dnb_away'].includes(l.type))) {
+    } else if (bet.betType !== 'parlay' && bet.legs?.some(l => l.type?.startsWith('wc_') && !['wc_home','wc_away','wc_draw','wc_winner','wc_dnb_home','wc_dnb_away'].includes(l.type))) {
       // ── WC Prop Bets (game props + player props) ──────────────
       if (bet.payout !== null && bet.payout !== undefined) continue;
       const leg = bet.legs[0];
@@ -10286,6 +10369,39 @@ async function _sbAutoSettle() {
       if (finalResult === 'win') payout = bet.stake + _mlPayout(leg.ml, bet.stake);
       else if (finalResult === 'push') payout = bet.stake;
       else payout = 0;
+    } else if (bet.legs?.some(l => l.type?.startsWith('wc_'))) {
+      // ── Parlay containing World Cup legs (incl. same-game SGP) ──
+      if (bet.payout !== null && bet.payout !== undefined) continue;
+      const wcSb = await _sbFetchEspnWcScoreboard().catch(() => []);
+      const searchGamesP = [-1, 1, 2].reduce((acc, offset) => {
+        const adj = new Date(bet.date + 'T12:00:00'); adj.setDate(adj.getDate() + offset);
+        return acc.concat(allGames[localDateStr(adj)] || []);
+      }, [...games]);
+      let _anyPending = false, _hasLoss = false, _hasPush = false;
+      const _results = [];
+      for (const l of bet.legs) {
+        let r;
+        if (l.type?.startsWith('wc_')) {
+          r = await _sbGradeWcLeg(l, wcSb);
+        } else if (l.type?.startsWith('prop_')) {
+          const g = searchGamesP.find(g => (g.home === l.homeAbbr && g.away === l.awayAbbr) || (g.home === l.awayAbbr && g.away === l.homeAbbr));
+          r = (!g || !g.isFinal) ? null : _sbGradePropLeg(l, await _sbGetPropStatsMap(g.eventId), l.type.includes('first_basket') ? await _sbFetchFirstScorer(g.eventId) : null);
+        } else {
+          const g = searchGamesP.find(g => (g.home === l.homeAbbr && g.away === l.awayAbbr) || (g.home === l.awayAbbr && g.away === l.homeAbbr));
+          r = g ? _sbGradeLeg(l, g) : null;
+        }
+        _results.push(r);
+        if (r === 'loss') _hasLoss = true;
+        else if (r == null) _anyPending = true;
+        else if (r === 'push') _hasPush = true;
+      }
+      if (_hasLoss) finalResult = 'loss';
+      else if (_anyPending) continue; // wait until every leg is graded
+      else finalResult = _hasPush ? 'push' : 'win';
+      payout = finalResult === 'win' ? bet.stake + _mlPayout(bet.parlayML, bet.stake)
+             : finalResult === 'push' ? bet.stake : 0;
+      bet.legResults = _results.map(r => r == null ? (finalResult === 'win' ? 'win' : null) : r);
+
     } else {
       // Parlay
       const searchGames2 = [-1, 1, 2].reduce((acc, offset) => {

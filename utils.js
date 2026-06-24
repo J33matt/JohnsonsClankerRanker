@@ -1364,6 +1364,126 @@ const _SGP_PTS_MARKETS = new Set([
   'player_points','player_points_rebounds','player_points_assists','player_points_rebounds_assists',
 ]);
 
+// ── World Cup same-game parlay correlation model ──────────────────
+// Soccer correlations between markets on the SAME match. Factor > 1 = positively
+// correlated (joint more likely than the product → shorter combined price);
+// factor < 1 = negatively correlated. Cross-game legs stay independent.
+const _SGP_WC = {
+  WIN_MKT_SAME_TEAM: 1.45,  // e.g. team result win + that team's 1st-half win
+  WIN_MKT_OPP_TEAM:  0.45,
+  WIN_SAME_SCORER:   1.18,  // team to win + a scorer/assister from that team
+  WIN_OPP_SCORER:    0.90,
+  WIN_OWN_CS:        1.30,  // team to win + that team's clean sheet (win to nil)
+  WIN_OPP_CS:        0.30,  // team to win + opponent clean sheet (near-impossible)
+  WIN_OWN_TTG_OVER:  1.22,  // team to win + that team over X goals
+  WIN_OPP_TTG_OVER:  0.92,
+  BTTS_YES_SCORER:   1.12,
+  BTTS_YES_CS:       0.20,  // both teams score vs a clean sheet
+  BTTS_YES_TTG_OVER: 1.10,
+  BTTS_NO_CS:        1.25,
+  SCORER_OWN_TTG_OVER: 1.20,
+};
+
+// Extract correlation-relevant features from a WC leg.
+function _wcLegFeatures(leg) {
+  const t = leg.type || '';
+  const event = (leg.gameKey || '').match(/^wc_(\d+)_/)?.[1] || (leg.eventId ? String(leg.eventId) : null);
+  let market = null, side = null, dir = null;
+  if (t === 'wc_home' || t === 'wc_away' || t === 'wc_draw') { market = 'result'; side = t === 'wc_home' ? 'home' : t === 'wc_away' ? 'away' : 'draw'; }
+  else if (t === 'wc_dnb_home' || t === 'wc_dnb_away') { market = 'dnb'; side = t.endsWith('home') ? 'home' : 'away'; }
+  else if (t.startsWith('wc_1hml_')) { market = '1hml'; side = t.endsWith('home') ? 'home' : t.endsWith('away') ? 'away' : 'draw'; }
+  else if (t === 'wc_btts_yes' || t === 'wc_btts_no') { market = 'btts'; dir = t.endsWith('yes') ? 'yes' : 'no'; }
+  else if (t === 'wc_goals_odd' || t === 'wc_goals_even') { market = 'oe'; }
+  else if (t.startsWith('wc_cs_')) { market = 'cs'; side = t.includes('_home_') ? 'home' : 'away'; dir = t.endsWith('yes') ? 'yes' : 'no'; }
+  else if (t.startsWith('wc_ttg_')) { market = 'ttg'; side = t.includes('_home_') ? 'home' : 'away'; dir = t.includes('_over') ? 'over' : 'under'; }
+  else if (t === 'wc_corn_over' || t === 'wc_corn_under') { market = 'corn'; dir = t.endsWith('over') ? 'over' : 'under'; }
+  else if (t.startsWith('wc_tcorn_')) { market = 'tcorn'; side = t.includes('_home_') ? 'home' : 'away'; dir = t.includes('_over') ? 'over' : 'under'; }
+  else if (t === 'wc_ag' || t === 'wc_s2' || t === 'wc_s3') { market = 'scorer'; side = leg.side || null; }
+  else if (t === 'wc_asst') { market = 'assist'; side = leg.side || null; }
+  return { event, market, side, dir };
+}
+
+// Correlation multiplier for a same-game pair of WC legs. Returns {factor,label} or null.
+function _wcCorrelation(a, b) {
+  const C = _SGP_WC;
+  const winTeam = f => (['result', 'dnb', '1hml'].includes(f.market) && (f.side === 'home' || f.side === 'away')) ? f.side : null;
+  const wa = winTeam(a), wb = winTeam(b);
+
+  // Two "team to win/lead" markets on the same match
+  if (wa && wb) return wa === wb ? { factor: C.WIN_MKT_SAME_TEAM, label: 'WIN_MARKETS_SAME_TEAM' }
+                                 : { factor: C.WIN_MKT_OPP_TEAM,  label: 'WIN_MARKETS_OPPOSITE' };
+
+  // team win + scorer/assist
+  const winPlayer = (w, p) => {
+    if (!w || (p.market !== 'scorer' && p.market !== 'assist')) return null;
+    if (!p.side || p.side === 'unknown') return null;
+    return p.side === w ? { factor: C.WIN_SAME_SCORER, label: 'WIN_+_SAME_TEAM_SCORER' }
+                        : { factor: C.WIN_OPP_SCORER,  label: 'WIN_+_OPP_SCORER' };
+  };
+  let r = winPlayer(wa, b) || winPlayer(wb, a); if (r) return r;
+
+  // team win + clean sheet
+  const winCs = (w, c) => {
+    if (!w || c.market !== 'cs' || c.dir !== 'yes') return null;
+    return c.side === w ? { factor: C.WIN_OWN_CS, label: 'WIN_+_OWN_CLEAN_SHEET' }
+                        : { factor: C.WIN_OPP_CS, label: 'WIN_+_OPP_CLEAN_SHEET' };
+  };
+  r = winCs(wa, b) || winCs(wb, a); if (r) return r;
+
+  // team win + that team's total goals over
+  const winTtg = (w, g) => {
+    if (!w || g.market !== 'ttg' || g.dir !== 'over') return null;
+    return g.side === w ? { factor: C.WIN_OWN_TTG_OVER, label: 'WIN_+_OWN_TTG_OVER' }
+                        : { factor: C.WIN_OPP_TTG_OVER, label: 'WIN_+_OPP_TTG_OVER' };
+  };
+  r = winTtg(wa, b) || winTtg(wb, a); if (r) return r;
+
+  // BTTS interactions
+  const btts = a.market === 'btts' ? a : b.market === 'btts' ? b : null;
+  if (btts) {
+    const o = btts === a ? b : a;
+    if (btts.dir === 'yes') {
+      if (o.market === 'scorer' || o.market === 'assist') return { factor: C.BTTS_YES_SCORER, label: 'BTTS_YES_+_SCORER' };
+      if (o.market === 'cs' && o.dir === 'yes') return { factor: C.BTTS_YES_CS, label: 'BTTS_YES_+_CLEAN_SHEET' };
+      if (o.market === 'ttg' && o.dir === 'over') return { factor: C.BTTS_YES_TTG_OVER, label: 'BTTS_YES_+_TTG_OVER' };
+    } else if (o.market === 'cs' && o.dir === 'yes') {
+      return { factor: C.BTTS_NO_CS, label: 'BTTS_NO_+_CLEAN_SHEET' };
+    }
+  }
+
+  // scorer + that player's team total goals over
+  const sc = a.market === 'scorer' ? a : b.market === 'scorer' ? b : null;
+  if (sc && sc.side && sc.side !== 'unknown') {
+    const o = sc === a ? b : a;
+    if (o.market === 'ttg' && o.dir === 'over' && o.side === sc.side) return { factor: C.SCORER_OWN_TTG_OVER, label: 'SCORER_+_OWN_TTG_OVER' };
+  }
+  return null;
+}
+
+// World Cup parlay odds. Same-game legs get correlation adjustment + house hold
+// (SGP / SGP+). Returns null when no two legs share a match (caller multiplies
+// the per-leg prices, which is the accurate price for independent events).
+function _sbCalcWcSgpOdds(legs) {
+  const feats = legs.map(_wcLegFeatures);
+  const evCount = {};
+  feats.forEach(f => { if (f.event) evCount[f.event] = (evCount[f.event] || 0) + 1; });
+  if (!Object.values(evCount).some(c => c >= 2)) return null; // no same-game pair → standard parlay
+
+  let P = legs.reduce((acc, l) => acc * _sgpImpliedProb(l.ml), 1);
+  const hits = [];
+  for (let i = 0; i < feats.length; i++) {
+    for (let j = i + 1; j < feats.length; j++) {
+      if (!feats[i].event || feats[i].event !== feats[j].event) continue; // same-game only
+      const m = _wcCorrelation(feats[i], feats[j]);
+      if (m && m.factor !== 1) { P *= m.factor; hits.push(m.label); }
+    }
+  }
+  P *= (1 + _SGP_CONFIG.SYNTHETIC_HOLD);
+  P = Math.min(P, 0.97);
+  const rawCombined = legs.reduce((acc, l) => acc * _mlToDecimal(l.ml), 1);
+  return { ml: _sgpProbToML(P), rawML: _parlayOddsToML(rawCombined), isSGP: true, adjustments: [...new Set(hits)] };
+}
+
 /**
  * Calculate SGP-adjusted odds for a slip.
  * Returns null when legs span multiple games (caller uses standard multiplication).
@@ -1373,6 +1493,8 @@ const _SGP_PTS_MARKETS = new Set([
  */
 function _sbCalculateSGPOdds(legs) {
   if (!legs || legs.length < 2) return null;
+  // World Cup legs use the soccer correlation model above.
+  if (legs.some(l => (l.type || '').startsWith('wc_'))) return _sbCalcWcSgpOdds(legs);
   const gameKey = legs[0].gameKey;
   if (!legs.every(l => l.gameKey === gameKey)) return null; // cross-game → standard path
 
