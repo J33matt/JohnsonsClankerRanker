@@ -10670,6 +10670,10 @@ function _renderSbSlip() {
     return;
   }
 
+  // Mode is automatic: 2+ legs is a parlay, otherwise a single. (Set here so it's
+  // correct regardless of which toggle added the legs — WC, golf, or game lines.)
+  _sbSlipMode = _sbSlip.length >= 2 ? 'parlay' : 'single';
+
   let html = '';
   // Mode label (informational only — mode is automatic)
   if (_sbSlip.length >= 2) {
