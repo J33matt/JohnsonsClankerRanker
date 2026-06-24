@@ -39,7 +39,10 @@ async function _wczFetchGroups() {
         GF: +s.pointsFor || 0, GA: +s.pointsAgainst || 0, GD: +s.pointDifferential || 0,
         gp: +s.gamesPlayed || 0, rank: +s.rank || 0,
         noteDesc: desc, noteColor: e.note?.color || '',
-        qualified: /advance|qualif/i.test(desc),
+        // Only a confirmed berth — NOT ESPN's "Best 8 advance" label that marks
+        // every third-place team (only 8 of the 12 actually go through).
+        qualified: /round of 32/i.test(desc),
+        eliminated: /eliminat/i.test(desc),
       };
     });
     return { letter, name: g.name, teams };
@@ -439,9 +442,9 @@ function _wczTeamDetail(t, data, tmap) {
   const current = line('Current', `${t.P} pts &middot; ${t.W}-${t.D}-${t.L} &middot; ${t.GD > 0 ? '+' + t.GD : t.GD} GD &middot; ${t.gp} played`, 'var(--text)');
 
   let body = '';
-  if (t.qualified || p >= 0.999) body = line('Status', t.noteDesc || 'Qualified for the Round of 32', '#22c55e');
+  if (p >= 0.999) body = line('Status', 'Qualified for the Round of 32', '#22c55e');
   else if (p <= 0.001) body = line('Status', 'Eliminated from contention', '#ef4444');
-  else if (!info.hasMatch) body = line('Status', 'Awaiting other results', 'var(--accent2)');
+  else if (!info.hasMatch) body = line('Status', "Group finished — fate now rests on other groups' third-place teams", 'var(--accent2)');
   else if (info.detailed) {
     const c = data.cond[t.id];
     const o1 = nm(info.o1), o2 = nm(info.o2), opp = nm(info.oppId);
