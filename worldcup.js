@@ -422,7 +422,13 @@ async function _wczRenderAdvance(fromToggle) {
   } catch (e) { el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif">Could not load data.</div>`; return; }
 
   const tmap = {}; groups.forEach(g => g.teams.forEach(t => tmap[t.id] = { ...t, group: g.letter }));
-  const all = Object.values(tmap).sort((a, b) => (data.prob[b.id] - data.prob[a.id]) || b.P - a.P || b.GD - a.GD);
+  const pl = id => data.place?.[id] || { p1: 0, p2: 0, p3: 0 };
+  const all = Object.values(tmap).sort((a, b) =>
+    (data.prob[b.id] - data.prob[a.id]) ||
+    (pl(b.id).p1 - pl(a.id).p1) ||
+    (pl(b.id).p2 - pl(a.id).p2) ||
+    (pl(b.id).p3 - pl(a.id).p3) ||
+    b.P - a.P || b.GD - a.GD);
 
   let html = `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:4px 4px 4px">Probability of Reaching the Round of 32</div>`;
   html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.81rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:0 4px 12px">Monte Carlo simulation of the remaining group matches using the 2026 tiebreakers (head-to-head first). Tap a country for its qualification scenarios.</div>`;
