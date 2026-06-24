@@ -313,8 +313,8 @@ function _wczBucket() { return { _all: [0, 0], a: [0, 0], d: [0, 0], b: [0, 0] }
 function _wczSimDetailed(groups, prep, N) {
   const { perGroup, meta } = prep;
   const ids = []; groups.forEach(g => g.teams.forEach(t => ids.push(t.id)));
-  const adv = {}; const cond = {};
-  ids.forEach(id => { adv[id] = 0; cond[id] = { win: _wczBucket(), draw: _wczBucket(), loss: _wczBucket() }; });
+  const adv = {}; const cond = {}; const place = {};
+  ids.forEach(id => { adv[id] = 0; place[id] = [0, 0, 0, 0]; cond[id] = { win: _wczBucket(), draw: _wczBucket(), loss: _wczBucket() }; });
 
   // Per-team final-matchday context: own opponent and the "other" group match (o1 vs o2).
   const info = {};
@@ -349,6 +349,7 @@ function _wczSimDetailed(groups, prep, N) {
       pg.ids.forEach(id => { st[id].GD = st[id].GF - st[id].GA; });
       const order = _wczRankGroup(pg.ids, matches, st);
       st[order[0]].adv = true; st[order[1]].adv = true;
+      for (let i = 0; i < order.length && i < 4; i++) place[order[i]][i]++;
       const third = st[order[2]]; thirds.push(third);
       pg._st = st;
     }
@@ -374,10 +375,11 @@ function _wczSimDetailed(groups, prep, N) {
     }
   }
 
-  const prob = {}, condP = {};
+  const prob = {}, condP = {}, placeP = {};
   const pr = bk => bk[1] ? bk[0] / bk[1] : null;
   ids.forEach(id => {
     prob[id] = adv[id] / N;
+    placeP[id] = { p1: place[id][0] / N, p2: place[id][1] / N, p3: place[id][2] / N, p4: place[id][3] / N };
     const c = cond[id];
     condP[id] = {
       win: { all: pr(c.win._all), a: pr(c.win.a), d: pr(c.win.d), b: pr(c.win.b) },
@@ -385,7 +387,7 @@ function _wczSimDetailed(groups, prep, N) {
       loss: { all: pr(c.loss._all), a: pr(c.loss.a), d: pr(c.loss.d), b: pr(c.loss.b) },
     };
   });
-  return { prob, cond: condP, info };
+  return { prob, cond: condP, info, place: placeP };
 }
 
 function _wczPct(p) { if (p == null) return '—'; if (p >= 0.999) return '100%'; if (p <= 0.001) return '0%'; const v = p * 100; return (v < 10 ? v.toFixed(1) : v.toFixed(0)) + '%'; }
@@ -404,12 +406,16 @@ async function _wczRenderAdvance(fromToggle) {
       const prep = await _wczPrepSim(groups);
       const anyRemaining = Object.values(prep.perGroup).some(pg => pg.remaining.length);
       if (!anyRemaining) {
-        const prob = {}, cond = {}, info = {};
-        groups.forEach(g => g.teams.forEach(t => { prob[t.id] = (t.qualified || t.rank <= 2) ? 1 : 0; cond[t.id] = { win: {}, draw: {}, loss: {} }; info[t.id] = { hasMatch: false }; }));
-        data = { ts: Date.now(), prob, cond, info };
+        const prob = {}, cond = {}, info = {}, place = {};
+        groups.forEach(g => g.teams.forEach(t => {
+          prob[t.id] = (t.qualified || t.rank <= 2) ? 1 : 0;
+          place[t.id] = { p1: t.rank === 1 ? 1 : 0, p2: t.rank === 2 ? 1 : 0, p3: t.rank === 3 ? 1 : 0, p4: t.rank === 4 ? 1 : 0 };
+          cond[t.id] = { win: {}, draw: {}, loss: {} }; info[t.id] = { hasMatch: false };
+        }));
+        data = { ts: Date.now(), prob, cond, info, place };
       } else {
         const r = _wczSimDetailed(groups, prep, 4000);
-        data = { ts: Date.now(), prob: r.prob, cond: r.cond, info: r.info };
+        data = { ts: Date.now(), prob: r.prob, cond: r.cond, info: r.info, place: r.place };
       }
       _wczAdvCache = data;
     }
@@ -420,19 +426,30 @@ async function _wczRenderAdvance(fromToggle) {
 
   let html = `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:4px 4px 4px">Probability of Reaching the Round of 32</div>`;
   html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.81rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:0 4px 12px">Monte Carlo simulation of the remaining group matches using the 2026 tiebreakers (head-to-head first). Tap a country for its qualification scenarios.</div>`;
+  const colHead = (txt, w) => `<span style="width:${w}px;text-align:right;flex-shrink:0">${txt}</span>`;
   html += `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">`;
+  html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">
+      <span style="width:24px;flex-shrink:0"></span>
+      <span style="flex:1">Team</span>
+      ${colHead('1st', 44)}${colHead('2nd', 44)}${colHead('3rd', 44)}${colHead('R32', 50)}
+      <span style="width:14px;flex-shrink:0"></span>
+    </div>`;
+  const col = (val, w, color, strong) => `<span style="width:${w}px;text-align:right;flex-shrink:0;font-family:'${strong ? 'Bebas Neue' : 'Barlow Condensed'}',sans-serif;font-size:${strong ? '1.13rem' : '0.98rem'};color:${color}">${val}</span>`;
   for (const t of all) {
     const p = data.prob[t.id];
+    const pl = data.place[t.id] || { p1: 0, p2: 0, p3: 0, p4: 0 };
     const pColor = p >= 0.999 ? '#22c55e' : p <= 0.001 ? '#ef4444' : p >= 0.5 ? 'var(--text)' : 'var(--muted)';
-    const barW = Math.round(Math.max(0, Math.min(1, p)) * 100);
+    const dim = v => v <= 0.001 ? 'rgba(255,255,255,0.25)' : 'var(--text)';
     const open = _wczExpanded[t.id];
     html += `<div onclick="_wczToggleTeam('${t.id}')" class="wc-team-row${open ? ' open' : ''}" style="cursor:pointer;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);${open ? 'background:rgba(255,255,255,0.04)' : ''}">
-      <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px">
         ${_wczTeamLogo(t.logo, 24)}
-        <span style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:1.09rem">${t.name} <span style="color:var(--muted);font-size:0.86rem">(Grp ${t.group})</span></span>
-        <div style="width:90px;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:${barW}%;background:${pColor};border-radius:3px"></div></div>
-        <span style="min-width:48px;text-align:right;font-family:'Bebas Neue',sans-serif;font-size:1.21rem;color:${pColor}">${_wczPct(p)}</span>
-        <span class="wc-chevron" style="font-size:0.8rem;width:14px;text-align:center">&#9662;</span>
+        <span style="flex:1;min-width:0;font-family:'Barlow Condensed',sans-serif;font-size:1.09rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.86rem">(Grp ${t.group})</span></span>
+        ${col(_wczPct(pl.p1), 44, dim(pl.p1))}
+        ${col(_wczPct(pl.p2), 44, dim(pl.p2))}
+        ${col(_wczPct(pl.p3), 44, dim(pl.p3))}
+        ${col(_wczPct(p), 50, pColor, true)}
+        <span class="wc-chevron" style="font-size:0.8rem;width:14px;text-align:center;flex-shrink:0">&#9662;</span>
       </div>
       ${open ? _wczTeamDetail(t, data, tmap) : ''}
     </div>`;
@@ -459,6 +476,19 @@ function _wczTeamDetail(t, data, tmap) {
       <span style="color:${color || 'var(--text)'};white-space:nowrap;font-weight:600;text-align:right">${value}</span>
     </div>`;
   const current = leader('Current', `${t.P} pts &middot; ${t.W}-${t.D}-${t.L} &middot; ${t.GD > 0 ? '+' + t.GD : t.GD} GD &middot; ${t.gp} GP`, 'var(--text)');
+
+  // Projected group finish (placement probabilities from the simulation).
+  const pl = data.place?.[t.id];
+  let finishBlock = '';
+  if (pl) {
+    finishBlock = `<div style="margin-top:8px;padding:6px 9px;background:rgba(255,255,255,0.03);border-radius:6px">`
+      + leader('Projected group finish', '', null, { bold: true, labelColor: 'var(--text)', size: '0.92rem' })
+      + leader('Win the group (1st)', _wczPct(pl.p1), '#22c55e', { indent: true, size: '0.85rem' })
+      + leader('Runner-up (2nd)', _wczPct(pl.p2), '#22c55e', { indent: true, size: '0.85rem' })
+      + leader('Third place (3rd)', _wczPct(pl.p3), 'var(--accent2)', { indent: true, size: '0.85rem' })
+      + leader('Bottom of group (4th)', _wczPct(pl.p4), 'var(--muted)', { indent: true, size: '0.85rem' })
+      + `</div>`;
+  }
 
   let body = '';
   if (p >= 0.999) body = leader('Status', 'Qualified for the Round of 32', '#22c55e');
@@ -489,5 +519,5 @@ function _wczTeamDetail(t, data, tmap) {
       + leader('If they draw', _wczPct(c.draw?.all) + ' to advance', (c.draw?.all ?? 0) >= 0.5 ? '#22c55e' : 'var(--muted)')
       + leader('If they lose', _wczPct(c.loss?.all) + ' to advance', (c.loss?.all ?? 0) >= 0.5 ? '#22c55e' : '#ef4444');
   }
-  return `<div style="margin-top:8px;padding:8px 4px 2px;border-top:1px solid rgba(255,255,255,0.06)">${current}${body}</div>`;
+  return `<div style="margin-top:8px;padding:8px 4px 2px;border-top:1px solid rgba(255,255,255,0.06)">${current}${finishBlock}${body}</div>`;
 }
