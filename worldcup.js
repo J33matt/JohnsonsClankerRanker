@@ -10,6 +10,19 @@ const _wczExpanded = {};
 
 function _wczStopLiveRefresh() { if (_wczLiveTimer) { clearInterval(_wczLiveTimer); _wczLiveTimer = null; } }
 
+function _wczEnsureStyle() {
+  if (document.getElementById('wcz-style')) return;
+  const st = document.createElement('style');
+  st.id = 'wcz-style';
+  st.textContent = `
+    .wc-team-row { transition: background 0.12s; }
+    .wc-team-row:hover { background: rgba(255,255,255,0.06); }
+    .wc-chevron { transition: transform 0.2s ease; display:inline-block; color: var(--muted); }
+    .wc-team-row.open .wc-chevron { transform: rotate(180deg); }
+  `;
+  document.head.appendChild(st);
+}
+
 function showWcTab(tab, btn) {
   localStorage.setItem('activeWcTab', tab);
   document.querySelectorAll('#wc-tabs .tab-btn').forEach(b => b.classList.remove('active'));
@@ -380,6 +393,7 @@ function _wczToggleTeam(id) { _wczExpanded[id] = !_wczExpanded[id]; _wczRenderAd
 
 async function _wczRenderAdvance(fromToggle) {
   const el = document.getElementById('wc-panel-advance'); if (!el) return;
+  _wczEnsureStyle();
   if (!fromToggle && !el.dataset.init) { el.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>Simulating tournament...</div>`; el.dataset.init = '1'; }
   let groups, data;
   try {
@@ -412,12 +426,13 @@ async function _wczRenderAdvance(fromToggle) {
     const pColor = p >= 0.999 ? '#22c55e' : p <= 0.001 ? '#ef4444' : p >= 0.5 ? 'var(--text)' : 'var(--muted)';
     const barW = Math.round(Math.max(0, Math.min(1, p)) * 100);
     const open = _wczExpanded[t.id];
-    html += `<div onclick="_wczToggleTeam('${t.id}')" style="cursor:pointer;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);${open ? 'background:rgba(255,255,255,0.03)' : ''}">
+    html += `<div onclick="_wczToggleTeam('${t.id}')" class="wc-team-row${open ? ' open' : ''}" style="cursor:pointer;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);${open ? 'background:rgba(255,255,255,0.04)' : ''}">
       <div style="display:flex;align-items:center;gap:10px">
         ${_wczTeamLogo(t.logo, 24)}
         <span style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:1.09rem">${t.name} <span style="color:var(--muted);font-size:0.86rem">(Grp ${t.group})</span></span>
         <div style="width:90px;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:${barW}%;background:${pColor};border-radius:3px"></div></div>
         <span style="min-width:48px;text-align:right;font-family:'Bebas Neue',sans-serif;font-size:1.21rem;color:${pColor}">${_wczPct(p)}</span>
+        <span class="wc-chevron" style="font-size:0.8rem;width:14px;text-align:center">&#9662;</span>
       </div>
       ${open ? _wczTeamDetail(t, data, tmap) : ''}
     </div>`;
@@ -438,11 +453,9 @@ function _wczTeamDetail(t, data, tmap) {
   const p = data.prob[t.id];
   const info = data.info[t.id] || {};
   const nm = id => tmap[id]?.name || 'opponent';
-  // Each row joins its label to its value with a dotted leader line, so the eye can
-  // track which value belongs to which label across the width of the box.
-  const leader = (label, value, color, o = {}) => `<div style="display:flex;align-items:center;gap:8px;${o.indent ? 'padding:4px 0 4px 16px' : 'padding:5px 0'};font-family:'Barlow Condensed',sans-serif;font-size:${o.size || '0.9rem'}">
-      <span style="color:${o.labelColor || 'var(--muted)'};white-space:nowrap;font-weight:${o.bold ? '700' : '400'}">${label}</span>
-      <span style="flex:1;min-width:14px;border-bottom:1px dotted rgba(255,255,255,0.3);transform:translateY(-3px)"></span>
+  // Label on the left, value on the right; the grouped cards keep them associated.
+  const leader = (label, value, color, o = {}) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;${o.indent ? 'padding:4px 0 4px 16px' : 'padding:5px 0'};font-family:'Barlow Condensed',sans-serif;font-size:${o.size || '0.9rem'}">
+      <span style="color:${o.labelColor || 'var(--muted)'};font-weight:${o.bold ? '700' : '400'}">${label}</span>
       <span style="color:${color || 'var(--text)'};white-space:nowrap;font-weight:600;text-align:right">${value}</span>
     </div>`;
   const current = leader('Current', `${t.P} pts &middot; ${t.W}-${t.D}-${t.L} &middot; ${t.GD > 0 ? '+' + t.GD : t.GD} GD &middot; ${t.gp} GP`, 'var(--text)');
