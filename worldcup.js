@@ -213,77 +213,166 @@ async function _wczRenderBracket() {
 }
 
 // ----------------------- Advancement Odds -----------------------
+// Match-level Monte Carlo with the 2026 group tiebreakers (head-to-head first).
 function _wczStrength(t) { const gp = Math.max(1, t.gp); return (t.P / gp) + 0.35 * (t.GD / gp); }
 function _wczPois(l) { const L = Math.exp(-l); let k = 0, p = 1; do { k++; p *= Math.random(); } while (p > L); return k - 1; }
 function _wczSimMatch(a, b) {
-  const d = (a.str ?? _wczStrength(a)) - (b.str ?? _wczStrength(b));
+  const d = (a.str ?? 0) - (b.str ?? 0);
   const la = Math.min(6, Math.max(0.15, 1.35 * Math.exp(0.45 * d)));
   const lb = Math.min(6, Math.max(0.15, 1.35 * Math.exp(-0.45 * d)));
   return [_wczPois(la), _wczPois(lb)];
 }
+// Cross-group comparator for the third-place pool (no head-to-head between groups):
+// points, overall goal difference, goals scored, then strength as a stable proxy.
 function _wczCmp(a, b) { return b.P - a.P || b.GD - a.GD || b.GF - a.GF || b.str - a.str; }
 
-async function _wczRemainingFixtures(groups) {
-  const teamGroup = {}; groups.forEach(g => g.teams.forEach(t => teamGroup[t.id] = g.letter));
-  const events = await _sbFetchEspnWcScoreboard();
-  const fix = [];
-  for (const ev of events) {
-    const c = ev.competitions?.[0]; if (!c) continue;
-    if ((c.status?.type?.state || 'pre') === 'post') continue;
-    const ids = (c.competitors || []).map(x => String(x.team.id));
-    if (ids.length !== 2) continue;
-    const ga = teamGroup[ids[0]], gb = teamGroup[ids[1]];
-    if (ga && ga === gb) fix.push({ group: ga, a: ids[0], b: ids[1] });
+// 2026 tiebreak for a set of teams level on points. Head-to-head points, then
+// H2H goal difference, then H2H goals — and whenever a step separates the set
+// into smaller still-tied subsets, the procedure restarts from H2H points for
+// each subset. If still tied after H2H, fall back to overall GD, GF, strength.
+function _wczBreakTie(ids, matches, st) {
+  if (ids.length === 1) return [st[ids[0]]];
+  const set = new Set(ids);
+  const mini = {}; ids.forEach(id => mini[id] = { P: 0, GD: 0, GF: 0 });
+  for (const m of matches) {
+    if (!set.has(m.a) || !set.has(m.b)) continue;
+    const A = mini[m.a], B = mini[m.b];
+    A.GF += m.as; A.GD += m.as - m.bs; B.GF += m.bs; B.GD += m.bs - m.as;
+    if (m.as > m.bs) A.P += 3; else if (m.bs > m.as) B.P += 3; else { A.P++; B.P++; }
   }
-  return fix;
+  for (const key of ['P', 'GD', 'GF']) {
+    const vals = [...new Set(ids.map(id => mini[id][key]))];
+    if (vals.length > 1) {
+      vals.sort((x, y) => y - x);
+      let res = [];
+      for (const v of vals) res = res.concat(_wczBreakTie(ids.filter(id => mini[id][key] === v), matches, st));
+      return res;
+    }
+  }
+  return [...ids].sort((x, y) => st[y].GD - st[x].GD || st[y].GF - st[x].GF || st[y].str - st[x].str).map(id => st[id]);
 }
 
-function _wczSim(groups, fixtures, N) {
-  const teams = {}; const byGroup = {};
-  groups.forEach(g => { byGroup[g.letter] = []; g.teams.forEach(t => { teams[t.id] = { ...t, group: g.letter, str: _wczStrength(t) }; byGroup[g.letter].push(t.id); }); });
-  const adv = {}, cond = {};
-  Object.keys(teams).forEach(id => { adv[id] = 0; cond[id] = { win: [0, 0], draw: [0, 0], loss: [0, 0] }; });
-  for (let it = 0; it < N; it++) {
-    const w = {}; Object.values(teams).forEach(t => { w[t.id] = { id: t.id, P: t.P, GF: t.GF, GD: t.GD, str: t.str, adv: false }; });
-    const own = {};
-    for (const f of fixtures) {
-      const [ga, gb] = _wczSimMatch(teams[f.a], teams[f.b]);
-      const A = w[f.a], B = w[f.b];
-      A.GF += ga; A.GD += ga - gb; B.GF += gb; B.GD += gb - ga;
-      if (ga > gb) { A.P += 3; own[f.a] = 'win'; own[f.b] = 'loss'; }
-      else if (gb > ga) { B.P += 3; own[f.b] = 'win'; own[f.a] = 'loss'; }
-      else { A.P += 1; B.P += 1; own[f.a] = 'draw'; own[f.b] = 'draw'; }
+// Final group order (1st..4th) applying the tiebreakers within equal-point blocks.
+function _wczRankGroup(ids, matches, st) {
+  const arr = ids.map(id => st[id]).sort((a, b) => b.P - a.P);
+  const out = []; let block = [];
+  for (let i = 0; i < arr.length; i++) {
+    if (i > 0 && arr[i].P !== arr[i - 1].P) { out.push(block); block = []; }
+    block.push(arr[i]);
+  }
+  if (block.length) out.push(block);
+  const order = [];
+  for (const b of out) order.push(...(b.length === 1 ? [b[0]] : _wczBreakTie(b.map(t => t.id), matches, st)));
+  return order.map(t => t.id);
+}
+
+// Pull every group match (played, with scores) and remaining fixtures from the scoreboard.
+async function _wczPrepSim(groups) {
+  const teamGroup = {}, meta = {};
+  groups.forEach(g => g.teams.forEach(t => { teamGroup[t.id] = g.letter; meta[t.id] = { str: _wczStrength(t) }; }));
+  const events = await _sbFetchEspnWcScoreboard();
+  // Seed each team from ESPN's authoritative aggregate (always complete, even if
+  // the scoreboard feed drops a played match). Found played matches are kept only
+  // to drive head-to-head tiebreakers; remaining fixtures come from the feed.
+  const perGroup = {}; groups.forEach(g => perGroup[g.letter] = {
+    ids: g.teams.map(t => t.id),
+    agg: Object.fromEntries(g.teams.map(t => [t.id, { P: t.P, GF: t.GF, GA: t.GA }])),
+    played: [], remaining: [],
+  });
+  for (const ev of events) {
+    const c = ev.competitions?.[0]; if (!c) continue;
+    const comp = c.competitors || []; if (comp.length !== 2) continue;
+    const home = comp.find(x => x.homeAway === 'home') || comp[0];
+    const away = comp.find(x => x.homeAway === 'away') || comp[1];
+    const ha = String(home.team.id), aw = String(away.team.id);
+    const g = teamGroup[ha]; if (!g || g !== teamGroup[aw]) continue;
+    if ((c.status?.type?.state || 'pre') === 'post') perGroup[g].played.push({ a: ha, b: aw, as: +home.score || 0, bs: +away.score || 0 });
+    else perGroup[g].remaining.push({ a: ha, b: aw });
+  }
+  return { perGroup, meta };
+}
+
+function _wczBucket() { return { _all: [0, 0], a: [0, 0], d: [0, 0], b: [0, 0] }; }
+
+function _wczSimDetailed(groups, prep, N) {
+  const { perGroup, meta } = prep;
+  const ids = []; groups.forEach(g => g.teams.forEach(t => ids.push(t.id)));
+  const adv = {}; const cond = {};
+  ids.forEach(id => { adv[id] = 0; cond[id] = { win: _wczBucket(), draw: _wczBucket(), loss: _wczBucket() }; });
+
+  // Per-team final-matchday context: own opponent and the "other" group match (o1 vs o2).
+  const info = {};
+  for (const g of groups) {
+    const pg = perGroup[g.letter], rem = pg.remaining;
+    const remCount = {}; pg.ids.forEach(id => remCount[id] = 0);
+    rem.forEach(m => { remCount[m.a]++; remCount[m.b]++; });
+    const detailed = rem.length === 2 && pg.ids.every(id => remCount[id] === 1);
+    for (const id of pg.ids) {
+      const my = rem.find(m => m.a === id || m.b === id);
+      const oppId = my ? (my.a === id ? my.b : my.a) : null;
+      let o1 = null, o2 = null;
+      if (detailed) { const other = rem.find(m => m !== my); if (other) { o1 = other.a; o2 = other.b; } }
+      info[id] = { oppId, o1, o2, detailed: detailed && !!o1, hasMatch: !!my };
     }
-    const thirds = [];
-    for (const L in byGroup) {
-      const arr = byGroup[L].map(id => w[id]).sort(_wczCmp);
-      if (arr[0]) arr[0].adv = true;
-      if (arr[1]) arr[1].adv = true;
-      if (arr[2]) thirds.push(arr[2]);
+  }
+
+  for (let it = 0; it < N; it++) {
+    const simRes = {}; const thirds = [];
+    for (const g of groups) {
+      const pg = perGroup[g.letter];
+      // Seed from the authoritative aggregate, then add simulated remaining matches.
+      const st = {}; pg.ids.forEach(id => { const a = pg.agg[id]; st[id] = { id, P: a.P, GF: a.GF, GA: a.GA, GD: a.GF - a.GA, str: meta[id].str }; });
+      const matches = pg.played.slice();
+      for (const m of pg.remaining) {
+        const [as, bs] = _wczSimMatch(meta[m.a], meta[m.b]);
+        matches.push({ a: m.a, b: m.b, as, bs }); simRes[m.a + '_' + m.b] = { as, bs };
+        const A = st[m.a], B = st[m.b];
+        A.GF += as; A.GA += bs; B.GF += bs; B.GA += as;
+        if (as > bs) A.P += 3; else if (bs > as) B.P += 3; else { A.P++; B.P++; }
+      }
+      pg.ids.forEach(id => { st[id].GD = st[id].GF - st[id].GA; });
+      const order = _wczRankGroup(pg.ids, matches, st);
+      st[order[0]].adv = true; st[order[1]].adv = true;
+      const third = st[order[2]]; thirds.push(third);
+      pg._st = st;
     }
     thirds.sort(_wczCmp);
     for (let i = 0; i < 8 && i < thirds.length; i++) thirds[i].adv = true;
-    for (const id in w) {
-      if (w[id].adv) adv[id]++;
-      const r = own[id];
-      if (r) { cond[id][r][1]++; if (w[id].adv) cond[id][r][0]++; }
+
+    for (const g of groups) {
+      const pg = perGroup[g.letter];
+      for (const id of pg.ids) {
+        const a = pg._st[id].adv ? 1 : 0; if (a) adv[id]++;
+        const inf = info[id]; if (!inf || !inf.hasMatch) continue;
+        const my = pg.remaining.find(m => m.a === id || m.b === id);
+        const r = simRes[my.a + '_' + my.b]; const isA = my.a === id;
+        const own = r.as === r.bs ? 'draw' : ((r.as > r.bs) === isA ? 'win' : 'loss');
+        const bk = cond[id][own]; bk._all[1]++; if (a) bk._all[0]++;
+        if (inf.detailed) {
+          const orr = simRes[inf.o1 + '_' + inf.o2];
+          const ok = orr.as === orr.bs ? 'd' : (orr.as > orr.bs ? 'a' : 'b');
+          bk[ok][1]++; if (a) bk[ok][0]++;
+        }
+      }
+      pg._st = null;
     }
   }
+
   const prob = {}, condP = {};
-  Object.keys(teams).forEach(id => {
+  const pr = bk => bk[1] ? bk[0] / bk[1] : null;
+  ids.forEach(id => {
     prob[id] = adv[id] / N;
     const c = cond[id];
     condP[id] = {
-      win: c.win[1] ? c.win[0] / c.win[1] : null,
-      draw: c.draw[1] ? c.draw[0] / c.draw[1] : null,
-      loss: c.loss[1] ? c.loss[0] / c.loss[1] : null,
+      win: { all: pr(c.win._all), a: pr(c.win.a), d: pr(c.win.d), b: pr(c.win.b) },
+      draw: { all: pr(c.draw._all), a: pr(c.draw.a), d: pr(c.draw.d), b: pr(c.draw.b) },
+      loss: { all: pr(c.loss._all), a: pr(c.loss.a), d: pr(c.loss.d), b: pr(c.loss.b) },
     };
   });
-  return { prob, cond: condP };
+  return { prob, cond: condP, info };
 }
 
 function _wczPct(p) { if (p == null) return '—'; if (p >= 0.999) return '100%'; if (p <= 0.001) return '0%'; const v = p * 100; return (v < 10 ? v.toFixed(1) : v.toFixed(0)) + '%'; }
-
 function _wczToggleTeam(id) { _wczExpanded[id] = !_wczExpanded[id]; _wczRenderAdvance(true); }
 
 async function _wczRenderAdvance(fromToggle) {
@@ -295,15 +384,16 @@ async function _wczRenderAdvance(fromToggle) {
     if (_wczAdvCache && Date.now() - _wczAdvCache.ts < 60000) {
       data = _wczAdvCache;
     } else {
-      const fixtures = await _wczRemainingFixtures(groups);
-      let prob = {}, cond = {};
-      if (!fixtures.length) {
-        groups.forEach(g => g.teams.forEach(t => { prob[t.id] = (t.qualified || t.rank <= 2) ? 1 : 0; cond[t.id] = { win: null, draw: null, loss: null }; }));
+      const prep = await _wczPrepSim(groups);
+      const anyRemaining = Object.values(prep.perGroup).some(pg => pg.remaining.length);
+      if (!anyRemaining) {
+        const prob = {}, cond = {}, info = {};
+        groups.forEach(g => g.teams.forEach(t => { prob[t.id] = (t.qualified || t.rank <= 2) ? 1 : 0; cond[t.id] = { win: {}, draw: {}, loss: {} }; info[t.id] = { hasMatch: false }; }));
+        data = { ts: Date.now(), prob, cond, info };
       } else {
-        const r = _wczSim(groups, fixtures, 4000); prob = r.prob; cond = r.cond;
+        const r = _wczSimDetailed(groups, prep, 4000);
+        data = { ts: Date.now(), prob: r.prob, cond: r.cond, info: r.info };
       }
-      const oppOf = {}; fixtures.forEach(f => { oppOf[f.a] = f.b; oppOf[f.b] = f.a; });
-      data = { ts: Date.now(), prob, cond, oppOf };
       _wczAdvCache = data;
     }
   } catch (e) { el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif">Could not load data.</div>`; return; }
@@ -312,9 +402,8 @@ async function _wczRenderAdvance(fromToggle) {
   const all = Object.values(tmap).sort((a, b) => (data.prob[b.id] - data.prob[a.id]) || b.P - a.P || b.GD - a.GD);
 
   let html = `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;color:var(--muted);padding:4px 4px 4px">Probability of Reaching the Round of 32</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:0 4px 12px">Monte Carlo simulation of the remaining group matches. Tap a country for its qualification scenarios.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:0 4px 12px">Monte Carlo simulation of the remaining group matches using the 2026 tiebreakers (head-to-head first). Tap a country for its qualification scenarios.</div>`;
   html += `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">`;
-
   for (const t of all) {
     const p = data.prob[t.id];
     const pColor = p >= 0.999 ? '#22c55e' : p <= 0.001 ? '#ef4444' : p >= 0.5 ? 'var(--text)' : 'var(--muted)';
@@ -327,43 +416,59 @@ async function _wczRenderAdvance(fromToggle) {
         <div style="width:90px;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:${barW}%;background:${pColor};border-radius:3px"></div></div>
         <span style="min-width:48px;text-align:right;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:${pColor}">${_wczPct(p)}</span>
       </div>
-      ${open ? _wczTeamDetail(t, data) : ''}
+      ${open ? _wczTeamDetail(t, data, tmap) : ''}
     </div>`;
   }
   html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:0.5px;color:rgba(255,255,255,0.3);padding:10px 4px">Match outcomes are modeled from each team's group form (Poisson scoring). Group ranking uses points, then overall goal difference and goals scored.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:0.5px;color:rgba(255,255,255,0.3);padding:10px 4px">Group ranking applies head-to-head points, head-to-head goal difference and goals, then overall goal difference and goals scored, per the 2026 rules.</div>`;
   el.innerHTML = html;
 }
 
-function _wczTeamDetail(t, data) {
+function _wczBranch(p) {
+  if (p == null) return ['—', 'var(--muted)'];
+  if (p >= 0.995) return ['Advances', '#22c55e'];
+  if (p <= 0.005) return ['Eliminated', '#ef4444'];
+  return [_wczPct(p) + ' (goals / 3rd-place race)', p >= 0.5 ? '#9be3b4' : 'var(--muted)'];
+}
+
+function _wczTeamDetail(t, data, tmap) {
   const p = data.prob[t.id];
-  const oppId = data.oppOf[t.id];
-  const line = (label, txt, color) => `<div style="display:flex;justify-content:space-between;padding:3px 0;font-family:'Barlow Condensed',sans-serif;font-size:0.84rem"><span style="color:var(--muted)">${label}</span><span style="color:${color || 'var(--text)'}">${txt}</span></div>`;
+  const info = data.info[t.id] || {};
+  const nm = id => tmap[id]?.name || 'opponent';
+  const line = (label, txt, color) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-family:'Barlow Condensed',sans-serif;font-size:0.84rem"><span style="color:var(--muted)">${label}</span><span style="color:${color || 'var(--text)'};text-align:right">${txt}</span></div>`;
+  const current = line('Current', `${t.P} pts &middot; ${t.W}-${t.D}-${t.L} &middot; ${t.GD > 0 ? '+' + t.GD : t.GD} GD &middot; ${t.gp} played`, 'var(--text)');
+
   let body = '';
-  if (t.qualified || p >= 0.999) {
-    body = line('Status', t.noteDesc || 'Qualified for the Round of 32', '#22c55e');
-  } else if (p <= 0.001) {
-    body = line('Status', 'Eliminated from contention', '#ef4444');
-  } else if (!oppId) {
-    body = line('Status', 'Awaiting other results', 'var(--accent2)');
+  if (t.qualified || p >= 0.999) body = line('Status', t.noteDesc || 'Qualified for the Round of 32', '#22c55e');
+  else if (p <= 0.001) body = line('Status', 'Eliminated from contention', '#ef4444');
+  else if (!info.hasMatch) body = line('Status', 'Awaiting other results', 'var(--accent2)');
+  else if (info.detailed) {
+    const c = data.cond[t.id];
+    const o1 = nm(info.o1), o2 = nm(info.o2), opp = nm(info.oppId);
+    const seg = (title, bucket) => {
+      if (!bucket || bucket.all == null) return '';
+      const clinch = bucket.all >= 0.999 ? ' — clinches' : bucket.all <= 0.001 ? ' — eliminated' : '';
+      const head = `<div style="display:flex;justify-content:space-between;margin-top:8px;font-family:'Barlow Condensed',sans-serif;font-size:0.82rem"><span style="color:var(--text);font-weight:700">${title}</span><span style="color:${bucket.all >= 0.5 ? '#22c55e' : 'var(--muted)'}">${_wczPct(bucket.all)} to advance${clinch}</span></div>`;
+      // Only show the other-match branch detail when the own result doesn't already settle it.
+      if (bucket.all >= 0.999 || bucket.all <= 0.001) return head;
+      const row = (lbl, pr) => { const [txt, col] = _wczBranch(pr); return `<div style="display:flex;justify-content:space-between;padding:2px 0 2px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.78rem"><span style="color:var(--muted)">${lbl}</span><span style="color:${col};text-align:right">${txt}</span></div>`; };
+      return head
+        + row(`${o1} beat ${o2}`, bucket.a)
+        + row(`${o1} & ${o2} draw`, bucket.d)
+        + row(`${o2} beat ${o1}`, bucket.b);
+    };
+    body = line('Final group match', `vs ${opp}`, 'var(--text)')
+      + `<div style="margin-top:2px;font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:rgba(255,255,255,0.4)">Other match in the group: ${o1} vs ${o2}</div>`
+      + seg(`If ${t.name} win`, c.win)
+      + seg(`If ${t.name} draw`, c.draw)
+      + seg(`If ${t.name} lose`, c.loss);
   } else {
-    const opp = (_wczStandingsCache?.data || []).flatMap(g => g.teams).find(x => x.id === oppId);
-    const c = data.cond[t.id] || {};
-    const clinchWin = c.win != null && c.win >= 0.999;
-    const elimLoss = c.loss != null && c.loss <= 0.001;
-    body += line('Final group match', 'vs ' + (opp ? opp.name : 'opponent'), 'var(--text)');
-    body += line('If they win', _wczPct(c.win) + ' to advance' + (clinchWin ? ' (clinches)' : ''), c.win >= 0.5 ? '#22c55e' : 'var(--text)');
-    body += line('If they draw', _wczPct(c.draw) + ' to advance', c.draw >= 0.5 ? '#22c55e' : 'var(--muted)');
-    body += line('If they lose', _wczPct(c.loss) + ' to advance' + (elimLoss ? ' (eliminated)' : ''), c.loss >= 0.5 ? '#22c55e' : '#ef4444');
-    let summary;
-    if (clinchWin && elimLoss) summary = 'Win and through; lose and out. A draw may be enough depending on other results.';
-    else if (clinchWin) summary = 'A win guarantees a place in the Round of 32.';
-    else if (elimLoss) summary = 'Must avoid defeat to stay alive.';
-    else summary = 'Result combines with goal difference and other groups to decide their fate.';
-    body += `<div style="margin-top:6px;font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:var(--accent2);line-height:1.35">${summary}</div>`;
+    const c = data.cond[t.id];
+    const opp = nm(info.oppId);
+    body = line('Final group match', `vs ${opp}`, 'var(--text)')
+      + line('If they win', _wczPct(c.win?.all) + ' to advance', (c.win?.all ?? 0) >= 0.5 ? '#22c55e' : 'var(--text)')
+      + line('If they draw', _wczPct(c.draw?.all) + ' to advance', (c.draw?.all ?? 0) >= 0.5 ? '#22c55e' : 'var(--muted)')
+      + line('If they lose', _wczPct(c.loss?.all) + ' to advance', (c.loss?.all ?? 0) >= 0.5 ? '#22c55e' : '#ef4444');
   }
-  return `<div style="margin-top:8px;padding:8px 4px 2px;border-top:1px solid rgba(255,255,255,0.06)">
-    ${line('Current', `${t.P} pts &middot; ${t.W}-${t.D}-${t.L} &middot; ${t.GD > 0 ? '+' + t.GD : t.GD} GD &middot; ${t.gp} played`, 'var(--text)')}
-    ${body}
-  </div>`;
+  return `<div style="margin-top:8px;padding:8px 4px 2px;border-top:1px solid rgba(255,255,255,0.06)">${current}${body}</div>`;
 }
