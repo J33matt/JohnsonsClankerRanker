@@ -65,12 +65,12 @@ function _wczMatchRow(ev) {
   const live = st === 'in', fin = st === 'post';
   const time = new Date(ev.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   const mid = (live || fin)
-    ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:1px">${h.score ?? 0} - ${a.score ?? 0}</span>`
-    : `<span style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.9rem">${time}</span>`;
+    ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.38rem;letter-spacing:1px">${h.score ?? 0} - ${a.score ?? 0}</span>`
+    : `<span style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:1.03rem">${time}</span>`;
   const sub = live
-    ? `<span style="color:#22c55e;font-size:0.6rem;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif">&#9679; ${c.status?.type?.shortDetail || 'LIVE'}</span>`
-    : fin ? `<span style="color:var(--muted);font-size:0.6rem;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif">FT</span>` : '';
-  const nm = t => `<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.98rem;letter-spacing:0.5px">${t.team.displayName}</span>`;
+    ? `<span style="color:#22c55e;font-size:0.69rem;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif">&#9679; ${c.status?.type?.shortDetail || 'LIVE'}</span>`
+    : fin ? `<span style="color:var(--muted);font-size:0.69rem;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif">FT</span>` : '';
+  const nm = t => `<span style="font-family:'Barlow Condensed',sans-serif;font-size:1.13rem;letter-spacing:0.5px">${t.team.displayName}</span>`;
   return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">
     <div style="flex:1;display:flex;align-items:center;gap:8px;justify-content:flex-end;text-align:right;min-width:0">${nm(h)}${_wczTeamLogo(h.team.logo, 26)}</div>
     <div style="min-width:78px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1px">${mid}${sub}</div>
@@ -86,7 +86,7 @@ async function _wczRenderScores() {
   catch (e) { el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif">Could not load matches.</div>`; return; }
   const evs = [...events].sort((a, b) => new Date(a.date) - new Date(b.date));
   const now = new Date(), todayKey = now.toDateString();
-  const head = t => `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;color:var(--muted);padding:14px 4px 6px">${t}</div>`;
+  const head = t => `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:14px 4px 6px">${t}</div>`;
   const wrap = rows => `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">${rows}</div>`;
 
   let html = '';
@@ -103,11 +103,11 @@ async function _wczRenderScores() {
     html += head('Upcoming Schedule');
     for (const k of dateKeys) {
       const label = new Date(k).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-      html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;letter-spacing:1.5px;color:var(--accent2);padding:10px 4px 4px">${label}</div>`;
+      html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.92rem;letter-spacing:1.5px;color:var(--accent2);padding:10px 4px 4px">${label}</div>`;
       html += wrap(byDate[k].map(_wczMatchRow).join(''));
     }
   }
-  html += `<div style="text-align:center;color:rgba(255,255,255,0.3);font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:1px;padding:14px 0">Live scores refresh automatically every 30 seconds.</div>`;
+  html += `<div style="text-align:center;color:rgba(255,255,255,0.3);font-family:'Barlow Condensed',sans-serif;font-size:0.81rem;letter-spacing:1px;padding:14px 0">Live scores refresh automatically every 30 seconds.</div>`;
   el.innerHTML = html;
 }
 
@@ -121,17 +121,17 @@ function _wczStandingsTable(g) {
     const band = pos <= 2 ? 'border-left:3px solid #22c55e' : pos === 3 ? 'border-left:3px solid var(--accent2)' : 'border-left:3px solid transparent';
     return `<tr style="${band}">
       <td style="padding:6px 6px;color:var(--muted);text-align:center;font-family:'Barlow Condensed',sans-serif">${pos}</td>
-      <td style="padding:6px 6px"><div style="display:flex;align-items:center;gap:7px">${_wczTeamLogo(t.logo, 22)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.92rem">${t.name}</span></div></td>
+      <td style="padding:6px 6px"><div style="display:flex;align-items:center;gap:7px">${_wczTeamLogo(t.logo, 22)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:1.06rem">${t.name}</span></div></td>
       <td style="text-align:center;color:var(--muted)">${t.gp}</td>
       <td style="text-align:center;color:var(--muted)">${t.W}-${t.D}-${t.L}</td>
       <td style="text-align:center;color:var(--muted)">${t.GD > 0 ? '+' + t.GD : t.GD}</td>
-      <td style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:1rem">${t.P}</td>
+      <td style="text-align:center;font-family:'Bebas Neue',sans-serif;font-size:1.15rem">${t.P}</td>
     </tr>`;
   }).join('');
   return `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
-    <div style="background:var(--surface2);padding:7px 12px;font-family:'Bebas Neue',sans-serif;letter-spacing:2px;font-size:1rem">${g.name}</div>
-    <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
-      <thead><tr style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;letter-spacing:1px;text-transform:uppercase">
+    <div style="background:var(--surface2);padding:7px 12px;font-family:'Bebas Neue',sans-serif;letter-spacing:2px;font-size:1.15rem">${g.name}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:0.98rem">
+      <thead><tr style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.71rem;letter-spacing:1px;text-transform:uppercase">
         <th style="padding:5px 6px"></th><th style="text-align:left;padding:5px 6px">Team</th><th>GP</th><th>W-D-L</th><th>GD</th><th>Pts</th>
       </tr></thead><tbody>${rows}</tbody>
     </table>
@@ -161,15 +161,15 @@ const _WCZ_R32 = [
 function _wczSlotHtml(slot, groupMap) {
   const g = groupMap[slot.g];
   if (slot.t === '3') {
-    return `<div style="display:flex;align-items:center;gap:7px;color:var(--accent2)"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.85rem">Best 3rd Place (${slot.g})</span></div>`;
+    return `<div style="display:flex;align-items:center;gap:7px;color:var(--accent2)"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.98rem">Best 3rd Place (${slot.g})</span></div>`;
   }
   const decided = g && _wczGroupComplete(g);
   if (decided) {
     const sorted = [...g.teams].sort((a, b) => a.rank - b.rank);
     const team = slot.t === 'W' ? sorted[0] : sorted[1];
-    return `<div style="display:flex;align-items:center;gap:7px">${_wczTeamLogo(team.logo, 22)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:0.92rem">${team.name}</span></div>`;
+    return `<div style="display:flex;align-items:center;gap:7px">${_wczTeamLogo(team.logo, 22)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:1.06rem">${team.name}</span></div>`;
   }
-  return `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.85rem">Group ${slot.g} ${slot.t === 'W' ? 'Winner' : 'Runner-up'}</div>`;
+  return `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.98rem">Group ${slot.g} ${slot.t === 'W' ? 'Winner' : 'Runner-up'}</div>`;
 }
 
 async function _wczRenderBracket() {
@@ -180,38 +180,38 @@ async function _wczRenderBracket() {
   catch (e) { el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif">Could not load standings.</div>`; return; }
   const groupMap = {}; groups.forEach(g => groupMap[g.letter] = g);
 
-  let html = `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;color:var(--muted);padding:4px 4px 10px">Group Standings</div>`;
+  let html = `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:4px 4px 10px">Group Standings</div>`;
   html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">`;
   html += groups.map(_wczStandingsTable).join('');
   html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:8px 4px">Green: top two (advance). Amber: third place (eight best advance as wildcards).</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:8px 4px">Green: top two (advance). Amber: third place (eight best advance as wildcards).</div>`;
 
   // Third-place wildcard race
   const thirds = groups.map(g => { const s = [...g.teams].sort((a, b) => a.rank - b.rank); return { ...s[2], group: g.letter, complete: _wczGroupComplete(g) }; })
     .filter(Boolean).sort((a, b) => b.P - a.P || b.GD - a.GD || b.GF - a.GF);
-  html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Third-Place Wildcard Race</div>`;
+  html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Third-Place Wildcard Race</div>`;
   html += `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">`;
   html += thirds.map((t, i) => {
     const inField = i < 8;
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);${inField ? 'background:rgba(34,197,94,0.06)' : ''}">
       <span style="width:20px;text-align:center;color:${inField ? '#22c55e' : 'var(--muted)'};font-family:'Bebas Neue',sans-serif">${i + 1}</span>
       ${_wczTeamLogo(t.logo, 22)}
-      <span style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:0.92rem">${t.name} <span style="color:var(--muted);font-size:0.78rem">(Group ${t.group})</span></span>
-      <span style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.8rem">${t.P} pts &middot; ${t.GD > 0 ? '+' + t.GD : t.GD} GD</span>
+      <span style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:1.06rem">${t.name} <span style="color:var(--muted);font-size:0.9rem">(Group ${t.group})</span></span>
+      <span style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.92rem">${t.P} pts &middot; ${t.GD > 0 ? '+' + t.GD : t.GD} GD</span>
     </div>`;
   }).join('');
-  html += `</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:8px 4px">Top eight third-place teams qualify for the Round of 32.</div>`;
+  html += `</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:8px 4px">Top eight third-place teams qualify for the Round of 32.</div>`;
 
   // Round of 32 bracket allocation
-  html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Round of 32</div>`;
+  html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Round of 32</div>`;
   html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">`;
   html += _WCZ_R32.map(mt => `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
-      <div style="background:var(--surface2);padding:4px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;letter-spacing:1.5px;color:var(--muted)">MATCH ${mt.m}</div>
+      <div style="background:var(--surface2);padding:4px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.71rem;letter-spacing:1.5px;color:var(--muted)">MATCH ${mt.m}</div>
       <div style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">${_wczSlotHtml(mt.a, groupMap)}</div>
       <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap)}</div>
     </div>`).join('');
   html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.68rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Decided spots show the qualified team. Undecided spots show who can claim them. Round of 16 onward locks in as the knockout matches are played.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Decided spots show the qualified team. Undecided spots show who can claim them. Round of 16 onward locks in as the knockout matches are played.</div>`;
   el.innerHTML = html;
 }
 
@@ -404,8 +404,8 @@ async function _wczRenderAdvance(fromToggle) {
   const tmap = {}; groups.forEach(g => g.teams.forEach(t => tmap[t.id] = { ...t, group: g.letter }));
   const all = Object.values(tmap).sort((a, b) => (data.prob[b.id] - data.prob[a.id]) || b.P - a.P || b.GD - a.GD);
 
-  let html = `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:2px;color:var(--muted);padding:4px 4px 4px">Probability of Reaching the Round of 32</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:0 4px 12px">Monte Carlo simulation of the remaining group matches using the 2026 tiebreakers (head-to-head first). Tap a country for its qualification scenarios.</div>`;
+  let html = `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:4px 4px 4px">Probability of Reaching the Round of 32</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.81rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:0 4px 12px">Monte Carlo simulation of the remaining group matches using the 2026 tiebreakers (head-to-head first). Tap a country for its qualification scenarios.</div>`;
   html += `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">`;
   for (const t of all) {
     const p = data.prob[t.id];
@@ -415,15 +415,15 @@ async function _wczRenderAdvance(fromToggle) {
     html += `<div onclick="_wczToggleTeam('${t.id}')" style="cursor:pointer;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);${open ? 'background:rgba(255,255,255,0.03)' : ''}">
       <div style="display:flex;align-items:center;gap:10px">
         ${_wczTeamLogo(t.logo, 24)}
-        <span style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:0.95rem">${t.name} <span style="color:var(--muted);font-size:0.75rem">(Grp ${t.group})</span></span>
+        <span style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:1.09rem">${t.name} <span style="color:var(--muted);font-size:0.86rem">(Grp ${t.group})</span></span>
         <div style="width:90px;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden"><div style="height:100%;width:${barW}%;background:${pColor};border-radius:3px"></div></div>
-        <span style="min-width:48px;text-align:right;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:${pColor}">${_wczPct(p)}</span>
+        <span style="min-width:48px;text-align:right;font-family:'Bebas Neue',sans-serif;font-size:1.21rem;color:${pColor}">${_wczPct(p)}</span>
       </div>
       ${open ? _wczTeamDetail(t, data, tmap) : ''}
     </div>`;
   }
   html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:0.5px;color:rgba(255,255,255,0.3);padding:10px 4px">Group ranking applies head-to-head points, head-to-head goal difference and goals, then overall goal difference and goals scored, per the 2026 rules.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.76rem;letter-spacing:0.5px;color:rgba(255,255,255,0.3);padding:10px 4px">Group ranking applies head-to-head points, head-to-head goal difference and goals, then overall goal difference and goals scored, per the 2026 rules.</div>`;
   el.innerHTML = html;
 }
 
@@ -438,40 +438,43 @@ function _wczTeamDetail(t, data, tmap) {
   const p = data.prob[t.id];
   const info = data.info[t.id] || {};
   const nm = id => tmap[id]?.name || 'opponent';
-  const line = (label, txt, color) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-family:'Barlow Condensed',sans-serif;font-size:0.84rem"><span style="color:var(--muted)">${label}</span><span style="color:${color || 'var(--text)'};text-align:right">${txt}</span></div>`;
-  const current = line('Current', `${t.P} pts &middot; ${t.W}-${t.D}-${t.L} &middot; ${t.GD > 0 ? '+' + t.GD : t.GD} GD &middot; ${t.gp} played`, 'var(--text)');
+  // Each row joins its label to its value with a dotted leader line, so the eye can
+  // track which value belongs to which label across the width of the box.
+  const leader = (label, value, color, o = {}) => `<div style="display:flex;align-items:center;gap:8px;${o.indent ? 'padding:4px 0 4px 16px' : 'padding:5px 0'};font-family:'Barlow Condensed',sans-serif;font-size:${o.size || '0.9rem'}">
+      <span style="color:${o.labelColor || 'var(--muted)'};white-space:nowrap;font-weight:${o.bold ? '700' : '400'}">${label}</span>
+      <span style="flex:1;min-width:14px;border-bottom:1px dotted rgba(255,255,255,0.3);transform:translateY(-3px)"></span>
+      <span style="color:${color || 'var(--text)'};white-space:nowrap;font-weight:600;text-align:right">${value}</span>
+    </div>`;
+  const current = leader('Current', `${t.P} pts &middot; ${t.W}-${t.D}-${t.L} &middot; ${t.GD > 0 ? '+' + t.GD : t.GD} GD &middot; ${t.gp} GP`, 'var(--text)');
 
   let body = '';
-  if (p >= 0.999) body = line('Status', 'Qualified for the Round of 32', '#22c55e');
-  else if (p <= 0.001) body = line('Status', 'Eliminated from contention', '#ef4444');
-  else if (!info.hasMatch) body = line('Status', "Group finished — fate now rests on other groups' third-place teams", 'var(--accent2)');
+  if (p >= 0.999) body = leader('Status', 'Qualified for the Round of 32', '#22c55e');
+  else if (p <= 0.001) body = leader('Status', 'Eliminated', '#ef4444');
+  else if (!info.hasMatch) body = leader('Status', "Depends on other groups' 3rd-place teams", 'var(--accent2)');
   else if (info.detailed) {
     const c = data.cond[t.id];
     const o1 = nm(info.o1), o2 = nm(info.o2), opp = nm(info.oppId);
-    const seg = (title, bucket) => {
+    const seg = (verb, bucket) => {
       if (!bucket || bucket.all == null) return '';
-      const clinch = bucket.all >= 0.999 ? ' — clinches' : bucket.all <= 0.001 ? ' — eliminated' : '';
-      const head = `<div style="display:flex;justify-content:space-between;margin-top:8px;font-family:'Barlow Condensed',sans-serif;font-size:0.82rem"><span style="color:var(--text);font-weight:700">${title}</span><span style="color:${bucket.all >= 0.5 ? '#22c55e' : 'var(--muted)'}">${_wczPct(bucket.all)} to advance${clinch}</span></div>`;
-      // Only show the other-match branch detail when the own result doesn't already settle it.
-      if (bucket.all >= 0.999 || bucket.all <= 0.001) return head;
-      const row = (lbl, pr) => { const [txt, col] = _wczBranch(pr); return `<div style="display:flex;justify-content:space-between;padding:2px 0 2px 12px;font-family:'Barlow Condensed',sans-serif;font-size:0.78rem"><span style="color:var(--muted)">${lbl}</span><span style="color:${col};text-align:right">${txt}</span></div>`; };
-      return head
-        + row(`${o1} beat ${o2}`, bucket.a)
-        + row(`${o1} & ${o2} draw`, bucket.d)
-        + row(`${o2} beat ${o1}`, bucket.b);
+      const settle = bucket.all >= 0.999 ? 'in' : bucket.all <= 0.001 ? 'out' : null;
+      const headVal = settle === 'in' ? 'Through (100%)' : settle === 'out' ? 'Out (0%)' : `${_wczPct(bucket.all)} to advance`;
+      const headColor = settle === 'out' ? '#ef4444' : bucket.all >= 0.5 ? '#22c55e' : 'var(--muted)';
+      let block = leader(`If ${t.name} ${verb}`, headVal, headColor, { bold: true, labelColor: 'var(--text)', size: '0.92rem' });
+      if (!settle) {
+        const branch = (lbl, pr) => { const [txt, col] = _wczBranch(pr); return leader(lbl, txt, col, { indent: true, size: '0.85rem' }); };
+        block += branch(`${o1} beat ${o2}`, bucket.a) + branch(`${o1} & ${o2} draw`, bucket.d) + branch(`${o2} beat ${o1}`, bucket.b);
+      }
+      return `<div style="margin-top:8px;padding:6px 9px;background:rgba(255,255,255,0.03);border-radius:6px">${block}</div>`;
     };
-    body = line('Final group match', `vs ${opp}`, 'var(--text)')
-      + `<div style="margin-top:2px;font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;color:rgba(255,255,255,0.4)">Other match in the group: ${o1} vs ${o2}</div>`
-      + seg(`If ${t.name} win`, c.win)
-      + seg(`If ${t.name} draw`, c.draw)
-      + seg(`If ${t.name} lose`, c.loss);
+    body = leader('Final match', `vs ${opp}`, 'var(--text)')
+      + `<div style="margin-top:2px;font-family:'Barlow Condensed',sans-serif;font-size:0.94rem;color:rgba(255,255,255,0.45)">Other match in the group: ${o1} vs ${o2}</div>`
+      + seg('win', c.win) + seg('draw', c.draw) + seg('lose', c.loss);
   } else {
     const c = data.cond[t.id];
-    const opp = nm(info.oppId);
-    body = line('Final group match', `vs ${opp}`, 'var(--text)')
-      + line('If they win', _wczPct(c.win?.all) + ' to advance', (c.win?.all ?? 0) >= 0.5 ? '#22c55e' : 'var(--text)')
-      + line('If they draw', _wczPct(c.draw?.all) + ' to advance', (c.draw?.all ?? 0) >= 0.5 ? '#22c55e' : 'var(--muted)')
-      + line('If they lose', _wczPct(c.loss?.all) + ' to advance', (c.loss?.all ?? 0) >= 0.5 ? '#22c55e' : '#ef4444');
+    body = leader('Final match', `vs ${nm(info.oppId)}`, 'var(--text)')
+      + leader('If they win', _wczPct(c.win?.all) + ' to advance', (c.win?.all ?? 0) >= 0.5 ? '#22c55e' : 'var(--text)')
+      + leader('If they draw', _wczPct(c.draw?.all) + ' to advance', (c.draw?.all ?? 0) >= 0.5 ? '#22c55e' : 'var(--muted)')
+      + leader('If they lose', _wczPct(c.loss?.all) + ' to advance', (c.loss?.all ?? 0) >= 0.5 ? '#22c55e' : '#ef4444');
   }
   return `<div style="margin-top:8px;padding:8px 4px 2px;border-top:1px solid rgba(255,255,255,0.06)">${current}${body}</div>`;
 }
