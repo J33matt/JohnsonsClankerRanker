@@ -38,6 +38,9 @@
         <button class="league-btn" onclick="switchLeague('sportsbook', this)">
           🎰 SPORTSBOOK
         </button>
+        <button class="league-btn" onclick="switchLeague('worldcup', this)">
+          <img src="https://a.espncdn.com/i/teamlogos/leagues/500/fifa.world.png" style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">WORLD CUP
+        </button>
       </div>
       <div class="tagline">Advanced NBA/NFL Power Rankings &amp; Analytics</div>
     </div>
@@ -62,6 +65,17 @@
   <button class="tab-btn active" onclick="showPgaTab('leaderboard', this)">⛳ Leaderboard</button>
   <button class="tab-btn" onclick="showPgaTab('schedule', this)">📅 Schedule</button>
   <button class="tab-btn" onclick="showPgaTab('rankings', this)">🏆 FedEx Cup</button>
+</div>
+
+<div id="wc-tabs" style="display:none;">
+  <button class="tab-btn active" onclick="showWcTab('scores', this)">Scores &amp; Schedule</button>
+  <button class="tab-btn" onclick="showWcTab('bracket', this)">Standings &amp; Bracket</button>
+  <button class="tab-btn" onclick="showWcTab('advance', this)">Advancement Odds</button>
+</div>
+<div id="wc-panels" style="display:none; padding:16px; max-width:1100px; margin:0 auto;">
+  <div id="wc-panel-scores" class="wc-panel"></div>
+  <div id="wc-panel-bracket" class="wc-panel" style="display:none"></div>
+  <div id="wc-panel-advance" class="wc-panel" style="display:none"></div>
 </div>
 
 <div id="nfl-tabs" style="display:none;">
@@ -555,6 +569,8 @@ function switchLeague(league, btn) {
   const nflPanels = document.getElementById('nfl-panels');
   const pgaTabs = document.getElementById('pga-tabs');
   const pgaPanels = document.getElementById('pga-panels');
+  const wcTabs = document.getElementById('wc-tabs');
+  const wcPanels = document.getElementById('wc-panels');
 
   // This selects all your NBA sections
   const nbaPanels = document.querySelectorAll('#panel-rankings, #panel-playoffs, #panel-simulations, #panel-predictions, #panel-sportsbook, #panel-cards');
@@ -566,6 +582,9 @@ function switchLeague(league, btn) {
   if (nflPanels) nflPanels.style.display = 'none';
   if (pgaTabs) pgaTabs.style.display = 'none';
   if (pgaPanels) pgaPanels.style.display = 'none';
+  if (wcTabs) wcTabs.style.display = 'none';
+  if (wcPanels) wcPanels.style.display = 'none';
+  if (typeof _wczStopLiveRefresh === 'function') _wczStopLiveRefresh();
   nbaPanels.forEach(p => { p.style.display = ''; p.classList.remove('active'); });
 
   if (league === 'nba') {
@@ -589,6 +608,13 @@ function switchLeague(league, btn) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     if (sbPanel) sbPanel.classList.add('active');
     renderSportsbook();
+
+  } else if (league === 'worldcup') {
+    if (wcTabs) wcTabs.style.display = 'flex';
+    if (wcPanels) wcPanels.style.display = 'block';
+    const _savedWcTab = localStorage.getItem('activeWcTab') || 'scores';
+    const _wcBtn = document.querySelector(`#wc-tabs button[onclick*="${_savedWcTab}"]`);
+    showWcTab(_savedWcTab, _wcBtn || document.querySelector('#wc-tabs button'));
 
   } else {
     // NFL
@@ -6794,6 +6820,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const _sbBtn = Array.from(document.querySelectorAll('.league-btn'))
       .find(b => (b.getAttribute('onclick') || '').includes("'sportsbook'"));
     if (_sbBtn) switchLeague('sportsbook', _sbBtn);
+  } else if (_savedLeague === 'worldcup') {
+    const _wcBtn = Array.from(document.querySelectorAll('.league-btn'))
+      .find(b => (b.getAttribute('onclick') || '').includes("'worldcup'"));
+    if (_wcBtn) switchLeague('worldcup', _wcBtn);
   } else {
     // Default to NFL (includes first-time visitors and explicitly saved 'nfl')
     const _nflBtn = Array.from(document.querySelectorAll('.league-btn'))
@@ -15361,5 +15391,6 @@ function _pgaBuildRankings(el, players) {
 <script src="cards-data.js"></script>
 <script src="cards-logic.js"></script>
 <script src="draft-lobby.js"></script>
+<script src="worldcup.js"></script>
 </body>
 </html>
