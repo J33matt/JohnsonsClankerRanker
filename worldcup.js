@@ -153,6 +153,31 @@ function _wczStandingsTable(g) {
   </div>`;
 }
 
+// Styling for the knockout bracket. Rounds are equal-height flex columns; each
+// cell is flex:1 so midpoints line up across rounds, and pseudo-elements draw the
+// connector lines (horizontal stub from every match + vertical joiner pairing two
+// matches into the next round). `.l` rounds flow rightward, `.r` rounds leftward.
+const _WCZ_BRACKET_CSS = `<style>
+.wczb-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:6px 2px 20px}
+.wczb{display:flex;gap:26px;align-items:stretch;width:max-content}
+.wczb-round{display:flex;flex-direction:column;justify-content:space-around;flex-shrink:0}
+.wczb-cell{flex:1;display:flex;flex-direction:column;justify-content:center;position:relative}
+.wczb .rl-r32{width:232px}.wczb .rl-r16{width:152px}.wczb .rl-qf{width:142px}.wczb .rl-sf{width:142px}.wczb .rl-final{width:158px;justify-content:center}
+.wczb-round.l .wczb-cell::after{content:'';position:absolute;right:-26px;top:calc(50% - 1px);width:26px;height:2px;background:var(--border)}
+.wczb-round.l.pair .wczb-cell:nth-child(odd)::before{content:'';position:absolute;right:-26px;top:50%;height:50%;width:2px;background:var(--border)}
+.wczb-round.l.pair .wczb-cell:nth-child(even)::before{content:'';position:absolute;right:-26px;bottom:50%;height:50%;width:2px;background:var(--border)}
+.wczb-round.r .wczb-cell::after{content:'';position:absolute;left:-26px;top:calc(50% - 1px);width:26px;height:2px;background:var(--border)}
+.wczb-round.r.pair .wczb-cell:nth-child(odd)::before{content:'';position:absolute;left:-26px;top:50%;height:50%;width:2px;background:var(--border)}
+.wczb-round.r.pair .wczb-cell:nth-child(even)::before{content:'';position:absolute;left:-26px;bottom:50%;height:50%;width:2px;background:var(--border)}
+.wczb-card{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)}
+.wczb-card-h{background:var(--surface2);padding:4px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.71rem;letter-spacing:1.5px;color:var(--muted)}
+.wczb-card-s{padding:9px 11px}
+.wczb-fut{border:1px dashed var(--border);border-radius:8px;overflow:hidden;background:rgba(255,255,255,0.02)}
+.wczb-fut-h{background:var(--surface2);padding:4px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:1.5px;color:var(--muted)}
+.wczb-fut-b{padding:6px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;color:var(--muted)}
+.wczb-fut-b+.wczb-fut-b{border-top:1px solid rgba(255,255,255,0.05)}
+</style>`;
+
 // Round of 32 slot allocation (2026 fixed structure).
 const _WCZ_R32 = [
   { m: 73, a: { t: 'RU', g: 'A' }, b: { t: 'RU', g: 'B' } },
@@ -303,36 +328,40 @@ async function _wczRenderBracket() {
   }).join('');
   html += `</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:8px 4px">Top eight (green) qualify. Ranked by points, then overall goal difference, then goals scored; fair-play points and FIFA ranking break any remaining ties.</div>`;
 
-  // Round of 32 bracket allocation — laid out as the real 2026 knockout tree
-  // (two halves of the draw, each quarterfinal grouping the two Round-of-16 pods
-  //  that feed it, each pod holding the two R32 matches whose winners meet).
+  // Round of 32 bracket — a true two-sided knockout tree with connector lines.
+  // Columns converge from both edges (R32 -> R16 -> QF -> SF) toward the Final in
+  // the middle. CSS pseudo-elements draw the horizontal stubs and the vertical
+  // joiners that pair two matches into the next round, so it reads as a bracket.
   html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Round of 32 Bracket</div>`;
+  html += _WCZ_BRACKET_CSS;
   const r32 = {}; _WCZ_R32.forEach(mt => r32[mt.m] = mt);
-  const card = m => { const mt = r32[m]; return `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">
-      <div style="background:var(--surface2);padding:4px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.71rem;letter-spacing:1.5px;color:var(--muted)">MATCH ${mt.m}</div>
-      <div style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">${_wczSlotHtml(mt.a, groupMap, adv, mt.m)}</div>
-      <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap, adv, mt.m)}</div>
+  const card = m => { const mt = r32[m]; return `<div class="wczb-card">
+      <div class="wczb-card-h">MATCH ${mt.m}</div>
+      <div class="wczb-card-s" style="border-bottom:1px solid rgba(255,255,255,0.05)">${_wczSlotHtml(mt.a, groupMap, adv, mt.m)}</div>
+      <div class="wczb-card-s">${_wczSlotHtml(mt.b, groupMap, adv, mt.m)}</div>
     </div>`; };
-  // One Round-of-16 pairing: the two R32 matches whose winners meet.
-  const pod = (r16, m1, m2) => `<div style="border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,0.015)">
-      ${card(m1)}${card(m2)}
-      <div style="text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;letter-spacing:1.5px;color:var(--accent2)">&#9660; ROUND OF 16 &middot; MATCH ${r16}</div>
+  // Compact placeholder node for a not-yet-played later-round match.
+  const fut = (label, num, l1, l2) => `<div class="wczb-fut">
+      <div class="wczb-fut-h">${label} &middot; M${num}</div>
+      <div class="wczb-fut-b">${l1}</div>
+      <div class="wczb-fut-b">${l2}</div>
     </div>`;
-  // One quarterfinal: the two Round-of-16 pods whose winners meet.
-  const qf = (qfNum, podsHtml) => `<div style="border:1px solid var(--border);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:12px;background:rgba(255,255,255,0.02)">
-      ${podsHtml}
-      <div style="text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:0.74rem;letter-spacing:1.5px;color:var(--muted)">&#9660; QUARTERFINAL &middot; MATCH ${qfNum}</div>
-    </div>`;
-  // One half of the draw, feeding a semifinal then the final.
-  const half = (label, sf, qfsHtml) => `<div style="display:flex;flex-direction:column;gap:16px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:1.5px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:5px">${label} &mdash; to Semifinal ${sf}</div>
-      ${qfsHtml}
-    </div>`;
-  html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:24px;align-items:start">`;
-  html += half('Top Half', 101, qf(97, pod(89, 74, 77) + pod(90, 73, 75)) + qf(98, pod(93, 83, 84) + pod(94, 81, 82)));
-  html += half('Bottom Half', 102, qf(99, pod(91, 76, 78) + pod(92, 79, 80)) + qf(100, pod(95, 86, 88) + pod(96, 85, 87)));
-  html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The two columns are the halves of the draw; nested boxes group each Round-of-16 pairing and quarterfinal, so you can trace a team's path to the final. A green CLINCHED tag marks a team locked into a spot. Any slot still in play is a dropdown — tap it to see every team that can still take it, its chance, and the result it needs. Candidate lists come from an exhaustive possibility search (so long shots show too); the third-place slot routing uses FIFA's official allocation table.</div>`;
+  const round = (cls, cells) => `<div class="wczb-round ${cls}">${cells.map(c => `<div class="wczb-cell">${c}</div>`).join('')}</div>`;
+  html += `<div class="wczb-wrap"><div class="wczb">`;
+  // Left half (flows left-to-right toward the Final).
+  html += round('rl-r32 l pair', [74, 77, 73, 75, 83, 84, 81, 82].map(card));
+  html += round('rl-r16 l pair', [fut('R16', 89, 'Winner M74', 'Winner M77'), fut('R16', 90, 'Winner M73', 'Winner M75'), fut('R16', 93, 'Winner M83', 'Winner M84'), fut('R16', 94, 'Winner M81', 'Winner M82')]);
+  html += round('rl-qf l pair', [fut('QF', 97, 'Winner M89', 'Winner M90'), fut('QF', 98, 'Winner M93', 'Winner M94')]);
+  html += round('rl-sf l', [fut('SF', 101, 'Winner M97', 'Winner M98')]);
+  // Final in the centre.
+  html += round('rl-final', [fut('FINAL', 104, 'Winner M101', 'Winner M102')]);
+  // Right half (flows right-to-left toward the Final).
+  html += round('rl-sf r', [fut('SF', 102, 'Winner M99', 'Winner M100')]);
+  html += round('rl-qf r pair', [fut('QF', 99, 'Winner M91', 'Winner M92'), fut('QF', 100, 'Winner M95', 'Winner M96')]);
+  html += round('rl-r16 r pair', [fut('R16', 91, 'Winner M76', 'Winner M78'), fut('R16', 92, 'Winner M79', 'Winner M80'), fut('R16', 95, 'Winner M86', 'Winner M88'), fut('R16', 96, 'Winner M85', 'Winner M87')]);
+  html += round('rl-r32 r pair', [76, 78, 79, 80, 86, 88, 85, 87].map(card));
+  html += `</div></div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The bracket flows from both edges toward the Final; follow the connector lines to trace a team's path. A green CLINCHED tag marks a team locked into a spot. Any slot still in play is a dropdown — tap it to see every team that can still take it, its chance, and the result it needs. Candidate lists come from an exhaustive possibility search (so long shots show too); the third-place slot routing uses FIFA's official allocation table.</div>`;
   el.innerHTML = html;
 }
 
