@@ -249,7 +249,10 @@ function _wczSlotHtml(slot, groupMap, adv, matchNum) {
         const t = c.t;
         const opp = adv.ownOpp?.[t.id] != null ? byId?.[adv.ownOpp[t.id]]?.name : null;
         const nm = id => byId?.[id]?.name || '?';
-        const scen = _wczEnumPos(adv.groupSim?.[slot.g], t.id, posIdx, nm) || _wczPosScenario(adv.placeCond?.[t.id], opp, posIdx);
+        const lines = _wczEnumPos(adv.groupSim?.[slot.g], t.id, posIdx, nm);
+        let scen;
+        if (lines) scen = lines.map(l => `<div style="display:flex;gap:6px"><span style="color:var(--text);flex-shrink:0;min-width:74px">${l.head}</span><span>${l.detail}</span></div>`).join('');
+        else scen = _wczPosScenario(adv.placeCond?.[t.id], opp, posIdx);
         return candRow(t.logo, t.name, null, fmtP(c.p), colFor(c.p), scen);
       }).join('');
       return dropdown(`Group ${slot.g} ${posName}:`, `${topT.name} ${fmtP(cands[0].p)}`, body, slotKey, open);
@@ -582,30 +585,37 @@ function _wczEnumPos(pg, teamId, posIdx, nm) {
     const ok = r === s ? 'D' : (r > s ? 'A' : 'B');
     add(ownRes, ok, Math.abs(r - s), order.indexOf(teamId) === posIdx);
   }
-  const verb = { W: `beats ${nm(oppId)}`, D: `draws with ${nm(oppId)}`, L: `loses to ${nm(oppId)}` };
-  const otherDesc = (ok, thr) => {
-    if (ok === 'D') return `${nm(othM.a)} and ${nm(othM.b)} draw`;
-    const w = ok === 'A' ? othM.a : othM.b, l = ok === 'A' ? othM.b : othM.a;
-    return `${nm(w)} ${thr ? `beat ${nm(l)} by ${thr}+` : `beat ${nm(l)}`}`;
-  };
-  const clauses = [];
+  const head = { W: `Beat ${nm(oppId)}`, D: `Draw ${nm(oppId)}`, L: `Lose to ${nm(oppId)}` };
+  const otherName = ok => ok === 'D' ? `${nm(othM.a)} & ${nm(othM.b)} draw`
+    : `${nm(ok === 'A' ? othM.a : othM.b)} beat ${nm(ok === 'A' ? othM.b : othM.a)}`;
+  const lines = [];
   for (const ownRes of ['W', 'D', 'L']) {
     const cs = cells[ownRes]; if (!cs) continue;
-    const qual = []; let allAlways = true;
+    const st = {};
     for (const ok of ['A', 'D', 'B']) {
-      const c = cs[ok]; if (!c || !c.hit.length) continue;
-      if (!c.miss.length) { qual.push(otherDesc(ok, null)); }
+      const c = cs[ok] || { hit: [], miss: [] };
+      if (!c.hit.length) st[ok] = { kind: 'none' };
+      else if (!c.miss.length) st[ok] = { kind: 'full' };
       else {
-        allAlways = false;
-        const minHit = Math.min(...c.hit), maxMiss = Math.max(...c.miss);
-        qual.push(minHit > maxMiss ? otherDesc(ok, minHit) : otherDesc(ok, null) + ' (on goal difference)');
+        const minHit = Math.min(...c.hit), maxHit = Math.max(...c.hit), minMiss = Math.min(...c.miss), maxMiss = Math.max(...c.miss);
+        st[ok] = { kind: 'part', qualThr: minHit > maxMiss ? minHit : null, failThr: minMiss > maxHit ? minMiss : null };
       }
     }
-    if (!qual.length) continue;
-    clauses.push(qual.length === 3 && allAlways ? `${nm(teamId)} ${verb[ownRes]}`
-      : `${nm(teamId)} ${verb[ownRes]} and ${qual.length > 1 ? `(${qual.join(' or ')})` : qual[0]}`);
+    const fulls = ['A', 'D', 'B'].filter(o => st[o].kind === 'full');
+    const parts = ['A', 'D', 'B'].filter(o => st[o].kind === 'part');
+    const nones = ['A', 'D', 'B'].filter(o => st[o].kind === 'none');
+    if (!fulls.length && !parts.length) continue; // this own result can't reach the position
+    let detail;
+    if (!parts.length && !nones.length) {
+      detail = 'qualifies';
+    } else {
+      const qualDesc = [...fulls.map(otherName), ...parts.map(o => otherName(o) + (st[o].qualThr ? ` by ${st[o].qualThr}+` : ' (on goal diff.)'))];
+      const failDesc = [...nones.map(otherName), ...parts.map(o => otherName(o) + (st[o].failThr ? ` by ${st[o].failThr}+` : ' (on goal diff.)'))];
+      detail = (failDesc.length && failDesc.length < qualDesc.length) ? 'qualifies unless ' + failDesc.join(' or ') : 'only if ' + qualDesc.join(' or ');
+    }
+    lines.push({ head: head[ownRes], detail });
   }
-  return clauses.length ? clauses.join('; OR ') : null;
+  return lines.length ? lines : null;
 }
 
 // Own-match requirement for a team to finish 1st (posIdx 0) or 2nd (posIdx 1) in its group.
