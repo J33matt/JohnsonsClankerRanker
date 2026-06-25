@@ -221,7 +221,7 @@ function _wczSlotHtml(slot, groupMap, adv, matchNum) {
           const p = spMap[id] || 0;
           const col = p >= 0.5 ? '#22c55e' : p >= 0.2 ? 'var(--accent2)' : 'var(--muted)';
           const opp = adv.ownOpp?.[id] != null ? byId[adv.ownOpp[id]]?.name : null;
-          const scen = _wczSlotScenario(feas[id], opp);
+          const scen = _wczSlotScenario(feas[id], opp, t.name, adv.slotMiss?.[matchNum]?.[id]);
           return `<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,0.05)">
             <div style="display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem">
               ${_wczTeamLogo(t.logo, 18)}<span style="flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.78rem">(${t.group})</span></span>
@@ -413,6 +413,7 @@ function _wczSimDetailed(groups, prep, N) {
   const adv = {}; const cond = {}; const place = {};
   ids.forEach(id => { adv[id] = 0; place[id] = [0, 0, 0, 0]; cond[id] = { win: _wczBucket(), draw: _wczBucket(), loss: _wczBucket() }; });
   const slotTally = {}; _WCZ_THIRD_SLOTS.forEach(s => slotTally[s.m] = {});
+  const qThird = {}; groups.forEach(g => qThird[g.letter] = 0); // P(group's third qualifies)
 
   // Per-team final-matchday context: own opponent and the "other" group match (o1 vs o2).
   const info = {};
@@ -452,7 +453,7 @@ function _wczSimDetailed(groups, prep, N) {
       pg._st = st;
     }
     thirds.sort(_wczCmp);
-    for (let i = 0; i < 8 && i < thirds.length; i++) thirds[i].adv = true;
+    for (let i = 0; i < 8 && i < thirds.length; i++) { thirds[i].adv = true; qThird[thirds[i].grp]++; }
 
     // Assign the eight qualifying thirds to the eight knockout slots using FIFA's
     // official allocation table (exact), falling back to a valid matching if needed.
@@ -495,8 +496,25 @@ function _wczSimDetailed(groups, prep, N) {
   });
   const slotProb = {};
   _WCZ_THIRD_SLOTS.forEach(s => { slotProb[s.m] = Object.entries(slotTally[s.m]).map(([id, c]) => ({ id, p: c / N })).sort((a, b) => b.p - a.p); });
-  return { prob, cond: condP, info, place: placeP, slotProb };
+  const qThirdP = {}; for (const g in qThird) qThirdP[g] = qThird[g] / N;
+  return { prob, cond: condP, info, place: placeP, slotProb, qThird: qThirdP };
 }
+
+// Most likely qualifying combination among the FEASIBLE ones (those actually observed
+// in the possibility search, so impossible group-sets are excluded), scored by each
+// group's third-qualifying probability. Returns the sorted 8-group key, or null.
+function _wczBestComboFrom(keys, qThird) {
+  const cl = x => Math.min(0.999, Math.max(0.001, x || 0));
+  let best = null, bestScore = -Infinity;
+  for (const key of keys) {
+    const inSet = new Set(key.split(''));
+    let s = 0; for (const g in qThird) s += inSet.has(g) ? Math.log(cl(qThird[g])) : Math.log(1 - cl(qThird[g]));
+    if (s > bestScore) { bestScore = s; best = key; }
+  }
+  return best;
+}
+
+function _wczList(a) { return a.length <= 1 ? (a[0] || '') : a.length === 2 ? `${a[0]} and ${a[1]}` : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`; }
 
 // Possibility search: simulate the remaining matches with UNIFORM scoring (no team
 // strength) over a large sample to surface every team that can still reach each
@@ -533,20 +551,29 @@ function _wczPossib(groups, prep, N) {
     const assign = (typeof _WCZ_ALLOC !== 'undefined' && _WCZ_ALLOC[key]) || _wczAssignThirds(q8.map(t => t.grp));
     for (const s of _WCZ_THIRD_SLOTS) {
       const L = assign[s.m]; if (L == null) continue; const id = teamByLetter[L]; if (!id) continue;
-      let f = slotFeas[s.m][id]; if (!f) { f = { win: false, draw: false, loss: false, hasMatch: ownKey[id] != null }; slotFeas[s.m][id] = f; }
+      let f = slotFeas[s.m][id]; if (!f) { f = { win: false, draw: false, loss: false, hasMatch: ownKey[id] != null, combos: {} }; slotFeas[s.m][id] = f; }
+      f.combos[key] = true;
       const ok = ownKey[id]; if (ok) { const r = simRes[ok.k]; if (r) { const own = r.as === r.bs ? 'draw' : ((r.as > r.bs) === ok.isA ? 'win' : 'loss'); f[own] = true; } }
     }
   }
   return { slotFeas, ownOpp };
 }
 
-function _wczSlotScenario(f, opp) {
+// "Most likely path" for a team to take a slot: its own-match requirement (from the
+// possibility search) plus which groups' thirds most likely miss the cut.
+function _wczSlotScenario(f, opp, team, missing) {
   if (!f) return '';
-  if (!f.hasMatch || !opp) return "Group finished — needs other groups' third-place results to fall their way";
-  const res = []; if (f.win) res.push('win'); if (f.draw) res.push('draw'); if (f.loss) res.push('lose');
-  if (res.length >= 3) return `Any result vs ${opp} keeps this open (depends on other groups)`;
-  if (!res.length) return '';
-  return `Needs to ${res.join(' or ')} vs ${opp} — other results end this path`;
+  const parts = [];
+  if (f.hasMatch && opp) {
+    const res = ['win', 'draw', 'loss'].filter(k => f[k]);
+    const verb = { win: `beats ${opp}`, draw: `draws with ${opp}`, loss: `loses to ${opp}` };
+    if (res.length >= 3) parts.push(`${team} finishes 3rd in its group`);
+    else if (res.length === 1) parts.push(`${team} ${verb[res[0]]}`);
+    else if (res.length) parts.push(`${team} ${res.map(k => k === 'win' ? 'wins' : k === 'draw' ? 'draws' : 'loses').join(' or ')} vs ${opp}`);
+  }
+  if (missing && missing.length) parts.push(`the third-placed teams of Group${missing.length > 1 ? 's' : ''} ${_wczList(missing)} miss the cut`);
+  if (!parts.length) return '';
+  return `Most likely: ${parts.join(', and ')}.`;
 }
 
 function _wczPct(p) { if (p == null) return '—'; if (p >= 0.999) return '100%'; if (p <= 0.001) return '0%'; const v = p * 100; return (v < 10 ? v.toFixed(1) : v.toFixed(0)) + '%'; }
@@ -558,7 +585,7 @@ async function _wczGetAdvData(groups) {
   if (_wczAdvCache && Date.now() - _wczAdvCache.ts < 60000) return _wczAdvCache;
   const prep = await _wczPrepSim(groups);
   const anyRemaining = Object.values(prep.perGroup).some(pg => pg.remaining.length);
-  let data;
+  let data, qThird;
   if (!anyRemaining) {
     const prob = {}, cond = {}, info = {}, place = {};
     groups.forEach(g => g.teams.forEach(t => {
@@ -567,16 +594,31 @@ async function _wczGetAdvData(groups) {
       cond[t.id] = { win: {}, draw: {}, loss: {} }; info[t.id] = { hasMatch: false };
     }));
     data = { ts: Date.now(), prob, cond, info, place };
+    // third qualifies => among the eight best current thirds
+    const thirds = groups.map(g => ({ g: g.letter, t: [...g.teams].sort((a, b) => a.rank - b.rank)[2] }))
+      .sort((a, b) => b.t.P - a.t.P || b.t.GD - a.t.GD || b.t.GF - a.t.GF);
+    qThird = {}; thirds.forEach((x, i) => qThird[x.g] = i < 8 ? 1 : 0);
   } else {
     const r = _wczSimDetailed(groups, prep, 4000);
     data = { ts: Date.now(), prob: r.prob, cond: r.cond, info: r.info, place: r.place, slotProb: r.slotProb };
+    qThird = r.qThird;
   }
-  // Broad possibility search for the third-place slots: which teams can still reach
-  // each slot, and the own-result each needs.
+  // Broad possibility search: which teams can still reach each slot + own-result needed.
   const poss = _wczPossib(groups, prep, anyRemaining ? 10000 : 1);
   data.slotFeas = poss.slotFeas; data.ownOpp = poss.ownOpp;
   data.teamById = {};
   groups.forEach(g => g.teams.forEach(t => data.teamById[t.id] = { ...t, group: g.letter }));
+  // Most-likely missing groups (the modal qualifying combination) per candidate.
+  data.slotMiss = {};
+  const allLetters = groups.map(g => g.letter);
+  for (const s of _WCZ_THIRD_SLOTS) {
+    data.slotMiss[s.m] = {};
+    for (const id in (data.slotFeas[s.m] || {})) {
+      const keys = Object.keys(data.slotFeas[s.m][id].combos || {});
+      const best = _wczBestComboFrom(keys, qThird);
+      if (best) { const inSet = new Set(best.split('')); data.slotMiss[s.m][id] = allLetters.filter(L => !inSet.has(L)); }
+    }
+  }
   _wczAdvCache = data;
   return data;
 }
