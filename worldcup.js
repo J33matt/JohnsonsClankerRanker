@@ -571,9 +571,11 @@ function _wczEnumPos(pg, teamId, posIdx, nm) {
   const othM = ownM === rem[0] ? rem[1] : rem[0];
   const oppId = ownM.a === teamId ? ownM.b : ownM.a;
   const ownIsA = ownM.a === teamId;
-  const MAXG = 7;
+  const MAXG = 7, REAL_MAX = 6; // plausible goal-margin ceiling for phrasing
   const cells = {};
-  const add = (ownRes, ok, margin, hit) => { (cells[ownRes] = cells[ownRes] || {}); const c = (cells[ownRes][ok] = cells[ownRes][ok] || { hit: [], miss: [] }); (hit ? c.hit : c.miss).push(margin); };
+  // Store the goal-difference SWING (other-match winner's margin minus this team's own
+  // margin) for each scoreline, so a GD-race condition reduces to a relative margin.
+  const add = (ownRes, ok, rel, hit) => { (cells[ownRes] = cells[ownRes] || {}); const c = (cells[ownRes][ok] = cells[ownRes][ok] || { hit: [], miss: [] }); (hit ? c.hit : c.miss).push(rel); };
   for (let p = 0; p <= MAXG; p++) for (let q = 0; q <= MAXG; q++) for (let r = 0; r <= MAXG; r++) for (let s = 0; s <= MAXG; s++) {
     const st = {}; pg.ids.forEach(id => { const a = pg.agg[id]; st[id] = { id, P: a.P, GF: a.GF, GA: a.GA, GD: a.GF - a.GA, str: 0 }; });
     const matches = pg.played.slice();
@@ -583,36 +585,46 @@ function _wczEnumPos(pg, teamId, posIdx, nm) {
     const order = _wczRankGroup(pg.ids, matches, st);
     const ownRes = p === q ? 'D' : ((p > q) === ownIsA ? 'W' : 'L');
     const ok = r === s ? 'D' : (r > s ? 'A' : 'B');
-    add(ownRes, ok, Math.abs(r - s), order.indexOf(teamId) === posIdx);
+    const ownGD = ownIsA ? p - q : q - p;          // this team's GD change in its own match
+    const rivalGD = r - s;                          // other match: a's GD change (>0 if a wins)
+    const rel = (ok === 'A' ? rivalGD : ok === 'B' ? -rivalGD : 0) - ownGD; // winner's margin minus team's
+    add(ownRes, ok, rel, order.indexOf(teamId) === posIdx);
   }
   const head = { W: `Beat ${nm(oppId)}`, D: `Draw ${nm(oppId)}`, L: `Lose to ${nm(oppId)}` };
-  const otherName = ok => ok === 'D' ? `${nm(othM.a)} & ${nm(othM.b)} draw`
-    : `${nm(ok === 'A' ? othM.a : othM.b)} beat ${nm(ok === 'A' ? othM.b : othM.a)}`;
+  const winnerOf = ok => ok === 'A' ? othM.a : othM.b, loserOf = ok => ok === 'A' ? othM.b : othM.a;
+  // Describe an other-match outcome, with a relative goal-margin where it matters.
+  const desc = (ok, ownRes, thr) => {
+    if (ok === 'D') return `${nm(othM.a)} & ${nm(othM.b)} draw`;
+    const base = `${nm(winnerOf(ok))} beat ${nm(loserOf(ok))}`;
+    if (thr == null) return base;
+    return ownRes === 'D' ? `${base} by ${thr}+` : `${base} by ${thr}+ more than ${nm(teamId)}`;
+  };
+  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
   const lines = [];
   for (const ownRes of ['W', 'D', 'L']) {
     const cs = cells[ownRes]; if (!cs) continue;
-    const st = {};
+    const qualDesc = [], failDesc = [];
     for (const ok of ['A', 'D', 'B']) {
       const c = cs[ok] || { hit: [], miss: [] };
-      if (!c.hit.length) st[ok] = { kind: 'none' };
-      else if (!c.miss.length) st[ok] = { kind: 'full' };
-      else {
-        const minHit = Math.min(...c.hit), maxHit = Math.max(...c.hit), minMiss = Math.min(...c.miss), maxMiss = Math.max(...c.miss);
-        st[ok] = { kind: 'part', qualThr: minHit > maxMiss ? minHit : null, failThr: minMiss > maxHit ? minMiss : null };
+      if (!c.hit.length) { failDesc.push(desc(ok, ownRes, null)); continue; }   // never qualifies here
+      if (!c.miss.length) { qualDesc.push(desc(ok, ownRes, null)); continue; }  // always qualifies here
+      // GD-dependent: a bigger swing either helps (qualify) or hurts (fail).
+      if (avg(c.hit) > avg(c.miss)) {
+        const thr = Math.max(...c.miss) + 1;                 // qualifies when swing >= thr
+        if (thr <= 0) qualDesc.push(desc(ok, ownRes, null));         // essentially always
+        else if (thr > REAL_MAX) failDesc.push(desc(ok, ownRes, null)); // needs an implausible margin → treat as no
+        else qualDesc.push(desc(ok, ownRes, thr));
+      } else {
+        const thr = Math.max(...c.hit) + 1;                  // fails when swing >= thr
+        if (thr <= 0) failDesc.push(desc(ok, ownRes, null));            // essentially always fails
+        else if (thr > REAL_MAX) qualDesc.push(desc(ok, ownRes, null)); // implausible to fail → treat as yes
+        else failDesc.push(desc(ok, ownRes, thr));
       }
     }
-    const fulls = ['A', 'D', 'B'].filter(o => st[o].kind === 'full');
-    const parts = ['A', 'D', 'B'].filter(o => st[o].kind === 'part');
-    const nones = ['A', 'D', 'B'].filter(o => st[o].kind === 'none');
-    if (!fulls.length && !parts.length) continue; // this own result can't reach the position
+    if (!qualDesc.length) continue; // can't reach the position with this result
     let detail;
-    if (!parts.length && !nones.length) {
-      detail = 'qualifies';
-    } else {
-      const qualDesc = [...fulls.map(otherName), ...parts.map(o => otherName(o) + (st[o].qualThr ? ` by ${st[o].qualThr}+` : ' (on goal diff.)'))];
-      const failDesc = [...nones.map(otherName), ...parts.map(o => otherName(o) + (st[o].failThr ? ` by ${st[o].failThr}+` : ' (on goal diff.)'))];
-      detail = (failDesc.length && failDesc.length < qualDesc.length) ? 'qualifies unless ' + failDesc.join(' or ') : 'only if ' + qualDesc.join(' or ');
-    }
+    if (!failDesc.length) detail = 'qualifies';
+    else detail = (failDesc.length < qualDesc.length) ? 'qualifies unless ' + failDesc.join(' or ') : 'only if ' + qualDesc.join(' or ');
     lines.push({ head: head[ownRes], detail });
   }
   return lines.length ? lines : null;
