@@ -602,7 +602,7 @@ function _wczEnumPos(pg, teamId, posIdx, nm) {
       }
     }
     if (!qual.length) continue;
-    clauses.push(qual.length === 3 && allAlways ? `${nm(teamId)} ${verb[ownRes]} (any other result)`
+    clauses.push(qual.length === 3 && allAlways ? `${nm(teamId)} ${verb[ownRes]}`
       : `${nm(teamId)} ${verb[ownRes]} and ${qual.length > 1 ? `(${qual.join(' or ')})` : qual[0]}`);
   }
   return clauses.length ? clauses.join('; OR ') : null;
