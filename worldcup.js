@@ -181,12 +181,17 @@ function _wczSlotHtml(slot, groupMap, adv) {
       const g = groupMap[L]; if (!g) return '';
       const t = [...g.teams].sort((a, b) => a.rank - b.rank)[2]; if (!t) return '';
       const pp = place?.[t.id] || {}; const q = Math.max(0, (prob?.[t.id] || 0) - (pp.p1 || 0) - (pp.p2 || 0));
-      const col = q >= 0.5 ? '#22c55e' : q >= 0.2 ? 'var(--accent2)' : 'var(--muted)';
+      // Status, not a slot-securing chance — a qualified team is eligible for several
+      // slots; which one it actually fills is set by FIFA's allocation table.
+      let label, col;
+      if (q >= 0.999) { label = 'Qualified'; col = '#22c55e'; }
+      else if (q <= 0.001) { label = 'Out'; col = 'rgba(255,255,255,0.3)'; }
+      else { label = _wczPct(q) + ' to qualify'; col = q >= 0.4 ? 'var(--accent2)' : 'var(--muted)'; }
       return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem">
         ${_wczTeamLogo(t.logo, 18)}<span style="flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.78rem">(${L})</span></span>
-        <span style="color:${col};font-weight:600;flex-shrink:0">${_wczPct(q)}</span></div>`;
+        <span style="color:${col};font-weight:600;flex-shrink:0">${label}</span></div>`;
     }).join('');
-    return `<div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--accent2);margin-bottom:3px">Best Third Place — eligible (wildcard chance):</div>${rows}</div>`;
+    return `<div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--accent2);margin-bottom:3px">Eligible third-place teams (one fills this slot):</div>${rows}</div>`;
   }
   const g = groupMap[slot.g];
   let team = null;
