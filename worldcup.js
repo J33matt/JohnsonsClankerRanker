@@ -156,16 +156,23 @@ function _wczStandingsTable(g) {
 // Styling for the knockout bracket. Rounds are equal-height flex columns; each
 // cell is flex:1 so midpoints line up across rounds, and pseudo-elements draw the
 // connector lines (horizontal stub from every match + vertical joiner pairing two
-// matches into the next round). `.l` rounds flow rightward, `.r` rounds leftward.
+// matches into the next round, all flowing rightward).
+//
+// The wrap breaks out of the centred panel to ~96vw so the bracket uses the full
+// page width, and flex-grow gives the Round-of-32 column the largest share (its
+// cards carry the qualification detail). A dashed centre line with TOP/BOTTOM
+// HALF pills marks the exact split between the two halves of the draw — it lands
+// on the cell-7/cell-8 boundary, which is the 50% line, so it never crosses a
+// connector.
 const _WCZ_BRACKET_CSS = `<style>
-.wczb-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:6px 2px 20px}
-.wczb{display:flex;gap:26px;align-items:stretch;width:max-content}
-.wczb-round{display:flex;flex-direction:column;justify-content:space-around;flex-shrink:0}
+.wczb-wrap{position:relative;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:8px 2px;width:min(96vw,1760px);left:50%;transform:translateX(-50%)}
+.wczb{display:flex;gap:24px;align-items:stretch;width:100%}
+.wczb-round{display:flex;flex-direction:column;justify-content:space-around;min-width:0}
 .wczb-cell{flex:1;display:flex;flex-direction:column;justify-content:center;position:relative}
-.wczb .rl-r32{width:232px}.wczb .rl-r16{width:152px}.wczb .rl-qf{width:142px}.wczb .rl-sf{width:142px}.wczb .rl-final{width:158px;justify-content:center}
-.wczb-round.l .wczb-cell::after{content:'';position:absolute;right:-26px;top:calc(50% - 1px);width:26px;height:2px;background:var(--border)}
-.wczb-round.l.pair .wczb-cell:nth-child(odd)::before{content:'';position:absolute;right:-26px;top:50%;height:50%;width:2px;background:var(--border)}
-.wczb-round.l.pair .wczb-cell:nth-child(even)::before{content:'';position:absolute;right:-26px;bottom:50%;height:50%;width:2px;background:var(--border)}
+.wczb .rl-r32{flex:5 1 320px}.wczb .rl-r16{flex:2 1 168px}.wczb .rl-qf{flex:2 1 150px}.wczb .rl-sf{flex:2 1 150px}.wczb .rl-final{flex:2 1 165px;justify-content:center}
+.wczb-round.l .wczb-cell::after{content:'';position:absolute;right:-24px;top:calc(50% - 1px);width:24px;height:2px;background:var(--border)}
+.wczb-round.l.pair .wczb-cell:nth-child(odd)::before{content:'';position:absolute;right:-24px;top:50%;height:50%;width:2px;background:var(--border)}
+.wczb-round.l.pair .wczb-cell:nth-child(even)::before{content:'';position:absolute;right:-24px;bottom:50%;height:50%;width:2px;background:var(--border)}
 .wczb-card{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)}
 .wczb-card-h{background:var(--surface2);padding:4px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.71rem;letter-spacing:1.5px;color:var(--muted)}
 .wczb-card-s{padding:9px 11px}
@@ -173,6 +180,9 @@ const _WCZ_BRACKET_CSS = `<style>
 .wczb-fut-h{background:var(--surface2);padding:4px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:1.5px;color:var(--muted)}
 .wczb-fut-b{padding:6px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;color:var(--muted)}
 .wczb-fut-b+.wczb-fut-b{border-top:1px solid rgba(255,255,255,0.05)}
+.wczb-divide{position:absolute;left:2px;right:2px;top:50%;border-top:2px dashed rgba(255,170,0,0.45);pointer-events:none;z-index:2}
+.wczb-half{position:absolute;left:50%;transform:translateX(-50%);font-family:'Barlow Condensed',sans-serif;font-size:0.74rem;letter-spacing:2px;color:var(--accent2);background:var(--surface);border:1px solid rgba(255,170,0,0.45);border-radius:20px;padding:2px 13px;pointer-events:none;z-index:3;white-space:nowrap}
+.wczb-half.top{top:calc(50% - 30px)}.wczb-half.bot{top:calc(50% + 8px)}
 </style>`;
 
 // Round of 32 slot allocation (2026 fixed structure).
@@ -357,7 +367,7 @@ async function _wczRenderBracket() {
     fut('QF', 99, 'Winner M91', 'Winner M92'), fut('QF', 100, 'Winner M95', 'Winner M96')]);
   html += round('rl-sf l pair', [fut('SF', 101, 'Winner M97', 'Winner M98'), fut('SF', 102, 'Winner M99', 'Winner M100')]);
   html += round('rl-final', [fut('FINAL', 104, 'Winner M101', 'Winner M102')]);
-  html += `</div></div>`;
+  html += `</div><div class="wczb-divide"></div><div class="wczb-half top">TOP HALF</div><div class="wczb-half bot">BOTTOM HALF</div></div>`;
   html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The bracket flows left to right toward the Final; follow the connector lines to trace a team's path. A green CLINCHED tag marks a team locked into a spot. Any slot still in play is a dropdown — tap it to see every team that can still take it, its chance, and the result it needs. Candidate lists come from an exhaustive possibility search (so long shots show too); the third-place slot routing uses FIFA's official allocation table.</div>`;
   el.innerHTML = html;
 }
