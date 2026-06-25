@@ -171,18 +171,50 @@ const _WCZ_R32 = [
   { m: 88, a: { t: 'RU', g: 'D' }, b: { t: 'RU', g: 'G' } },
 ];
 
-function _wczSlotHtml(slot, groupMap, adv) {
+// The eight third-place slots and which groups' third-placed team may fill each.
+const _WCZ_THIRD_SLOTS = _WCZ_R32.filter(mt => mt.b.t === '3').map(mt => ({ m: mt.m, g: new Set(mt.b.g.split('/')) }));
+function _wczShuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+// Assign the eight qualifying third-place groups to the eight slots, respecting
+// eligibility (a group can never meet the winner from its own group). A random
+// VALID assignment is drawn each call; averaging over the simulation estimates how
+// often each team lands in each slot. The official FIFA table fixes one specific
+// assignment once the eight groups are known, so these are modelled odds.
+function _wczAssignThirds(qLetters) {
+  const slots = _wczShuffle(_WCZ_THIRD_SLOTS.slice());
+  const used = {}, res = {};
+  const bt = i => {
+    if (i === slots.length) return true;
+    const s = slots[i];
+    for (const L of _wczShuffle(qLetters.filter(x => !used[x] && s.g.has(x)))) { used[L] = 1; res[s.m] = L; if (bt(i + 1)) return true; used[L] = 0; }
+    return false;
+  };
+  bt(0); return res;
+}
+
+function _wczSlotHtml(slot, groupMap, adv, matchNum) {
   const place = adv?.place, prob = adv?.prob;
   // Third-place slot: list the eligible groups' current third-place team with its
   // chance of grabbing a wildcard berth (overall advance minus the chance it finishes
   // 1st/2nd). Which qualifier lands in THIS exact slot is set by FIFA's allocation table.
   if (slot.t === '3') {
+    const sp = adv?.slotProb?.[matchNum];
+    const byId = adv?.teamById;
+    if (sp && sp.length && byId) {
+      // Modelled chance that each team takes THIS exact spot (sums to ~100%).
+      const rows = sp.filter(x => x.p >= 0.005).map(x => {
+        const t = byId[x.id]; if (!t) return '';
+        const col = x.p >= 0.5 ? '#22c55e' : x.p >= 0.2 ? 'var(--accent2)' : 'var(--muted)';
+        return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem">
+          ${_wczTeamLogo(t.logo, 18)}<span style="flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.78rem">(${t.group})</span></span>
+          <span style="color:${col};font-weight:600;flex-shrink:0">${_wczPct(x.p)}</span></div>`;
+      }).join('');
+      return `<div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--accent2);margin-bottom:3px">Chance to take this spot:</div>${rows || '<span style="color:var(--muted)">To be determined</span>'}</div>`;
+    }
+    // Fallback (no simulation, e.g. group stage finished): list eligible groups' thirds.
     const rows = slot.g.split('/').map(L => {
       const g = groupMap[L]; if (!g) return '';
       const t = [...g.teams].sort((a, b) => a.rank - b.rank)[2]; if (!t) return '';
       const pp = place?.[t.id] || {}; const q = Math.max(0, (prob?.[t.id] || 0) - (pp.p1 || 0) - (pp.p2 || 0));
-      // Status, not a slot-securing chance — a qualified team is eligible for several
-      // slots; which one it actually fills is set by FIFA's allocation table.
       let label, col;
       if (q >= 0.999) { label = 'Qualified'; col = '#22c55e'; }
       else if (q <= 0.001) { label = 'Out'; col = 'rgba(255,255,255,0.3)'; }
@@ -257,11 +289,11 @@ async function _wczRenderBracket() {
   html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">`;
   html += _WCZ_R32.map(mt => `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
       <div style="background:var(--surface2);padding:4px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.71rem;letter-spacing:1.5px;color:var(--muted)">MATCH ${mt.m}</div>
-      <div style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">${_wczSlotHtml(mt.a, groupMap, adv)}</div>
-      <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap, adv)}</div>
+      <div style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">${_wczSlotHtml(mt.a, groupMap, adv, mt.m)}</div>
+      <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap, adv, mt.m)}</div>
     </div>`).join('');
   html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Winner/runner-up slots fill once that position is clinched. Third-place slots list each eligible group's current third-place team with its chance of qualifying as one of the eight wildcards; which qualifier takes each exact slot is set by FIFA's official allocation table once the eight groups are known.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Winner/runner-up slots fill once that position is clinched. For third-place slots, the percentage is each team's modelled chance of taking that exact spot (assuming each valid assignment of the eight wildcards is equally likely); the official FIFA table fixes one specific assignment once the eight groups are known.</div>`;
   el.innerHTML = html;
 }
 
@@ -352,6 +384,7 @@ function _wczSimDetailed(groups, prep, N) {
   const ids = []; groups.forEach(g => g.teams.forEach(t => ids.push(t.id)));
   const adv = {}; const cond = {}; const place = {};
   ids.forEach(id => { adv[id] = 0; place[id] = [0, 0, 0, 0]; cond[id] = { win: _wczBucket(), draw: _wczBucket(), loss: _wczBucket() }; });
+  const slotTally = {}; _WCZ_THIRD_SLOTS.forEach(s => slotTally[s.m] = {});
 
   // Per-team final-matchday context: own opponent and the "other" group match (o1 vs o2).
   const info = {};
@@ -387,11 +420,17 @@ function _wczSimDetailed(groups, prep, N) {
       const order = _wczRankGroup(pg.ids, matches, st);
       st[order[0]].adv = true; st[order[1]].adv = true;
       for (let i = 0; i < order.length && i < 4; i++) place[order[i]][i]++;
-      const third = st[order[2]]; thirds.push(third);
+      const third = st[order[2]]; third.grp = g.letter; thirds.push(third);
       pg._st = st;
     }
     thirds.sort(_wczCmp);
     for (let i = 0; i < 8 && i < thirds.length; i++) thirds[i].adv = true;
+
+    // Assign the eight qualifying thirds to the eight knockout slots and tally.
+    const q8 = thirds.slice(0, 8);
+    const teamByLetter = {}; q8.forEach(t => teamByLetter[t.grp] = t.id);
+    const assign = _wczAssignThirds(q8.map(t => t.grp));
+    for (const s of _WCZ_THIRD_SLOTS) { const L = assign[s.m]; if (L == null) continue; const tid = teamByLetter[L]; slotTally[s.m][tid] = (slotTally[s.m][tid] || 0) + 1; }
 
     for (const g of groups) {
       const pg = perGroup[g.letter];
@@ -424,7 +463,9 @@ function _wczSimDetailed(groups, prep, N) {
       loss: { all: pr(c.loss._all), a: pr(c.loss.a), d: pr(c.loss.d), b: pr(c.loss.b) },
     };
   });
-  return { prob, cond: condP, info, place: placeP };
+  const slotProb = {};
+  _WCZ_THIRD_SLOTS.forEach(s => { slotProb[s.m] = Object.entries(slotTally[s.m]).map(([id, c]) => ({ id, p: c / N })).sort((a, b) => b.p - a.p); });
+  return { prob, cond: condP, info, place: placeP, slotProb };
 }
 
 function _wczPct(p) { if (p == null) return '—'; if (p >= 0.999) return '100%'; if (p <= 0.001) return '0%'; const v = p * 100; return (v < 10 ? v.toFixed(1) : v.toFixed(0)) + '%'; }
@@ -447,8 +488,10 @@ async function _wczGetAdvData(groups) {
     data = { ts: Date.now(), prob, cond, info, place };
   } else {
     const r = _wczSimDetailed(groups, prep, 4000);
-    data = { ts: Date.now(), prob: r.prob, cond: r.cond, info: r.info, place: r.place };
+    data = { ts: Date.now(), prob: r.prob, cond: r.cond, info: r.info, place: r.place, slotProb: r.slotProb };
   }
+  data.teamById = {};
+  groups.forEach(g => g.teams.forEach(t => data.teamById[t.id] = { ...t, group: g.letter }));
   _wczAdvCache = data;
   return data;
 }
