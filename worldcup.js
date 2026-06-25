@@ -165,7 +165,8 @@ function _wczStandingsTable(g) {
 // (a top margin on the first bottom-half cell of every column), which keeps every
 // round's halves aligned so the connector lines stay correct.
 const _WCZ_BRACKET_CSS = `<style>
-.wczb-wrap{position:relative;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:8px 2px;width:min(90vw,1400px);left:50%;transform:translateX(-50%)}
+.wczb-section{position:relative;left:50%;transform:translateX(-50%);width:min(90vw,1400px)}
+.wczb-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:8px 0;width:100%}
 .wczb{display:flex;gap:24px;align-items:stretch;width:100%}
 .wczb-round{display:flex;flex-direction:column;justify-content:space-around;min-width:0}
 .wczb-cell{flex:1;display:flex;flex-direction:column;justify-content:center;position:relative}
@@ -339,8 +340,9 @@ async function _wczRenderBracket() {
   // which fits the page width without horizontal scrolling. CSS pseudo-elements
   // draw the horizontal stubs and the vertical joiners that pair two matches
   // into the next round.
-  html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Round of 32 Bracket</div>`;
   html += _WCZ_BRACKET_CSS;
+  html += `<div class="wczb-section">`;
+  html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Round of 32 Bracket</div>`;
   const r32 = {}; _WCZ_R32.forEach(mt => r32[mt.m] = mt);
   const card = m => { const mt = r32[m]; return `<div class="wczb-card">
       <div class="wczb-card-h">MATCH ${mt.m}</div>
@@ -370,6 +372,7 @@ async function _wczRenderBracket() {
   html += round('rl-final', [fut('FINAL', 104, 'Winner M101', 'Winner M102')]);
   html += `</div></div>`;
   html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The bracket flows left to right toward the Final; follow the connector lines to trace a team's path. A green CLINCHED tag marks a team locked into a spot. Any slot still in play is a dropdown — tap it to see every team that can still take it, its chance, and the result it needs. Candidate lists come from an exhaustive possibility search (so long shots show too); the third-place slot routing uses FIFA's official allocation table.</div>`;
+  html += `</div>`;
   el.innerHTML = html;
 }
 
