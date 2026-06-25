@@ -327,7 +327,7 @@ async function _wczRenderBracket() {
       <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap, adv, mt.m)}</div>
     </div>`).join('');
   html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Winner/runner-up slots fill once that position is clinched. Tap a third-place slot to expand every candidate, its chance of taking that exact spot, and the results it needs to reach the Round of 32. Slot percentages assume each valid assignment of the eight wildcards is equally likely; the official FIFA table fixes one specific assignment once the eight groups are known.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Winner/runner-up slots fill once that position is clinched. Tap a third-place slot to expand every candidate, its chance of taking that exact spot, and the results it needs to reach the Round of 32. Slot assignments use FIFA's official allocation table (Annex C), so the percentages are exact given which eight third-placed teams qualify.</div>`;
   el.innerHTML = html;
 }
 
@@ -460,11 +460,13 @@ function _wczSimDetailed(groups, prep, N) {
     thirds.sort(_wczCmp);
     for (let i = 0; i < 8 && i < thirds.length; i++) thirds[i].adv = true;
 
-    // Assign the eight qualifying thirds to the eight knockout slots and tally.
+    // Assign the eight qualifying thirds to the eight knockout slots using FIFA's
+    // official allocation table (exact), falling back to a valid matching if needed.
     const q8 = thirds.slice(0, 8);
     const teamByLetter = {}; q8.forEach(t => teamByLetter[t.grp] = t.id);
-    const assign = _wczAssignThirds(q8.map(t => t.grp));
-    for (const s of _WCZ_THIRD_SLOTS) { const L = assign[s.m]; if (L == null) continue; const tid = teamByLetter[L]; slotTally[s.m][tid] = (slotTally[s.m][tid] || 0) + 1; }
+    const key = q8.map(t => t.grp).sort().join('');
+    const assign = (typeof _WCZ_ALLOC !== 'undefined' && _WCZ_ALLOC[key]) || _wczAssignThirds(q8.map(t => t.grp));
+    for (const s of _WCZ_THIRD_SLOTS) { const L = assign[s.m]; if (L == null) continue; const tid = teamByLetter[L]; if (tid) slotTally[s.m][tid] = (slotTally[s.m][tid] || 0) + 1; }
 
     for (const g of groups) {
       const pg = perGroup[g.letter];
