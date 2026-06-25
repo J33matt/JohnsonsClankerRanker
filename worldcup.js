@@ -576,7 +576,15 @@ function _wczSlotScenario(f, opp, team, missing) {
   return `Most likely: ${parts.join(', and ')}.`;
 }
 
-function _wczPct(p) { if (p == null) return '—'; if (p >= 0.999) return '100%'; if (p <= 0.001) return '0%'; const v = p * 100; return (v < 10 ? v.toFixed(1) : v.toFixed(0)) + '%'; }
+function _wczPct(p) {
+  if (p == null) return '—';
+  if (p >= 0.9995) return '100%';      // only show 100% when essentially clinched
+  if (p <= 0.0005) return '0%';
+  const v = p * 100;
+  if (v >= 99.5) return '99%';         // don't let 99.5–99.94% round up to 100%
+  if (v <= 0.5) return '<1%';          // don't let a live chance round down to 0%
+  return (v < 10 ? v.toFixed(1) : String(Math.round(v))) + '%';
+}
 function _wczToggleTeam(id) { _wczExpanded[id] = !_wczExpanded[id]; _wczRenderAdvance(true); }
 
 // Shared advancement simulation (prob/place/cond), cached for 60s — used by both
