@@ -245,7 +245,13 @@ function _wczSlotHtml(slot, groupMap, adv, matchNum) {
       const slotKey = matchNum + '_' + slot.t + '_' + slot.g, open = _wczSlotOpen[slotKey];
       const topT = cands[0].t;
       let body = '';
-      if (open) body = cands.map(c => { const t = c.t; const opp = adv.ownOpp?.[t.id] != null ? byId?.[adv.ownOpp[t.id]]?.name : null; const scen = _wczPosScenario(adv.placeCond?.[t.id], opp, posIdx); return candRow(t.logo, t.name, null, fmtP(c.p), colFor(c.p), scen); }).join('');
+      if (open) body = cands.map(c => {
+        const t = c.t;
+        const opp = adv.ownOpp?.[t.id] != null ? byId?.[adv.ownOpp[t.id]]?.name : null;
+        const nm = id => byId?.[id]?.name || '?';
+        const scen = _wczEnumPos(adv.groupSim?.[slot.g], t.id, posIdx, nm) || _wczPosScenario(adv.placeCond?.[t.id], opp, posIdx);
+        return candRow(t.logo, t.name, null, fmtP(c.p), colFor(c.p), scen);
+      }).join('');
       return dropdown(`Group ${slot.g} ${posName}:`, `${topT.name} ${fmtP(cands[0].p)}`, body, slotKey, open);
     }
   }
@@ -552,6 +558,56 @@ function _wczPossib(groups, prep, N) {
   return { slotFeas, ownOpp, posReach };
 }
 
+// Exact within-group conditions for a team to finish in `posIdx` (0=win, 1=runner-up),
+// by enumerating every scoreline of the group's two final matches through the real
+// 2026 tiebreaker engine. Returns a readable multi-clause string, or null.
+function _wczEnumPos(pg, teamId, posIdx, nm) {
+  const rem = pg.remaining;
+  if (rem.length !== 2) return null; // only the final-matchday case is cleanly enumerable
+  const ownM = (rem[0].a === teamId || rem[0].b === teamId) ? rem[0] : rem[1];
+  const othM = ownM === rem[0] ? rem[1] : rem[0];
+  const oppId = ownM.a === teamId ? ownM.b : ownM.a;
+  const ownIsA = ownM.a === teamId;
+  const MAXG = 7;
+  const cells = {};
+  const add = (ownRes, ok, margin, hit) => { (cells[ownRes] = cells[ownRes] || {}); const c = (cells[ownRes][ok] = cells[ownRes][ok] || { hit: [], miss: [] }); (hit ? c.hit : c.miss).push(margin); };
+  for (let p = 0; p <= MAXG; p++) for (let q = 0; q <= MAXG; q++) for (let r = 0; r <= MAXG; r++) for (let s = 0; s <= MAXG; s++) {
+    const st = {}; pg.ids.forEach(id => { const a = pg.agg[id]; st[id] = { id, P: a.P, GF: a.GF, GA: a.GA, GD: a.GF - a.GA, str: 0 }; });
+    const matches = pg.played.slice();
+    const mm = [{ a: ownM.a, b: ownM.b, as: p, bs: q }, { a: othM.a, b: othM.b, as: r, bs: s }];
+    for (const m of mm) { matches.push(m); const A = st[m.a], B = st[m.b]; A.GF += m.as; A.GA += m.bs; B.GF += m.bs; B.GA += m.as; if (m.as > m.bs) A.P += 3; else if (m.bs > m.as) B.P += 3; else { A.P++; B.P++; } }
+    pg.ids.forEach(id => st[id].GD = st[id].GF - st[id].GA);
+    const order = _wczRankGroup(pg.ids, matches, st);
+    const ownRes = p === q ? 'D' : ((p > q) === ownIsA ? 'W' : 'L');
+    const ok = r === s ? 'D' : (r > s ? 'A' : 'B');
+    add(ownRes, ok, Math.abs(r - s), order.indexOf(teamId) === posIdx);
+  }
+  const verb = { W: `beats ${nm(oppId)}`, D: `draws with ${nm(oppId)}`, L: `loses to ${nm(oppId)}` };
+  const otherDesc = (ok, thr) => {
+    if (ok === 'D') return `${nm(othM.a)} and ${nm(othM.b)} draw`;
+    const w = ok === 'A' ? othM.a : othM.b, l = ok === 'A' ? othM.b : othM.a;
+    return `${nm(w)} ${thr ? `beat ${nm(l)} by ${thr}+` : `beat ${nm(l)}`}`;
+  };
+  const clauses = [];
+  for (const ownRes of ['W', 'D', 'L']) {
+    const cs = cells[ownRes]; if (!cs) continue;
+    const qual = []; let allAlways = true;
+    for (const ok of ['A', 'D', 'B']) {
+      const c = cs[ok]; if (!c || !c.hit.length) continue;
+      if (!c.miss.length) { qual.push(otherDesc(ok, null)); }
+      else {
+        allAlways = false;
+        const minHit = Math.min(...c.hit), maxMiss = Math.max(...c.miss);
+        qual.push(minHit > maxMiss ? otherDesc(ok, minHit) : otherDesc(ok, null) + ' (on goal difference)');
+      }
+    }
+    if (!qual.length) continue;
+    clauses.push(qual.length === 3 && allAlways ? `${nm(teamId)} ${verb[ownRes]} (any other result)`
+      : `${nm(teamId)} ${verb[ownRes]} and ${qual.length > 1 ? `(${qual.join(' or ')})` : qual[0]}`);
+  }
+  return clauses.length ? clauses.join('; OR ') : null;
+}
+
 // Own-match requirement for a team to finish 1st (posIdx 0) or 2nd (posIdx 1) in its group.
 function _wczPosScenario(pc, opp, posIdx) {
   if (!pc || !opp) return '';
@@ -617,6 +673,7 @@ async function _wczGetAdvData(groups) {
   // Broad possibility search: which teams can still reach each slot + own-result needed.
   const poss = _wczPossib(groups, prep, anyRemaining ? 10000 : 1);
   data.slotFeas = poss.slotFeas; data.ownOpp = poss.ownOpp; data.posReach = poss.posReach;
+  data.groupSim = prep.perGroup; // agg/played/remaining per group, for exact W/RU scenarios
   data.teamById = {};
   groups.forEach(g => g.teams.forEach(t => data.teamById[t.id] = { ...t, group: g.letter }));
   // Most-likely missing groups (the modal qualifying combination) per candidate.
