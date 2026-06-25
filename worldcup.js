@@ -7,6 +7,8 @@ let _wczStandingsCache = null;
 let _wczLiveTimer = null;
 let _wczAdvCache = null;
 const _wczExpanded = {};
+const _wczSlotOpen = {};
+function _wczToggleSlot(m) { _wczSlotOpen[m] = !_wczSlotOpen[m]; _wczRenderBracket(); }
 
 function _wczStopLiveRefresh() { if (_wczLiveTimer) { clearInterval(_wczLiveTimer); _wczLiveTimer = null; } }
 
@@ -191,6 +193,22 @@ function _wczAssignThirds(qLetters) {
   bt(0); return res;
 }
 
+// Compact "what results does this team need" line: its final group match and the
+// chance it reaches the Round of 32 after a win / draw / loss. (Becoming a candidate
+// for a specific slot first requires reaching the R32 as a third-place team.)
+function _wczQualCond(adv, id) {
+  const info = adv?.info?.[id], c = adv?.cond?.[id];
+  if (!info || !info.hasMatch || !c) {
+    const p = adv?.prob?.[id];
+    if (p >= 0.999) return 'Already qualified';
+    if (p <= 0.001) return 'Cannot qualify';
+    return 'Depends on other groups';
+  }
+  const opp = adv.teamById?.[info.oppId]?.name || 'opponent';
+  const f = v => v == null ? '—' : _wczPct(v);
+  return `vs ${opp} — win ${f(c.win?.all)} / draw ${f(c.draw?.all)} / lose ${f(c.loss?.all)} to reach R32`;
+}
+
 function _wczSlotHtml(slot, groupMap, adv, matchNum) {
   const place = adv?.place, prob = adv?.prob;
   // Third-place slot: list the eligible groups' current third-place team with its
@@ -200,15 +218,31 @@ function _wczSlotHtml(slot, groupMap, adv, matchNum) {
     const sp = adv?.slotProb?.[matchNum];
     const byId = adv?.teamById;
     if (sp && sp.length && byId) {
-      // Modelled chance that each team takes THIS exact spot (sums to ~100%).
-      const rows = sp.filter(x => x.p >= 0.005).map(x => {
-        const t = byId[x.id]; if (!t) return '';
-        const col = x.p >= 0.5 ? '#22c55e' : x.p >= 0.2 ? 'var(--accent2)' : 'var(--muted)';
-        return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem">
-          ${_wczTeamLogo(t.logo, 18)}<span style="flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.78rem">(${t.group})</span></span>
-          <span style="color:${col};font-weight:600;flex-shrink:0">${_wczPct(x.p)}</span></div>`;
-      }).join('');
-      return `<div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--accent2);margin-bottom:3px">Chance to take this spot:</div>${rows || '<span style="color:var(--muted)">To be determined</span>'}</div>`;
+      const open = _wczSlotOpen[matchNum];
+      const cands = sp.filter(x => x.p >= 0.005);
+      const topT = cands[0] && byId[cands[0].id];
+      const headLine = topT ? `${topT.name} ${_wczPct(cands[0].p)}` : 'To be determined';
+      let body = '';
+      if (open) {
+        body = cands.map(x => {
+          const t = byId[x.id]; if (!t) return '';
+          const col = x.p >= 0.5 ? '#22c55e' : x.p >= 0.2 ? 'var(--accent2)' : 'var(--muted)';
+          const cond = _wczQualCond(adv, x.id);
+          return `<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,0.05)">
+            <div style="display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem">
+              ${_wczTeamLogo(t.logo, 18)}<span style="flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.78rem">(${t.group})</span></span>
+              <span style="color:${col};font-weight:600;flex-shrink:0">${_wczPct(x.p)}</span></div>
+            ${cond ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:rgba(255,255,255,0.5);padding-left:24px;margin-top:1px">${cond}</div>` : ''}
+          </div>`;
+        }).join('');
+      }
+      return `<div>
+        <div onclick="event.stopPropagation();_wczToggleSlot(${matchNum})" style="cursor:pointer;display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif">
+          <span style="font-size:0.78rem;color:var(--accent2);flex-shrink:0">Third place:</span>
+          <span style="flex:1;min-width:0;font-size:0.92rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${headLine}</span>
+          <span style="font-size:0.8rem;color:var(--muted);transform:${open ? 'rotate(180deg)' : 'none'};transition:transform 0.2s">&#9662;</span>
+        </div>
+        ${body}</div>`;
     }
     // Fallback (no simulation, e.g. group stage finished): list eligible groups' thirds.
     const rows = slot.g.split('/').map(L => {
@@ -293,7 +327,7 @@ async function _wczRenderBracket() {
       <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap, adv, mt.m)}</div>
     </div>`).join('');
   html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Winner/runner-up slots fill once that position is clinched. For third-place slots, the percentage is each team's modelled chance of taking that exact spot (assuming each valid assignment of the eight wildcards is equally likely); the official FIFA table fixes one specific assignment once the eight groups are known.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Winner/runner-up slots fill once that position is clinched. Tap a third-place slot to expand every candidate, its chance of taking that exact spot, and the results it needs to reach the Round of 32. Slot percentages assume each valid assignment of the eight wildcards is equally likely; the official FIFA table fixes one specific assignment once the eight groups are known.</div>`;
   el.innerHTML = html;
 }
 
