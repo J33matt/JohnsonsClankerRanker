@@ -171,11 +171,24 @@ const _WCZ_R32 = [
   { m: 88, a: { t: 'RU', g: 'D' }, b: { t: 'RU', g: 'G' } },
 ];
 
-function _wczSlotHtml(slot, groupMap, place) {
-  const g = groupMap[slot.g];
+function _wczSlotHtml(slot, groupMap, adv) {
+  const place = adv?.place, prob = adv?.prob;
+  // Third-place slot: list the eligible groups' current third-place team with its
+  // chance of grabbing a wildcard berth (overall advance minus the chance it finishes
+  // 1st/2nd). Which qualifier lands in THIS exact slot is set by FIFA's allocation table.
   if (slot.t === '3') {
-    return `<div style="display:flex;align-items:center;gap:7px;color:var(--accent2)"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.98rem">Best 3rd Place (${slot.g})</span></div>`;
+    const rows = slot.g.split('/').map(L => {
+      const g = groupMap[L]; if (!g) return '';
+      const t = [...g.teams].sort((a, b) => a.rank - b.rank)[2]; if (!t) return '';
+      const pp = place?.[t.id] || {}; const q = Math.max(0, (prob?.[t.id] || 0) - (pp.p1 || 0) - (pp.p2 || 0));
+      const col = q >= 0.5 ? '#22c55e' : q >= 0.2 ? 'var(--accent2)' : 'var(--muted)';
+      return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem">
+        ${_wczTeamLogo(t.logo, 18)}<span style="flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.78rem">(${L})</span></span>
+        <span style="color:${col};font-weight:600;flex-shrink:0">${_wczPct(q)}</span></div>`;
+    }).join('');
+    return `<div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--accent2);margin-bottom:3px">Best Third Place — eligible (wildcard chance):</div>${rows}</div>`;
   }
+  const g = groupMap[slot.g];
   let team = null;
   if (g) {
     if (_wczGroupComplete(g)) {
@@ -195,10 +208,10 @@ function _wczSlotHtml(slot, groupMap, place) {
 async function _wczRenderBracket() {
   const el = document.getElementById('wc-panel-bracket'); if (!el) return;
   if (!el.dataset.init) { el.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>Loading standings...</div>`; el.dataset.init = '1'; }
-  let groups, place = null;
+  let groups, adv = null;
   try {
     groups = await _wczFetchGroups();
-    place = (await _wczGetAdvData(groups).catch(() => null))?.place || null;
+    adv = await _wczGetAdvData(groups).catch(() => null);
   }
   catch (e) { el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif">Could not load standings.</div>`; return; }
   const groupMap = {}; groups.forEach(g => groupMap[g.letter] = g);
@@ -230,11 +243,11 @@ async function _wczRenderBracket() {
   html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">`;
   html += _WCZ_R32.map(mt => `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
       <div style="background:var(--surface2);padding:4px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.71rem;letter-spacing:1.5px;color:var(--muted)">MATCH ${mt.m}</div>
-      <div style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">${_wczSlotHtml(mt.a, groupMap, place)}</div>
-      <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap, place)}</div>
+      <div style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">${_wczSlotHtml(mt.a, groupMap, adv)}</div>
+      <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap, adv)}</div>
     </div>`).join('');
   html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Decided spots show the qualified team. Undecided spots show who can claim them. Round of 16 onward locks in as the knockout matches are played.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Winner/runner-up slots fill once that position is clinched. Third-place slots list each eligible group's current third-place team with its chance of qualifying as one of the eight wildcards; which qualifier takes each exact slot is set by FIFA's official allocation table once the eight groups are known.</div>`;
   el.innerHTML = html;
 }
 
