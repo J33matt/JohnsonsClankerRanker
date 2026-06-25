@@ -171,25 +171,35 @@ const _WCZ_R32 = [
   { m: 88, a: { t: 'RU', g: 'D' }, b: { t: 'RU', g: 'G' } },
 ];
 
-function _wczSlotHtml(slot, groupMap) {
+function _wczSlotHtml(slot, groupMap, place) {
   const g = groupMap[slot.g];
   if (slot.t === '3') {
     return `<div style="display:flex;align-items:center;gap:7px;color:var(--accent2)"><span style="font-family:'Barlow Condensed',sans-serif;font-size:0.98rem">Best 3rd Place (${slot.g})</span></div>`;
   }
-  const decided = g && _wczGroupComplete(g);
-  if (decided) {
-    const sorted = [...g.teams].sort((a, b) => a.rank - b.rank);
-    const team = slot.t === 'W' ? sorted[0] : sorted[1];
-    return `<div style="display:flex;align-items:center;gap:7px">${_wczTeamLogo(team.logo, 22)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:1.06rem">${team.name}</span></div>`;
+  let team = null;
+  if (g) {
+    if (_wczGroupComplete(g)) {
+      const sorted = [...g.teams].sort((a, b) => a.rank - b.rank);
+      team = slot.t === 'W' ? sorted[0] : sorted[1];
+    } else if (place) {
+      // Fill a slot once that position is mathematically clinched (100% in the sim):
+      // p1 for the group winner, p2 for the runner-up.
+      const key = slot.t === 'W' ? 'p1' : 'p2';
+      team = g.teams.find(t => (place[t.id]?.[key] || 0) >= 0.999) || null;
+    }
   }
+  if (team) return `<div style="display:flex;align-items:center;gap:7px">${_wczTeamLogo(team.logo, 22)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:1.06rem">${team.name}</span></div>`;
   return `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.98rem">Group ${slot.g} ${slot.t === 'W' ? 'Winner' : 'Runner-up'}</div>`;
 }
 
 async function _wczRenderBracket() {
   const el = document.getElementById('wc-panel-bracket'); if (!el) return;
   if (!el.dataset.init) { el.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>Loading standings...</div>`; el.dataset.init = '1'; }
-  let groups;
-  try { groups = await _wczFetchGroups(); }
+  let groups, place = null;
+  try {
+    groups = await _wczFetchGroups();
+    place = (await _wczGetAdvData(groups).catch(() => null))?.place || null;
+  }
   catch (e) { el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif">Could not load standings.</div>`; return; }
   const groupMap = {}; groups.forEach(g => groupMap[g.letter] = g);
 
@@ -220,8 +230,8 @@ async function _wczRenderBracket() {
   html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">`;
   html += _WCZ_R32.map(mt => `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
       <div style="background:var(--surface2);padding:4px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.71rem;letter-spacing:1.5px;color:var(--muted)">MATCH ${mt.m}</div>
-      <div style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">${_wczSlotHtml(mt.a, groupMap)}</div>
-      <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap)}</div>
+      <div style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">${_wczSlotHtml(mt.a, groupMap, place)}</div>
+      <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap, place)}</div>
     </div>`).join('');
   html += `</div>`;
   html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Decided spots show the qualified team. Undecided spots show who can claim them. Round of 16 onward locks in as the knockout matches are played.</div>`;
@@ -393,6 +403,29 @@ function _wczSimDetailed(groups, prep, N) {
 function _wczPct(p) { if (p == null) return '—'; if (p >= 0.999) return '100%'; if (p <= 0.001) return '0%'; const v = p * 100; return (v < 10 ? v.toFixed(1) : v.toFixed(0)) + '%'; }
 function _wczToggleTeam(id) { _wczExpanded[id] = !_wczExpanded[id]; _wczRenderAdvance(true); }
 
+// Shared advancement simulation (prob/place/cond), cached for 60s — used by both
+// the Advancement Odds tab and the bracket (to fill clinched slots early).
+async function _wczGetAdvData(groups) {
+  if (_wczAdvCache && Date.now() - _wczAdvCache.ts < 60000) return _wczAdvCache;
+  const prep = await _wczPrepSim(groups);
+  const anyRemaining = Object.values(prep.perGroup).some(pg => pg.remaining.length);
+  let data;
+  if (!anyRemaining) {
+    const prob = {}, cond = {}, info = {}, place = {};
+    groups.forEach(g => g.teams.forEach(t => {
+      prob[t.id] = (t.qualified || t.rank <= 2) ? 1 : 0;
+      place[t.id] = { p1: t.rank === 1 ? 1 : 0, p2: t.rank === 2 ? 1 : 0, p3: t.rank === 3 ? 1 : 0, p4: t.rank === 4 ? 1 : 0 };
+      cond[t.id] = { win: {}, draw: {}, loss: {} }; info[t.id] = { hasMatch: false };
+    }));
+    data = { ts: Date.now(), prob, cond, info, place };
+  } else {
+    const r = _wczSimDetailed(groups, prep, 4000);
+    data = { ts: Date.now(), prob: r.prob, cond: r.cond, info: r.info, place: r.place };
+  }
+  _wczAdvCache = data;
+  return data;
+}
+
 async function _wczRenderAdvance(fromToggle) {
   const el = document.getElementById('wc-panel-advance'); if (!el) return;
   _wczEnsureStyle();
@@ -400,25 +433,7 @@ async function _wczRenderAdvance(fromToggle) {
   let groups, data;
   try {
     groups = await _wczFetchGroups();
-    if (_wczAdvCache && Date.now() - _wczAdvCache.ts < 60000) {
-      data = _wczAdvCache;
-    } else {
-      const prep = await _wczPrepSim(groups);
-      const anyRemaining = Object.values(prep.perGroup).some(pg => pg.remaining.length);
-      if (!anyRemaining) {
-        const prob = {}, cond = {}, info = {}, place = {};
-        groups.forEach(g => g.teams.forEach(t => {
-          prob[t.id] = (t.qualified || t.rank <= 2) ? 1 : 0;
-          place[t.id] = { p1: t.rank === 1 ? 1 : 0, p2: t.rank === 2 ? 1 : 0, p3: t.rank === 3 ? 1 : 0, p4: t.rank === 4 ? 1 : 0 };
-          cond[t.id] = { win: {}, draw: {}, loss: {} }; info[t.id] = { hasMatch: false };
-        }));
-        data = { ts: Date.now(), prob, cond, info, place };
-      } else {
-        const r = _wczSimDetailed(groups, prep, 4000);
-        data = { ts: Date.now(), prob: r.prob, cond: r.cond, info: r.info, place: r.place };
-      }
-      _wczAdvCache = data;
-    }
+    data = await _wczGetAdvData(groups);
   } catch (e) { el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif">Could not load data.</div>`; return; }
 
   const tmap = {}; groups.forEach(g => g.teams.forEach(t => tmap[t.id] = { ...t, group: g.letter }));
