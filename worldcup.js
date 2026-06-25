@@ -226,17 +226,26 @@ async function _wczRenderBracket() {
   const thirds = groups.map(g => { const s = [...g.teams].sort((a, b) => a.rank - b.rank); return { ...s[2], group: g.letter, complete: _wczGroupComplete(g) }; })
     .filter(Boolean).sort((a, b) => b.P - a.P || b.GD - a.GD || b.GF - a.GF);
   html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Third-Place Wildcard Race</div>`;
-  html += `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">`;
+  const wcCol = 'text-align:center;padding:7px 8px;flex-shrink:0';
+  html += `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+    <div style="display:flex;align-items:center;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">
+      <span style="width:34px;${wcCol}">#</span>
+      <span style="flex:1;text-align:left;padding:7px 8px">Team</span>
+      <span style="width:48px;${wcCol}" title="Group points (1st tiebreaker)">Pts</span>
+      <span style="width:48px;${wcCol}" title="Overall goal difference (2nd tiebreaker)">GD</span>
+      <span style="width:48px;${wcCol}" title="Overall goals scored (3rd tiebreaker)">GF</span>
+    </div>`;
   html += thirds.map((t, i) => {
     const inField = i < 8;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.05);${inField ? 'background:rgba(34,197,94,0.06)' : ''}">
-      <span style="width:20px;text-align:center;color:${inField ? '#22c55e' : 'var(--muted)'};font-family:'Bebas Neue',sans-serif">${i + 1}</span>
-      ${_wczTeamLogo(t.logo, 22)}
-      <span style="flex:1;font-family:'Barlow Condensed',sans-serif;font-size:1.06rem">${t.name} <span style="color:var(--muted);font-size:0.9rem">(Group ${t.group})</span></span>
-      <span style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.92rem">${t.P} pts &middot; ${t.GD > 0 ? '+' + t.GD : t.GD} GD</span>
+    return `<div style="display:flex;align-items:center;border-bottom:1px solid rgba(255,255,255,0.05);${inField ? 'background:rgba(34,197,94,0.06)' : ''}">
+      <span style="width:34px;${wcCol};color:${inField ? '#22c55e' : 'var(--muted)'};font-family:'Bebas Neue',sans-serif;font-size:1.06rem">${i + 1}</span>
+      <span style="flex:1;display:flex;align-items:center;gap:8px;padding:7px 8px;min-width:0">${_wczTeamLogo(t.logo, 22)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:1.06rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.86rem">(${t.group})</span></span></span>
+      <span style="width:48px;${wcCol};font-family:'Bebas Neue',sans-serif;font-size:1.06rem">${t.P}</span>
+      <span style="width:48px;${wcCol};font-family:'Barlow Condensed',sans-serif;font-size:0.98rem;color:var(--muted)">${t.GD > 0 ? '+' + t.GD : t.GD}</span>
+      <span style="width:48px;${wcCol};font-family:'Barlow Condensed',sans-serif;font-size:0.98rem;color:var(--muted)">${t.GF}</span>
     </div>`;
   }).join('');
-  html += `</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:8px 4px">Top eight third-place teams qualify for the Round of 32.</div>`;
+  html += `</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:8px 4px">Top eight (green) qualify. Ranked by points, then overall goal difference, then goals scored; fair-play points and FIFA ranking break any remaining ties.</div>`;
 
   // Round of 32 bracket allocation
   html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Round of 32</div>`;
