@@ -194,80 +194,62 @@ function _wczAssignThirds(qLetters) {
 }
 
 function _wczSlotHtml(slot, groupMap, adv, matchNum) {
-  const place = adv?.place, prob = adv?.prob;
-  // Third-place slot: list the eligible groups' current third-place team with its
-  // chance of grabbing a wildcard berth (overall advance minus the chance it finishes
-  // 1st/2nd). Which qualifier lands in THIS exact slot is set by FIFA's allocation table.
+  const place = adv?.place, byId = adv?.teamById;
+  // A clinched team — visually distinct (green accent + CLINCHED tag, no dropdown).
+  const lockedHtml = (logo, name) => `<div style="display:flex;align-items:center;gap:7px;border-left:3px solid #22c55e;padding-left:8px">
+      ${_wczTeamLogo(logo, 22)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:1.06rem">${name}</span>
+      <span style="font-size:0.66rem;letter-spacing:1.5px;color:#22c55e;font-family:'Barlow Condensed',sans-serif;flex-shrink:0">CLINCHED</span></div>`;
+  const candRow = (logo, name, sub, pctTxt, col, scen) => `<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,0.05)">
+      <div style="display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem">
+        ${_wczTeamLogo(logo, 18)}<span style="flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}${sub ? ` <span style="color:var(--muted);font-size:0.78rem">(${sub})</span>` : ''}</span>
+        <span style="color:${col};font-weight:600;flex-shrink:0">${pctTxt}</span></div>
+      ${scen ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:rgba(255,255,255,0.5);padding-left:24px;margin-top:1px">${scen}</div>` : ''}
+    </div>`;
+  const dropdown = (prefix, headLine, body, slotKey, open) => `<div>
+      <div onclick="event.stopPropagation();_wczToggleSlot('${slotKey}')" style="cursor:pointer;display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif">
+        <span style="font-size:0.78rem;color:var(--accent2);flex-shrink:0">${prefix}</span>
+        <span style="flex:1;min-width:0;font-size:0.92rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${headLine}</span>
+        <span style="font-size:0.8rem;color:var(--muted);transform:${open ? 'rotate(180deg)' : 'none'};transition:transform 0.2s">&#9662;</span>
+      </div>${body}</div>`;
+  const colFor = p => p >= 0.5 ? '#22c55e' : p >= 0.2 ? 'var(--accent2)' : 'var(--muted)';
+
+  // ---- Third-place slot ----
   if (slot.t === '3') {
     const feas = adv?.slotFeas?.[matchNum];
-    const byId = adv?.teamById;
     if (feas && byId) {
       const spMap = {}; (adv.slotProb?.[matchNum] || []).forEach(x => spMap[x.id] = x.p);
       const ids = Object.keys(feas).sort((a, b) => (spMap[b] || 0) - (spMap[a] || 0));
-      const open = _wczSlotOpen[matchNum];
-      const fmtP = id => {
-        const p = spMap[id];
-        if (p == null) return ids.length === 1 ? '100%' : 'possible';
-        if (p >= 0.9995 && ids.length > 1) return '>99%'; // not truly locked — another team is still possible
-        if (p >= 0.005) return _wczPct(p);
-        return '<1%';
-      };
-      const topT = byId[ids[0]];
-      const headLine = topT ? `${topT.name} ${fmtP(ids[0])}` : 'To be determined';
-      let body = '';
-      if (open) {
-        body = ids.map(id => {
-          const t = byId[id]; if (!t) return '';
-          const p = spMap[id] || 0;
-          const col = p >= 0.5 ? '#22c55e' : p >= 0.2 ? 'var(--accent2)' : 'var(--muted)';
-          const opp = adv.ownOpp?.[id] != null ? byId[adv.ownOpp[id]]?.name : null;
-          const scen = _wczSlotScenario(feas[id], opp, t.name, adv.slotMiss?.[matchNum]?.[id]);
-          return `<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,0.05)">
-            <div style="display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem">
-              ${_wczTeamLogo(t.logo, 18)}<span style="flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.78rem">(${t.group})</span></span>
-              <span style="color:${col};font-weight:600;flex-shrink:0">${fmtP(id)}</span></div>
-            ${scen ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;color:rgba(255,255,255,0.5);padding-left:24px;margin-top:1px">${scen}</div>` : ''}
-          </div>`;
-        }).join('');
+      if (ids.length) {
+        const fmtP = id => { const p = spMap[id]; if (p == null) return ids.length === 1 ? '100%' : 'possible'; if (p >= 0.9995 && ids.length > 1) return '>99%'; if (p >= 0.005) return _wczPct(p); return '<1%'; };
+        if (ids.length === 1) { const t = byId[ids[0]]; return lockedHtml(t.logo, `${t.name} (${t.group})`); }
+        const slotKey = matchNum + '_3', open = _wczSlotOpen[slotKey];
+        const topT = byId[ids[0]];
+        let body = '';
+        if (open) body = ids.map(id => { const t = byId[id]; if (!t) return ''; const opp = adv.ownOpp?.[id] != null ? byId[adv.ownOpp[id]]?.name : null; const scen = _wczSlotScenario(feas[id], opp, t.name, adv.slotMiss?.[matchNum]?.[id]); return candRow(t.logo, t.name, t.group, fmtP(id), colFor(spMap[id] || 0), scen); }).join('');
+        return dropdown('Third place:', `${topT.name} ${fmtP(ids[0])}`, body, slotKey, open);
       }
-      return `<div>
-        <div onclick="event.stopPropagation();_wczToggleSlot(${matchNum})" style="cursor:pointer;display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif">
-          <span style="font-size:0.78rem;color:var(--accent2);flex-shrink:0">Third place:</span>
-          <span style="flex:1;min-width:0;font-size:0.92rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${headLine}</span>
-          <span style="font-size:0.8rem;color:var(--muted);transform:${open ? 'rotate(180deg)' : 'none'};transition:transform 0.2s">&#9662;</span>
-        </div>
-        ${body}</div>`;
     }
-    // Fallback (no simulation, e.g. group stage finished): list eligible groups' thirds.
-    const rows = slot.g.split('/').map(L => {
-      const g = groupMap[L]; if (!g) return '';
-      const t = [...g.teams].sort((a, b) => a.rank - b.rank)[2]; if (!t) return '';
-      const pp = place?.[t.id] || {}; const q = Math.max(0, (prob?.[t.id] || 0) - (pp.p1 || 0) - (pp.p2 || 0));
-      let label, col;
-      if (q >= 0.999) { label = 'Qualified'; col = '#22c55e'; }
-      else if (q <= 0.001) { label = 'Out'; col = 'rgba(255,255,255,0.3)'; }
-      else { label = _wczPct(q) + ' to qualify'; col = q >= 0.4 ? 'var(--accent2)' : 'var(--muted)'; }
-      return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem">
-        ${_wczTeamLogo(t.logo, 18)}<span style="flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.78rem">(${L})</span></span>
-        <span style="color:${col};font-weight:600;flex-shrink:0">${label}</span></div>`;
-    }).join('');
-    return `<div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;color:var(--accent2);margin-bottom:3px">Eligible third-place teams (one fills this slot):</div>${rows}</div>`;
+    return `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.98rem">Best third place (${slot.g})</div>`;
   }
+
+  // ---- Winner / Runner-up slot ----
   const g = groupMap[slot.g];
-  let team = null;
-  if (g) {
-    if (_wczGroupComplete(g)) {
-      const sorted = [...g.teams].sort((a, b) => a.rank - b.rank);
-      team = slot.t === 'W' ? sorted[0] : sorted[1];
-    } else if (place) {
-      // Fill a slot once that position is mathematically clinched (100% in the sim):
-      // p1 for the group winner, p2 for the runner-up.
-      const key = slot.t === 'W' ? 'p1' : 'p2';
-      team = g.teams.find(t => (place[t.id]?.[key] || 0) >= 0.999) || null;
+  const posName = slot.t === 'W' ? 'Winner' : 'Runner-up';
+  const pkey = slot.t === 'W' ? 'p1' : 'p2', posIdx = slot.t === 'W' ? 0 : 1;
+  if (g && place && adv?.posReach) {
+    const cands = g.teams.map(t => ({ t, p: place[t.id]?.[pkey] || 0, reach: adv.posReach[t.id]?.[pkey] }))
+      .filter(c => c.reach).sort((a, b) => b.p - a.p);
+    if (cands.length) {
+      const fmtP = p => p >= 0.9995 && cands.length > 1 ? '>99%' : p >= 0.005 ? _wczPct(p) : (cands.length === 1 ? '100%' : '<1%');
+      if (cands.length === 1) { const t = cands[0].t; return lockedHtml(t.logo, t.name); }
+      const slotKey = matchNum + '_' + slot.t + '_' + slot.g, open = _wczSlotOpen[slotKey];
+      const topT = cands[0].t;
+      let body = '';
+      if (open) body = cands.map(c => { const t = c.t; const opp = adv.ownOpp?.[t.id] != null ? byId?.[adv.ownOpp[t.id]]?.name : null; const scen = _wczPosScenario(adv.placeCond?.[t.id], opp, posIdx); return candRow(t.logo, t.name, null, fmtP(c.p), colFor(c.p), scen); }).join('');
+      return dropdown(`Group ${slot.g} ${posName}:`, `${topT.name} ${fmtP(cands[0].p)}`, body, slotKey, open);
     }
   }
-  if (team) return `<div style="display:flex;align-items:center;gap:7px">${_wczTeamLogo(team.logo, 22)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:1.06rem">${team.name}</span></div>`;
-  return `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.98rem">Group ${slot.g} ${slot.t === 'W' ? 'Winner' : 'Runner-up'}</div>`;
+  return `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.98rem">Group ${slot.g} ${posName}</div>`;
 }
 
 async function _wczRenderBracket() {
@@ -321,7 +303,7 @@ async function _wczRenderBracket() {
       <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap, adv, mt.m)}</div>
     </div>`).join('');
   html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">Winner/runner-up slots fill once clinched. Tap a third-place slot to see every team that can still reach it, its chance of doing so, and the result it needs. Percentages are the realistic chance (FIFA's official allocation table decides the exact slot); the candidate list comes from an exhaustive possibility search, so even long-shot paths are shown.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">A green CLINCHED tag marks a team locked into a spot. Any slot still in play is a dropdown — tap it to see every team that can still take it, its chance, and the result it needs. Candidate lists come from an exhaustive possibility search (so long shots show too); the third-place slot routing uses FIFA's official allocation table.</div>`;
   el.innerHTML = html;
 }
 
@@ -414,6 +396,8 @@ function _wczSimDetailed(groups, prep, N) {
   ids.forEach(id => { adv[id] = 0; place[id] = [0, 0, 0, 0]; cond[id] = { win: _wczBucket(), draw: _wczBucket(), loss: _wczBucket() }; });
   const slotTally = {}; _WCZ_THIRD_SLOTS.forEach(s => slotTally[s.m] = {});
   const qThird = {}; groups.forEach(g => qThird[g.letter] = 0); // P(group's third qualifies)
+  // Per-team finishing position conditioned on own final-match result: [1st, 2nd, total]
+  const placeCond = {}; ids.forEach(id => placeCond[id] = { win: [0, 0, 0], draw: [0, 0, 0], loss: [0, 0, 0] });
 
   // Per-team final-matchday context: own opponent and the "other" group match (o1 vs o2).
   const info = {};
@@ -432,7 +416,7 @@ function _wczSimDetailed(groups, prep, N) {
   }
 
   for (let it = 0; it < N; it++) {
-    const simRes = {}; const thirds = [];
+    const simRes = {}; const thirds = []; const posIter = {};
     for (const g of groups) {
       const pg = perGroup[g.letter];
       // Seed from the authoritative aggregate, then add simulated remaining matches.
@@ -448,7 +432,7 @@ function _wczSimDetailed(groups, prep, N) {
       pg.ids.forEach(id => { st[id].GD = st[id].GF - st[id].GA; });
       const order = _wczRankGroup(pg.ids, matches, st);
       st[order[0]].adv = true; st[order[1]].adv = true;
-      for (let i = 0; i < order.length && i < 4; i++) place[order[i]][i]++;
+      for (let i = 0; i < order.length && i < 4; i++) { place[order[i]][i]++; posIter[order[i]] = i; }
       const third = st[order[2]]; third.grp = g.letter; thirds.push(third);
       pg._st = st;
     }
@@ -471,6 +455,7 @@ function _wczSimDetailed(groups, prep, N) {
         const my = pg.remaining.find(m => m.a === id || m.b === id);
         const r = simRes[my.a + '_' + my.b]; const isA = my.a === id;
         const own = r.as === r.bs ? 'draw' : ((r.as > r.bs) === isA ? 'win' : 'loss');
+        const pc = placeCond[id][own]; pc[2]++; if (posIter[id] === 0) pc[0]++; else if (posIter[id] === 1) pc[1]++;
         const bk = cond[id][own]; bk._all[1]++; if (a) bk._all[0]++;
         if (inf.detailed) {
           const orr = simRes[inf.o1 + '_' + inf.o2];
@@ -497,7 +482,12 @@ function _wczSimDetailed(groups, prep, N) {
   const slotProb = {};
   _WCZ_THIRD_SLOTS.forEach(s => { slotProb[s.m] = Object.entries(slotTally[s.m]).map(([id, c]) => ({ id, p: c / N })).sort((a, b) => b.p - a.p); });
   const qThirdP = {}; for (const g in qThird) qThirdP[g] = qThird[g] / N;
-  return { prob, cond: condP, info, place: placeP, slotProb, qThird: qThirdP };
+  const placeCondP = {};
+  ids.forEach(id => {
+    const c = placeCond[id]; const f = r => r[2] ? { p1: r[0] / r[2], p2: r[1] / r[2], n: r[2] } : { p1: null, p2: null, n: 0 };
+    placeCondP[id] = { win: f(c.win), draw: f(c.draw), loss: f(c.loss) };
+  });
+  return { prob, cond: condP, info, place: placeP, slotProb, qThird: qThirdP, placeCond: placeCondP };
 }
 
 // Most likely qualifying combination among the FEASIBLE ones (those actually observed
@@ -528,6 +518,7 @@ function _wczPossib(groups, prep, N) {
     ownOpp[m.a] = m.b; ownOpp[m.b] = m.a;
   }
   const slotFeas = {}; _WCZ_THIRD_SLOTS.forEach(s => slotFeas[s.m] = {});
+  const posReach = {}; groups.forEach(g => g.teams.forEach(t => posReach[t.id] = { p1: false, p2: false }));
   for (let it = 0; it < N; it++) {
     const simRes = {}, thirds = [];
     for (const g of groups) {
@@ -542,6 +533,8 @@ function _wczPossib(groups, prep, N) {
       }
       pg.ids.forEach(id => st[id].GD = st[id].GF - st[id].GA);
       const order = _wczRankGroup(pg.ids, matches, st);
+      if (order[0]) posReach[order[0]].p1 = true;
+      if (order[1]) posReach[order[1]].p2 = true;
       const third = st[order[2]]; third.grp = g.letter; thirds.push(third);
     }
     thirds.sort(_wczCmp);
@@ -556,7 +549,17 @@ function _wczPossib(groups, prep, N) {
       const ok = ownKey[id]; if (ok) { const r = simRes[ok.k]; if (r) { const own = r.as === r.bs ? 'draw' : ((r.as > r.bs) === ok.isA ? 'win' : 'loss'); f[own] = true; } }
     }
   }
-  return { slotFeas, ownOpp };
+  return { slotFeas, ownOpp, posReach };
+}
+
+// Own-match requirement for a team to finish 1st (posIdx 0) or 2nd (posIdx 1) in its group.
+function _wczPosScenario(pc, opp, posIdx) {
+  if (!pc || !opp) return '';
+  const hit = k => pc[k] && pc[k].n > 0 && (posIdx === 0 ? pc[k].p1 > 0 : pc[k].p2 > 0);
+  const res = ['win', 'draw', 'loss'].filter(hit);
+  if (!res.length || res.length >= 3) return res.length >= 3 ? `any result vs ${opp} can be enough` : '';
+  const word = { win: 'win', draw: 'draw', loss: 'lose' };
+  return `needs to ${res.map(k => word[k]).join(' or ')} vs ${opp}`;
 }
 
 // "Most likely path" for a team to take a slot: its own-match requirement (from the
@@ -608,12 +611,12 @@ async function _wczGetAdvData(groups) {
     qThird = {}; thirds.forEach((x, i) => qThird[x.g] = i < 8 ? 1 : 0);
   } else {
     const r = _wczSimDetailed(groups, prep, 4000);
-    data = { ts: Date.now(), prob: r.prob, cond: r.cond, info: r.info, place: r.place, slotProb: r.slotProb };
+    data = { ts: Date.now(), prob: r.prob, cond: r.cond, info: r.info, place: r.place, slotProb: r.slotProb, placeCond: r.placeCond };
     qThird = r.qThird;
   }
   // Broad possibility search: which teams can still reach each slot + own-result needed.
   const poss = _wczPossib(groups, prep, anyRemaining ? 10000 : 1);
-  data.slotFeas = poss.slotFeas; data.ownOpp = poss.ownOpp;
+  data.slotFeas = poss.slotFeas; data.ownOpp = poss.ownOpp; data.posReach = poss.posReach;
   data.teamById = {};
   groups.forEach(g => g.teams.forEach(t => data.teamById[t.id] = { ...t, group: g.letter }));
   // Most-likely missing groups (the modal qualifying combination) per candidate.
