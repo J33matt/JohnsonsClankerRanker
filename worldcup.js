@@ -166,9 +166,6 @@ const _WCZ_BRACKET_CSS = `<style>
 .wczb-round.l .wczb-cell::after{content:'';position:absolute;right:-26px;top:calc(50% - 1px);width:26px;height:2px;background:var(--border)}
 .wczb-round.l.pair .wczb-cell:nth-child(odd)::before{content:'';position:absolute;right:-26px;top:50%;height:50%;width:2px;background:var(--border)}
 .wczb-round.l.pair .wczb-cell:nth-child(even)::before{content:'';position:absolute;right:-26px;bottom:50%;height:50%;width:2px;background:var(--border)}
-.wczb-round.r .wczb-cell::after{content:'';position:absolute;left:-26px;top:calc(50% - 1px);width:26px;height:2px;background:var(--border)}
-.wczb-round.r.pair .wczb-cell:nth-child(odd)::before{content:'';position:absolute;left:-26px;top:50%;height:50%;width:2px;background:var(--border)}
-.wczb-round.r.pair .wczb-cell:nth-child(even)::before{content:'';position:absolute;left:-26px;bottom:50%;height:50%;width:2px;background:var(--border)}
 .wczb-card{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)}
 .wczb-card-h{background:var(--surface2);padding:4px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.71rem;letter-spacing:1.5px;color:var(--muted)}
 .wczb-card-s{padding:9px 11px}
@@ -328,10 +325,12 @@ async function _wczRenderBracket() {
   }).join('');
   html += `</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:8px 4px">Top eight (green) qualify. Ranked by points, then overall goal difference, then goals scored; fair-play points and FIFA ranking break any remaining ties.</div>`;
 
-  // Round of 32 bracket — a true two-sided knockout tree with connector lines.
-  // Columns converge from both edges (R32 -> R16 -> QF -> SF) toward the Final in
-  // the middle. CSS pseudo-elements draw the horizontal stubs and the vertical
-  // joiners that pair two matches into the next round, so it reads as a bracket.
+  // Round of 32 bracket — a single left-to-right knockout tree. Both halves of
+  // the draw are stacked vertically (top half above bottom half) so the rounds
+  // narrow rightward 16 -> 8 -> 4 -> 2 -> 1 and meet at the Final on the right,
+  // which fits the page width without horizontal scrolling. CSS pseudo-elements
+  // draw the horizontal stubs and the vertical joiners that pair two matches
+  // into the next round.
   html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Round of 32 Bracket</div>`;
   html += _WCZ_BRACKET_CSS;
   const r32 = {}; _WCZ_R32.forEach(mt => r32[mt.m] = mt);
@@ -348,20 +347,18 @@ async function _wczRenderBracket() {
     </div>`;
   const round = (cls, cells) => `<div class="wczb-round ${cls}">${cells.map(c => `<div class="wczb-cell">${c}</div>`).join('')}</div>`;
   html += `<div class="wczb-wrap"><div class="wczb">`;
-  // Left half (flows left-to-right toward the Final).
-  html += round('rl-r32 l pair', [74, 77, 73, 75, 83, 84, 81, 82].map(card));
-  html += round('rl-r16 l pair', [fut('R16', 89, 'Winner M74', 'Winner M77'), fut('R16', 90, 'Winner M73', 'Winner M75'), fut('R16', 93, 'Winner M83', 'Winner M84'), fut('R16', 94, 'Winner M81', 'Winner M82')]);
-  html += round('rl-qf l pair', [fut('QF', 97, 'Winner M89', 'Winner M90'), fut('QF', 98, 'Winner M93', 'Winner M94')]);
-  html += round('rl-sf l', [fut('SF', 101, 'Winner M97', 'Winner M98')]);
-  // Final in the centre.
+  // Top half then bottom half, stacked into one rightward-flowing bracket.
+  html += round('rl-r32 l pair', [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87].map(card));
+  html += round('rl-r16 l pair', [
+    fut('R16', 89, 'Winner M74', 'Winner M77'), fut('R16', 90, 'Winner M73', 'Winner M75'), fut('R16', 93, 'Winner M83', 'Winner M84'), fut('R16', 94, 'Winner M81', 'Winner M82'),
+    fut('R16', 91, 'Winner M76', 'Winner M78'), fut('R16', 92, 'Winner M79', 'Winner M80'), fut('R16', 95, 'Winner M86', 'Winner M88'), fut('R16', 96, 'Winner M85', 'Winner M87')]);
+  html += round('rl-qf l pair', [
+    fut('QF', 97, 'Winner M89', 'Winner M90'), fut('QF', 98, 'Winner M93', 'Winner M94'),
+    fut('QF', 99, 'Winner M91', 'Winner M92'), fut('QF', 100, 'Winner M95', 'Winner M96')]);
+  html += round('rl-sf l pair', [fut('SF', 101, 'Winner M97', 'Winner M98'), fut('SF', 102, 'Winner M99', 'Winner M100')]);
   html += round('rl-final', [fut('FINAL', 104, 'Winner M101', 'Winner M102')]);
-  // Right half (flows right-to-left toward the Final).
-  html += round('rl-sf r', [fut('SF', 102, 'Winner M99', 'Winner M100')]);
-  html += round('rl-qf r pair', [fut('QF', 99, 'Winner M91', 'Winner M92'), fut('QF', 100, 'Winner M95', 'Winner M96')]);
-  html += round('rl-r16 r pair', [fut('R16', 91, 'Winner M76', 'Winner M78'), fut('R16', 92, 'Winner M79', 'Winner M80'), fut('R16', 95, 'Winner M86', 'Winner M88'), fut('R16', 96, 'Winner M85', 'Winner M87')]);
-  html += round('rl-r32 r pair', [76, 78, 79, 80, 86, 88, 85, 87].map(card));
   html += `</div></div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The bracket flows from both edges toward the Final; follow the connector lines to trace a team's path. A green CLINCHED tag marks a team locked into a spot. Any slot still in play is a dropdown — tap it to see every team that can still take it, its chance, and the result it needs. Candidate lists come from an exhaustive possibility search (so long shots show too); the third-place slot routing uses FIFA's official allocation table.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The bracket flows left to right toward the Final; follow the connector lines to trace a team's path. A green CLINCHED tag marks a team locked into a spot. Any slot still in play is a dropdown — tap it to see every team that can still take it, its chance, and the result it needs. Candidate lists come from an exhaustive possibility search (so long shots show too); the third-place slot routing uses FIFA's official allocation table.</div>`;
   el.innerHTML = html;
 }
 
