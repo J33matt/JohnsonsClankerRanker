@@ -303,16 +303,36 @@ async function _wczRenderBracket() {
   }).join('');
   html += `</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:8px 4px">Top eight (green) qualify. Ranked by points, then overall goal difference, then goals scored; fair-play points and FIFA ranking break any remaining ties.</div>`;
 
-  // Round of 32 bracket allocation
-  html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Round of 32</div>`;
-  html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">`;
-  html += _WCZ_R32.map(mt => `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+  // Round of 32 bracket allocation — laid out as the real 2026 knockout tree
+  // (two halves of the draw, each quarterfinal grouping the two Round-of-16 pods
+  //  that feed it, each pod holding the two R32 matches whose winners meet).
+  html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Round of 32 Bracket</div>`;
+  const r32 = {}; _WCZ_R32.forEach(mt => r32[mt.m] = mt);
+  const card = m => { const mt = r32[m]; return `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)">
       <div style="background:var(--surface2);padding:4px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.71rem;letter-spacing:1.5px;color:var(--muted)">MATCH ${mt.m}</div>
       <div style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">${_wczSlotHtml(mt.a, groupMap, adv, mt.m)}</div>
       <div style="padding:9px 12px">${_wczSlotHtml(mt.b, groupMap, adv, mt.m)}</div>
-    </div>`).join('');
+    </div>`; };
+  // One Round-of-16 pairing: the two R32 matches whose winners meet.
+  const pod = (r16, m1, m2) => `<div style="border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,0.015)">
+      ${card(m1)}${card(m2)}
+      <div style="text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;letter-spacing:1.5px;color:var(--accent2)">&#9660; ROUND OF 16 &middot; MATCH ${r16}</div>
+    </div>`;
+  // One quarterfinal: the two Round-of-16 pods whose winners meet.
+  const qf = (qfNum, podsHtml) => `<div style="border:1px solid var(--border);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:12px;background:rgba(255,255,255,0.02)">
+      ${podsHtml}
+      <div style="text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:0.74rem;letter-spacing:1.5px;color:var(--muted)">&#9660; QUARTERFINAL &middot; MATCH ${qfNum}</div>
+    </div>`;
+  // One half of the draw, feeding a semifinal then the final.
+  const half = (label, sf, qfsHtml) => `<div style="display:flex;flex-direction:column;gap:16px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:1.5px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:5px">${label} &mdash; to Semifinal ${sf}</div>
+      ${qfsHtml}
+    </div>`;
+  html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:24px;align-items:start">`;
+  html += half('Top Half', 101, qf(97, pod(89, 74, 77) + pod(90, 73, 75)) + qf(98, pod(93, 83, 84) + pod(94, 81, 82)));
+  html += half('Bottom Half', 102, qf(99, pod(91, 76, 78) + pod(92, 79, 80)) + qf(100, pod(95, 86, 88) + pod(96, 85, 87)));
   html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">A green CLINCHED tag marks a team locked into a spot. Any slot still in play is a dropdown — tap it to see every team that can still take it, its chance, and the result it needs. Candidate lists come from an exhaustive possibility search (so long shots show too); the third-place slot routing uses FIFA's official allocation table.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The two columns are the halves of the draw; nested boxes group each Round-of-16 pairing and quarterfinal, so you can trace a team's path to the final. A green CLINCHED tag marks a team locked into a spot. Any slot still in play is a dropdown — tap it to see every team that can still take it, its chance, and the result it needs. Candidate lists come from an exhaustive possibility search (so long shots show too); the third-place slot routing uses FIFA's official allocation table.</div>`;
   el.innerHTML = html;
 }
 
