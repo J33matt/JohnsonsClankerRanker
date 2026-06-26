@@ -318,6 +318,7 @@ async function _wczRenderBracket() {
     <div style="display:flex;align-items:center;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">
       <span style="width:34px;${wcCol}">#</span>
       <span style="flex:1;text-align:left;padding:7px 8px">Team</span>
+      <span style="width:40px;${wcCol}" title="Games played">GP</span>
       <span style="width:48px;${wcCol}" title="Group points (1st tiebreaker)">Pts</span>
       <span style="width:48px;${wcCol}" title="Overall goal difference (2nd tiebreaker)">GD</span>
       <span style="width:48px;${wcCol}" title="Overall goals scored (3rd tiebreaker)">GF</span>
@@ -327,6 +328,7 @@ async function _wczRenderBracket() {
     return `<div style="display:flex;align-items:center;border-bottom:1px solid rgba(255,255,255,0.05);${inField ? 'background:rgba(34,197,94,0.06)' : ''}">
       <span style="width:34px;${wcCol};color:${inField ? '#22c55e' : 'var(--muted)'};font-family:'Bebas Neue',sans-serif;font-size:1.06rem">${i + 1}</span>
       <span style="flex:1;display:flex;align-items:center;gap:8px;padding:7px 8px;min-width:0">${_wczTeamLogo(t.logo, 22)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:1.06rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.86rem">(${t.group})</span></span></span>
+      <span style="width:40px;${wcCol};font-family:'Barlow Condensed',sans-serif;font-size:0.98rem;color:var(--muted)">${t.gp}</span>
       <span style="width:48px;${wcCol};font-family:'Bebas Neue',sans-serif;font-size:1.06rem">${t.P}</span>
       <span style="width:48px;${wcCol};font-family:'Barlow Condensed',sans-serif;font-size:0.98rem;color:var(--muted)">${t.GD > 0 ? '+' + t.GD : t.GD}</span>
       <span style="width:48px;${wcCol};font-family:'Barlow Condensed',sans-serif;font-size:0.98rem;color:var(--muted)">${t.GF}</span>
