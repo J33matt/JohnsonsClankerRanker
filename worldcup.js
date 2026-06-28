@@ -21,7 +21,7 @@ function showWcTab(tab, btn) {
   _wczStopLiveRefresh();
   if (tab === 'scores') { _wczRenderScores(); _wczLiveTimer = setInterval(_wczRenderScores, 30000); }
   else if (tab === 'standings') _wczRenderStandings();
-  else if (tab === 'bracket') _wczRenderBracket();
+  else if (tab === 'bracket') { _wczRenderBracket(); _wczLiveTimer = setInterval(_wczRenderBracket, 30000); }
 }
 
 // ----------------------------- data -----------------------------
@@ -167,15 +167,35 @@ const _WCZ_BRACKET_CSS = `<style>
 .wczb-team{position:relative;display:flex;align-items:center;gap:11px;padding:9px 12px 9px 11px;border-left:3px solid var(--tc,transparent);background-repeat:no-repeat;background-position:right center;background-size:auto 165%;overflow:hidden}
 .wczb-flag{flex-shrink:0;width:40px;height:27px;border-radius:3px;overflow:hidden;box-shadow:0 2px 7px rgba(0,0,0,0.6);outline:1px solid rgba(255,255,255,0.2);display:inline-flex;background:var(--surface2)}
 .wczb-flag img{width:100%;height:100%;object-fit:cover;display:block}
-.wczb-tinfo{display:flex;flex-direction:column;min-width:0;gap:2px}
+.wczb-tinfo{display:flex;flex-direction:column;min-width:0;gap:2px;flex:1}
 .wczb-tname{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:0.6px;line-height:1;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px rgba(0,0,0,0.55)}
 .wczb-tseed{font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:1.4px;text-transform:uppercase;color:var(--tc);white-space:nowrap;font-weight:600}
-.wczb-vs{display:flex;align-items:center;justify-content:center;position:relative;height:1px;margin:1px 12px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
-.wczb-vs span{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0 8px;font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:1.5px;color:var(--muted)}
+.wczb-score{flex-shrink:0;padding-left:10px;font-family:'Bebas Neue',sans-serif;font-size:1.55rem;line-height:1;color:#fff;text-shadow:0 1px 5px rgba(0,0,0,0.8)}
+.wczb-score.win{color:var(--accent2)}
+.wczb-score.lose{color:var(--muted)}
+.wczb-vs{display:flex;align-items:center;justify-content:center;position:relative;height:1px;margin:2px 12px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
+.wczb-vs span{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1px 9px;font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:1.5px;color:var(--muted)}
+.wczb-vs .wczb-status.live{color:#22c55e;border-color:rgba(34,197,94,0.6);background:rgba(34,197,94,0.12)}
+.wczb-card.live{border-color:rgba(34,197,94,0.6);box-shadow:0 0 0 1px rgba(34,197,94,0.35),0 8px 22px rgba(0,0,0,0.5)}
+.wczb-when{float:right;color:var(--muted);letter-spacing:1px}
 .wczb-fut{border:1px dashed var(--border);border-radius:8px;overflow:hidden;background:rgba(255,255,255,0.02)}
 .wczb-fut-h{background:var(--surface2);padding:4px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:1.5px;color:var(--muted)}
 .wczb-fut-b{padding:6px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;color:var(--muted)}
 .wczb-fut-b+.wczb-fut-b{border-top:1px solid rgba(255,255,255,0.05)}
+.wczb-hero{position:relative;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;padding:18px 20px 16px;margin-bottom:8px;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:linear-gradient(120deg,rgba(255,170,0,0.16),rgba(255,170,0,0) 48%),linear-gradient(160deg,var(--surface2),var(--surface))}
+.wczb-hero::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(#ffd24a,#d98b4a)}
+.wczb-hero-kicker{font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;letter-spacing:3px;text-transform:uppercase;color:var(--accent2)}
+.wczb-hero-title{font-family:'Bebas Neue',sans-serif;font-size:2.7rem;line-height:0.92;letter-spacing:1px;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,0.55)}
+.wczb-hero-sub{font-family:'Barlow Condensed',sans-serif;font-size:0.96rem;letter-spacing:1.5px;color:var(--muted);margin-top:3px}
+.wczb-hero-side{display:flex;flex-direction:column;align-items:flex-end;gap:9px}
+.wczb-pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.wczb-pill{font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:0.5px;color:var(--text);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:20px;padding:4px 13px;white-space:nowrap}
+.wczb-pill-lbl{color:var(--muted);text-transform:uppercase;font-size:0.7rem;letter-spacing:1px}
+.wczb-pill.live{color:#22c55e;border-color:rgba(34,197,94,0.55);background:rgba(34,197,94,0.12);animation:wczbpulse 1.6s ease-in-out infinite}
+.wczb-legend{display:flex;gap:15px;flex-wrap:wrap;justify-content:flex-end;font-family:'Barlow Condensed',sans-serif;font-size:0.77rem;letter-spacing:0.5px;color:var(--muted)}
+.wczb-legend span{display:inline-flex;align-items:center;gap:5px}
+.wczb-legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+@keyframes wczbpulse{0%,100%{opacity:1}50%{opacity:0.5}}
 </style>`;
 
 // Round of 32 slot allocation (2026 fixed structure).
@@ -334,6 +354,34 @@ async function _wczRenderStandings() {
   el.innerHTML = html;
 }
 
+// Resolve a settled bracket slot to its single team, or null if still contested
+// (won't happen once the group stage is complete). Mirrors the resolution inside
+// _wczSlotHtml but returns structured data so the card can also show a live score.
+function _wczSlotTeam(slot, groupMap, adv, matchNum) {
+  if (!adv) return null;
+  if (slot.t === '3') {
+    const feas = adv.slotFeas?.[matchNum], byId = adv.teamById;
+    if (feas && byId) { const ids = Object.keys(feas); if (ids.length === 1 && byId[ids[0]]) { const t = byId[ids[0]]; return { id: String(ids[0]), name: t.name, logo: t.logo, group: t.group, seedLabel: `3rd Place &middot; Group ${t.group}`, color: '#d98b4a' }; } }
+    return null;
+  }
+  const g = groupMap[slot.g], pkey = slot.t === 'W' ? 'p1' : 'p2';
+  if (g && adv.place && adv.posReach) {
+    const cands = g.teams.map(t => ({ t, p: adv.place[t.id]?.[pkey] || 0, reach: adv.posReach[t.id]?.[pkey] })).filter(c => c.reach).sort((a, b) => b.p - a.p);
+    if (cands.length === 1) { const t = cands[0].t; return { id: String(t.id), name: t.name, logo: t.logo, group: slot.g, seedLabel: `${slot.t === 'W' ? 'Winner' : 'Runner-up'} &middot; Group ${slot.g}`, color: slot.t === 'W' ? '#ffd24a' : '#c9d2dc' }; }
+  }
+  return null;
+}
+
+// One team row in a bracket card; `score` is optional right-aligned goals HTML.
+function _wczTeamRowHtml(team, score) {
+  const bg = team.logo ? `;background-image:linear-gradient(90deg,var(--surface) 46%,transparent 130%),url('${team.logo}')` : '';
+  return `<div class="wczb-team" style="--tc:${team.color}${bg}">
+    <span class="wczb-flag">${team.logo ? `<img src="${team.logo}" onerror="this.parentNode.style.display='none'">` : ''}</span>
+    <span class="wczb-tinfo"><span class="wczb-tname">${team.name}</span><span class="wczb-tseed">${team.seedLabel}</span></span>
+    ${score || ''}
+  </div>`;
+}
+
 async function _wczRenderBracket() {
   const el = document.getElementById('wc-panel-bracket'); if (!el) return;
   if (!el.dataset.init) { el.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>Loading bracket...</div>`; el.dataset.init = '1'; }
@@ -344,24 +392,81 @@ async function _wczRenderBracket() {
   }
   catch (e) { el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif">Could not load bracket.</div>`; return; }
   const groupMap = {}; groups.forEach(g => groupMap[g.letter] = g);
-  let html = '';
+  let events = [];
+  try { events = await _sbFetchEspnWcScoreboard(); } catch (e) { events = []; }
+  // Index scoreboard events by the sorted pair of team ids so each card can find
+  // its kickoff time / live score / final result.
+  const evByPair = {};
+  for (const ev of events) {
+    const c = ev.competitions?.[0]; if (!c || !c.competitors || c.competitors.length < 2) continue;
+    evByPair[c.competitors.map(x => String(x.team?.id ?? x.id)).sort().join('_')] = ev;
+  }
+  // Resolve all 16 R32 ties up front (teams + their event) and gather header
+  // stats: the earliest kickoff (start date) and how many games are live now.
+  const r32 = {}; _WCZ_R32.forEach(mt => r32[mt.m] = mt);
+  const matchData = {}; let earliest = null, liveNow = 0;
+  for (const mt of _WCZ_R32) {
+    const ta = _wczSlotTeam(mt.a, groupMap, adv, mt.m), tb = _wczSlotTeam(mt.b, groupMap, adv, mt.m);
+    const ev = (ta && tb) ? (evByPair[[ta.id, tb.id].sort().join('_')] || null) : null;
+    if (ev) { const d = new Date(ev.date); if (!earliest || d < earliest) earliest = d; if (ev.competitions?.[0]?.status?.type?.state === 'in') liveNow++; }
+    matchData[mt.m] = { ta, tb, ev };
+  }
 
   // Round of 32 bracket — a single left-to-right knockout tree. Both halves of
   // the draw are stacked vertically (top half above bottom half) so the rounds
   // narrow rightward 16 -> 8 -> 4 -> 2 -> 1 and meet at the Final on the right,
   // which fits the page width without horizontal scrolling. CSS pseudo-elements
-  // draw the horizontal stubs and the vertical joiners that pair two matches
-  // into the next round.
-  html += _WCZ_BRACKET_CSS;
+  // draw the horizontal stubs and the vertical joiners that pair two matches.
+  let html = _WCZ_BRACKET_CSS;
   html += `<div class="wczb-section">`;
-  html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:4px 4px 8px">Round of 32 Bracket</div>`;
-  const r32 = {}; _WCZ_R32.forEach(mt => r32[mt.m] = mt);
-  const card = m => { const mt = r32[m]; return `<div class="wczb-card">
-      <div class="wczb-card-h">MATCH ${mt.m}</div>
-      ${_wczSlotHtml(mt.a, groupMap, adv, mt.m)}
-      <div class="wczb-vs"><span>VS</span></div>
-      ${_wczSlotHtml(mt.b, groupMap, adv, mt.m)}
-    </div>`; };
+
+  // Hero banner: title, start date, live indicator, and the medal legend.
+  const dateStr = earliest ? earliest.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : null;
+  html += `<div class="wczb-hero">
+      <div class="wczb-hero-main">
+        <div class="wczb-hero-kicker">2026 FIFA World Cup</div>
+        <div class="wczb-hero-title">Knockout Stage</div>
+        <div class="wczb-hero-sub">Round of 32 &middot; Road to the Final</div>
+      </div>
+      <div class="wczb-hero-side">
+        <div class="wczb-pills">
+          ${liveNow ? `<span class="wczb-pill live">&#9679; ${liveNow} LIVE NOW</span>` : ''}
+          ${dateStr ? `<span class="wczb-pill"><span class="wczb-pill-lbl">Kicks off</span> ${dateStr}</span>` : ''}
+        </div>
+        <div class="wczb-legend">
+          <span><i style="background:#ffd24a"></i>Winner</span>
+          <span><i style="background:#c9d2dc"></i>Runner-up</span>
+          <span><i style="background:#d98b4a"></i>3rd Place</span>
+        </div>
+      </div>
+    </div>`;
+
+  const scoreHtml = (val, cls) => `<span class="wczb-score${cls ? ' ' + cls : ''}">${val}</span>`;
+  const card = m => {
+    const { ta, tb, ev } = matchData[m];
+    let aScore = '', bScore = '', mid = `<div class="wczb-vs"><span>VS</span></div>`, when = '', liveCls = '';
+    if (ev) {
+      const c = ev.competitions[0], st = c.status?.type?.state, d = new Date(ev.date);
+      const comps = {}; c.competitors.forEach(x => comps[String(x.team?.id ?? x.id)] = x);
+      if (st === 'in' || st === 'post') {
+        const sa = +(ta ? comps[ta.id]?.score ?? 0 : 0), sb = +(tb ? comps[tb.id]?.score ?? 0 : 0);
+        const pa = st === 'post' ? (sa > sb ? 'win' : sa < sb ? 'lose' : '') : '';
+        const pb = st === 'post' ? (sb > sa ? 'win' : sb < sa ? 'lose' : '') : '';
+        aScore = scoreHtml(sa, pa); bScore = scoreHtml(sb, pb);
+        if (st === 'in') { liveCls = ' live'; mid = `<div class="wczb-vs"><span class="wczb-status live">&#9679; ${c.status?.type?.shortDetail || 'LIVE'}</span></div>`; }
+        else mid = `<div class="wczb-vs"><span class="wczb-status">FULL TIME</span></div>`;
+        when = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } else {
+        mid = `<div class="wczb-vs"><span>${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} &middot; ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>`;
+      }
+    }
+    const rowA = ta ? _wczTeamRowHtml(ta, aScore) : _wczSlotHtml(r32[m].a, groupMap, adv, m);
+    const rowB = tb ? _wczTeamRowHtml(tb, bScore) : _wczSlotHtml(r32[m].b, groupMap, adv, m);
+    return `<div class="wczb-card${liveCls}">
+        <div class="wczb-card-h">MATCH ${m}${when ? `<span class="wczb-when">${when}</span>` : ''}</div>
+        ${rowA}${mid}${rowB}
+      </div>`;
+  };
   // Compact placeholder node for a not-yet-played later-round match.
   const fut = (label, num, l1, l2) => `<div class="wczb-fut">
       <div class="wczb-fut-h">${label} &middot; M${num}</div>
@@ -384,9 +489,12 @@ async function _wczRenderBracket() {
   html += round('rl-sf l pair', [fut('SF', 101, 'Winner M97', 'Winner M98'), fut('SF', 102, 'Winner M99', 'Winner M100')]);
   html += round('rl-final', [fut('FINAL', 104, 'Winner M101', 'Winner M102')]);
   html += `</div></div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The bracket flows left to right toward the Final; follow the connector lines to trace a team's path. The coloured edge marks how each team qualified &mdash; gold for a group winner, silver for a runner-up, bronze for a third-place wildcard. Third-place placements use FIFA's official allocation table.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The bracket flows left to right toward the Final; follow the connector lines to trace a team's path. The coloured edge marks how each team qualified &mdash; gold for a group winner, silver for a runner-up, bronze for a third-place wildcard. Live scores and kickoff times update automatically every 30 seconds; third-place placements use FIFA's official allocation table.</div>`;
   html += `</div>`;
+  // Preserve the bracket's horizontal scroll position across live refreshes.
+  const prevWrap = el.querySelector('.wczb-wrap'), sl = prevWrap ? prevWrap.scrollLeft : 0;
   el.innerHTML = html;
+  const newWrap = el.querySelector('.wczb-wrap'); if (newWrap && sl) newWrap.scrollLeft = sl;
 }
 
 // ----------------------- Advancement Odds -----------------------
@@ -743,7 +851,9 @@ function _wczPct(p) {
 // Shared advancement simulation (prob/place/cond), cached for 60s — used by the
 // bracket to fill clinched slots and route the third-place wildcards.
 async function _wczGetAdvData(groups) {
-  if (_wczAdvCache && Date.now() - _wczAdvCache.ts < 60000) return _wczAdvCache;
+  // 5-minute cache: with the group stage finished the result is fixed, so the
+  // 30s live-score refresh on the bracket tab reuses it instead of recomputing.
+  if (_wczAdvCache && Date.now() - _wczAdvCache.ts < 300000) return _wczAdvCache;
   const prep = await _wczPrepSim(groups);
   const anyRemaining = Object.values(prep.perGroup).some(pg => pg.remaining.length);
   let data, qThird;
