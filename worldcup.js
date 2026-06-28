@@ -1,29 +1,15 @@
 // ============================ World Cup Tab ============================
-// Three sub-tabs: Scores & Schedule, Standings & Bracket, Advancement Odds.
+// Three sub-tabs: Scores & Schedule, Standings, Bracket.
 // Data: ESPN public FIFA World Cup endpoints (scoreboard + standings, no key).
 // Reuses globals from index.html: _sbFetchEspnWcScoreboard, _sbWcFlag.
 
 let _wczStandingsCache = null;
 let _wczLiveTimer = null;
 let _wczAdvCache = null;
-const _wczExpanded = {};
 const _wczSlotOpen = {};
 function _wczToggleSlot(m) { _wczSlotOpen[m] = !_wczSlotOpen[m]; _wczRenderBracket(); }
 
 function _wczStopLiveRefresh() { if (_wczLiveTimer) { clearInterval(_wczLiveTimer); _wczLiveTimer = null; } }
-
-function _wczEnsureStyle() {
-  if (document.getElementById('wcz-style')) return;
-  const st = document.createElement('style');
-  st.id = 'wcz-style';
-  st.textContent = `
-    .wc-team-row { transition: background 0.12s; }
-    .wc-team-row:hover { background: rgba(255,255,255,0.06); }
-    .wc-chevron { transition: transform 0.2s ease; display:inline-block; color: var(--muted); }
-    .wc-team-row.open .wc-chevron { transform: rotate(180deg); }
-  `;
-  document.head.appendChild(st);
-}
 
 function showWcTab(tab, btn) {
   localStorage.setItem('activeWcTab', tab);
@@ -34,8 +20,8 @@ function showWcTab(tab, btn) {
   if (panel) panel.style.display = 'block';
   _wczStopLiveRefresh();
   if (tab === 'scores') { _wczRenderScores(); _wczLiveTimer = setInterval(_wczRenderScores, 30000); }
+  else if (tab === 'standings') _wczRenderStandings();
   else if (tab === 'bracket') _wczRenderBracket();
-  else if (tab === 'advance') _wczRenderAdvance();
 }
 
 // ----------------------------- data -----------------------------
@@ -292,16 +278,12 @@ function _wczSlotHtml(slot, groupMap, adv, matchNum) {
   return `<div style="color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:0.98rem">Group ${slot.g} ${posName}</div>`;
 }
 
-async function _wczRenderBracket() {
-  const el = document.getElementById('wc-panel-bracket'); if (!el) return;
+async function _wczRenderStandings() {
+  const el = document.getElementById('wc-panel-standings'); if (!el) return;
   if (!el.dataset.init) { el.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>Loading standings...</div>`; el.dataset.init = '1'; }
-  let groups, adv = null;
-  try {
-    groups = await _wczFetchGroups();
-    adv = await _wczGetAdvData(groups).catch(() => null);
-  }
+  let groups;
+  try { groups = await _wczFetchGroups(); }
   catch (e) { el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif">Could not load standings.</div>`; return; }
-  const groupMap = {}; groups.forEach(g => groupMap[g.letter] = g);
 
   let html = `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:4px 4px 10px">Group Standings</div>`;
   html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">`;
@@ -335,6 +317,20 @@ async function _wczRenderBracket() {
     </div>`;
   }).join('');
   html += `</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:8px 4px">Top eight (green) qualify. Ranked by points, then overall goal difference, then goals scored; fair-play points and FIFA ranking break any remaining ties.</div>`;
+  el.innerHTML = html;
+}
+
+async function _wczRenderBracket() {
+  const el = document.getElementById('wc-panel-bracket'); if (!el) return;
+  if (!el.dataset.init) { el.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>Loading bracket...</div>`; el.dataset.init = '1'; }
+  let groups, adv = null;
+  try {
+    groups = await _wczFetchGroups();
+    adv = await _wczGetAdvData(groups).catch(() => null);
+  }
+  catch (e) { el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif">Could not load bracket.</div>`; return; }
+  const groupMap = {}; groups.forEach(g => groupMap[g.letter] = g);
+  let html = '';
 
   // Round of 32 bracket — a single left-to-right knockout tree. Both halves of
   // the draw are stacked vertically (top half above bottom half) so the rounds
@@ -344,7 +340,7 @@ async function _wczRenderBracket() {
   // into the next round.
   html += _WCZ_BRACKET_CSS;
   html += `<div class="wczb-section">`;
-  html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:18px 4px 8px">Round of 32 Bracket</div>`;
+  html += `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:4px 4px 8px">Round of 32 Bracket</div>`;
   const r32 = {}; _WCZ_R32.forEach(mt => r32[mt.m] = mt);
   const card = m => { const mt = r32[m]; return `<div class="wczb-card">
       <div class="wczb-card-h">MATCH ${mt.m}</div>
@@ -728,10 +724,9 @@ function _wczPct(p) {
   if (v <= 0.5) return '<1%';          // don't let a live chance round down to 0%
   return (v < 10 ? v.toFixed(1) : String(Math.round(v))) + '%';
 }
-function _wczToggleTeam(id) { _wczExpanded[id] = !_wczExpanded[id]; _wczRenderAdvance(true); }
 
-// Shared advancement simulation (prob/place/cond), cached for 60s — used by both
-// the Advancement Odds tab and the bracket (to fill clinched slots early).
+// Shared advancement simulation (prob/place/cond), cached for 60s — used by the
+// bracket to fill clinched slots and route the third-place wildcards.
 async function _wczGetAdvData(groups) {
   if (_wczAdvCache && Date.now() - _wczAdvCache.ts < 60000) return _wczAdvCache;
   const prep = await _wczPrepSim(groups);
@@ -773,121 +768,4 @@ async function _wczGetAdvData(groups) {
   }
   _wczAdvCache = data;
   return data;
-}
-
-async function _wczRenderAdvance(fromToggle) {
-  const el = document.getElementById('wc-panel-advance'); if (!el) return;
-  _wczEnsureStyle();
-  if (!fromToggle && !el.dataset.init) { el.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>Simulating tournament...</div>`; el.dataset.init = '1'; }
-  let groups, data;
-  try {
-    groups = await _wczFetchGroups();
-    data = await _wczGetAdvData(groups);
-  } catch (e) { el.innerHTML = `<div style="padding:24px;color:var(--muted);font-family:'Barlow Condensed',sans-serif">Could not load data.</div>`; return; }
-
-  const tmap = {}; groups.forEach(g => g.teams.forEach(t => tmap[t.id] = { ...t, group: g.letter }));
-  const pl = id => data.place?.[id] || { p1: 0, p2: 0, p3: 0 };
-  const all = Object.values(tmap).sort((a, b) =>
-    (data.prob[b.id] - data.prob[a.id]) ||
-    (pl(b.id).p1 - pl(a.id).p1) ||
-    (pl(b.id).p2 - pl(a.id).p2) ||
-    (pl(b.id).p3 - pl(a.id).p3) ||
-    b.P - a.P || b.GD - a.GD);
-
-  let html = `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.21rem;letter-spacing:2px;color:var(--muted);padding:4px 4px 4px">Probability of Reaching the Round of 32</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.81rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:0 4px 12px">Monte Carlo simulation of the remaining group matches using the 2026 tiebreakers (head-to-head first). Tap a country for its qualification scenarios.</div>`;
-  const colHead = (txt, w) => `<span style="width:${w}px;text-align:right;flex-shrink:0">${txt}</span>`;
-  html += `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">`;
-  html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted)">
-      <span style="width:24px;flex-shrink:0"></span>
-      <span style="flex:1">Team</span>
-      ${colHead('1st', 44)}${colHead('2nd', 44)}${colHead('3rd', 44)}${colHead('R32', 50)}
-      <span style="width:14px;flex-shrink:0"></span>
-    </div>`;
-  const col = (val, w, color, strong) => `<span style="width:${w}px;text-align:right;flex-shrink:0;font-family:'${strong ? 'Bebas Neue' : 'Barlow Condensed'}',sans-serif;font-size:${strong ? '1.13rem' : '0.98rem'};color:${color}">${val}</span>`;
-  for (const t of all) {
-    const p = data.prob[t.id];
-    const pl = data.place[t.id] || { p1: 0, p2: 0, p3: 0, p4: 0 };
-    const pColor = p >= 0.999 ? '#22c55e' : p <= 0.001 ? '#ef4444' : p >= 0.5 ? 'var(--text)' : 'var(--muted)';
-    const dim = v => v <= 0.001 ? 'rgba(255,255,255,0.25)' : 'var(--text)';
-    const open = _wczExpanded[t.id];
-    html += `<div onclick="_wczToggleTeam('${t.id}')" class="wc-team-row${open ? ' open' : ''}" style="cursor:pointer;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);${open ? 'background:rgba(255,255,255,0.04)' : ''}">
-      <div style="display:flex;align-items:center;gap:8px">
-        ${_wczTeamLogo(t.logo, 24)}
-        <span style="flex:1;min-width:0;font-family:'Barlow Condensed',sans-serif;font-size:1.09rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name} <span style="color:var(--muted);font-size:0.86rem">(Grp ${t.group})</span></span>
-        ${col(_wczPct(pl.p1), 44, dim(pl.p1))}
-        ${col(_wczPct(pl.p2), 44, dim(pl.p2))}
-        ${col(_wczPct(pl.p3), 44, dim(pl.p3))}
-        ${col(_wczPct(p), 50, pColor, true)}
-        <span class="wc-chevron" style="font-size:0.8rem;width:14px;text-align:center;flex-shrink:0">&#9662;</span>
-      </div>
-      ${open ? _wczTeamDetail(t, data, tmap) : ''}
-    </div>`;
-  }
-  html += `</div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.76rem;letter-spacing:0.5px;color:rgba(255,255,255,0.3);padding:10px 4px">Group ranking applies head-to-head points, head-to-head goal difference and goals, then overall goal difference and goals scored, per the 2026 rules.</div>`;
-  el.innerHTML = html;
-}
-
-function _wczBranch(p) {
-  if (p == null) return ['—', 'var(--muted)'];
-  if (p >= 0.995) return ['Advances', '#22c55e'];
-  if (p <= 0.005) return ['Eliminated', '#ef4444'];
-  return [_wczPct(p) + ' (goals / 3rd-place race)', p >= 0.5 ? '#9be3b4' : 'var(--muted)'];
-}
-
-function _wczTeamDetail(t, data, tmap) {
-  const p = data.prob[t.id];
-  const info = data.info[t.id] || {};
-  const nm = id => tmap[id]?.name || 'opponent';
-  // Label on the left, value on the right; the grouped cards keep them associated.
-  const leader = (label, value, color, o = {}) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;${o.indent ? 'padding:4px 0 4px 16px' : 'padding:5px 0'};font-family:'Barlow Condensed',sans-serif;font-size:${o.size || '0.9rem'}">
-      <span style="color:${o.labelColor || 'var(--muted)'};font-weight:${o.bold ? '700' : '400'}">${label}</span>
-      <span style="color:${color || 'var(--text)'};white-space:nowrap;font-weight:600;text-align:right">${value}</span>
-    </div>`;
-  const current = leader('Current', `${t.P} pts &middot; ${t.W}-${t.D}-${t.L} &middot; ${t.GD > 0 ? '+' + t.GD : t.GD} GD &middot; ${t.gp} GP`, 'var(--text)');
-
-  // Projected group finish (placement probabilities from the simulation).
-  const pl = data.place?.[t.id];
-  let finishBlock = '';
-  if (pl) {
-    finishBlock = `<div style="margin-top:8px;padding:6px 9px;background:rgba(255,255,255,0.03);border-radius:6px">`
-      + leader('Projected group finish', '', null, { bold: true, labelColor: 'var(--text)', size: '0.92rem' })
-      + leader('Win the group (1st)', _wczPct(pl.p1), '#22c55e', { indent: true, size: '0.85rem' })
-      + leader('Runner-up (2nd)', _wczPct(pl.p2), '#22c55e', { indent: true, size: '0.85rem' })
-      + leader('Third place (3rd)', _wczPct(pl.p3), 'var(--accent2)', { indent: true, size: '0.85rem' })
-      + leader('Bottom of group (4th)', _wczPct(pl.p4), 'var(--muted)', { indent: true, size: '0.85rem' })
-      + `</div>`;
-  }
-
-  let body = '';
-  if (p >= 0.999) body = leader('Status', 'Qualified for the Round of 32', '#22c55e');
-  else if (p <= 0.001) body = leader('Status', 'Eliminated', '#ef4444');
-  else if (!info.hasMatch) body = leader('Status', "Depends on other groups' 3rd-place teams", 'var(--accent2)');
-  else if (info.detailed) {
-    const c = data.cond[t.id];
-    const o1 = nm(info.o1), o2 = nm(info.o2), opp = nm(info.oppId);
-    const seg = (verb, bucket) => {
-      if (!bucket || bucket.all == null) return '';
-      const settle = bucket.all >= 0.999 ? 'in' : bucket.all <= 0.001 ? 'out' : null;
-      const headVal = settle === 'in' ? 'Through (100%)' : settle === 'out' ? 'Out (0%)' : `${_wczPct(bucket.all)} to advance`;
-      const headColor = settle === 'out' ? '#ef4444' : bucket.all >= 0.5 ? '#22c55e' : 'var(--muted)';
-      let block = leader(`If ${t.name} ${verb}`, headVal, headColor, { bold: true, labelColor: 'var(--text)', size: '0.92rem' });
-      if (!settle) {
-        const branch = (lbl, pr) => { const [txt, col] = _wczBranch(pr); return leader(lbl, txt, col, { indent: true, size: '0.85rem' }); };
-        block += branch(`${o1} beat ${o2}`, bucket.a) + branch(`${o1} & ${o2} draw`, bucket.d) + branch(`${o2} beat ${o1}`, bucket.b);
-      }
-      return `<div style="margin-top:8px;padding:6px 9px;background:rgba(255,255,255,0.03);border-radius:6px">${block}</div>`;
-    };
-    body = leader('Final match', `vs ${opp}`, 'var(--text)')
-      + `<div style="margin-top:2px;font-family:'Barlow Condensed',sans-serif;font-size:0.94rem;color:rgba(255,255,255,0.45)">Other match in the group: ${o1} vs ${o2}</div>`
-      + seg('win', c.win) + seg('draw', c.draw) + seg('lose', c.loss);
-  } else {
-    const c = data.cond[t.id];
-    body = leader('Final match', `vs ${nm(info.oppId)}`, 'var(--text)')
-      + leader('If they win', _wczPct(c.win?.all) + ' to advance', (c.win?.all ?? 0) >= 0.5 ? '#22c55e' : 'var(--text)')
-      + leader('If they draw', _wczPct(c.draw?.all) + ' to advance', (c.draw?.all ?? 0) >= 0.5 ? '#22c55e' : 'var(--muted)')
-      + leader('If they lose', _wczPct(c.loss?.all) + ' to advance', (c.loss?.all ?? 0) >= 0.5 ? '#22c55e' : '#ef4444');
-  }
-  return `<div style="margin-top:8px;padding:8px 4px 2px;border-top:1px solid rgba(255,255,255,0.06)">${current}${finishBlock}${body}</div>`;
 }

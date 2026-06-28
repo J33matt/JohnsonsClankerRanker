@@ -69,13 +69,13 @@
 
 <div id="wc-tabs" style="display:none;">
   <button class="tab-btn active" onclick="showWcTab('scores', this)">Scores &amp; Schedule</button>
-  <button class="tab-btn" onclick="showWcTab('bracket', this)">Standings &amp; Bracket</button>
-  <button class="tab-btn" onclick="showWcTab('advance', this)">Advancement Odds</button>
+  <button class="tab-btn" onclick="showWcTab('standings', this)">Standings</button>
+  <button class="tab-btn" onclick="showWcTab('bracket', this)">Bracket</button>
 </div>
 <div id="wc-panels" style="display:none; padding:16px; max-width:1100px; margin:0 auto;">
   <div id="wc-panel-scores" class="wc-panel"></div>
+  <div id="wc-panel-standings" class="wc-panel" style="display:none"></div>
   <div id="wc-panel-bracket" class="wc-panel" style="display:none"></div>
-  <div id="wc-panel-advance" class="wc-panel" style="display:none"></div>
 </div>
 
 <div id="nfl-tabs" style="display:none;">
@@ -612,7 +612,8 @@ function switchLeague(league, btn) {
   } else if (league === 'worldcup') {
     if (wcTabs) wcTabs.style.display = 'flex';
     if (wcPanels) wcPanels.style.display = 'block';
-    const _savedWcTab = localStorage.getItem('activeWcTab') || 'scores';
+    let _savedWcTab = localStorage.getItem('activeWcTab') || 'scores';
+    if (!['scores', 'standings', 'bracket'].includes(_savedWcTab)) _savedWcTab = 'scores';
     const _wcBtn = document.querySelector(`#wc-tabs button[onclick*="${_savedWcTab}"]`);
     showWcTab(_savedWcTab, _wcBtn || document.querySelector('#wc-tabs button'));
 
