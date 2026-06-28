@@ -161,9 +161,17 @@ const _WCZ_BRACKET_CSS = `<style>
 .wczb-round.l .wczb-cell::after{content:'';position:absolute;right:-24px;top:calc(50% - 1px);width:24px;height:2px;background:var(--border)}
 .wczb-round.l.pair .wczb-cell:nth-child(odd)::before{content:'';position:absolute;right:-24px;top:50%;height:50%;width:2px;background:var(--border)}
 .wczb-round.l.pair .wczb-cell:nth-child(even)::before{content:'';position:absolute;right:-24px;bottom:50%;height:50%;width:2px;background:var(--border)}
-.wczb-card{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);margin:5px 0}
-.wczb-card-h{background:var(--surface2);padding:4px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.71rem;letter-spacing:1.5px;color:var(--muted)}
-.wczb-card-s{padding:9px 11px}
+.wczb-card{position:relative;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:linear-gradient(160deg,var(--surface2),var(--surface));margin:5px 0;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+.wczb-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,0.5);border-color:rgba(255,170,0,0.55)}
+.wczb-card-h{background:linear-gradient(90deg,rgba(255,170,0,0.18),rgba(255,170,0,0) 70%);padding:3px 11px;font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2.5px;color:var(--accent2);border-bottom:1px solid var(--border)}
+.wczb-team{position:relative;display:flex;align-items:center;gap:11px;padding:9px 12px 9px 11px;border-left:3px solid var(--tc,transparent);background-repeat:no-repeat;background-position:right center;background-size:auto 165%;overflow:hidden}
+.wczb-flag{flex-shrink:0;width:40px;height:27px;border-radius:3px;overflow:hidden;box-shadow:0 2px 7px rgba(0,0,0,0.6);outline:1px solid rgba(255,255,255,0.2);display:inline-flex;background:var(--surface2)}
+.wczb-flag img{width:100%;height:100%;object-fit:cover;display:block}
+.wczb-tinfo{display:flex;flex-direction:column;min-width:0;gap:2px}
+.wczb-tname{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:0.6px;line-height:1;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px rgba(0,0,0,0.55)}
+.wczb-tseed{font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:1.4px;text-transform:uppercase;color:var(--tc);white-space:nowrap;font-weight:600}
+.wczb-vs{display:flex;align-items:center;justify-content:center;position:relative;height:1px;margin:1px 12px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
+.wczb-vs span{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0 8px;font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:1.5px;color:var(--muted)}
 .wczb-fut{border:1px dashed var(--border);border-radius:8px;overflow:hidden;background:rgba(255,255,255,0.02)}
 .wczb-fut-h{background:var(--surface2);padding:4px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:1.5px;color:var(--muted)}
 .wczb-fut-b{padding:6px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;color:var(--muted)}
@@ -212,10 +220,16 @@ function _wczAssignThirds(qLetters) {
 
 function _wczSlotHtml(slot, groupMap, adv, matchNum) {
   const place = adv?.place, byId = adv?.teamById;
-  // A clinched team — visually distinct (green accent + CLINCHED tag, no dropdown).
-  const lockedHtml = (logo, name) => `<div style="display:flex;align-items:center;gap:7px;border-left:3px solid #22c55e;padding-left:8px">
-      ${_wczTeamLogo(logo, 22)}<span style="font-family:'Barlow Condensed',sans-serif;font-size:1.06rem">${name}</span>
-      <span style="font-size:0.66rem;letter-spacing:1.5px;color:#22c55e;font-family:'Barlow Condensed',sans-serif;flex-shrink:0">CLINCHED</span></div>`;
+  // A settled team: big flag-forward row. The flag bleeds in as a faded backdrop,
+  // a crisp flag chip sits beside the name, and a medal-coloured accent (gold /
+  // silver / bronze) marks a group winner / runner-up / third place.
+  const teamRow = (logo, name, seed, color) => {
+    const bg = logo ? `;background-image:linear-gradient(90deg,var(--surface) 46%,transparent 130%),url('${logo}')` : '';
+    return `<div class="wczb-team" style="--tc:${color}${bg}">
+      <span class="wczb-flag">${logo ? `<img src="${logo}" onerror="this.parentNode.style.display='none'">` : ''}</span>
+      <span class="wczb-tinfo"><span class="wczb-tname">${name}</span><span class="wczb-tseed">${seed}</span></span>
+    </div>`;
+  };
   const candRow = (logo, name, sub, pctTxt, col, scen) => `<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,0.05)">
       <div style="display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem">
         ${_wczTeamLogo(logo, 18)}<span style="flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}${sub ? ` <span style="color:var(--muted);font-size:0.78rem">(${sub})</span>` : ''}</span>
@@ -238,7 +252,7 @@ function _wczSlotHtml(slot, groupMap, adv, matchNum) {
       const ids = Object.keys(feas).sort((a, b) => (spMap[b] || 0) - (spMap[a] || 0));
       if (ids.length) {
         const fmtP = id => { const p = spMap[id]; if (p == null) return ids.length === 1 ? '100%' : 'possible'; if (p >= 0.9995 && ids.length > 1) return '>99%'; if (p >= 0.005) return _wczPct(p); return '<1%'; };
-        if (ids.length === 1) { const t = byId[ids[0]]; return lockedHtml(t.logo, `${t.name} (${t.group})`); }
+        if (ids.length === 1) { const t = byId[ids[0]]; return teamRow(t.logo, t.name, `3rd Place &middot; Group ${t.group}`, '#d98b4a'); }
         const slotKey = matchNum + '_3', open = _wczSlotOpen[slotKey];
         const topT = byId[ids[0]];
         let body = '';
@@ -258,7 +272,7 @@ function _wczSlotHtml(slot, groupMap, adv, matchNum) {
       .filter(c => c.reach).sort((a, b) => b.p - a.p);
     if (cands.length) {
       const fmtP = p => p >= 0.9995 && cands.length > 1 ? '>99%' : p >= 0.005 ? _wczPct(p) : (cands.length === 1 ? '100%' : '<1%');
-      if (cands.length === 1) { const t = cands[0].t; return lockedHtml(t.logo, t.name); }
+      if (cands.length === 1) { const t = cands[0].t; return teamRow(t.logo, t.name, `${posName} &middot; Group ${slot.g}`, slot.t === 'W' ? '#ffd24a' : '#c9d2dc'); }
       const slotKey = matchNum + '_' + slot.t + '_' + slot.g, open = _wczSlotOpen[slotKey];
       const topT = cands[0].t;
       let body = '';
@@ -344,8 +358,9 @@ async function _wczRenderBracket() {
   const r32 = {}; _WCZ_R32.forEach(mt => r32[mt.m] = mt);
   const card = m => { const mt = r32[m]; return `<div class="wczb-card">
       <div class="wczb-card-h">MATCH ${mt.m}</div>
-      <div class="wczb-card-s" style="border-bottom:1px solid rgba(255,255,255,0.05)">${_wczSlotHtml(mt.a, groupMap, adv, mt.m)}</div>
-      <div class="wczb-card-s">${_wczSlotHtml(mt.b, groupMap, adv, mt.m)}</div>
+      ${_wczSlotHtml(mt.a, groupMap, adv, mt.m)}
+      <div class="wczb-vs"><span>VS</span></div>
+      ${_wczSlotHtml(mt.b, groupMap, adv, mt.m)}
     </div>`; };
   // Compact placeholder node for a not-yet-played later-round match.
   const fut = (label, num, l1, l2) => `<div class="wczb-fut">
@@ -369,7 +384,7 @@ async function _wczRenderBracket() {
   html += round('rl-sf l pair', [fut('SF', 101, 'Winner M97', 'Winner M98'), fut('SF', 102, 'Winner M99', 'Winner M100')]);
   html += round('rl-final', [fut('FINAL', 104, 'Winner M101', 'Winner M102')]);
   html += `</div></div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The bracket flows left to right toward the Final; follow the connector lines to trace a team's path. A green CLINCHED tag marks a team locked into a spot. Any slot still in play is a dropdown — tap it to see every team that can still take it, its chance, and the result it needs. Candidate lists come from an exhaustive possibility search (so long shots show too); the third-place slot routing uses FIFA's official allocation table.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The bracket flows left to right toward the Final; follow the connector lines to trace a team's path. The coloured edge marks how each team qualified &mdash; gold for a group winner, silver for a runner-up, bronze for a third-place wildcard. Third-place placements use FIFA's official allocation table.</div>`;
   html += `</div>`;
   el.innerHTML = html;
 }
