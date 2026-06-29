@@ -8420,6 +8420,7 @@ async function _sbFetchWcScores() {
       const awayC = comp.competitors?.find(c => c.homeAway === 'away');
       if (!homeC || !awayC) continue;
       const key = [_sbWcNormName(homeC.team?.displayName), _sbWcNormName(awayC.team?.displayName)].sort().join('|');
+      const _etStr = `${comp.status?.type?.detail || ''} ${comp.status?.type?.shortDetail || ''}`.toLowerCase();
       result[key] = {
         espnHome: homeC.team?.displayName,
         espnAway: awayC.team?.displayName,
@@ -8427,6 +8428,10 @@ async function _sbFetchWcScores() {
         awayScore: awayC.score ?? '',
         state: comp.status?.type?.state,
         shortDetail: comp.status?.type?.shortDetail,
+        // True if the game went past 90' (extra time / penalties). The 3-way
+        // moneyline and DNB are 90-minute markets, so a knockout that reaches ET
+        // was level at 90' and settles as a draw.
+        wentToET: (comp.status?.period || 0) > 2 || /aet|extra time|\bpens?\b|penalt|shootout/.test(_etStr),
       };
     }
     _sbWcScoreCache.data = result;
@@ -8711,6 +8716,13 @@ async function _sbRenderWorldCupSection() {
     <button style="${tabStyle('game_props')}" onclick="_sbSetWcSubTab('game_props')">GAME PROPS</button>
     <button style="${tabStyle('player_props')}" onclick="_sbSetWcSubTab('player_props')">PLAYER PROPS</button>
   </div>`;
+
+  if (_sbWcSubTab === 'matches' || _sbWcSubTab === 'dnb') {
+    html += `<div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:14px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,0.02);font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;letter-spacing:0.5px;color:var(--muted);line-height:1.35">
+      <span style="color:var(--accent);font-weight:700;flex-shrink:0">90'</span>
+      <span>Moneylines settle on the <strong style="color:var(--text)">90-minute result only</strong> (regulation). Extra time and penalties don't count — in the knockouts, a tie after 90 minutes settles as a <strong style="color:var(--text)">Draw</strong> (and Draw No Bet pushes), even if the match is decided later.</span>
+    </div>`;
+  }
 
   if (_sbWcSubTab === 'matches') {
     // Group by date, render flat with dividers
@@ -10137,6 +10149,10 @@ async function _sbGradeWcLeg(leg, scoreboard) {
   if (!comp) return null;
   const state = comp.status?.type?.state || 'pre';
   const period = comp.status?.period || 0;
+  // Did the game go past 90' (extra time / penalties)? Soccer has 2 regular
+  // periods; ET adds period 3+, and the status detail reads AET / Pens.
+  const _sd = `${comp.status?.type?.detail || ''} ${comp.status?.type?.shortDetail || ''}`.toLowerCase();
+  const wentToET = period > 2 || /aet|extra time|\bpens?\b|penalt|shootout/.test(_sd);
   const homeC = comp.competitors?.find(c => c.homeAway === 'home');
   const awayC = comp.competitors?.find(c => c.homeAway === 'away');
   const eHs = parseInt(homeC?.score || '0'), eAs = parseInt(awayC?.score || '0');
@@ -10148,7 +10164,22 @@ async function _sbGradeWcLeg(leg, scoreboard) {
   const as_ = bHisEH ? eAs : eHs;  // bet-away goals
   const total = hs + as_;
   const is1H = ['wc_1h_over','wc_1h_under','wc_1hml_home','wc_1hml_away','wc_1hml_draw'].includes(t);
+  const isReg90 = ['wc_home','wc_away','wc_draw','wc_dnb_home','wc_dnb_away'].includes(t);
   if (is1H) { if (!(state === 'post' || period >= 2)) return null; }
+  else if (isReg90) {
+    // 3-way moneyline and Draw No Bet are 90-minute (regulation) markets, matching
+    // the DraftKings odds used. They settle once regulation is complete — at full
+    // time, or as soon as a knockout tie goes to extra time. In a single-leg
+    // knockout, reaching ET means the score was level at 90', so the 90' result is
+    // a draw regardless of what happens in extra time or penalties.
+    if (!(state === 'post' || wentToET)) return null;
+    if (wentToET) {
+      if (t === 'wc_draw') return 'win';
+      if (t === 'wc_dnb_home' || t === 'wc_dnb_away') return 'push';
+      return 'loss'; // wc_home / wc_away — backed a side, but 90' was a draw
+    }
+    // decided within 90': the final score is the regulation score — fall through.
+  }
   else if (state !== 'post') return null;
 
   switch (t) {
@@ -10266,8 +10297,14 @@ async function _sbAutoSettle() {
       const homeIsHome = _sbWcNormName(sc.espnHome) === _sbWcNormName(oddsHome);
       const oddsHomeScore = homeIsHome ? espnHomeScore : espnAwayScore;
       const oddsAwayScore = homeIsHome ? espnAwayScore : espnHomeScore;
+      if (sc.wentToET) {
+        // 90-minute market: a knockout that reached extra time was level at 90'.
+        if (leg.type === 'wc_draw') finalResult = 'win';
+        else if (leg.type === 'wc_dnb_home' || leg.type === 'wc_dnb_away') finalResult = 'push';
+        else finalResult = 'loss'; // wc_home / wc_away — 90' ended in a draw
+      }
       // 3-way market: draw is a loss for home/away bettors (no push)
-      if (leg.type === 'wc_home')
+      else if (leg.type === 'wc_home')
         finalResult = oddsHomeScore > oddsAwayScore ? 'win' : 'loss';
       else if (leg.type === 'wc_away')
         finalResult = oddsAwayScore > oddsHomeScore ? 'win' : 'loss';
@@ -12463,25 +12500,29 @@ function _wcStatusRow(winning, label) {
   return `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:${c};margin-top:3px">${winning ? '✓' : '✗'} ${label}</div>`;
 }
 
-function _wcMatchTracker(hs, as_, stateLabel, stateColor, leg) {
+function _wcMatchTracker(hs, as_, stateLabel, stateColor, leg, wentToET) {
+  // 90-minute market: once a knockout reaches extra time, the 90' result is a draw.
   let winning;
-  if (leg.type === 'wc_home') winning = hs > as_;
+  if (wentToET) winning = leg.type === 'wc_draw';
+  else if (leg.type === 'wc_home') winning = hs > as_;
   else if (leg.type === 'wc_away') winning = as_ > hs;
   else winning = hs === as_;
   const [h, a] = (leg.homeAbbr || '').split(' vs ');
   const block = _wcScoreBlock(h||'Home', a||'Away', hs, as_, stateLabel, stateColor);
-  const status = stateLabel === 'FINAL' || stateLabel !== 'PRE' ? _wcStatusRow(winning, winning ? 'Winning' : 'Losing') : '';
+  const label = wentToET ? (winning ? "Won — draw at 90'" : "Lost — draw at 90'") : (winning ? 'Winning' : 'Losing');
+  const status = stateLabel !== 'PRE' ? _wcStatusRow(winning, label) : '';
   return block + status;
 }
 
-function _wcDnbTracker(hs, as_, stateLabel, stateColor, leg) {
+function _wcDnbTracker(hs, as_, stateLabel, stateColor, leg, wentToET) {
   const isHome = leg.type === 'wc_dnb_home';
   const [h, a] = (leg.homeAbbr || '').split(' vs ');
   const block = _wcScoreBlock(h||'Home', a||'Away', hs, as_, stateLabel, stateColor);
   let statusRow = '';
   if (stateLabel !== 'PRE') {
-    if (hs === as_) {
-      statusRow = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:var(--muted);margin-top:3px">↺ Level — stake refunds (Draw No Bet)</div>`;
+    if (wentToET || hs === as_) {
+      // Level at 90' (or headed to ET) → Draw No Bet refunds the stake.
+      statusRow = `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:var(--muted);margin-top:3px">↺ Level at 90' — stake refunds (Draw No Bet)</div>`;
     } else {
       const winning = isHome ? hs > as_ : as_ > hs;
       const c = winning ? 'var(--green)' : 'var(--red)';
@@ -12732,6 +12773,8 @@ async function _sbFillWcBetTrackers(bets) {
       const hs = swapped ? eAs : eHs;
       const as_ = swapped ? eHs : eAs;
       const isLive = state === 'in';
+      const _etS = `${comp?.status?.type?.detail || ''} ${comp?.status?.type?.shortDetail || ''}`.toLowerCase();
+      const wentToET = (comp?.status?.period || 0) > 2 || /aet|extra time|\bpens?\b|penalt|shootout/.test(_etS);
       const stateLabel = isLive ? '● LIVE' : 'FINAL';
       const stateColor = isLive ? '#22c55e' : 'var(--muted)';
       const summary = summaries[eid] || null;
@@ -12741,9 +12784,9 @@ async function _sbFillWcBetTrackers(bets) {
       const bAId = swapped ? eHId : eAId;
       let html = '';
       if (['wc_home','wc_away','wc_draw'].includes(l.type)) {
-        html = _wcMatchTracker(hs, as_, stateLabel, stateColor, l);
+        html = _wcMatchTracker(hs, as_, stateLabel, stateColor, l, wentToET);
       } else if (['wc_dnb_home','wc_dnb_away'].includes(l.type)) {
-        html = _wcDnbTracker(hs, as_, stateLabel, stateColor, l);
+        html = _wcDnbTracker(hs, as_, stateLabel, stateColor, l, wentToET);
       } else if (['wc_btts_yes','wc_btts_no'].includes(l.type)) {
         html = _wcBttsTracker(hs, as_, stateLabel, stateColor, l);
       } else if (['wc_cs_home_yes','wc_cs_home_no','wc_cs_away_yes','wc_cs_away_no'].includes(l.type)) {
