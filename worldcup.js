@@ -178,6 +178,15 @@ const _WCZ_BRACKET_CSS = `<style>
 .wczb-vs .wczb-status.live{color:#22c55e;border-color:rgba(34,197,94,0.6);background:rgba(34,197,94,0.12)}
 .wczb-card.live{border-color:rgba(34,197,94,0.6);box-shadow:0 0 0 1px rgba(34,197,94,0.35),0 8px 22px rgba(0,0,0,0.5)}
 .wczb-when{float:right;color:var(--muted);letter-spacing:1px}
+.wczb-team.elim{opacity:0.4;filter:grayscale(0.95)}
+.wczb-team.elim .wczb-tname{color:var(--muted);text-shadow:none}
+.wczb-card-c .wczb-card-h{font-size:0.6rem;letter-spacing:1.5px;padding:3px 9px}
+.wczb-card-c .wczb-team{padding:6px 9px;gap:8px}
+.wczb-card-c .wczb-flag{width:30px;height:20px}
+.wczb-card-c .wczb-tname{font-size:1rem}
+.wczb-card-c .wczb-score{font-size:1.25rem}
+.wczb-card-c .wczb-vs{margin:1px 9px}
+.wczb-ph{padding:8px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.86rem;letter-spacing:0.5px;color:var(--muted)}
 .wczb-fut{border:1px dashed var(--border);border-radius:8px;overflow:hidden;background:rgba(255,255,255,0.02)}
 .wczb-fut-h{background:var(--surface2);padding:4px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:1.5px;color:var(--muted)}
 .wczb-fut-b{padding:6px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;color:var(--muted)}
@@ -382,6 +391,24 @@ function _wczTeamRowHtml(team, score) {
   </div>`;
 }
 
+// How each knockout match is fed by the winners of two earlier matches.
+const _WCZ_FEEDS = {
+  89: [74, 77], 90: [73, 75], 93: [83, 84], 94: [81, 82], 91: [76, 78], 92: [79, 80], 95: [86, 88], 96: [85, 87],
+  97: [89, 90], 98: [93, 94], 99: [91, 92], 100: [95, 96], 101: [97, 98], 102: [99, 100], 104: [101, 102],
+};
+const _WCZ_ROUND_NAME = m => m >= 73 && m <= 88 ? 'Round of 32' : m >= 89 && m <= 96 ? 'Round of 16' : m >= 97 && m <= 100 ? 'Quarterfinal' : m >= 101 && m <= 102 ? 'Semifinal' : m === 104 ? 'Final' : '';
+
+// Winning team id of a completed knockout tie, by the actual result (extra time /
+// penalties included — unlike the 90' moneyline), or null if not yet decided.
+function _wczWinnerId(ev) {
+  const c = ev?.competitions?.[0]; if (!c || c.status?.type?.state !== 'post') return null;
+  const w = (c.competitors || []).find(x => x.winner === true);
+  if (w) return String(w.team?.id ?? w.id);
+  const cs = c.competitors || [];
+  if (cs.length === 2) { const s0 = +(cs[0].score || 0), s1 = +(cs[1].score || 0); if (s0 !== s1) { const t = s0 > s1 ? cs[0] : cs[1]; return String(t.team?.id ?? t.id); } }
+  return null;
+}
+
 async function _wczRenderBracket() {
   const el = document.getElementById('wc-panel-bracket'); if (!el) return;
   if (!el.dataset.init) { el.innerHTML = `<div class="loading-spinner"><div class="spinner"></div>Loading bracket...</div>`; el.dataset.init = '1'; }
@@ -401,16 +428,31 @@ async function _wczRenderBracket() {
     const c = ev.competitions?.[0]; if (!c || !c.competitors || c.competitors.length < 2) continue;
     evByPair[c.competitors.map(x => String(x.team?.id ?? x.id)).sort().join('_')] = ev;
   }
-  // Resolve all 16 R32 ties up front (teams + their event) and gather header
-  // stats: the earliest kickoff (start date) and how many games are live now.
+  // Resolve each match's two teams. A later round's participants are the winners
+  // (advancers) of its two feeder matches, resolved recursively with memoisation,
+  // so results propagate forward as knockout games finish.
   const r32 = {}; _WCZ_R32.forEach(mt => r32[mt.m] = mt);
-  const matchData = {}; let earliest = null, liveNow = 0;
-  for (const mt of _WCZ_R32) {
-    const ta = _wczSlotTeam(mt.a, groupMap, adv, mt.m), tb = _wczSlotTeam(mt.b, groupMap, adv, mt.m);
-    const ev = (ta && tb) ? (evByPair[[ta.id, tb.id].sort().join('_')] || null) : null;
-    if (ev) { const d = new Date(ev.date); if (!earliest || d < earliest) earliest = d; if (ev.competitions?.[0]?.status?.type?.state === 'in') liveNow++; }
-    matchData[mt.m] = { ta, tb, ev };
+  const R32SET = new Set(_WCZ_R32.map(mt => mt.m));
+  const teamsMemo = {}, advMemo = {};
+  const evForPair = (t1, t2) => (t1 && t2) ? (evByPair[[t1.id, t2.id].sort().join('_')] || null) : null;
+  function teamsForMatch(m) {
+    if (teamsMemo[m]) return teamsMemo[m];
+    let res;
+    if (R32SET.has(m)) { const mt = r32[m]; res = [_wczSlotTeam(mt.a, groupMap, adv, m), _wczSlotTeam(mt.b, groupMap, adv, m)]; }
+    else { const [c1, c2] = _WCZ_FEEDS[m]; res = [advancerOf(c1), advancerOf(c2)]; }
+    teamsMemo[m] = res; return res;
   }
+  function advancerOf(m) {
+    if (m in advMemo) return advMemo[m];
+    const [t1, t2] = teamsForMatch(m);
+    const wid = _wczWinnerId(evForPair(t1, t2));
+    advMemo[m] = wid ? (t1 && t1.id === wid ? t1 : t2 && t2.id === wid ? t2 : null) : null;
+    return advMemo[m];
+  }
+  // Header stats: earliest R32 kickoff (start date) and live knockout games.
+  let earliest = null, liveNow = 0;
+  for (const mt of _WCZ_R32) { const [t1, t2] = teamsForMatch(mt.m), ev = evForPair(t1, t2); if (ev) { const d = new Date(ev.date); if (!earliest || d < earliest) earliest = d; } }
+  for (const m of [..._WCZ_R32.map(x => x.m), ...Object.keys(_WCZ_FEEDS).map(Number)]) { const [t1, t2] = teamsForMatch(m), ev = evForPair(t1, t2); if (ev?.competitions?.[0]?.status?.type?.state === 'in') liveNow++; }
 
   // Round of 32 bracket — a single left-to-right knockout tree. Both halves of
   // the draw are stacked vertically (top half above bottom half) so the rounds
@@ -442,52 +484,59 @@ async function _wczRenderBracket() {
     </div>`;
 
   const scoreHtml = (val, cls) => `<span class="wczb-score${cls ? ' ' + cls : ''}">${val}</span>`;
-  const card = m => {
-    const { ta, tb, ev } = matchData[m];
-    let aScore = '', bScore = '', mid = `<div class="wczb-vs"><span>VS</span></div>`, when = '', liveCls = '';
+  // One team row: flag, name, optional seed (full cards only) and score. A team
+  // that lost a finished tie (eliminated) is greyed out.
+  const teamLine = (team, opts) => {
+    if (!team) return `<div class="wczb-ph">${opts.fallback || 'TBD'}</div>`;
+    const cls = 'wczb-team' + (opts.elim ? ' elim' : '') + (opts.win ? ' win' : '');
+    const bg = team.logo ? `;background-image:linear-gradient(90deg,var(--surface) 46%,transparent 130%),url('${team.logo}')` : '';
+    const flag = team.logo ? `<img src="${team.logo}" onerror="this.parentNode.style.display='none'">` : '';
+    return `<div class="${cls}" style="--tc:${team.color}${bg}">
+      <span class="wczb-flag">${flag}</span>
+      <span class="wczb-tinfo"><span class="wczb-tname">${team.name}</span>${opts.compact ? '' : `<span class="wczb-tseed">${team.seedLabel}</span>`}</span>
+      ${opts.score || ''}
+    </div>`;
+  };
+  // Render a match node. R32 ties are full cards; later rounds are compact and show
+  // the advancing teams once their feeders finish. Displays kickoff time / live
+  // score / final result and greys the eliminated side.
+  const nodeHtml = (m, compact) => {
+    const [t1, t2] = teamsForMatch(m), ev = evForPair(t1, t2), [c1, c2] = _WCZ_FEEDS[m] || [];
+    let s1 = '', s2 = '', mid = `<div class="wczb-vs"><span>VS</span></div>`, when = '', liveCls = '';
+    let elim1 = false, elim2 = false, win1 = false, win2 = false;
     if (ev) {
       const c = ev.competitions[0], st = c.status?.type?.state, d = new Date(ev.date);
-      const comps = {}; c.competitors.forEach(x => comps[String(x.team?.id ?? x.id)] = x);
+      const cm = {}; c.competitors.forEach(x => cm[String(x.team?.id ?? x.id)] = x);
       if (st === 'in' || st === 'post') {
-        const sa = +(ta ? comps[ta.id]?.score ?? 0 : 0), sb = +(tb ? comps[tb.id]?.score ?? 0 : 0);
-        const pa = st === 'post' ? (sa > sb ? 'win' : sa < sb ? 'lose' : '') : '';
-        const pb = st === 'post' ? (sb > sa ? 'win' : sb < sa ? 'lose' : '') : '';
-        aScore = scoreHtml(sa, pa); bScore = scoreHtml(sb, pb);
+        const a = +(t1 ? cm[t1.id]?.score ?? 0 : 0), b = +(t2 ? cm[t2.id]?.score ?? 0 : 0);
+        if (st === 'post') { const wid = _wczWinnerId(ev); win1 = !!(t1 && wid === t1.id); win2 = !!(t2 && wid === t2.id); elim1 = !!(t1 && wid && wid !== t1.id); elim2 = !!(t2 && wid && wid !== t2.id); }
+        s1 = scoreHtml(a, st === 'post' ? (win1 ? 'win' : 'lose') : ''); s2 = scoreHtml(b, st === 'post' ? (win2 ? 'win' : 'lose') : '');
         if (st === 'in') { liveCls = ' live'; mid = `<div class="wczb-vs"><span class="wczb-status live">&#9679; ${c.status?.type?.shortDetail || 'LIVE'}</span></div>`; }
-        else mid = `<div class="wczb-vs"><span class="wczb-status">FULL TIME</span></div>`;
+        else mid = `<div class="wczb-vs"><span class="wczb-status">${c.status?.type?.shortDetail || 'FT'}</span></div>`;
         when = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       } else {
         mid = `<div class="wczb-vs"><span>${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} &middot; ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>`;
       }
     }
-    const rowA = ta ? _wczTeamRowHtml(ta, aScore) : _wczSlotHtml(r32[m].a, groupMap, adv, m);
-    const rowB = tb ? _wczTeamRowHtml(tb, bScore) : _wczSlotHtml(r32[m].b, groupMap, adv, m);
-    return `<div class="wczb-card${liveCls}">
-        <div class="wczb-card-h">MATCH ${m}${when ? `<span class="wczb-when">${when}</span>` : ''}</div>
-        ${rowA}${mid}${rowB}
+    const label = compact ? `${_WCZ_ROUND_NAME(m)} &middot; M${m}` : `MATCH ${m}`;
+    const row1 = teamLine(t1, { score: s1, elim: elim1, win: win1, compact, fallback: `Winner M${c1 || ''}` });
+    const row2 = teamLine(t2, { score: s2, elim: elim2, win: win2, compact, fallback: `Winner M${c2 || ''}` });
+    return `<div class="wczb-card${compact ? ' wczb-card-c' : ''}${liveCls}">
+        <div class="wczb-card-h">${label}${when ? `<span class="wczb-when">${when}</span>` : ''}</div>
+        ${row1}${mid}${row2}
       </div>`;
   };
-  // Compact placeholder node for a not-yet-played later-round match.
-  const fut = (label, num, l1, l2) => `<div class="wczb-fut">
-      <div class="wczb-fut-h">${label} &middot; M${num}</div>
-      <div class="wczb-fut-b">${l1}</div>
-      <div class="wczb-fut-b">${l2}</div>
-    </div>`;
   // The first bottom-half cell (index = half the column) gets `half-start`, which
   // adds the extra space dividing the two halves of the draw. Same proportion in
   // every column, so the rounds stay aligned.
   const round = (cls, cells) => { const half = cells.length > 1 ? cells.length / 2 : -1; return `<div class="wczb-round ${cls}">${cells.map((c, i) => `<div class="wczb-cell${i === half ? ' half-start' : ''}">${c}</div>`).join('')}</div>`; };
   html += `<div class="wczb-wrap"><div class="wczb">`;
   // Top half then bottom half, stacked into one rightward-flowing bracket.
-  html += round('rl-r32 l pair', [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87].map(card));
-  html += round('rl-r16 l pair', [
-    fut('R16', 89, 'Winner M74', 'Winner M77'), fut('R16', 90, 'Winner M73', 'Winner M75'), fut('R16', 93, 'Winner M83', 'Winner M84'), fut('R16', 94, 'Winner M81', 'Winner M82'),
-    fut('R16', 91, 'Winner M76', 'Winner M78'), fut('R16', 92, 'Winner M79', 'Winner M80'), fut('R16', 95, 'Winner M86', 'Winner M88'), fut('R16', 96, 'Winner M85', 'Winner M87')]);
-  html += round('rl-qf l pair', [
-    fut('QF', 97, 'Winner M89', 'Winner M90'), fut('QF', 98, 'Winner M93', 'Winner M94'),
-    fut('QF', 99, 'Winner M91', 'Winner M92'), fut('QF', 100, 'Winner M95', 'Winner M96')]);
-  html += round('rl-sf l pair', [fut('SF', 101, 'Winner M97', 'Winner M98'), fut('SF', 102, 'Winner M99', 'Winner M100')]);
-  html += round('rl-final', [fut('FINAL', 104, 'Winner M101', 'Winner M102')]);
+  html += round('rl-r32 l pair', [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87].map(m => nodeHtml(m, false)));
+  html += round('rl-r16 l pair', [89, 90, 93, 94, 91, 92, 95, 96].map(m => nodeHtml(m, true)));
+  html += round('rl-qf l pair', [97, 98, 99, 100].map(m => nodeHtml(m, true)));
+  html += round('rl-sf l pair', [101, 102].map(m => nodeHtml(m, true)));
+  html += round('rl-final', [104].map(m => nodeHtml(m, true)));
   html += `</div></div>`;
   html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The bracket flows left to right toward the Final; follow the connector lines to trace a team's path. The coloured edge marks how each team qualified &mdash; gold for a group winner, silver for a runner-up, bronze for a third-place wildcard. Live scores and kickoff times update automatically every 30 seconds; third-place placements use FIFA's official allocation table.</div>`;
   html += `</div>`;
