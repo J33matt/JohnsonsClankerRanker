@@ -151,60 +151,50 @@ function _wczStandingsTable(g) {
 // (a top margin on the first bottom-half cell of every column), which keeps every
 // round's halves aligned so the connector lines stay correct.
 const _WCZ_BRACKET_CSS = `<style>
-.wczb-section{position:relative;left:50%;transform:translateX(-50%);width:min(90vw,1400px)}
-.wczb-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:8px 0;width:100%}
-.wczb{display:flex;gap:24px;align-items:stretch;width:100%}
+.wczb-section{position:relative;left:50%;transform:translateX(-50%);width:min(90vw,1380px)}
+.wczb-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:6px 0;width:100%}
+.wczb{display:flex;gap:22px;align-items:stretch;width:100%}
 .wczb-round{display:flex;flex-direction:column;justify-content:space-around;min-width:0}
 .wczb-cell{flex:1;display:flex;flex-direction:column;justify-content:center;position:relative}
-.wczb-cell.half-start{margin-top:24px}
-.wczb .rl-r32{flex:5 1 320px}.wczb .rl-r16{flex:2 1 168px}.wczb .rl-qf{flex:2 1 150px}.wczb .rl-sf{flex:2 1 150px}.wczb .rl-final{flex:2 1 165px;justify-content:center}
-.wczb-round.l .wczb-cell::after{content:'';position:absolute;right:-24px;top:calc(50% - 1px);width:24px;height:2px;background:var(--border)}
-.wczb-round.l.pair .wczb-cell:nth-child(odd)::before{content:'';position:absolute;right:-24px;top:50%;height:50%;width:2px;background:var(--border)}
-.wczb-round.l.pair .wczb-cell:nth-child(even)::before{content:'';position:absolute;right:-24px;bottom:50%;height:50%;width:2px;background:var(--border)}
-.wczb-card{position:relative;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:linear-gradient(160deg,var(--surface2),var(--surface));margin:5px 0;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
-.wczb-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,0.5);border-color:rgba(255,170,0,0.55)}
-.wczb-card-h{background:linear-gradient(90deg,rgba(255,170,0,0.18),rgba(255,170,0,0) 70%);padding:3px 11px;font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;letter-spacing:2.5px;color:var(--accent2);border-bottom:1px solid var(--border)}
-.wczb-team{position:relative;display:flex;align-items:center;gap:11px;padding:9px 12px 9px 11px;border-left:3px solid var(--tc,transparent);background-repeat:no-repeat;background-position:right center;background-size:auto 165%;overflow:hidden}
-.wczb-flag{flex-shrink:0;width:40px;height:27px;border-radius:3px;overflow:hidden;box-shadow:0 2px 7px rgba(0,0,0,0.6);outline:1px solid rgba(255,255,255,0.2);display:inline-flex;background:var(--surface2)}
+.wczb-cell.half-start{margin-top:26px}
+.wczb .rl-r32{flex:5 1 320px}.wczb .rl-r16{flex:2 1 166px}.wczb .rl-qf{flex:2 1 150px}.wczb .rl-sf{flex:2 1 150px}.wczb .rl-final{flex:2 1 162px;justify-content:center}
+.wczb-round.l .wczb-cell::after{content:'';position:absolute;right:-22px;top:calc(50% - 0.5px);width:22px;height:1px;background:var(--border)}
+.wczb-round.l.pair .wczb-cell:nth-child(odd)::before{content:'';position:absolute;right:-22px;top:50%;height:50%;width:1px;background:var(--border)}
+.wczb-round.l.pair .wczb-cell:nth-child(even)::before{content:'';position:absolute;right:-22px;bottom:50%;height:50%;width:1px;background:var(--border)}
+.wczb-card{position:relative;border:1px solid var(--border);border-radius:4px;overflow:hidden;background:var(--surface);margin:5px 0}
+.wczb-card:hover{border-color:rgba(255,255,255,0.2)}
+.wczb-card-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:4px 11px;font-family:'Barlow Condensed',sans-serif;font-size:0.64rem;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)}
+.wczb-team{display:flex;align-items:center;gap:11px;padding:9px 12px 9px 11px;border-left:2px solid transparent}
+.wczb-team.win{border-left-color:var(--accent2);background:rgba(255,255,255,0.022)}
+.wczb-flag{flex-shrink:0;width:38px;height:26px;border-radius:2px;overflow:hidden;border:1px solid rgba(255,255,255,0.14);display:inline-flex;background:var(--surface2)}
 .wczb-flag img{width:100%;height:100%;object-fit:cover;display:block}
-.wczb-tinfo{display:flex;flex-direction:column;min-width:0;gap:2px;flex:1}
-.wczb-tname{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:0.6px;line-height:1;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px rgba(0,0,0,0.55)}
-.wczb-tseed{font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:1.4px;text-transform:uppercase;color:var(--tc);white-space:nowrap;font-weight:600}
-.wczb-score{flex-shrink:0;padding-left:10px;font-family:'Bebas Neue',sans-serif;font-size:1.55rem;line-height:1;color:#fff;text-shadow:0 1px 5px rgba(0,0,0,0.8)}
+.wczb-tinfo{display:flex;flex-direction:column;min-width:0;gap:3px;flex:1}
+.wczb-tname{font-family:'Bebas Neue',sans-serif;font-size:1.18rem;letter-spacing:0.5px;line-height:1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wczb-tseed{font-family:'Barlow Condensed',sans-serif;font-size:0.64rem;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.wczb-score{flex-shrink:0;padding-left:10px;font-family:'Bebas Neue',sans-serif;font-size:1.45rem;line-height:1;color:var(--text)}
 .wczb-score.win{color:var(--accent2)}
 .wczb-score.lose{color:var(--muted)}
-.wczb-vs{display:flex;align-items:center;justify-content:center;position:relative;height:1px;margin:2px 12px;background:linear-gradient(90deg,transparent,var(--border),transparent)}
-.wczb-vs span{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1px 9px;font-family:'Bebas Neue',sans-serif;font-size:0.72rem;letter-spacing:1.5px;color:var(--muted)}
-.wczb-vs .wczb-status.live{color:#22c55e;border-color:rgba(34,197,94,0.6);background:rgba(34,197,94,0.12)}
-.wczb-card.live{border-color:rgba(34,197,94,0.6);box-shadow:0 0 0 1px rgba(34,197,94,0.35),0 8px 22px rgba(0,0,0,0.5)}
-.wczb-when{float:right;color:var(--muted);letter-spacing:1px}
-.wczb-team.elim{opacity:0.4;filter:grayscale(0.95)}
-.wczb-team.elim .wczb-tname{color:var(--muted);text-shadow:none}
-.wczb-card-c .wczb-card-h{font-size:0.6rem;letter-spacing:1.5px;padding:3px 9px}
+.wczb-vs{display:flex;align-items:center;justify-content:center;position:relative;height:1px;margin:0 12px;background:var(--border)}
+.wczb-vs span{position:absolute;background:var(--surface);padding:0 8px;font-family:'Barlow Condensed',sans-serif;font-size:0.62rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.wczb-vs .wczb-status.live{color:#3fb950}
+.wczb-card.live{border-color:rgba(63,185,80,0.5)}
+.wczb-when{color:var(--muted);letter-spacing:1px;flex-shrink:0}
+.wczb-team.elim{opacity:0.4}
+.wczb-team.elim .wczb-flag{filter:grayscale(1)}
+.wczb-team.elim .wczb-tname{color:var(--muted)}
+.wczb-card-c .wczb-card-h{font-size:0.6rem;padding:3px 9px}
 .wczb-card-c .wczb-team{padding:6px 9px;gap:8px}
-.wczb-card-c .wczb-flag{width:30px;height:20px}
+.wczb-card-c .wczb-flag{width:28px;height:19px}
 .wczb-card-c .wczb-tname{font-size:1rem}
-.wczb-card-c .wczb-score{font-size:1.25rem}
-.wczb-card-c .wczb-vs{margin:1px 9px}
-.wczb-ph{padding:8px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.86rem;letter-spacing:0.5px;color:var(--muted)}
-.wczb-fut{border:1px dashed var(--border);border-radius:8px;overflow:hidden;background:rgba(255,255,255,0.02)}
-.wczb-fut-h{background:var(--surface2);padding:4px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;letter-spacing:1.5px;color:var(--muted)}
-.wczb-fut-b{padding:6px 9px;font-family:'Barlow Condensed',sans-serif;font-size:0.9rem;color:var(--muted)}
-.wczb-fut-b+.wczb-fut-b{border-top:1px solid rgba(255,255,255,0.05)}
-.wczb-hero{position:relative;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;padding:18px 20px 16px;margin-bottom:8px;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:linear-gradient(120deg,rgba(255,170,0,0.16),rgba(255,170,0,0) 48%),linear-gradient(160deg,var(--surface2),var(--surface))}
-.wczb-hero::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(#ffd24a,#d98b4a)}
-.wczb-hero-kicker{font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;letter-spacing:3px;text-transform:uppercase;color:var(--accent2)}
-.wczb-hero-title{font-family:'Bebas Neue',sans-serif;font-size:2.7rem;line-height:0.92;letter-spacing:1px;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,0.55)}
-.wczb-hero-sub{font-family:'Barlow Condensed',sans-serif;font-size:0.96rem;letter-spacing:1.5px;color:var(--muted);margin-top:3px}
-.wczb-hero-side{display:flex;flex-direction:column;align-items:flex-end;gap:9px}
-.wczb-pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
-.wczb-pill{font-family:'Barlow Condensed',sans-serif;font-size:0.88rem;letter-spacing:0.5px;color:var(--text);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:20px;padding:4px 13px;white-space:nowrap}
-.wczb-pill-lbl{color:var(--muted);text-transform:uppercase;font-size:0.7rem;letter-spacing:1px}
-.wczb-pill.live{color:#22c55e;border-color:rgba(34,197,94,0.55);background:rgba(34,197,94,0.12);animation:wczbpulse 1.6s ease-in-out infinite}
-.wczb-legend{display:flex;gap:15px;flex-wrap:wrap;justify-content:flex-end;font-family:'Barlow Condensed',sans-serif;font-size:0.77rem;letter-spacing:0.5px;color:var(--muted)}
-.wczb-legend span{display:inline-flex;align-items:center;gap:5px}
-.wczb-legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
-@keyframes wczbpulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.wczb-card-c .wczb-score{font-size:1.2rem}
+.wczb-ph{padding:8px 10px;font-family:'Barlow Condensed',sans-serif;font-size:0.82rem;letter-spacing:0.5px;color:rgba(255,255,255,0.32);border-left:2px solid transparent}
+.wczb-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px;padding:2px 2px 0}
+.wczb-eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:0.72rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted)}
+.wczb-h2{margin:3px 0 0;font-family:'Bebas Neue',sans-serif;font-size:2.05rem;line-height:1;letter-spacing:0.5px;color:var(--text);font-weight:400}
+.wczb-head-r{display:flex;align-items:center;gap:14px;font-family:'Barlow Condensed',sans-serif;font-size:0.84rem;letter-spacing:0.5px;color:var(--muted)}
+.wczb-live{display:inline-flex;align-items:center;gap:6px;color:#3fb950}
+.wczb-live i{width:7px;height:7px;background:#3fb950;display:inline-block}
+.wczb-rule{height:3px;width:46px;background:var(--accent2);margin:9px 2px 16px}
 </style>`;
 
 // Round of 32 slot allocation (2026 fixed structure).
@@ -462,26 +452,19 @@ async function _wczRenderBracket() {
   let html = _WCZ_BRACKET_CSS;
   html += `<div class="wczb-section">`;
 
-  // Hero banner: title, start date, live indicator, and the medal legend.
-  const dateStr = earliest ? earliest.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : null;
-  html += `<div class="wczb-hero">
-      <div class="wczb-hero-main">
-        <div class="wczb-hero-kicker">2026 FIFA World Cup</div>
-        <div class="wczb-hero-title">Knockout Stage</div>
-        <div class="wczb-hero-sub">Round of 32 &middot; Road to the Final</div>
+  // Masthead: eyebrow, title, a short accent rule, and quiet metadata on the right.
+  const dateStr = earliest ? earliest.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
+  html += `<div class="wczb-head">
+      <div>
+        <div class="wczb-eyebrow">FIFA World Cup 2026</div>
+        <h2 class="wczb-h2">Knockout Bracket</h2>
       </div>
-      <div class="wczb-hero-side">
-        <div class="wczb-pills">
-          ${liveNow ? `<span class="wczb-pill live">&#9679; ${liveNow} LIVE NOW</span>` : ''}
-          ${dateStr ? `<span class="wczb-pill"><span class="wczb-pill-lbl">Kicks off</span> ${dateStr}</span>` : ''}
-        </div>
-        <div class="wczb-legend">
-          <span><i style="background:#ffd24a"></i>Winner</span>
-          <span><i style="background:#c9d2dc"></i>Runner-up</span>
-          <span><i style="background:#d98b4a"></i>3rd Place</span>
-        </div>
+      <div class="wczb-head-r">
+        ${liveNow ? `<span class="wczb-live"><i></i>${liveNow} live now</span>` : ''}
+        ${dateStr ? `<span>Round of 32 from ${dateStr}</span>` : ''}
       </div>
-    </div>`;
+    </div>
+    <div class="wczb-rule"></div>`;
 
   const scoreHtml = (val, cls) => `<span class="wczb-score${cls ? ' ' + cls : ''}">${val}</span>`;
   // One team row: flag, name, optional seed (full cards only) and score. A team
@@ -489,9 +472,8 @@ async function _wczRenderBracket() {
   const teamLine = (team, opts) => {
     if (!team) return `<div class="wczb-ph">${opts.fallback || 'TBD'}</div>`;
     const cls = 'wczb-team' + (opts.elim ? ' elim' : '') + (opts.win ? ' win' : '');
-    const bg = team.logo ? `;background-image:linear-gradient(90deg,var(--surface) 46%,transparent 130%),url('${team.logo}')` : '';
     const flag = team.logo ? `<img src="${team.logo}" onerror="this.parentNode.style.display='none'">` : '';
-    return `<div class="${cls}" style="--tc:${team.color}${bg}">
+    return `<div class="${cls}">
       <span class="wczb-flag">${flag}</span>
       <span class="wczb-tinfo"><span class="wczb-tname">${team.name}</span>${opts.compact ? '' : `<span class="wczb-tseed">${team.seedLabel}</span>`}</span>
       ${opts.score || ''}
@@ -538,7 +520,7 @@ async function _wczRenderBracket() {
   html += round('rl-sf l pair', [101, 102].map(m => nodeHtml(m, true)));
   html += round('rl-final', [104].map(m => nodeHtml(m, true)));
   html += `</div></div>`;
-  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.78rem;letter-spacing:1px;color:rgba(255,255,255,0.35);padding:10px 4px 4px">The bracket flows left to right toward the Final; follow the connector lines to trace a team's path. The coloured edge marks how each team qualified &mdash; gold for a group winner, silver for a runner-up, bronze for a third-place wildcard. Live scores and kickoff times update automatically every 30 seconds; third-place placements use FIFA's official allocation table.</div>`;
+  html += `<div style="font-family:'Barlow Condensed',sans-serif;font-size:0.76rem;letter-spacing:0.5px;color:rgba(255,255,255,0.32);padding:14px 2px 2px;max-width:640px">Winners advance to the right; eliminated teams are dimmed. Knockout ties are decided by the full result, including extra time and penalties. Scores refresh every 30 seconds.</div>`;
   html += `</div>`;
   // Preserve the bracket's horizontal scroll position across live refreshes.
   const prevWrap = el.querySelector('.wczb-wrap'), sl = prevWrap ? prevWrap.scrollLeft : 0;
